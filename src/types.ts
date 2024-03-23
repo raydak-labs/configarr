@@ -64,3 +64,16 @@ export type YamlList = {
 export type YamlInput = {
   custom_formats: YamlList[];
 };
+
+export type TrashQualityDefintionQuality = {
+  quality: string;
+  min: number;
+  preferred: number;
+  max: number;
+};
+
+export type TrashQualityDefintion = {
+  trash_id: string;
+  type: string;
+  qualities: TrashQualityDefintionQuality[];
+};

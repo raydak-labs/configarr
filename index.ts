@@ -5,12 +5,12 @@ import path from "path";
 import simpleGit from "simple-git";
 import { parse } from "yaml";
 import {
-  Api,
   CustomFormatResource,
   Field,
   PrivacyLevel,
   QualityProfileResource,
 } from "./src/__generated__/MySuperbApi";
+import { getSonarrApi } from "./src/api";
 import {
   CFProcessing,
   ConfigarrCF,
@@ -19,21 +19,14 @@ import {
   TrashCFResource,
   YamlInput,
 } from "./src/types";
-import { carrCfToValidCf, toCarrCF, trashCfToValidCf } from "./src/util";
+import {
+  IS_DRY_RUN,
+  carrCfToValidCf,
+  toCarrCF,
+  trashCfToValidCf,
+} from "./src/util";
 
-const api = new Api({
-  //   headers: {
-  //     "X-Api-Key": process.env.SONARR_API_KEY!,
-  //   },
-  // url: process.env.SONARR_URL!,
-  // baseURL: process.env.SONARR_URL!,
-  baseUrl: process.env.SONARR_URL!,
-  baseApiParams: {
-    headers: {
-      "X-Api-Key": process.env.SONARR_API_KEY!,
-    },
-  },
-});
+const api = getSonarrApi();
 
 const ROOT_PATH = path.resolve(process.cwd());
 
@@ -466,7 +459,6 @@ function compareObjectsCarr(
             changes.push(`Mismatch found for key ${key}`);
           }
         } else {
-          console.log(value1, value2);
           if (value1 !== value2) {
             changes.push(
               `Mismatch found for key ${key}: server value ${value1}, value to set ${value2}`
@@ -474,7 +466,7 @@ function compareObjectsCarr(
           }
         }
       } else {
-        console.log(`Ignore unknown key for comparison.`);
+        console.log(`Ignore unknown key for comparison: ${key}`);
       }
     }
   }
@@ -488,8 +480,6 @@ const loadYamlFile = () => {
 
   const file = readFileSync(`${PATH_TO_OUTPUT_DIR}/input.yml`, "utf8");
   const yamlRes = parse(file) as YamlInput;
-
-  console.log(yamlRes);
 
   return yamlRes;
 };
@@ -521,7 +511,7 @@ const gitStuff = async () => {
     );
   }
 
-  console.log(r);
+  console.log(`Git Check`, r);
 };
 
 const loadTrashCfs = async () => {
@@ -606,7 +596,7 @@ const loadLocalCfs = async (): Promise<CFProcessing | null> => {
 };
 
 const loadQualityProfiles = async () => {
-  const qualityProfile = await api.api.v3QualityprofileList();
+  const qualityProfile = await api.v3QualityprofileList();
   return qualityProfile.data;
 };
 
@@ -648,10 +638,10 @@ const calculateProfileActions = async (
 };
 
 const getServerCFs = async (): Promise<CustomFormatResource[]> => {
-  return (await import("./test/samples/cfs.json"))
+  return (await import("./tests/samples/cfs.json"))
     .default as unknown as Promise<CustomFormatResource[]>;
 
-  const cfOnServer = await api.api.v3CustomformatList();
+  const cfOnServer = await api.v3CustomformatList();
   return cfOnServer.data;
 };
 
@@ -707,7 +697,7 @@ const go = async () => {
 
   console.log(`Trash CFs: ${trashIdToObject.size}`);
 
-  const cfOnServer = await api.api.v3CustomformatList();
+  const cfOnServer = await api.v3CustomformatList();
 
   console.log(`CFs on server: ${cfOnServer.data.length}`);
 
@@ -747,13 +737,10 @@ const go = async () => {
         );
 
         try {
-          const updateResult = await api.api.v3CustomformatUpdate(
-            existingCf.id,
-            {
-              id: existingCf.id,
-              ...tr.requestConfig,
-            }
-          );
+          const updateResult = await api.v3CustomformatUpdate(existingCf.id, {
+            id: existingCf.id,
+            ...tr.requestConfig,
+          });
 
           console.log(`Updated CF ${tr.requestConfig.name}`);
         } catch (err) {
@@ -766,10 +753,7 @@ const go = async () => {
       // Create
 
       try {
-        console.log(JSON.stringify(tr.requestConfig));
-        const createResult = await api.api.v3CustomformatCreate(
-          tr.requestConfig
-        );
+        const createResult = await api.v3CustomformatCreate(tr.requestConfig);
 
         console.log(`Created CF ${tr.requestConfig.name}`);
       } catch (err) {
@@ -800,7 +784,7 @@ const go = async () => {
   //       console.log(JSON.stringify(value));
 
   //       try {
-  //         const updateResult = await api.api.v3CustomformatUpdate(value.id, {
+  //         const updateResult = await api.v3CustomformatUpdate(value.id, {
   //           id: value.id,
   //           ...trashThing.requestConfig,
   //         });
@@ -828,10 +812,10 @@ const go = async () => {
 
   return;
 
-  const result = await api.api.v3CustomformatList();
+  const result = await api.v3CustomformatList();
   console.log(result.data);
 
-  //   const test = await api.api.v3CustomformatCreate({
+  //   const test = await api.v3CustomformatCreate({
   //     name: "Test this",
   //     specifications: [
   //       {
@@ -983,7 +967,6 @@ const manageCf = async (
 
     if (existingCf) {
       // Update if necessary
-      console.log(JSON.stringify(existingCf), JSON.stringify(existingCf));
       const comparison = compareObjectsCarr(existingCf, tr.requestConfig);
 
       if (!comparison.equal) {
@@ -993,15 +976,20 @@ const manageCf = async (
         );
 
         try {
-          const updateResult = await api.api.v3CustomformatUpdate(
-            existingCf.id + "",
-            {
-              id: existingCf.id,
-              ...tr.requestConfig,
-            }
-          );
-
-          console.log(`Updated CF ${tr.requestConfig.name}`);
+          if (IS_DRY_RUN) {
+            console.log(
+              `DryRun: Would update CF: ${existingCf.id} - ${existingCf.name}`
+            );
+          } else {
+            const updateResult = await api.v3CustomformatUpdate(
+              existingCf.id + "",
+              {
+                id: existingCf.id,
+                ...tr.requestConfig,
+              }
+            );
+            console.log(`Updated CF ${tr.requestConfig.name}`);
+          }
         } catch (err) {
           console.log(`Failed updating CF ${tr.requestConfig.name}`, err.error);
         }
@@ -1012,12 +1000,12 @@ const manageCf = async (
       // Create
 
       try {
-        console.log(JSON.stringify(tr.requestConfig));
-        const createResult = await api.api.v3CustomformatCreate(
-          tr.requestConfig
-        );
-
-        console.log(`Created CF ${tr.requestConfig.name}`);
+        if (IS_DRY_RUN) {
+          console.log(`Would create CF: ${tr.requestConfig.name}`);
+        } else {
+          const createResult = await api.v3CustomformatCreate(tr.requestConfig);
+          console.log(`Created CF ${tr.requestConfig.name}`);
+        }
       } catch (err) {
         console.log(`Failed creating CF ${tr.requestConfig.name}`, err.error);
       }

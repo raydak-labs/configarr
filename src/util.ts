@@ -1,5 +1,24 @@
+import path from "path";
 import { CustomFormatResource } from "./__generated__/MySuperbApi";
 import { ConfigarrCF, TrashCF, UserFriendlyField } from "./types";
+
+export const IS_DRY_RUN = process.env.DRY_RUN === "true";
+
+export const repoPath = path.resolve(process.env.CUSTOM_REPO_ROOT || "./repos");
+
+const trashRepoPath = "docs/json";
+
+const trashRepoRoot = `${repoPath}/trash-guides`;
+const trashRepoSonarrRoot = `${trashRepoRoot}/${trashRepoPath}/sonarr`;
+
+const trashRepoRadarrRoot = `${trashRepoRoot}/${trashRepoPath}/radarr`;
+
+export const trashRepoPaths = {
+  root: trashRepoPath,
+  sonarrCF: `${trashRepoSonarrRoot}/cf`,
+  sonarrQuality: `${trashRepoSonarrRoot}/quality-size`,
+  sonarrNaming: `${trashRepoSonarrRoot}/naming`,
+};
 
 export const trashToCarrCF = ({
   trash_id,
@@ -190,7 +209,6 @@ export function compareObjectsCarr(
             changes.push(`Mismatch found for key ${key}`);
           }
         } else {
-          console.log(value1, value2);
           if (value1 !== value2) {
             changes.push(
               `Mismatch found for key ${key}: server value ${value1}, value to set ${value2}`
