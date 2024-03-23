@@ -7,11 +7,19 @@ import { parse } from "yaml";
 import {
   Api,
   CustomFormatResource,
-  CustomFormatSpecificationSchema,
   Field,
   PrivacyLevel,
   QualityProfileResource,
 } from "./src/__generated__/MySuperbApi";
+import {
+  CFProcessing,
+  ConfigarrCF,
+  DynamicImportType,
+  TrashCF,
+  TrashCFResource,
+  YamlInput,
+} from "./src/types";
+import { carrCfToValidCf, toCarrCF, trashCfToValidCf } from "./src/util";
 
 const api = new Api({
   //   headers: {
@@ -26,190 +34,6 @@ const api = new Api({
     },
   },
 });
-
-type DynamicImportType<T> = { default: T };
-
-/** Used in the UI of Sonarr/Radarr to import. Trash JSON are based on that so users can copy&paste stuff */
-type UserFriendlyField = {
-  name?: string | null;
-  value?: any;
-} & Pick<CustomFormatSpecificationSchema, "negate" | "required">;
-
-type TrashCFSpF = { min: number; max: number };
-
-type TC1 = Omit<CustomFormatSpecificationSchema, "fields"> & {
-  implementation: "ReleaseTitleSpecification" | "LanguageSpecification";
-  fields?: UserFriendlyField | null;
-};
-
-type TC2 = Omit<CustomFormatSpecificationSchema, "fields"> & {
-  implementation: "SizeSpecification";
-  fields?: TrashCFSpF;
-};
-
-type TCM = TC1 | TC2;
-
-type TrashCFResource = Omit<CustomFormatResource, "specifications"> & {
-  specifications?: TCM[] | null;
-};
-
-type TrashCF = {
-  trash_id: string;
-  trash_scores?: {
-    default: number;
-  };
-  trash_regex?: string;
-} & TrashCFResource;
-
-type ConfigarrCF = {
-  configarr_id: string;
-  configarr_scores?: {
-    default: number;
-  };
-} & TrashCFResource;
-
-type CFProcessing = {
-  carrIdMapping: Map<
-    string,
-    {
-      carrConfig: ConfigarrCF;
-      requestConfig: CustomFormatResource;
-    }
-  >;
-  cfNameToCarrConfig: Map<string, ConfigarrCF>;
-};
-
-type YamlList = {
-  trash_ids?: string[];
-  quality_profiles: { name: string }[];
-};
-
-type YamlInput = {
-  custom_formats: YamlList[];
-};
-
-const trashToCarrCF = ({
-  trash_id,
-  trash_regex,
-  trash_scores,
-  ...rest
-}: TrashCF): ConfigarrCF => {
-  return {
-    ...rest,
-    configarr_id: trash_id,
-    configarr_scores: trash_scores,
-  };
-};
-
-const toCarrCF = (input: TrashCF | ConfigarrCF): ConfigarrCF => {
-  if ("configarr_id" in input) {
-    return input;
-  }
-
-  return trashToCarrCF(input);
-};
-
-const trashCfToValidCf = (trashCf: TrashCF): CustomFormatResource => {
-  const { trash_id, trash_regex, trash_scores, ...rest } = trashCf;
-
-  if (!rest.specifications) {
-    console.log(`TrashCF is wrong ${trash_id}, ${rest.name}.`);
-    throw new Error("TrashCF wrong");
-  }
-
-  const specs = rest.specifications.map((spec) => {
-    const newFields: UserFriendlyField[] = [];
-
-    if (!spec.fields) {
-      console.log(`Spec: ${spec.name} fields is not defined`);
-      throw new Error(`Spec is not correctly defined: ${spec.name}`);
-    }
-
-    switch (spec.implementation) {
-      case "SizeSpecification":
-        newFields.push({
-          name: "min",
-          value: spec.fields.min,
-        });
-        newFields.push({
-          name: "max",
-          value: spec.fields.max,
-        });
-        break;
-      case "ReleaseTitleSpecification":
-      case "LanguageSpecification":
-      default:
-        newFields.push({
-          value: spec.fields.value,
-        });
-        break;
-    }
-
-    return {
-      ...spec,
-      fields: newFields.map((f) => {
-        if (f.name) {
-          return f;
-        }
-
-        return { ...f, name: "value" };
-      }),
-    };
-  });
-
-  return { ...rest, specifications: specs };
-};
-
-const carrCfToValidCf = (cf: ConfigarrCF): CustomFormatResource => {
-  const { configarr_id, configarr_scores, ...rest } = cf;
-
-  if (!rest.specifications) {
-    console.log(`ConfigarrCF is wrong ${configarr_id}, ${rest.name}.`);
-    throw new Error("ConfigarrCF wrong");
-  }
-
-  const specs = rest.specifications.map((spec) => {
-    const newFields: UserFriendlyField[] = [];
-
-    if (!spec.fields) {
-      console.log(`Spec: ${spec.name} fields is not defined`);
-      throw new Error(`Spec is not correctly defined: ${spec.name}`);
-    }
-
-    switch (spec.implementation) {
-      case "SizeSpecification":
-        newFields.push({
-          name: "min",
-          value: spec.fields.min,
-        });
-        newFields.push({
-          name: "max",
-          value: spec.fields.max,
-        });
-        break;
-      case "ReleaseTitleSpecification":
-      case "LanguageSpecification":
-      default:
-        newFields.push({
-          value: spec.fields.value,
-        });
-        break;
-    }
-
-    return {
-      ...spec,
-      fields: newFields.map((f) => {
-        if (f.name) {
-          return f;
-        }
-
-        return { ...f, name: "value" };
-      }),
-    };
-  });
-
-  return { ...rest, specifications: specs };
-};
 
 const ROOT_PATH = path.resolve(process.cwd());
 
@@ -1219,9 +1043,9 @@ const pipeline = async () => {
     return p;
   }, new Map<string, CustomFormatResource>());
 
-  for (const key of idsToManage) {
-    await manageCf(mergedCFs, serverCFMapping, idsToManage);
-  }
+  await manageCf(mergedCFs, serverCFMapping, idsToManage);
+  console.log(`CustomFormats should be in sync`);
+
   /*
   - load trash
   - load custom resources

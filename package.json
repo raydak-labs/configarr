@@ -4,7 +4,6 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
     "tsg": "swagger-to-ts -f input.json -o test.ts",
     "go": "tsx index.ts"
   },
@@ -20,5 +19,9 @@
     "swagger-typescript-api": "^13.0.3",
     "tsx": "^4.7.1",
     "yaml": "^2.4.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.42.1",
+    "@types/node": "^20.11.30"
   }
 }

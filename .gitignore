@@ -2,3 +2,7 @@ node_modules
 repos
 *.env
 !.env.template
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
