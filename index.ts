@@ -10,6 +10,7 @@ import {
   CustomFormatSpecificationSchema,
   Field,
   PrivacyLevel,
+  QualityProfileResource,
 } from "./src/__generated__/MySuperbApi";
 
 const api = new Api({
@@ -52,6 +53,140 @@ type TrashCF = {
   };
   trash_regex?: string;
 } & TrashCFResource;
+
+type ConfigarrCF = {
+  configarr_id: string;
+  configarr_scores?: {
+    default: number;
+  };
+} & TrashCFResource;
+
+type CFProcessing = {
+  carrIdMapping: Map<
+    string,
+    {
+      carrConfig: ConfigarrCF;
+      requestConfig: CustomFormatResource;
+    }
+  >;
+  cfNameToCarrConfig: Map<string, ConfigarrCF>;
+};
+
+type YamlList = {
+  trash_ids?: string[];
+  quality_profiles: { name: string }[];
+};
+
+type YamlInput = {
+  custom_formats: YamlList[];
+};
+
+const trashToCarrCF = ({
+  trash_id,
+  trash_regex,
+  trash_scores,
+  ...rest
+}: TrashCF): ConfigarrCF => {
+  return {
+    ...rest,
+    configarr_id: trash_id,
+    configarr_scores: trash_scores,
+  };
+};
+
+const toCarrCF = (input: TrashCF | ConfigarrCF): ConfigarrCF => {
+  if ("configarr_id" in input) {
+    return input;
+  }
+
+  return trashToCarrCF(input);
+};
+
+const trashCfToValidCf = (trashCf: TrashCF): CustomFormatResource => {
+  const { trash_id, trash_regex, trash_scores, ...rest } = trashCf;
+
+  if (!rest.specifications) {
+    console.log(`TrashCF is wrong ${trash_id}, ${rest.name}.`);
+    throw new Error("TrashCF wrong");
+  }
+
+  const specs = rest.specifications.map((spec) => {
+    const newFields: Field[] = [];
+
+    if (!spec.fields) {
+      console.log(`Spec: ${spec.name} fields is not defined`);
+      throw new Error(`Spec is not correctly defined: ${spec.name}`);
+    }
+
+    switch (spec.implementation) {
+      case "SizeSpecification":
+        newFields.push({ name: "min", value: spec.fields.min });
+        newFields.push({ name: "max", value: spec.fields.max });
+        break;
+      case "ReleaseTitleSpecification":
+      case "LanguageSpecification":
+      default:
+        newFields.push({ value: spec.fields.value });
+        break;
+    }
+
+    return {
+      ...spec,
+      fields: newFields.map((f) => {
+        if (f.name) {
+          return f;
+        }
+
+        return { name: "value", ...f };
+      }),
+    };
+  });
+
+  return { ...rest, specifications: specs };
+};
+
+const carrCfToValidCf = (cf: ConfigarrCF): CustomFormatResource => {
+  const { configarr_id, configarr_scores, ...rest } = cf;
+
+  if (!rest.specifications) {
+    console.log(`ConfigarrCF is wrong ${configarr_id}, ${rest.name}.`);
+    throw new Error("ConfigarrCF wrong");
+  }
+
+  const specs = rest.specifications.map((spec) => {
+    const newFields: Field[] = [];
+
+    if (!spec.fields) {
+      console.log(`Spec: ${spec.name} fields is not defined`);
+      throw new Error(`Spec is not correctly defined: ${spec.name}`);
+    }
+
+    switch (spec.implementation) {
+      case "SizeSpecification":
+        newFields.push({ name: "min", value: spec.fields.min });
+        newFields.push({ name: "max", value: spec.fields.max });
+        break;
+      case "ReleaseTitleSpecification":
+      case "LanguageSpecification":
+      default:
+        newFields.push({ value: spec.fields.value });
+        break;
+    }
+
+    return {
+      ...spec,
+      fields: newFields.map((f) => {
+        if (f.name) {
+          return f;
+        }
+
+        return { name: "value", ...f };
+      }),
+    };
+  });
+
+  return { ...rest, specifications: specs };
+};
 
 const ROOT_PATH = path.resolve(process.cwd());
 
@@ -168,49 +303,6 @@ const testGo = async () => {
   console.log(differenceInObj(object2, object1));
 
   console.log(compareObjects2(object1, object2)); // Output: true
-};
-
-const trashCfToValidCf = (trashCf: TrashCF): CustomFormatResource => {
-  const { trash_id, trash_regex, trash_scores, ...rest } = trashCf;
-
-  if (!rest.specifications) {
-    console.log(`TrashCF is wrong ${trash_id}, ${rest.name}.`);
-    throw new Error("TrashCF wrong");
-  }
-
-  const specs = rest.specifications.map((spec) => {
-    const newFields: Field[] = [];
-
-    if (!spec.fields) {
-      console.log(`Spec: ${spec.name} fields is not defined`);
-      throw new Error(`Spec is not correctly defined: ${spec.name}`);
-    }
-
-    switch (spec.implementation) {
-      case "SizeSpecification":
-        newFields.push({ name: "min", value: spec.fields.min });
-        newFields.push({ name: "max", value: spec.fields.max });
-        break;
-      case "ReleaseTitleSpecification":
-      case "LanguageSpecification":
-      default:
-        newFields.push({ value: spec.fields.value });
-        break;
-    }
-
-    return {
-      ...spec,
-      fields: newFields.map((f) => {
-        if (f.name) {
-          return f;
-        }
-
-        return { name: "value", ...f };
-      }),
-    };
-  });
-
-  return { ...rest, specifications: specs };
 };
 
 function compareObjects(
@@ -461,14 +553,87 @@ function compareObjects3(
   return { equal, changes };
 }
 
-type YamlList = {
-  trash_ids?: string[];
-  quality_profiles: { name: string }[];
-};
+function compareObjectsCarr(
+  object1: CustomFormatResource,
+  trashCf: ConfigarrCF
+): { equal: boolean; changes: string[] } {
+  const changes: string[] = [];
 
-type YamlInput = {
-  custom_formats: YamlList[];
-};
+  const object2 = carrCfToValidCf(trashCf);
+
+  for (const key in object2) {
+    if (Object.prototype.hasOwnProperty.call(object2, key)) {
+      if (object1.hasOwnProperty(key)) {
+        const value1 = object1[key];
+        let value2 = object2[key];
+
+        if (key === "fields") {
+          if (!Array.isArray(value2)) {
+            value2 = [value2];
+          }
+        }
+
+        if (Array.isArray(value1)) {
+          if (!Array.isArray(value2)) {
+            changes.push(`Expected array for key ${key} in object2`);
+            continue;
+          }
+
+          if (value1.length !== value2.length) {
+            changes.push(
+              `Array length mismatch for key ${key}: object1 length ${value1.length}, object2 length ${value2.length}`
+            );
+            continue;
+          }
+
+          for (let i = 0; i < value1.length; i++) {
+            const { equal: isEqual, changes: subChanges } = compareObjects2(
+              value1[i],
+              value2[i]
+            );
+            // changes.push(
+            //   ...subChanges.map((subChange) => `${key}[${i}].${subChange}`)
+            // );
+
+            if (subChanges.length > 0) {
+              changes.push(`${key}[${i}].${subChanges[0]}`);
+            }
+
+            if (!isEqual && changes.length <= 0) {
+              changes.push(
+                `Mismatch found in array element at index ${i} for key ${key}`
+              );
+            }
+          }
+        } else if (typeof value1 === "object" && value1 !== null) {
+          if (typeof value2 !== "object" || value2 === null) {
+            changes.push(`Expected object for key ${key} in object2`);
+            continue;
+          }
+
+          const { equal: isEqual, changes: subChanges } = compareObjects2(
+            value1,
+            value2
+          );
+          changes.push(...subChanges.map((subChange) => `${key}.${subChange}`));
+          if (!isEqual) {
+            changes.push(`Mismatch found for key ${key}`);
+          }
+        } else {
+          if (value1 !== value2) {
+            changes.push(
+              `Mismatch found for key ${key}: server value ${value1}, value to set ${value2}`
+            );
+          }
+        }
+      } else {
+      }
+    }
+  }
+
+  const equal = changes.length === 0;
+  return { equal, changes };
+}
 
 const loadYamlFile = () => {
   const PATH_TO_OUTPUT_DIR = path.resolve(process.cwd(), ".");
@@ -479,6 +644,18 @@ const loadYamlFile = () => {
   console.log(yamlRes);
 
   return yamlRes;
+};
+
+const calculateCFsToManage = (yaml: YamlInput) => {
+  const cfTrashToManage: Set<string> = new Set();
+
+  yaml.custom_formats.map((cf) => {
+    if (cf.trash_ids) {
+      cf.trash_ids.forEach((tid) => cfTrashToManage.add(tid));
+    }
+  });
+
+  return cfTrashToManage;
 };
 
 const gitStuff = async () => {
@@ -497,6 +674,144 @@ const gitStuff = async () => {
   }
 
   console.log(r);
+};
+
+const loadTrashCfs = async () => {
+  const trashRepoPath = "./repos/trash-guides";
+  const trashJsonDir = "docs/json";
+  const trashRadarrPath = `${trashJsonDir}/radarr`;
+  const trashRadarrCfPath = `${trashRadarrPath}/cf`;
+
+  const trashSonarrPath = `${trashJsonDir}/sonarr`;
+  const trashSonarrCfPath = `${trashSonarrPath}/cf`;
+
+  const files = readdirSync(`${trashRepoPath}/${trashSonarrCfPath}`).filter(
+    (fn) => fn.endsWith("json")
+  );
+
+  const trashIdToObject = new Map<
+    string,
+    { trashConfig: TrashCF; requestConfig: CustomFormatResource }
+  >();
+
+  const cfNameToTrashId = new Map<string, string>();
+
+  for (const file of files) {
+    const name = `${trashRepoPath}/${trashSonarrCfPath}/${file}`;
+    const cf: DynamicImportType<TrashCF> = await import(`${ROOT_PATH}/${name}`);
+
+    trashIdToObject.set(cf.default.trash_id, {
+      trashConfig: cf.default,
+      requestConfig: trashCfToValidCf(cf.default),
+    });
+
+    if (cf.default.name) {
+      cfNameToTrashId.set(cf.default.name, cf.default.trash_id);
+    }
+  }
+
+  console.log(`Trash CFs: ${trashIdToObject.size}`);
+
+  return { trashIdToObject, cfNameToTrashId };
+};
+
+const loadLocalCfs = async (): Promise<CFProcessing | null> => {
+  const sonarrLocalPath = process.env.SONARR_LOCAL_PATH;
+  if (!sonarrLocalPath) {
+    console.log("Ignoring local cfs.");
+    return null;
+  }
+
+  const files = readdirSync(`${sonarrLocalPath}`).filter((fn) =>
+    fn.endsWith("json")
+  );
+
+  const carrIdToObject = new Map<
+    string,
+    { carrConfig: ConfigarrCF; requestConfig: CustomFormatResource }
+  >();
+
+  const cfNameToCarrObject = new Map<string, ConfigarrCF>();
+
+  for (const file of files) {
+    const name = `${sonarrLocalPath}/${file}`;
+    const cf: DynamicImportType<TrashCF | ConfigarrCF> = await import(
+      `${ROOT_PATH}/${name}`
+    );
+
+    const cfD = toCarrCF(cf.default);
+
+    carrIdToObject.set(cfD.configarr_id, {
+      carrConfig: cfD,
+      requestConfig: carrCfToValidCf(cfD),
+    });
+
+    if (cfD.name) {
+      cfNameToCarrObject.set(cfD.name, cfD);
+    }
+  }
+
+  return {
+    carrIdMapping: carrIdToObject,
+    cfNameToCarrConfig: cfNameToCarrObject,
+  };
+};
+
+const loadQualityProfiles = async () => {
+  const qualityProfile = await api.api.v3QualityprofileList();
+  return qualityProfile.data;
+};
+
+const calculateProfileActions = async (
+  yaml: YamlInput,
+  profiles: QualityProfileResource[]
+) => {
+  const configProfiles: Set<string> = new Set();
+  const serverProfiles = profiles.map((sp) => sp.name!);
+
+  yaml.custom_formats.map((cf) => {
+    cf.quality_profiles.forEach((qp) => configProfiles.add(qp.name));
+  });
+
+  const { create, update } = Array.from(configProfiles.values()).reduce<{
+    create: string[];
+    update: string[];
+  }>(
+    ({ create, update }, c) => {
+      if (serverProfiles.includes(c)) {
+        return {
+          create,
+          update: update.concat(c),
+        };
+      }
+      return {
+        create: create.concat(c),
+        update,
+      };
+    },
+    {
+      create: [],
+      update: [],
+    }
+  );
+
+  console.log(`Profiles to create: ${create}`);
+  console.log(`Profiles to potentially update: ${update}`);
+};
+
+const getServerCFs = async (): Promise<CustomFormatResource[]> => {
+  return (await import("./test/samples/cfs.json"))
+    .default as unknown as Promise<CustomFormatResource[]>;
+
+  const cfOnServer = await api.api.v3CustomformatList();
+  return cfOnServer.data;
+};
+
+const go2 = async () => {
+  const yamlStuff = loadYamlFile();
+  const profile = await loadQualityProfiles();
+
+  calculateProfileActions(yamlStuff, profile);
 };
 
 const go = async () => {
@@ -683,88 +998,219 @@ const go = async () => {
   //   });
 };
 
-go();
-//testGo();
-
-const object22: TrashCF = {
-  trash_id: "eb3d5cc0a2be0db205fb823640db6a3c",
-  trash_scores: {
-    default: 6,
-  },
-  name: "Repack v2",
-  includeCustomFormatWhenRenaming: false,
-  specifications: [
-    {
-      name: "Repack v2",
-      implementation: "ReleaseTitleSpecification",
-      negate: false,
-      required: false,
-      fields: {
-        value: "\\b(repack22)\\b",
-      },
+const testCompare = () => {
+  const object22: TrashCF = {
+    trash_id: "eb3d5cc0a2be0db205fb823640db6a3c",
+    trash_scores: {
+      default: 6,
     },
-    {
-      name: "Proper v2",
-      implementation: "ReleaseTitleSpecification",
-      negate: false,
-      required: false,
-      fields: {
-        value: "\\b(proper2)\\b",
-      },
-    },
-  ],
-};
-
-const object11 = {
-  id: 7,
-  name: "Repack v2",
-  includeCustomFormatWhenRenaming: false,
-  specifications: [
-    {
-      name: "Repack v2",
-      implementation: "ReleaseTitleSpecification",
-      implementationName: "Release Title",
-      infoLink: "https://wiki.servarr.com/sonarr/settings#custom-formats-2",
-      negate: false,
-      required: false,
-      fields: [
-        {
-          order: 0,
-          name: "value",
-          label: "Regular Expression",
-          helpText: "Custom Format RegEx is Case Insensitive",
-          value: "\\b(repack2)\\b",
-          type: "textbox",
-          advanced: false,
-          privacy: PrivacyLevel.Normal,
-          isFloat: false,
+    name: "Repack v2",
+    includeCustomFormatWhenRenaming: false,
+    specifications: [
+      {
+        name: "Repack v2",
+        implementation: "ReleaseTitleSpecification",
+        negate: false,
+        required: false,
+        fields: {
+          value: "\\b(repack22)\\b",
         },
-      ],
-    },
-    {
-      name: "Proper v2",
-      implementation: "ReleaseTitleSpecification",
-      implementationName: "Release Title",
-      infoLink: "https://wiki.servarr.com/sonarr/settings#custom-formats-2",
-      negate: false,
-      required: false,
-      fields: [
-        {
-          order: 0,
-          name: "value",
-          label: "Regular Expression",
-          helpText: "Custom Format RegEx is Case Insensitive",
+      },
+      {
+        name: "Proper v2",
+        implementation: "ReleaseTitleSpecification",
+        negate: false,
+        required: false,
+        fields: {
           value: "\\b(proper2)\\b",
-          type: "textbox",
-          advanced: false,
-          privacy: PrivacyLevel.Normal,
-          isFloat: false,
         },
-      ],
-    },
-  ],
+      },
+    ],
+  };
+
+  const object11 = {
+    id: 7,
+    name: "Repack v2",
+    includeCustomFormatWhenRenaming: false,
+    specifications: [
+      {
+        name: "Repack v2",
+        implementation: "ReleaseTitleSpecification",
+        implementationName: "Release Title",
+        infoLink: "https://wiki.servarr.com/sonarr/settings#custom-formats-2",
+        negate: false,
+        required: false,
+        fields: [
+          {
+            order: 0,
+            name: "value",
+            label: "Regular Expression",
+            helpText: "Custom Format RegEx is Case Insensitive",
+            value: "\\b(repack2)\\b",
+            type: "textbox",
+            advanced: false,
+            privacy: PrivacyLevel.Normal,
+            isFloat: false,
+          },
+        ],
+      },
+      {
+        name: "Proper v2",
+        implementation: "ReleaseTitleSpecification",
+        implementationName: "Release Title",
+        infoLink: "https://wiki.servarr.com/sonarr/settings#custom-formats-2",
+        negate: false,
+        required: false,
+        fields: [
+          {
+            order: 0,
+            name: "value",
+            label: "Regular Expression",
+            helpText: "Custom Format RegEx is Case Insensitive",
+            value: "\\b(proper2)\\b",
+            type: "textbox",
+            advanced: false,
+            privacy: PrivacyLevel.Normal,
+            isFloat: false,
+          },
+        ],
+      },
+    ],
+  };
+
+  const comparisonResult2 = compareObjects2(object11, object22);
+  console.log("Objects are equal:", comparisonResult2.equal);
+  console.log("Changes:", comparisonResult2.changes);
 };
 
-const comparisonResult2 = compareObjects2(object11, object22);
-console.log("Objects are equal:", comparisonResult2.equal);
-console.log("Changes:", comparisonResult2.changes);
+const mergeCfSources = (listOfCfs: (CFProcessing | null)[]): CFProcessing => {
+  return listOfCfs.reduce<CFProcessing>(
+    (p, c) => {
+      if (!c) {
+        return p;
+      }
+
+      for (const [key, value] of c.carrIdMapping.entries()) {
+        if (p.carrIdMapping.has(key)) {
+          console.log(`Overwriting ${key} during CF merge`);
+        }
+        p.carrIdMapping.set(key, value);
+      }
+
+      for (const [key, value] of c.cfNameToCarrConfig.entries()) {
+        if (p.cfNameToCarrConfig.has(key)) {
+          console.log(`Overwriting ${key} during CF merge`);
+        }
+        p.cfNameToCarrConfig.set(key, value);
+      }
+
+      return p;
+    },
+    {
+      carrIdMapping: new Map(),
+      cfNameToCarrConfig: new Map(),
+    }
+  );
+};
+
+const manageCf = async (
+  cfProcessing: CFProcessing,
+  cfsToManage: Set<string>
+) => {
+  const {
+    carrIdMapping: trashIdToObject,
+    cfNameToCarrConfig: existingCfToObject,
+  } = cfProcessing;
+
+  const manageSingle = async (carrId: string) => {
+    const tr = trashIdToObject.get(carrId);
+
+    if (!tr) {
+      console.log(`TrashID to manage ${carrId} does not exists`);
+      return;
+    }
+
+    const carrObject = existingCfToObject.get(tr.carrConfig.name!);
+    if (!carrObject) {
+      console.log(`Shouldn't be here`);
+      return;
+    }
+    const existingCf = trashIdToObject.get(
+      carrObject.configarr_id
+    )?.requestConfig;
+
+    if (existingCf) {
+      // Update if necessary
+      const comparison = compareObjectsCarr(existingCf, tr.carrConfig);
+
+      if (!comparison.equal) {
+        console.log(
+          `Found mismatch for ${tr.requestConfig.name}.`,
+          comparison.changes
+        );
+
+        try {
+          const updateResult = await api.api.v3CustomformatUpdate(
+            existingCf.id + "",
+            {
+              id: existingCf.id,
+              ...tr.requestConfig,
+            }
+          );
+
+          console.log(`Updated CF ${tr.requestConfig.name}`);
+        } catch (err) {
+          console.log(`Failed updating CF ${tr.requestConfig.name}`, err.error);
+        }
+      } else {
+        console.log(`CF ${tr.requestConfig.name} does not need update.`);
+      }
+    } else {
+      // Create
+
+      try {
+        console.log(JSON.stringify(tr.requestConfig));
+        const createResult = await api.api.v3CustomformatCreate(
+          tr.requestConfig
+        );
+
+        console.log(`Created CF ${tr.requestConfig.name}`);
+      } catch (err) {
+        console.log(`Failed creating CF ${tr.requestConfig.name}`, err.error);
+      }
+    }
+  };
+  cfsToManage.forEach((cf) => manageSingle(cf));
+};
+
+const pipeline = async () => {
+  const yaml = loadYamlFile();
+  const result = await loadLocalCfs();
+  const mergedCFs = mergeCfSources([result]);
+
+  const idsToManage = calculateCFsToManage(yaml);
+
+  console.log(`Stuff to manage: ${Array.from(idsToManage)}`);
+
+  const serverCFs = await getServerCFs();
+  console.log(`CFs on server: ${serverCFs.length}`);
+
+  for (const key of idsToManage) {
+    await manageCf(mergedCFs, idsToManage);
+  }
+  /*
+  - load trash
+  - load custom resources
+  - merge stuff together to see what actually needs to be done
+  - create/update CFs
+  - future: somehow track managed CFs?
+  - create/update quality profiles
+  - future: quality definitions
+  */
+};
+
+pipeline();
+//go();
+//go2();
+//testGo();
+//testCompare();
