@@ -6,18 +6,41 @@ export const IS_DRY_RUN = process.env.DRY_RUN === "true";
 
 export const repoPath = path.resolve(process.env.CUSTOM_REPO_ROOT || "./repos");
 
-const trashRepoPath = "docs/json";
+const recyclarrConfigPath = `${repoPath}/recyclarr-config`;
+const recyclarrSonarrRoot = `${recyclarrConfigPath}/sonarr`;
+const recyclarrSonarrCFs = `${recyclarrSonarrRoot}/includes/custom-formats`;
+const recyclarrSonarrQDs = `${recyclarrSonarrRoot}/includes/quality-definitions`;
+const recyclarrSonarrQPs = `${recyclarrSonarrRoot}/includes/quality-profiles`;
 
+const recyclarrRadarrRoot = `${recyclarrConfigPath}/radarr`;
+const recyclarrRadarrCFs = `${recyclarrRadarrRoot}/includes/custom-formats`;
+const recyclarrRadarrQDs = `${recyclarrRadarrRoot}/includes/quality-definitions`;
+const recyclarrRadarrQPs = `${recyclarrRadarrRoot}/includes/quality-profiles`;
+
+const trashRepoPath = "docs/json";
 const trashRepoRoot = `${repoPath}/trash-guides`;
 const trashRepoSonarrRoot = `${trashRepoRoot}/${trashRepoPath}/sonarr`;
 
 const trashRepoRadarrRoot = `${trashRepoRoot}/${trashRepoPath}/radarr`;
 
 export const trashRepoPaths = {
-  root: trashRepoPath,
+  root: trashRepoRoot,
   sonarrCF: `${trashRepoSonarrRoot}/cf`,
   sonarrQuality: `${trashRepoSonarrRoot}/quality-size`,
   sonarrNaming: `${trashRepoSonarrRoot}/naming`,
+  radarrCF: `${trashRepoRadarrRoot}/cf`,
+  radarrQuality: `${trashRepoRadarrRoot}/quality-size`,
+  radarrNaming: `${trashRepoRadarrRoot}/naming`,
+};
+
+export const recyclarrRepoPaths = {
+  root: recyclarrConfigPath,
+  sonarrCF: `${recyclarrSonarrCFs}`,
+  sonarrQD: `${recyclarrSonarrQDs}`,
+  sonarrQP: `${recyclarrSonarrQPs}`,
+  radarrCF: `${recyclarrRadarrCFs}`,
+  radarrQD: `${recyclarrRadarrQDs}`,
+  radarrQP: `${recyclarrRadarrQPs}`,
 };
 
 export const trashToCarrCF = ({

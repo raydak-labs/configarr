@@ -11,10 +11,17 @@ import {
   QualityProfileResource,
 } from "./src/__generated__/MySuperbApi";
 import { getSonarrApi } from "./src/api";
+import { getConfig } from "./src/config";
+import {
+  cloneRecyclarritStuff,
+  loadRecyclarrTemplates,
+} from "./src/recyclarrImporter";
+import { loadSonarrTrashCFs } from "./src/trashGuide";
 import {
   CFProcessing,
   ConfigarrCF,
   DynamicImportType,
+  RecyclarrTemplates,
   TrashCF,
   TrashCFResource,
   YamlInput,
@@ -1015,11 +1022,57 @@ const manageCf = async (
 };
 
 const pipeline = async () => {
+  const applicationConfig = getConfig();
+
+  const temporary = await cloneRecyclarritStuff();
+
+  const recyclarrTemplateMap = loadRecyclarrTemplates();
+
+  const recylarrMergedTemplates: RecyclarrTemplates &
+    Required<Pick<RecyclarrTemplates, "custom_formats">> = {
+    custom_formats: [],
+  };
+
+  const scoring = new Map<string, { [key: string]: { score: number } }>();
+
+  for (const test in applicationConfig.sonarr) {
+    const value = applicationConfig.sonarr[test];
+
+    console.log(`Recyclarr Include Processing: ${test}`);
+
+    if (value.include) {
+      console.log(`Recyclarr Includes: ${value.include}`);
+      value.include.forEach((e) => {
+        const template = recyclarrTemplateMap.get(e.template);
+
+        if (!template) {
+          console.log(`Unknown recyclarr template requested: ${e.template}`);
+          return;
+        }
+
+        if (template.custom_formats) {
+          recylarrMergedTemplates.custom_formats?.push(
+            ...template.custom_formats
+          );
+        }
+        if (template.quality_definition) {
+          recylarrMergedTemplates.quality_definition =
+            template.quality_definition;
+        }
+        // TODO Quality profiles missing
+        // TODO Ignore recursive include for now
+      });
+    }
+  }
+
+  console.log(recylarrMergedTemplates);
+
   const yaml = loadYamlFile();
   const result = await loadLocalCfs();
-  const mergedCFs = mergeCfSources([result]);
+  const trashCFs = await loadSonarrTrashCFs();
+  const mergedCFs = mergeCfSources([trashCFs, result]);
 
-  const idsToManage = calculateCFsToManage(yaml);
+  const idsToManage = calculateCFsToManage(recylarrMergedTemplates);
 
   console.log(`Stuff to manage: ${Array.from(idsToManage)}`);
 

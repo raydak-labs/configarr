@@ -77,3 +77,50 @@ export type TrashQualityDefintion = {
   type: string;
   qualities: TrashQualityDefintionQuality[];
 };
+
+export type YamlConfigInstance = {
+  base_url: string;
+  api_key: string;
+  quality_definition?: {
+    type: string;
+  };
+  include?: { template: string }[];
+  custom_formats: YamlList[];
+  quality_profiles: YamlConfigQualityProfile[];
+};
+
+export type YamlConfigQualityProfile = {
+  name: string;
+  reset_unmatched_scores?: {
+    enabled: boolean;
+  };
+  upgrade: {
+    allowed: boolean;
+    until_quality: string;
+    until_score: number;
+  };
+  min_format_score: number;
+  score_set: string;
+  quality_sort: string;
+  qualities: YamlConfigQualityProfileItems[];
+};
+
+export type YamlConfigQualityProfileItems = {
+  name: string;
+  qualitites: string[];
+};
+
+export type RecyclarrTemplates = Partial<
+  Pick<YamlConfigInstance, "quality_definition" | "custom_formats" | "include">
+>;
+
+export type YamlConfig = {
+  trashGuideUrl: string;
+  recyclarrConfigUrl: string;
+  sonarr: {
+    [key: string]: YamlConfigInstance;
+  };
+  radarr: {
+    [key: string]: YamlConfigInstance;
+  };
+};
