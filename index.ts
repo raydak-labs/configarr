@@ -13,6 +13,11 @@ import {
 import { getSonarrApi } from "./src/api";
 import { getConfig } from "./src/config";
 import {
+  calculateQualityDefinitionDiff,
+  loadQualityDefinitionFromSonarr,
+  loadQualityDefinitionSonarrFromTrash,
+} from "./src/qualityDefinition";
+import {
   cloneRecyclarritStuff,
   loadRecyclarrTemplates,
 } from "./src/recyclarrImporter";
@@ -24,6 +29,7 @@ import {
   RecyclarrTemplates,
   TrashCF,
   TrashCFResource,
+  TrashQualityDefintion,
   YamlInput,
 } from "./src/types";
 import {
@@ -1087,6 +1093,46 @@ const pipeline = async () => {
   await manageCf(mergedCFs, serverCFMapping, idsToManage);
   console.log(`CustomFormats should be in sync`);
 
+  const qualityDefinition = recylarrMergedTemplates.quality_definition?.type;
+
+  if (qualityDefinition) {
+    const qdSonarr = await loadQualityDefinitionFromSonarr();
+    let qdTrash: TrashQualityDefintion;
+
+    switch (qualityDefinition) {
+      case "anime":
+        qdTrash = await loadQualityDefinitionSonarrFromTrash("anime");
+        break;
+      case "series":
+        qdTrash = await loadQualityDefinitionSonarrFromTrash("series");
+        break;
+      default:
+        throw new Error(`Unsupported quality defintion ${qualityDefinition}`);
+    }
+
+    const { changeMap, create, restData } = calculateQualityDefinitionDiff(
+      qdSonarr,
+      qdTrash
+    );
+
+    if (changeMap.size > 0) {
+      if (IS_DRY_RUN) {
+        console.log("DryRun: Would update QualityDefinitions.");
+      } else {
+        console.log(`Diffs in quality definitions found`, changeMap.values());
+        await api.v3QualitydefinitionUpdateUpdate(restData);
+        console.log(`Updated QualityDefinitions`);
+      }
+    } else {
+      console.log(`QualityDefinitions do not need update!`);
+    }
+
+    if (create.length > 0) {
+      console.log(
+        `Currently not implemented this case for quality definitions.`
+      );
+    }
+  }
   /*
   - load trash
   - load custom resources

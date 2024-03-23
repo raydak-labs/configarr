@@ -9,14 +9,18 @@ export type QualityDefintionsSonarr = "anime" | "series" | "custom";
 
 export const loadQualityDefinitionSonarrFromTrash = async (
   qdType: QualityDefintionsSonarr
-) => {
+): Promise<TrashQualityDefintion> => {
   switch (qdType) {
     case "anime":
-      return (await import(`${trashRepoPaths.sonarrQuality}/anime.json`))
-        .default;
+      return (
+        await import(path.resolve(`${trashRepoPaths.sonarrQuality}/anime.json`))
+      ).default;
     case "series":
-      return (await import(`${trashRepoPaths.sonarrQuality}/series.json`))
-        .default;
+      return (
+        await import(
+          path.resolve(`${trashRepoPaths.sonarrQuality}/series.json`)
+        )
+      ).default;
     case "custom":
       throw new Error("Not implemented yet");
     default:
@@ -45,11 +49,17 @@ export const calculateQualityDefinitionDiff = (
   const changeMap = new Map<string, string[]>();
   const create: TrashQualityDefintionQuality[] = [];
 
+  const restData: QualityDefinitionResource[] = [];
+
   for (const tq of trashQD.qualities) {
     const element = serverMap.get(tq.quality);
 
     if (element) {
       const changes: string[] = [];
+
+      if (!element.maxSize) {
+        console.log("WTF");
+      }
 
       if (element.minSize !== tq.min) {
         changes.push(`MinSize diff: ${element.minSize} - ${tq.min}`);
@@ -65,12 +75,20 @@ export const calculateQualityDefinitionDiff = (
 
       if (changes.length > 0) {
         changeMap.set(element.title!, changes);
+        restData.push({
+          ...element,
+          maxSize: tq.max,
+          minSize: tq.min,
+          preferredSize: tq.preferred,
+        });
+      } else {
+        restData.push(element);
       }
     } else {
-      // TODO create
+      // TODO create probably never happens?
       create.push(tq);
     }
   }
 
-  return { changeMap, create };
+  return { changeMap, restData, create };
 };

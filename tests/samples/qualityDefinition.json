@@ -93,6 +93,8 @@
         "title": "HDTV-720p",
         "weight": 6,
         "minSize": 10,
+        "maxSize": 400,
+        "preferredSize": 399,
         "id": 7
     },
     {
@@ -105,6 +107,8 @@
         "title": "HDTV-1080p",
         "weight": 7,
         "minSize": 15,
+        "maxSize": 400,
+        "preferredSize": 399,
         "id": 8
     },
     {
@@ -129,6 +133,8 @@
         "title": "WEBRip-720p",
         "weight": 9,
         "minSize": 10,
+        "maxSize": 400,
+        "preferredSize": 399,
         "id": 10
     },
     {
@@ -141,6 +147,8 @@
         "title": "WEBDL-720p",
         "weight": 9,
         "minSize": 10,
+        "maxSize": 400,
+        "preferredSize": 399,
         "id": 11
     },
     {
@@ -153,6 +161,8 @@
         "title": "Bluray-720p",
         "weight": 10,
         "minSize": 17.1,
+        "maxSize": 400,
+        "preferredSize": 399,
         "id": 12
     },
     {
@@ -165,6 +175,8 @@
         "title": "WEBRip-1080p",
         "weight": 11,
         "minSize": 15,
+        "maxSize": 400,
+        "preferredSize": 399,
         "id": 13
     },
     {
@@ -177,6 +189,8 @@
         "title": "WEBDL-1080p",
         "weight": 11,
         "minSize": 15,
+        "maxSize": 400,
+        "preferredSize": 399,
         "id": 14
     },
     {
@@ -189,6 +203,8 @@
         "title": "Bluray-1080p",
         "weight": 12,
         "minSize": 50.4,
+        "maxSize": 400,
+        "preferredSize": 399,
         "id": 15
     },
     {
@@ -201,6 +217,8 @@
         "title": "Bluray-1080p Remux",
         "weight": 13,
         "minSize": 69.1,
+        "maxSize": 400,
+        "preferredSize": 399,
         "id": 16
     },
     {
@@ -213,6 +231,8 @@
         "title": "HDTV-2160p",
         "weight": 14,
         "minSize": 25,
+        "maxSize": 400,
+        "preferredSize": 399,
         "id": 17
     },
     {
@@ -225,6 +245,8 @@
         "title": "WEBRip-2160p",
         "weight": 15,
         "minSize": 25,
+        "maxSize": 400,
+        "preferredSize": 399,
         "id": 18
     },
     {
@@ -237,6 +259,8 @@
         "title": "WEBDL-2160p",
         "weight": 15,
         "minSize": 25,
+        "maxSize": 400,
+        "preferredSize": 399,
         "id": 19
     },
     {
@@ -249,6 +273,8 @@
         "title": "Bluray-2160p",
         "weight": 16,
         "minSize": 94.6,
+        "maxSize": 400,
+        "preferredSize": 399,
         "id": 20
     },
     {
@@ -261,6 +287,8 @@
         "title": "Bluray-2160p Remux",
         "weight": 17,
         "minSize": 187.4,
+        "maxSize": 400,
+        "preferredSize": 399,
         "id": 21
     }
 ]
