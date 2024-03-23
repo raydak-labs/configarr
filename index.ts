@@ -28,11 +28,18 @@ const api = new Api({
 });
 
 type DynamicImportType<T> = { default: T };
+
+/** Used in the UI of Sonarr/Radarr to import. Trash JSON are based on that so users can copy&paste stuff */
+type UserFriendlyField = {
+  name?: string | null;
+  value?: any;
+} & Pick<CustomFormatSpecificationSchema, "negate" | "required">;
+
 type TrashCFSpF = { min: number; max: number };
 
 type TC1 = Omit<CustomFormatSpecificationSchema, "fields"> & {
   implementation: "ReleaseTitleSpecification" | "LanguageSpecification";
-  fields?: Field | null;
+  fields?: UserFriendlyField | null;
 };
 
 type TC2 = Omit<CustomFormatSpecificationSchema, "fields"> & {
@@ -111,7 +118,7 @@ const trashCfToValidCf = (trashCf: TrashCF): CustomFormatResource => {
   }
 
   const specs = rest.specifications.map((spec) => {
-    const newFields: Field[] = [];
+    const newFields: UserFriendlyField[] = [];
 
     if (!spec.fields) {
       console.log(`Spec: ${spec.name} fields is not defined`);
@@ -120,13 +127,21 @@ const trashCfToValidCf = (trashCf: TrashCF): CustomFormatResource => {
 
     switch (spec.implementation) {
       case "SizeSpecification":
-        newFields.push({ name: "min", value: spec.fields.min });
-        newFields.push({ name: "max", value: spec.fields.max });
+        newFields.push({
+          name: "min",
+          value: spec.fields.min,
+        });
+        newFields.push({
+          name: "max",
+          value: spec.fields.max,
+        });
         break;
       case "ReleaseTitleSpecification":
       case "LanguageSpecification":
       default:
-        newFields.push({ value: spec.fields.value });
+        newFields.push({
+          value: spec.fields.value,
+        });
         break;
     }
 
@@ -137,7 +152,7 @@ const trashCfToValidCf = (trashCf: TrashCF): CustomFormatResource => {
           return f;
         }
 
-        return { name: "value", ...f };
+        return { ...f, name: "value" };
       }),
     };
   });
@@ -154,7 +169,7 @@ const carrCfToValidCf = (cf: ConfigarrCF): CustomFormatResource => {
   }
 
   const specs = rest.specifications.map((spec) => {
-    const newFields: Field[] = [];
+    const newFields: UserFriendlyField[] = [];
 
     if (!spec.fields) {
       console.log(`Spec: ${spec.name} fields is not defined`);
@@ -163,13 +178,21 @@ const carrCfToValidCf = (cf: ConfigarrCF): CustomFormatResource => {
 
     switch (spec.implementation) {
       case "SizeSpecification":
-        newFields.push({ name: "min", value: spec.fields.min });
-        newFields.push({ name: "max", value: spec.fields.max });
+        newFields.push({
+          name: "min",
+          value: spec.fields.min,
+        });
+        newFields.push({
+          name: "max",
+          value: spec.fields.max,
+        });
         break;
       case "ReleaseTitleSpecification":
       case "LanguageSpecification":
       default:
-        newFields.push({ value: spec.fields.value });
+        newFields.push({
+          value: spec.fields.value,
+        });
         break;
     }
 
@@ -180,7 +203,7 @@ const carrCfToValidCf = (cf: ConfigarrCF): CustomFormatResource => {
           return f;
         }
 
-        return { name: "value", ...f };
+        return { ...f, name: "value" };
       }),
     };
   });
@@ -555,11 +578,9 @@ function compareObjects3(
 
 function compareObjectsCarr(
   object1: CustomFormatResource,
-  trashCf: ConfigarrCF
+  object2: CustomFormatResource
 ): { equal: boolean; changes: string[] } {
   const changes: string[] = [];
-
-  const object2 = carrCfToValidCf(trashCf);
 
   for (const key in object2) {
     if (Object.prototype.hasOwnProperty.call(object2, key)) {
@@ -567,6 +588,7 @@ function compareObjectsCarr(
         const value1 = object1[key];
         let value2 = object2[key];
 
+        // Todo remove should be already handled
         if (key === "fields") {
           if (!Array.isArray(value2)) {
             value2 = [value2];
@@ -587,7 +609,7 @@ function compareObjectsCarr(
           }
 
           for (let i = 0; i < value1.length; i++) {
-            const { equal: isEqual, changes: subChanges } = compareObjects2(
+            const { equal: isEqual, changes: subChanges } = compareObjectsCarr(
               value1[i],
               value2[i]
             );
@@ -605,13 +627,13 @@ function compareObjectsCarr(
               );
             }
           }
-        } else if (typeof value1 === "object" && value1 !== null) {
-          if (typeof value2 !== "object" || value2 === null) {
-            changes.push(`Expected object for key ${key} in object2`);
+        } else if (typeof value2 === "object" && value2 !== null) {
+          if (typeof value1 !== "object" || value1 === null) {
+            changes.push(`Expected object for key ${key} in object1`);
             continue;
           }
 
-          const { equal: isEqual, changes: subChanges } = compareObjects2(
+          const { equal: isEqual, changes: subChanges } = compareObjectsCarr(
             value1,
             value2
           );
@@ -620,6 +642,7 @@ function compareObjectsCarr(
             changes.push(`Mismatch found for key ${key}`);
           }
         } else {
+          console.log(value1, value2);
           if (value1 !== value2) {
             changes.push(
               `Mismatch found for key ${key}: server value ${value1}, value to set ${value2}`
@@ -627,6 +650,7 @@ function compareObjectsCarr(
           }
         }
       } else {
+        console.log(`Ignore unknown key for comparison.`);
       }
     }
   }
@@ -1115,6 +1139,7 @@ const mergeCfSources = (listOfCfs: (CFProcessing | null)[]): CFProcessing => {
 
 const manageCf = async (
   cfProcessing: CFProcessing,
+  serverCfs: Map<string, CustomFormatResource>,
   cfsToManage: Set<string>
 ) => {
   const {
@@ -1130,18 +1155,12 @@ const manageCf = async (
       return;
     }
 
-    const carrObject = existingCfToObject.get(tr.carrConfig.name!);
-    if (!carrObject) {
-      console.log(`Shouldn't be here`);
-      return;
-    }
-    const existingCf = trashIdToObject.get(
-      carrObject.configarr_id
-    )?.requestConfig;
+    const existingCf = serverCfs.get(tr.carrConfig.name!);
 
     if (existingCf) {
       // Update if necessary
-      const comparison = compareObjectsCarr(existingCf, tr.carrConfig);
+      console.log(JSON.stringify(existingCf), JSON.stringify(existingCf));
+      const comparison = compareObjectsCarr(existingCf, tr.requestConfig);
 
       if (!comparison.equal) {
         console.log(
@@ -1195,8 +1214,13 @@ const pipeline = async () => {
   const serverCFs = await getServerCFs();
   console.log(`CFs on server: ${serverCFs.length}`);
 
+  const serverCFMapping = serverCFs.reduce((p, c) => {
+    p.set(c.name!, c);
+    return p;
+  }, new Map<string, CustomFormatResource>());
+
   for (const key of idsToManage) {
-    await manageCf(mergedCFs, idsToManage);
+    await manageCf(mergedCFs, serverCFMapping, idsToManage);
   }
   /*
   - load trash
