@@ -1,0 +1,5 @@
+custom_formats:
+  - trash_ids:
+      - custom-size-more-40gb
+    quality_profiles:
+      - name: Default (DE)

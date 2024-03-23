@@ -1,0 +1,24 @@
+{
+  "name": "swagger-ts-gen",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "tsg": "swagger-to-ts -f input.json -o test.ts",
+    "go": "tsx index.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@infinite-debugger/swagger-to-ts": "0.1.0-alpha.124",
+    "axios": "^1.6.8",
+    "dotenv": "^16.4.5",
+    "node-ts": "^6.0.1",
+    "simple-git": "^3.23.0",
+    "swagger-typescript-api": "^13.0.3",
+    "tsx": "^4.7.1",
+    "yaml": "^2.4.1"
+  }
+}
