@@ -5,7 +5,7 @@ import { getConfig } from "./config";
 import { RecyclarrTemplates } from "./types";
 import { recyclarrRepoPaths } from "./util";
 
-export const cloneRecyclarritStuff = async () => {
+export const cloneRecyclarrTemplateRepo = async () => {
   const rootPath = recyclarrRepoPaths.root;
 
   if (!fs.existsSync(rootPath)) {
@@ -17,11 +17,11 @@ export const cloneRecyclarritStuff = async () => {
 
   const applicationConfig = getConfig();
 
-  if (r) {
-    await gitClient.pull();
-  } else {
+  if (!r) {
     await simpleGit().clone(applicationConfig.recyclarrConfigUrl, rootPath);
   }
+
+  await gitClient.checkout(applicationConfig.trashRevision ?? "master");
 
   console.log(`Recyclarr Git Check`, r);
 };

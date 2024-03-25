@@ -9,7 +9,7 @@ generateApi({
   name: "MySuperbApi.ts",
   output: path.resolve(process.cwd(), "./src/__generated__"),
   url: "https://raw.githubusercontent.com/Sonarr/Sonarr/develop/src/Sonarr.Api.V3/openapi.json",
-  httpClientType: "fetch",
+  httpClientType: "axios",
 })
   .then(({ files, configuration }) => {
     files.forEach(({ content, name }) => {

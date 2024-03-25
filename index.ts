@@ -1,18 +1,16 @@
 import "dotenv/config";
 
-import { readFileSync, readdirSync } from "fs";
+import fs, { readFileSync, readdirSync } from "fs";
 import path from "path";
-import simpleGit from "simple-git";
 import { parse } from "yaml";
 import {
   CustomFormatResource,
-  Field,
   PrivacyLevel,
   QualityProfileResource,
 } from "./src/__generated__/MySuperbApi";
-import { getSonarrApi } from "./src/api";
+import { configureSonarrApi, getSonarrApi } from "./src/api";
 import { getConfig } from "./src/config";
-import { loadServerCustomFormats } from "./src/customFormats";
+import { loadServerCustomFormats, manageCf } from "./src/customFormats";
 import {
   calculateQualityDefinitionDiff,
   loadQualityDefinitionFromSonarr,
@@ -24,18 +22,18 @@ import {
   mapQualityProfiles,
 } from "./src/qualityProfiles";
 import {
-  cloneRecyclarritStuff,
+  cloneRecyclarrTemplateRepo,
   loadRecyclarrTemplates,
 } from "./src/recyclarrImporter";
-import { loadSonarrTrashCFs } from "./src/trashGuide";
+import { cloneTrashRepo, loadSonarrTrashCFs } from "./src/trashGuide";
 import {
   CFProcessing,
   ConfigarrCF,
   DynamicImportType,
   RecyclarrMergedTemplates,
   TrashCF,
-  TrashCFResource,
   TrashQualityDefintion,
+  YamlConfigInstance,
   YamlConfigQualityProfile,
   YamlInput,
 } from "./src/types";
@@ -45,8 +43,6 @@ import {
   toCarrCF,
   trashCfToValidCf,
 } from "./src/util";
-
-export const api = getSonarrApi();
 
 const ROOT_PATH = path.resolve(process.cwd());
 
@@ -159,97 +155,7 @@ const testGo = async () => {
       },
     ],
   };
-
-  console.log(differenceInObj(object2, object1));
-
-  console.log(compareObjects2(object1, object2)); // Output: true
 };
-
-function compareObjects(
-  fullObject: CustomFormatResource,
-  partialObject: Partial<TrashCFResource>
-): boolean {
-  if (!partialObject.name || !partialObject.specifications) {
-    return false;
-  }
-
-  if (
-    fullObject.name !== partialObject.name ||
-    fullObject.includeCustomFormatWhenRenaming !==
-      partialObject.includeCustomFormatWhenRenaming
-  ) {
-    return false;
-  }
-
-  if (!fullObject.specifications || !partialObject.specifications) {
-    // TODO not sure
-    return false;
-  }
-
-  if (
-    fullObject.specifications &&
-    fullObject.specifications.length !== partialObject.specifications.length
-  ) {
-    return false;
-  }
-
-  for (let i = 0; i < fullObject.specifications.length; i++) {
-    const fullSpec = fullObject.specifications[i];
-    const partialSpec = partialObject.specifications.find(
-      (spec) => spec.name === fullSpec.name
-    );
-
-    if (!partialSpec) {
-      return false;
-    }
-
-    if (!fullSpec.fields || !partialSpec.fields) {
-      // TODO not sure
-      return false;
-    }
-
-    if (
-      typeof fullSpec.fields === "object" &&
-      !Array.isArray(fullSpec.fields)
-    ) {
-      // Assume single object as array with single element
-      if (
-        !Array.isArray(partialSpec.fields) ||
-        partialSpec.fields.length !== 1
-      ) {
-        return false;
-      }
-
-      const fullFieldValue = (fullSpec.fields as { value: string }).value;
-      const partialFieldValue = (partialSpec.fields[0] as Field).value;
-
-      if (fullFieldValue !== partialFieldValue) {
-        return false;
-      }
-    } else {
-      if (
-        !Array.isArray(fullSpec.fields) ||
-        !Array.isArray(partialSpec.fields) ||
-        fullSpec.fields.length !== partialSpec.fields.length
-      ) {
-        return false;
-      }
-
-      for (let j = 0; j < fullSpec.fields.length; j++) {
-        const fullField = fullSpec.fields[j];
-        const partialField = partialSpec.fields.find(
-          (field) => field.name === fullField.name
-        );
-
-        if (!partialField || partialField.value !== fullField.value) {
-          return false;
-        }
-      }
-    }
-  }
-
-  return true;
-}
 
 function compareObjects2(
   object1: CustomFormatResource,
@@ -413,7 +319,7 @@ function compareObjects3(
   return { equal, changes };
 }
 
-function compareObjectsCarr(
+export function compareObjectsCarr(
   object1: CustomFormatResource,
   object2: CustomFormatResource
 ): { equal: boolean; changes: string[] } {
@@ -516,63 +422,6 @@ const calculateCFsToManage = (yaml: YamlInput) => {
   return cfTrashToManage;
 };
 
-const gitStuff = async () => {
-  const trashRepoPath = "./repos/trash-guides";
-
-  const gitClient = simpleGit(trashRepoPath);
-  const r = await gitClient.checkIsRepo();
-
-  if (r) {
-    await gitClient.pull();
-  } else {
-    await simpleGit().clone(
-      "https://github.com/BlackDark/fork-TRASH-Guides",
-      "."
-    );
-  }
-
-  console.log(`Git Check`, r);
-};
-
-const loadTrashCfs = async () => {
-  const trashRepoPath = "./repos/trash-guides";
-  const trashJsonDir = "docs/json";
-  const trashRadarrPath = `${trashJsonDir}/radarr`;
-  const trashRadarrCfPath = `${trashRadarrPath}/cf`;
-
-  const trashSonarrPath = `${trashJsonDir}/sonarr`;
-  const trashSonarrCfPath = `${trashSonarrPath}/cf`;
-
-  const files = readdirSync(`${trashRepoPath}/${trashSonarrCfPath}`).filter(
-    (fn) => fn.endsWith("json")
-  );
-
-  const trashIdToObject = new Map<
-    string,
-    { trashConfig: TrashCF; requestConfig: CustomFormatResource }
-  >();
-
-  const cfNameToTrashId = new Map<string, string>();
-
-  for (const file of files) {
-    const name = `${trashRepoPath}/${trashSonarrCfPath}/${file}`;
-    const cf: DynamicImportType<TrashCF> = await import(`${ROOT_PATH}/${name}`);
-
-    trashIdToObject.set(cf.default.trash_id, {
-      trashConfig: cf.default,
-      requestConfig: trashCfToValidCf(cf.default),
-    });
-
-    if (cf.default.name) {
-      cfNameToTrashId.set(cf.default.name, cf.default.trash_id);
-    }
-  }
-
-  console.log(`Trash CFs: ${trashIdToObject.size}`);
-
-  return { trashIdToObject, cfNameToTrashId };
-};
-
 const loadLocalCfs = async (): Promise<CFProcessing | null> => {
   const sonarrLocalPath = process.env.SONARR_LOCAL_PATH;
   if (!sonarrLocalPath) {
@@ -616,6 +465,7 @@ const loadLocalCfs = async (): Promise<CFProcessing | null> => {
 };
 
 const loadQualityProfiles = async () => {
+  const api = getSonarrApi();
   const qualityProfile = await api.v3QualityprofileList();
   return qualityProfile.data;
 };
@@ -665,6 +515,7 @@ const go2 = async () => {
 };
 
 const go = async () => {
+  const api = getSonarrApi();
   const yamlStuff = loadYamlFile();
 
   const cfTrashToManage: Set<string> = new Set();
@@ -842,91 +693,6 @@ const go = async () => {
   //   });
 };
 
-const testCompare = () => {
-  const object22: TrashCF = {
-    trash_id: "eb3d5cc0a2be0db205fb823640db6a3c",
-    trash_scores: {
-      default: 6,
-    },
-    name: "Repack v2",
-    includeCustomFormatWhenRenaming: false,
-    specifications: [
-      {
-        name: "Repack v2",
-        implementation: "ReleaseTitleSpecification",
-        negate: false,
-        required: false,
-        fields: {
-          value: "\\b(repack22)\\b",
-        },
-      },
-      {
-        name: "Proper v2",
-        implementation: "ReleaseTitleSpecification",
-        negate: false,
-        required: false,
-        fields: {
-          value: "\\b(proper2)\\b",
-        },
-      },
-    ],
-  };
-
-  const object11 = {
-    id: 7,
-    name: "Repack v2",
-    includeCustomFormatWhenRenaming: false,
-    specifications: [
-      {
-        name: "Repack v2",
-        implementation: "ReleaseTitleSpecification",
-        implementationName: "Release Title",
-        infoLink: "https://wiki.servarr.com/sonarr/settings#custom-formats-2",
-        negate: false,
-        required: false,
-        fields: [
-          {
-            order: 0,
-            name: "value",
-            label: "Regular Expression",
-            helpText: "Custom Format RegEx is Case Insensitive",
-            value: "\\b(repack2)\\b",
-            type: "textbox",
-            advanced: false,
-            privacy: PrivacyLevel.Normal,
-            isFloat: false,
-          },
-        ],
-      },
-      {
-        name: "Proper v2",
-        implementation: "ReleaseTitleSpecification",
-        implementationName: "Release Title",
-        infoLink: "https://wiki.servarr.com/sonarr/settings#custom-formats-2",
-        negate: false,
-        required: false,
-        fields: [
-          {
-            order: 0,
-            name: "value",
-            label: "Regular Expression",
-            helpText: "Custom Format RegEx is Case Insensitive",
-            value: "\\b(proper2)\\b",
-            type: "textbox",
-            advanced: false,
-            privacy: PrivacyLevel.Normal,
-            isFloat: false,
-          },
-        ],
-      },
-    ],
-  };
-
-  const comparisonResult2 = compareObjects2(object11, object22);
-  console.log("Objects are equal:", comparisonResult2.equal);
-  console.log("Changes:", comparisonResult2.changes);
-};
-
 const mergeCfSources = (listOfCfs: (CFProcessing | null)[]): CFProcessing => {
   return listOfCfs.reduce<CFProcessing>(
     (p, c) => {
@@ -957,80 +723,8 @@ const mergeCfSources = (listOfCfs: (CFProcessing | null)[]): CFProcessing => {
   );
 };
 
-const manageCf = async (
-  cfProcessing: CFProcessing,
-  serverCfs: Map<string, CustomFormatResource>,
-  cfsToManage: Set<string>
-) => {
-  const {
-    carrIdMapping: trashIdToObject,
-    cfNameToCarrConfig: existingCfToObject,
-  } = cfProcessing;
-
-  const manageSingle = async (carrId: string) => {
-    const tr = trashIdToObject.get(carrId);
-
-    if (!tr) {
-      console.log(`TrashID to manage ${carrId} does not exists`);
-      return;
-    }
-
-    const existingCf = serverCfs.get(tr.carrConfig.name!);
-
-    if (existingCf) {
-      // Update if necessary
-      const comparison = compareObjectsCarr(existingCf, tr.requestConfig);
-
-      if (!comparison.equal) {
-        console.log(
-          `Found mismatch for ${tr.requestConfig.name}.`,
-          comparison.changes
-        );
-
-        try {
-          if (IS_DRY_RUN) {
-            console.log(
-              `DryRun: Would update CF: ${existingCf.id} - ${existingCf.name}`
-            );
-          } else {
-            const updateResult = await api.v3CustomformatUpdate(
-              existingCf.id + "",
-              {
-                id: existingCf.id,
-                ...tr.requestConfig,
-              }
-            );
-            console.log(`Updated CF ${tr.requestConfig.name}`);
-          }
-        } catch (err) {
-          console.log(`Failed updating CF ${tr.requestConfig.name}`, err.error);
-        }
-      } else {
-        console.log(`CF ${tr.requestConfig.name} does not need update.`);
-      }
-    } else {
-      // Create
-
-      try {
-        if (IS_DRY_RUN) {
-          console.log(`Would create CF: ${tr.requestConfig.name}`);
-        } else {
-          const createResult = await api.v3CustomformatCreate(tr.requestConfig);
-          console.log(`Created CF ${tr.requestConfig.name}`);
-        }
-      } catch (err) {
-        console.log(`Failed creating CF ${tr.requestConfig.name}`, err.error);
-      }
-    }
-  };
-  cfsToManage.forEach((cf) => manageSingle(cf));
-};
-
-const pipeline = async () => {
-  const applicationConfig = getConfig();
-
-  const temporary = await cloneRecyclarritStuff();
-
+const pipeline = async (value: YamlConfigInstance) => {
+  const api = getSonarrApi();
   const recyclarrTemplateMap = loadRecyclarrTemplates();
 
   const recylarrMergedTemplates: RecyclarrMergedTemplates = {
@@ -1038,49 +732,43 @@ const pipeline = async () => {
     quality_profiles: [],
   };
 
-  for (const test in applicationConfig.sonarr) {
-    const value = applicationConfig.sonarr[test];
+  if (value.include) {
+    console.log(`Recyclarr Includes: ${value.include}`);
+    value.include.forEach((e) => {
+      const template = recyclarrTemplateMap.get(e.template);
 
-    console.log(`Recyclarr Include Processing: ${test}`);
+      if (!template) {
+        console.log(`Unknown recyclarr template requested: ${e.template}`);
+        return;
+      }
 
-    if (value.include) {
-      console.log(`Recyclarr Includes: ${value.include}`);
-      value.include.forEach((e) => {
-        const template = recyclarrTemplateMap.get(e.template);
+      if (template.custom_formats) {
+        recylarrMergedTemplates.custom_formats?.push(
+          ...template.custom_formats
+        );
+      }
 
-        if (!template) {
-          console.log(`Unknown recyclarr template requested: ${e.template}`);
-          return;
+      if (template.quality_definition) {
+        recylarrMergedTemplates.quality_definition =
+          template.quality_definition;
+      }
+
+      if (template.quality_profiles) {
+        for (const qp of template.quality_profiles) {
+          recylarrMergedTemplates.quality_profiles.push(qp);
         }
+      }
 
-        if (template.custom_formats) {
-          recylarrMergedTemplates.custom_formats?.push(
-            ...template.custom_formats
-          );
-        }
+      // TODO Ignore recursive include for now
+    });
+  }
 
-        if (template.quality_definition) {
-          recylarrMergedTemplates.quality_definition =
-            template.quality_definition;
-        }
+  if (value.custom_formats) {
+    recylarrMergedTemplates.custom_formats.push(...value.custom_formats);
+  }
 
-        if (template.quality_profiles) {
-          for (const qp of template.quality_profiles) {
-            recylarrMergedTemplates.quality_profiles.push(qp);
-          }
-        }
-
-        // TODO Ignore recursive include for now
-      });
-    }
-
-    if (value.custom_formats) {
-      recylarrMergedTemplates.custom_formats.push(...value.custom_formats);
-    }
-
-    if (value.quality_profiles) {
-      recylarrMergedTemplates.quality_profiles.push(...value.quality_profiles);
-    }
+  if (value.quality_profiles) {
+    recylarrMergedTemplates.quality_profiles.push(...value.quality_profiles);
   }
 
   console.log(recylarrMergedTemplates);
@@ -1195,6 +883,9 @@ const pipeline = async () => {
     qpServer
   );
 
+  changedQPs.forEach((e, i) => {
+    fs.writeFileSync(`test${i}.json`, JSON.stringify(e, null, 2), "utf-8");
+  });
   console.log(
     `QPs: Create: ${create.length}, Update: ${changedQPs.length}, Unchanged: ${noChanges.length}`
   );
@@ -1209,7 +900,33 @@ const pipeline = async () => {
   */
 };
 
-pipeline();
+const run = async () => {
+  const applicationConfig = getConfig();
+
+  await cloneRecyclarrTemplateRepo();
+  await cloneTrashRepo();
+
+  // TODO currently this has to be run sequentially because of the centrally configured api
+
+  for (const instanceName in applicationConfig.sonarr) {
+    const instance = applicationConfig.sonarr[instanceName];
+    console.log(`Processing Sonarr Instance: ${instanceName}`);
+    await configureSonarrApi(instance.base_url, instance.api_key);
+    await pipeline(instance);
+  }
+
+  for (const instanceName in applicationConfig.radarr) {
+    console.log(`Processing Radarr instance: ${instanceName}`);
+    console.log(`Currently not implemented`);
+    continue;
+
+    const instance = applicationConfig.sonarr[instanceName];
+    console.log(`Processing Sonarr Instance: ${instanceName}`);
+    await pipeline(instance);
+  }
+};
+
+run();
 //go();
 //go2();
 //testGo();

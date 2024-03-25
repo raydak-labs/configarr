@@ -1,8 +1,49 @@
 import fs from "fs";
 import path from "path";
+import simpleGit, { CheckRepoActions } from "simple-git";
 import { CustomFormatResource } from "./__generated__/MySuperbApi";
+import { getConfig } from "./config";
 import { CFProcessing, ConfigarrCF, DynamicImportType, TrashCF } from "./types";
-import { carrCfToValidCf, toCarrCF } from "./util";
+import { carrCfToValidCf, toCarrCF, trashRepoPaths } from "./util";
+
+const gitStuff = async () => {
+  const trashRepoPath = "./repos/trash-guides";
+
+  const gitClient = simpleGit(trashRepoPath);
+  const r = await gitClient.checkIsRepo();
+
+  if (r) {
+    await gitClient.pull();
+  } else {
+    await simpleGit().clone(
+      "https://github.com/BlackDark/fork-TRASH-Guides",
+      "."
+    );
+  }
+
+  console.log(`Git Check`, r);
+};
+
+export const cloneTrashRepo = async () => {
+  const rootPath = trashRepoPaths.root;
+
+  if (!fs.existsSync(rootPath)) {
+    fs.mkdirSync(rootPath);
+  }
+
+  const gitClient = simpleGit(rootPath);
+  const r = await gitClient.checkIsRepo(CheckRepoActions.IS_REPO_ROOT);
+
+  const applicationConfig = getConfig();
+
+  if (!r) {
+    await simpleGit().clone(applicationConfig.trashGuideUrl, rootPath);
+  }
+
+  await gitClient.checkout(applicationConfig.trashRevision ?? "master");
+
+  console.log(`TrashGuide Git Check`, r);
+};
 
 export const loadSonarrTrashCFs = async (): Promise<CFProcessing> => {
   const trashRepoPath = "./repos/trash-guides";

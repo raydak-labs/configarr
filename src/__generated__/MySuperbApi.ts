@@ -1763,10 +1763,12 @@ export interface Version {
   minorRevision?: number;
 }
 
-export type QueryParamsType = Record<string | number, any>;
-export type ResponseFormat = keyof Omit<Body, "body" | "bodyUsed">;
+import type { AxiosInstance, AxiosRequestConfig, AxiosResponse, HeadersDefaults, ResponseType } from "axios";
+import axios from "axios";
 
-export interface FullRequestParams extends Omit<RequestInit, "body"> {
+export type QueryParamsType = Record<string | number, any>;
+
+export interface FullRequestParams extends Omit<AxiosRequestConfig, "data" | "params" | "url" | "responseType"> {
   /** set parameter to `true` for call `securityWorker` for this request */
   secure?: boolean;
   /** request path */
@@ -1776,36 +1778,20 @@ export interface FullRequestParams extends Omit<RequestInit, "body"> {
   /** query params */
   query?: QueryParamsType;
   /** format of response (i.e. response.json() -> format: "json") */
-  format?: ResponseFormat;
+  format?: ResponseType;
   /** request body */
   body?: unknown;
-  /** base url */
-  baseUrl?: string;
-  /** request cancellation token */
-  cancelToken?: CancelToken;
 }
 
-export type RequestParams = Omit<
-  FullRequestParams,
-  "body" | "method" | "query" | "path"
->;
+export type RequestParams = Omit<FullRequestParams, "body" | "method" | "query" | "path">;
 
-export interface ApiConfig<SecurityDataType = unknown> {
-  baseUrl?: string;
-  baseApiParams?: Omit<RequestParams, "baseUrl" | "cancelToken" | "signal">;
+export interface ApiConfig<SecurityDataType = unknown> extends Omit<AxiosRequestConfig, "data" | "cancelToken"> {
   securityWorker?: (
-    securityData: SecurityDataType | null
-  ) => Promise<RequestParams | void> | RequestParams | void;
-  customFetch?: typeof fetch;
+    securityData: SecurityDataType | null,
+  ) => Promise<AxiosRequestConfig | void> | AxiosRequestConfig | void;
+  secure?: boolean;
+  format?: ResponseType;
 }
-
-export interface HttpResponse<D extends unknown, E extends unknown = unknown>
-  extends Response {
-  data: D;
-  error: E;
-}
-
-type CancelToken = Symbol | string | number;
 
 export enum ContentType {
   Json = "application/json",
@@ -1815,198 +1801,95 @@ export enum ContentType {
 }
 
 export class HttpClient<SecurityDataType = unknown> {
-  public baseUrl: string = "{protocol}://{hostpath}";
+  public instance: AxiosInstance;
   private securityData: SecurityDataType | null = null;
   private securityWorker?: ApiConfig<SecurityDataType>["securityWorker"];
-  private abortControllers = new Map<CancelToken, AbortController>();
-  private customFetch = (...fetchParams: Parameters<typeof fetch>) =>
-    fetch(...fetchParams);
+  private secure?: boolean;
+  private format?: ResponseType;
 
-  private baseApiParams: RequestParams = {
-    credentials: "same-origin",
-    headers: {},
-    redirect: "follow",
-    referrerPolicy: "no-referrer",
-  };
-
-  constructor(apiConfig: ApiConfig<SecurityDataType> = {}) {
-    Object.assign(this, apiConfig);
+  constructor({ securityWorker, secure, format, ...axiosConfig }: ApiConfig<SecurityDataType> = {}) {
+    this.instance = axios.create({ ...axiosConfig, baseURL: axiosConfig.baseURL || "{protocol}://{hostpath}" });
+    this.secure = secure;
+    this.format = format;
+    this.securityWorker = securityWorker;
   }
 
   public setSecurityData = (data: SecurityDataType | null) => {
     this.securityData = data;
   };
 
-  protected encodeQueryParam(key: string, value: any) {
-    const encodedKey = encodeURIComponent(key);
-    return `${encodedKey}=${encodeURIComponent(
-      typeof value === "number" ? value : `${value}`
-    )}`;
-  }
+  protected mergeRequestParams(params1: AxiosRequestConfig, params2?: AxiosRequestConfig): AxiosRequestConfig {
+    const method = params1.method || (params2 && params2.method);
 
-  protected addQueryParam(query: QueryParamsType, key: string) {
-    return this.encodeQueryParam(key, query[key]);
-  }
-
-  protected addArrayQueryParam(query: QueryParamsType, key: string) {
-    const value = query[key];
-    return value.map((v: any) => this.encodeQueryParam(key, v)).join("&");
-  }
-
-  protected toQueryString(rawQuery?: QueryParamsType): string {
-    const query = rawQuery || {};
-    const keys = Object.keys(query).filter(
-      (key) => "undefined" !== typeof query[key]
-    );
-    return keys
-      .map((key) =>
-        Array.isArray(query[key])
-          ? this.addArrayQueryParam(query, key)
-          : this.addQueryParam(query, key)
-      )
-      .join("&");
-  }
-
-  protected addQueryParams(rawQuery?: QueryParamsType): string {
-    const queryString = this.toQueryString(rawQuery);
-    return queryString ? `?${queryString}` : "";
-  }
-
-  private contentFormatters: Record<ContentType, (input: any) => any> = {
-    [ContentType.Json]: (input: any) =>
-      input !== null && (typeof input === "object" || typeof input === "string")
-        ? JSON.stringify(input)
-        : input,
-    [ContentType.Text]: (input: any) =>
-      input !== null && typeof input !== "string"
-        ? JSON.stringify(input)
-        : input,
-    [ContentType.FormData]: (input: any) =>
-      Object.keys(input || {}).reduce((formData, key) => {
-        const property = input[key];
-        formData.append(
-          key,
-          property instanceof Blob
-            ? property
-            : typeof property === "object" && property !== null
-            ? JSON.stringify(property)
-            : `${property}`
-        );
-        return formData;
-      }, new FormData()),
-    [ContentType.UrlEncoded]: (input: any) => this.toQueryString(input),
-  };
-
-  protected mergeRequestParams(
-    params1: RequestParams,
-    params2?: RequestParams
-  ): RequestParams {
     return {
-      ...this.baseApiParams,
+      ...this.instance.defaults,
       ...params1,
       ...(params2 || {}),
       headers: {
-        ...(this.baseApiParams.headers || {}),
+        ...((method && this.instance.defaults.headers[method.toLowerCase() as keyof HeadersDefaults]) || {}),
         ...(params1.headers || {}),
         ...((params2 && params2.headers) || {}),
       },
     };
   }
 
-  protected createAbortSignal = (
-    cancelToken: CancelToken
-  ): AbortSignal | undefined => {
-    if (this.abortControllers.has(cancelToken)) {
-      const abortController = this.abortControllers.get(cancelToken);
-      if (abortController) {
-        return abortController.signal;
+  protected stringifyFormItem(formItem: unknown) {
+    if (typeof formItem === "object" && formItem !== null) {
+      return JSON.stringify(formItem);
+    } else {
+      return `${formItem}`;
+    }
+  }
+
+  protected createFormData(input: Record<string, unknown>): FormData {
+    return Object.keys(input || {}).reduce((formData, key) => {
+      const property = input[key];
+      const propertyContent: any[] = property instanceof Array ? property : [property];
+
+      for (const formItem of propertyContent) {
+        const isFileType = formItem instanceof Blob || formItem instanceof File;
+        formData.append(key, isFileType ? formItem : this.stringifyFormItem(formItem));
       }
-      return void 0;
-    }
 
-    const abortController = new AbortController();
-    this.abortControllers.set(cancelToken, abortController);
-    return abortController.signal;
-  };
+      return formData;
+    }, new FormData());
+  }
 
-  public abortRequest = (cancelToken: CancelToken) => {
-    const abortController = this.abortControllers.get(cancelToken);
-
-    if (abortController) {
-      abortController.abort();
-      this.abortControllers.delete(cancelToken);
-    }
-  };
-
-  public request = async <T = any, E = any>({
-    body,
+  public request = async <T = any, _E = any>({
     secure,
     path,
     type,
     query,
     format,
-    baseUrl,
-    cancelToken,
+    body,
     ...params
-  }: FullRequestParams): Promise<HttpResponse<T, E>> => {
+  }: FullRequestParams): Promise<AxiosResponse<T>> => {
     const secureParams =
-      ((typeof secure === "boolean" ? secure : this.baseApiParams.secure) &&
+      ((typeof secure === "boolean" ? secure : this.secure) &&
         this.securityWorker &&
         (await this.securityWorker(this.securityData))) ||
       {};
     const requestParams = this.mergeRequestParams(params, secureParams);
-    const queryString = query && this.toQueryString(query);
-    const payloadFormatter = this.contentFormatters[type || ContentType.Json];
-    const responseFormat = format || requestParams.format;
+    const responseFormat = format || this.format || undefined;
 
-    return this.customFetch(
-      `${baseUrl || this.baseUrl || ""}${path}${
-        queryString ? `?${queryString}` : ""
-      }`,
-      {
-        ...requestParams,
-        headers: {
-          ...(requestParams.headers || {}),
-          ...(type && type !== ContentType.FormData
-            ? { "Content-Type": type }
-            : {}),
-        },
-        signal:
-          (cancelToken
-            ? this.createAbortSignal(cancelToken)
-            : requestParams.signal) || null,
-        body:
-          typeof body === "undefined" || body === null
-            ? null
-            : payloadFormatter(body),
-      }
-    ).then(async (response) => {
-      const r = response as HttpResponse<T, E>;
-      r.data = null as unknown as T;
-      r.error = null as unknown as E;
+    if (type === ContentType.FormData && body && body !== null && typeof body === "object") {
+      body = this.createFormData(body as Record<string, unknown>);
+    }
 
-      const data = !responseFormat
-        ? r
-        : await response[responseFormat]()
-            .then((data) => {
-              if (r.ok) {
-                r.data = data;
-              } else {
-                r.error = data;
-              }
-              return r;
-            })
-            .catch((e) => {
-              r.error = e;
-              return r;
-            });
+    if (type === ContentType.Text && body && body !== null && typeof body !== "string") {
+      body = JSON.stringify(body);
+    }
 
-      if (cancelToken) {
-        this.abortControllers.delete(cancelToken);
-      }
-
-      if (!response.ok) throw data;
-      return data;
+    return this.instance.request({
+      ...requestParams,
+      headers: {
+        ...(requestParams.headers || {}),
+        ...(type && type !== ContentType.FormData ? { "Content-Type": type } : {}),
+      },
+      params: query,
+      responseType: responseFormat,
+      data: body,
+      url: path,
     });
   };
 }
@@ -2019,9 +1902,7 @@ export class HttpClient<SecurityDataType = unknown> {
  *
  * Sonarr API docs - The v3 API docs apply to both v3 and v4 versions of Sonarr. Some functionality may only be available in v4 of the Sonarr application.
  */
-export class Api<
-  SecurityDataType extends unknown
-> extends HttpClient<SecurityDataType> {
+export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDataType> {
   /**
    * No description
    *
@@ -2063,10 +1944,7 @@ export class Api<
      * @request POST:/api/v3/autotagging
      * @secure
      */
-    v3AutotaggingCreate: (
-      data: AutoTaggingResource,
-      params: RequestParams = {}
-    ) =>
+    v3AutotaggingCreate: (data: AutoTaggingResource, params: RequestParams = {}) =>
       this.request<AutoTaggingResource, any>({
         path: `/api/v3/autotagging`,
         method: "POST",
@@ -2102,11 +1980,7 @@ export class Api<
      * @request PUT:/api/v3/autotagging/{id}
      * @secure
      */
-    v3AutotaggingUpdate: (
-      id: string,
-      data: AutoTaggingResource,
-      params: RequestParams = {}
-    ) =>
+    v3AutotaggingUpdate: (id: string, data: AutoTaggingResource, params: RequestParams = {}) =>
       this.request<AutoTaggingResource, any>({
         path: `/api/v3/autotagging/${id}`,
         method: "PUT",
@@ -2254,7 +2128,7 @@ export class Api<
         sortKey?: string;
         sortDirection?: SortDirection;
       },
-      params: RequestParams = {}
+      params: RequestParams = {},
     ) =>
       this.request<BlocklistResourcePagingResource, any>({
         path: `/api/v3/blocklist`,
@@ -2289,10 +2163,7 @@ export class Api<
      * @request DELETE:/api/v3/blocklist/bulk
      * @secure
      */
-    v3BlocklistBulkDelete: (
-      data: BlocklistBulkResource,
-      params: RequestParams = {}
-    ) =>
+    v3BlocklistBulkDelete: (data: BlocklistBulkResource, params: RequestParams = {}) =>
       this.request<void, any>({
         path: `/api/v3/blocklist/bulk`,
         method: "DELETE",
@@ -2327,7 +2198,7 @@ export class Api<
         /** @default "" */
         tags?: string;
       },
-      params: RequestParams = {}
+      params: RequestParams = {},
     ) =>
       this.request<EpisodeResource[], any>({
         path: `/api/v3/calendar`,
@@ -2449,10 +2320,7 @@ export class Api<
      * @request POST:/api/v3/customfilter
      * @secure
      */
-    v3CustomfilterCreate: (
-      data: CustomFilterResource,
-      params: RequestParams = {}
-    ) =>
+    v3CustomfilterCreate: (data: CustomFilterResource, params: RequestParams = {}) =>
       this.request<CustomFilterResource, any>({
         path: `/api/v3/customfilter`,
         method: "POST",
@@ -2471,11 +2339,7 @@ export class Api<
      * @request PUT:/api/v3/customfilter/{id}
      * @secure
      */
-    v3CustomfilterUpdate: (
-      id: string,
-      data: CustomFilterResource,
-      params: RequestParams = {}
-    ) =>
+    v3CustomfilterUpdate: (id: string, data: CustomFilterResource, params: RequestParams = {}) =>
       this.request<CustomFilterResource, any>({
         path: `/api/v3/customfilter/${id}`,
         method: "PUT",
@@ -2527,10 +2391,7 @@ export class Api<
      * @request POST:/api/v3/customformat
      * @secure
      */
-    v3CustomformatCreate: (
-      data: CustomFormatResource,
-      params: RequestParams = {}
-    ) =>
+    v3CustomformatCreate: (data: CustomFormatResource, params: RequestParams = {}) =>
       this.request<CustomFormatResource, any>({
         path: `/api/v3/customformat`,
         method: "POST",
@@ -2566,11 +2427,7 @@ export class Api<
      * @request PUT:/api/v3/customformat/{id}
      * @secure
      */
-    v3CustomformatUpdate: (
-      id: string,
-      data: CustomFormatResource,
-      params: RequestParams = {}
-    ) =>
+    v3CustomformatUpdate: (id: string, data: CustomFormatResource, params: RequestParams = {}) =>
       this.request<CustomFormatResource, any>({
         path: `/api/v3/customformat/${id}`,
         method: "PUT",
@@ -2661,7 +2518,7 @@ export class Api<
         /** @default true */
         monitored?: boolean;
       },
-      params: RequestParams = {}
+      params: RequestParams = {},
     ) =>
       this.request<EpisodeResourcePagingResource, any>({
         path: `/api/v3/wanted/cutoff`,
@@ -2697,10 +2554,7 @@ export class Api<
      * @request POST:/api/v3/delayprofile
      * @secure
      */
-    v3DelayprofileCreate: (
-      data: DelayProfileResource,
-      params: RequestParams = {}
-    ) =>
+    v3DelayprofileCreate: (data: DelayProfileResource, params: RequestParams = {}) =>
       this.request<DelayProfileResource, any>({
         path: `/api/v3/delayprofile`,
         method: "POST",
@@ -2752,11 +2606,7 @@ export class Api<
      * @request PUT:/api/v3/delayprofile/{id}
      * @secure
      */
-    v3DelayprofileUpdate: (
-      id: string,
-      data: DelayProfileResource,
-      params: RequestParams = {}
-    ) =>
+    v3DelayprofileUpdate: (id: string, data: DelayProfileResource, params: RequestParams = {}) =>
       this.request<DelayProfileResource, any>({
         path: `/api/v3/delayprofile/${id}`,
         method: "PUT",
@@ -2798,7 +2648,7 @@ export class Api<
         /** @format int32 */
         after?: number;
       },
-      params: RequestParams = {}
+      params: RequestParams = {},
     ) =>
       this.request<DelayProfileResource[], any>({
         path: `/api/v3/delayprofile/reorder/${id}`,
@@ -2857,7 +2707,7 @@ export class Api<
         /** @default false */
         forceSave?: boolean;
       },
-      params: RequestParams = {}
+      params: RequestParams = {},
     ) =>
       this.request<DownloadClientResource, any>({
         path: `/api/v3/downloadclient`,
@@ -2885,7 +2735,7 @@ export class Api<
         /** @default false */
         forceSave?: boolean;
       },
-      params: RequestParams = {}
+      params: RequestParams = {},
     ) =>
       this.request<DownloadClientResource, any>({
         path: `/api/v3/downloadclient/${id}`,
@@ -2939,10 +2789,7 @@ export class Api<
      * @request PUT:/api/v3/downloadclient/bulk
      * @secure
      */
-    v3DownloadclientBulkUpdate: (
-      data: DownloadClientBulkResource,
-      params: RequestParams = {}
-    ) =>
+    v3DownloadclientBulkUpdate: (data: DownloadClientBulkResource, params: RequestParams = {}) =>
       this.request<DownloadClientResource, any>({
         path: `/api/v3/downloadclient/bulk`,
         method: "PUT",
@@ -2961,10 +2808,7 @@ export class Api<
      * @request DELETE:/api/v3/downloadclient/bulk
      * @secure
      */
-    v3DownloadclientBulkDelete: (
-      data: DownloadClientBulkResource,
-      params: RequestParams = {}
-    ) =>
+    v3DownloadclientBulkDelete: (data: DownloadClientBulkResource, params: RequestParams = {}) =>
       this.request<void, any>({
         path: `/api/v3/downloadclient/bulk`,
         method: "DELETE",
@@ -2999,10 +2843,7 @@ export class Api<
      * @request POST:/api/v3/downloadclient/test
      * @secure
      */
-    v3DownloadclientTestCreate: (
-      data: DownloadClientResource,
-      params: RequestParams = {}
-    ) =>
+    v3DownloadclientTestCreate: (data: DownloadClientResource, params: RequestParams = {}) =>
       this.request<void, any>({
         path: `/api/v3/downloadclient/test`,
         method: "POST",
@@ -3036,11 +2877,7 @@ export class Api<
      * @request POST:/api/v3/downloadclient/action/{name}
      * @secure
      */
-    v3DownloadclientActionCreate: (
-      name: string,
-      data: DownloadClientResource,
-      params: RequestParams = {}
-    ) =>
+    v3DownloadclientActionCreate: (name: string, data: DownloadClientResource, params: RequestParams = {}) =>
       this.request<void, any>({
         path: `/api/v3/downloadclient/action/${name}`,
         method: "POST",
@@ -3075,11 +2912,7 @@ export class Api<
      * @request PUT:/api/v3/config/downloadclient/{id}
      * @secure
      */
-    v3ConfigDownloadclientUpdate: (
-      id: string,
-      data: DownloadClientConfigResource,
-      params: RequestParams = {}
-    ) =>
+    v3ConfigDownloadclientUpdate: (id: string, data: DownloadClientConfigResource, params: RequestParams = {}) =>
       this.request<DownloadClientConfigResource, any>({
         path: `/api/v3/config/downloadclient/${id}`,
         method: "PUT",
@@ -3127,7 +2960,7 @@ export class Api<
         /** @default false */
         includeImages?: boolean;
       },
-      params: RequestParams = {}
+      params: RequestParams = {},
     ) =>
       this.request<EpisodeResource[], any>({
         path: `/api/v3/episode`,
@@ -3146,11 +2979,7 @@ export class Api<
      * @request PUT:/api/v3/episode/{id}
      * @secure
      */
-    v3EpisodeUpdate: (
-      id: number,
-      data: EpisodeResource,
-      params: RequestParams = {}
-    ) =>
+    v3EpisodeUpdate: (id: number, data: EpisodeResource, params: RequestParams = {}) =>
       this.request<EpisodeResource, any>({
         path: `/api/v3/episode/${id}`,
         method: "PUT",
@@ -3192,7 +3021,7 @@ export class Api<
         /** @default false */
         includeImages?: boolean;
       },
-      params: RequestParams = {}
+      params: RequestParams = {},
     ) =>
       this.request<void, any>({
         path: `/api/v3/episode/monitor`,
@@ -3218,7 +3047,7 @@ export class Api<
         seriesId?: number;
         episodeFileIds?: number[];
       },
-      params: RequestParams = {}
+      params: RequestParams = {},
     ) =>
       this.request<EpisodeFileResource[], any>({
         path: `/api/v3/episodefile`,
@@ -3237,11 +3066,7 @@ export class Api<
      * @request PUT:/api/v3/episodefile/{id}
      * @secure
      */
-    v3EpisodefileUpdate: (
-      id: string,
-      data: EpisodeFileResource,
-      params: RequestParams = {}
-    ) =>
+    v3EpisodefileUpdate: (id: string, data: EpisodeFileResource, params: RequestParams = {}) =>
       this.request<EpisodeFileResource, any>({
         path: `/api/v3/episodefile/${id}`,
         method: "PUT",
@@ -3293,10 +3118,7 @@ export class Api<
      * @request PUT:/api/v3/episodefile/editor
      * @secure
      */
-    v3EpisodefileEditorUpdate: (
-      data: EpisodeFileListResource,
-      params: RequestParams = {}
-    ) =>
+    v3EpisodefileEditorUpdate: (data: EpisodeFileListResource, params: RequestParams = {}) =>
       this.request<void, any>({
         path: `/api/v3/episodefile/editor`,
         method: "PUT",
@@ -3314,10 +3136,7 @@ export class Api<
      * @request DELETE:/api/v3/episodefile/bulk
      * @secure
      */
-    v3EpisodefileBulkDelete: (
-      data: EpisodeFileListResource,
-      params: RequestParams = {}
-    ) =>
+    v3EpisodefileBulkDelete: (data: EpisodeFileListResource, params: RequestParams = {}) =>
       this.request<void, any>({
         path: `/api/v3/episodefile/bulk`,
         method: "DELETE",
@@ -3335,10 +3154,7 @@ export class Api<
      * @request PUT:/api/v3/episodefile/bulk
      * @secure
      */
-    v3EpisodefileBulkUpdate: (
-      data: EpisodeFileResource[],
-      params: RequestParams = {}
-    ) =>
+    v3EpisodefileBulkUpdate: (data: EpisodeFileResource[], params: RequestParams = {}) =>
       this.request<void, any>({
         path: `/api/v3/episodefile/bulk`,
         method: "PUT",
@@ -3364,7 +3180,7 @@ export class Api<
         /** @default false */
         allowFoldersWithoutTrailingSlashes?: boolean;
       },
-      params: RequestParams = {}
+      params: RequestParams = {},
     ) =>
       this.request<void, any>({
         path: `/api/v3/filesystem`,
@@ -3386,7 +3202,7 @@ export class Api<
       query?: {
         path?: string;
       },
-      params: RequestParams = {}
+      params: RequestParams = {},
     ) =>
       this.request<void, any>({
         path: `/api/v3/filesystem/type`,
@@ -3408,7 +3224,7 @@ export class Api<
       query?: {
         path?: string;
       },
-      params: RequestParams = {}
+      params: RequestParams = {},
     ) =>
       this.request<void, any>({
         path: `/api/v3/filesystem/mediafiles`,
@@ -3467,7 +3283,7 @@ export class Api<
         languages?: number[];
         quality?: number[];
       },
-      params: RequestParams = {}
+      params: RequestParams = {},
     ) =>
       this.request<HistoryResourcePagingResource, any>({
         path: `/api/v3/history`,
@@ -3496,7 +3312,7 @@ export class Api<
         /** @default false */
         includeEpisode?: boolean;
       },
-      params: RequestParams = {}
+      params: RequestParams = {},
     ) =>
       this.request<HistoryResource[], any>({
         path: `/api/v3/history/since`,
@@ -3527,7 +3343,7 @@ export class Api<
         /** @default false */
         includeEpisode?: boolean;
       },
-      params: RequestParams = {}
+      params: RequestParams = {},
     ) =>
       this.request<HistoryResource[], any>({
         path: `/api/v3/history/series`,
@@ -3579,11 +3395,7 @@ export class Api<
      * @request PUT:/api/v3/config/host/{id}
      * @secure
      */
-    v3ConfigHostUpdate: (
-      id: string,
-      data: HostConfigResource,
-      params: RequestParams = {}
-    ) =>
+    v3ConfigHostUpdate: (id: string, data: HostConfigResource, params: RequestParams = {}) =>
       this.request<HostConfigResource, any>({
         path: `/api/v3/config/host/${id}`,
         method: "PUT",
@@ -3642,7 +3454,7 @@ export class Api<
         /** @default false */
         forceSave?: boolean;
       },
-      params: RequestParams = {}
+      params: RequestParams = {},
     ) =>
       this.request<ImportListResource, any>({
         path: `/api/v3/importlist`,
@@ -3670,7 +3482,7 @@ export class Api<
         /** @default false */
         forceSave?: boolean;
       },
-      params: RequestParams = {}
+      params: RequestParams = {},
     ) =>
       this.request<ImportListResource, any>({
         path: `/api/v3/importlist/${id}`,
@@ -3724,10 +3536,7 @@ export class Api<
      * @request PUT:/api/v3/importlist/bulk
      * @secure
      */
-    v3ImportlistBulkUpdate: (
-      data: ImportListBulkResource,
-      params: RequestParams = {}
-    ) =>
+    v3ImportlistBulkUpdate: (data: ImportListBulkResource, params: RequestParams = {}) =>
       this.request<ImportListResource, any>({
         path: `/api/v3/importlist/bulk`,
         method: "PUT",
@@ -3746,10 +3555,7 @@ export class Api<
      * @request DELETE:/api/v3/importlist/bulk
      * @secure
      */
-    v3ImportlistBulkDelete: (
-      data: ImportListBulkResource,
-      params: RequestParams = {}
-    ) =>
+    v3ImportlistBulkDelete: (data: ImportListBulkResource, params: RequestParams = {}) =>
       this.request<void, any>({
         path: `/api/v3/importlist/bulk`,
         method: "DELETE",
@@ -3784,10 +3590,7 @@ export class Api<
      * @request POST:/api/v3/importlist/test
      * @secure
      */
-    v3ImportlistTestCreate: (
-      data: ImportListResource,
-      params: RequestParams = {}
-    ) =>
+    v3ImportlistTestCreate: (data: ImportListResource, params: RequestParams = {}) =>
       this.request<void, any>({
         path: `/api/v3/importlist/test`,
         method: "POST",
@@ -3821,11 +3624,7 @@ export class Api<
      * @request POST:/api/v3/importlist/action/{name}
      * @secure
      */
-    v3ImportlistActionCreate: (
-      name: string,
-      data: ImportListResource,
-      params: RequestParams = {}
-    ) =>
+    v3ImportlistActionCreate: (name: string, data: ImportListResource, params: RequestParams = {}) =>
       this.request<void, any>({
         path: `/api/v3/importlist/action/${name}`,
         method: "POST",
@@ -3860,11 +3659,7 @@ export class Api<
      * @request PUT:/api/v3/config/importlist/{id}
      * @secure
      */
-    v3ConfigImportlistUpdate: (
-      id: string,
-      data: ImportListConfigResource,
-      params: RequestParams = {}
-    ) =>
+    v3ConfigImportlistUpdate: (id: string, data: ImportListConfigResource, params: RequestParams = {}) =>
       this.request<ImportListConfigResource, any>({
         path: `/api/v3/config/importlist/${id}`,
         method: "PUT",
@@ -3918,10 +3713,7 @@ export class Api<
      * @request POST:/api/v3/importlistexclusion
      * @secure
      */
-    v3ImportlistexclusionCreate: (
-      data: ImportListExclusionResource,
-      params: RequestParams = {}
-    ) =>
+    v3ImportlistexclusionCreate: (data: ImportListExclusionResource, params: RequestParams = {}) =>
       this.request<ImportListExclusionResource, any>({
         path: `/api/v3/importlistexclusion`,
         method: "POST",
@@ -3955,7 +3747,7 @@ export class Api<
         sortKey?: string;
         sortDirection?: SortDirection;
       },
-      params: RequestParams = {}
+      params: RequestParams = {},
     ) =>
       this.request<ImportListExclusionResourcePagingResource, any>({
         path: `/api/v3/importlistexclusion/paged`,
@@ -3974,11 +3766,7 @@ export class Api<
      * @request PUT:/api/v3/importlistexclusion/{id}
      * @secure
      */
-    v3ImportlistexclusionUpdate: (
-      id: string,
-      data: ImportListExclusionResource,
-      params: RequestParams = {}
-    ) =>
+    v3ImportlistexclusionUpdate: (id: string, data: ImportListExclusionResource, params: RequestParams = {}) =>
       this.request<ImportListExclusionResource, any>({
         path: `/api/v3/importlistexclusion/${id}`,
         method: "PUT",
@@ -4053,7 +3841,7 @@ export class Api<
         /** @default false */
         forceSave?: boolean;
       },
-      params: RequestParams = {}
+      params: RequestParams = {},
     ) =>
       this.request<IndexerResource, any>({
         path: `/api/v3/indexer`,
@@ -4081,7 +3869,7 @@ export class Api<
         /** @default false */
         forceSave?: boolean;
       },
-      params: RequestParams = {}
+      params: RequestParams = {},
     ) =>
       this.request<IndexerResource, any>({
         path: `/api/v3/indexer/${id}`,
@@ -4135,10 +3923,7 @@ export class Api<
      * @request PUT:/api/v3/indexer/bulk
      * @secure
      */
-    v3IndexerBulkUpdate: (
-      data: IndexerBulkResource,
-      params: RequestParams = {}
-    ) =>
+    v3IndexerBulkUpdate: (data: IndexerBulkResource, params: RequestParams = {}) =>
       this.request<IndexerResource, any>({
         path: `/api/v3/indexer/bulk`,
         method: "PUT",
@@ -4157,10 +3942,7 @@ export class Api<
      * @request DELETE:/api/v3/indexer/bulk
      * @secure
      */
-    v3IndexerBulkDelete: (
-      data: IndexerBulkResource,
-      params: RequestParams = {}
-    ) =>
+    v3IndexerBulkDelete: (data: IndexerBulkResource, params: RequestParams = {}) =>
       this.request<void, any>({
         path: `/api/v3/indexer/bulk`,
         method: "DELETE",
@@ -4229,11 +4011,7 @@ export class Api<
      * @request POST:/api/v3/indexer/action/{name}
      * @secure
      */
-    v3IndexerActionCreate: (
-      name: string,
-      data: IndexerResource,
-      params: RequestParams = {}
-    ) =>
+    v3IndexerActionCreate: (name: string, data: IndexerResource, params: RequestParams = {}) =>
       this.request<void, any>({
         path: `/api/v3/indexer/action/${name}`,
         method: "POST",
@@ -4268,11 +4046,7 @@ export class Api<
      * @request PUT:/api/v3/config/indexer/{id}
      * @secure
      */
-    v3ConfigIndexerUpdate: (
-      id: string,
-      data: IndexerConfigResource,
-      params: RequestParams = {}
-    ) =>
+    v3ConfigIndexerUpdate: (id: string, data: IndexerConfigResource, params: RequestParams = {}) =>
       this.request<IndexerConfigResource, any>({
         path: `/api/v3/config/indexer/${id}`,
         method: "PUT",
@@ -4360,10 +4134,7 @@ export class Api<
      * @deprecated
      * @secure
      */
-    v3LanguageprofileCreate: (
-      data: LanguageProfileResource,
-      params: RequestParams = {}
-    ) =>
+    v3LanguageprofileCreate: (data: LanguageProfileResource, params: RequestParams = {}) =>
       this.request<LanguageProfileResource, any>({
         path: `/api/v3/languageprofile`,
         method: "POST",
@@ -4418,11 +4189,7 @@ export class Api<
      * @deprecated
      * @secure
      */
-    v3LanguageprofileUpdate: (
-      id: string,
-      data: LanguageProfileResource,
-      params: RequestParams = {}
-    ) =>
+    v3LanguageprofileUpdate: (id: string, data: LanguageProfileResource, params: RequestParams = {}) =>
       this.request<LanguageProfileResource, any>({
         path: `/api/v3/languageprofile/${id}`,
         method: "PUT",
@@ -4543,7 +4310,7 @@ export class Api<
         sortDirection?: SortDirection;
         level?: string;
       },
-      params: RequestParams = {}
+      params: RequestParams = {},
     ) =>
       this.request<LogResourcePagingResource, any>({
         path: `/api/v3/log`,
@@ -4606,7 +4373,7 @@ export class Api<
         /** @default true */
         filterExistingFiles?: boolean;
       },
-      params: RequestParams = {}
+      params: RequestParams = {},
     ) =>
       this.request<ManualImportResource[], any>({
         path: `/api/v3/manualimport`,
@@ -4625,10 +4392,7 @@ export class Api<
      * @request POST:/api/v3/manualimport
      * @secure
      */
-    v3ManualimportCreate: (
-      data: ManualImportReprocessResource[],
-      params: RequestParams = {}
-    ) =>
+    v3ManualimportCreate: (data: ManualImportReprocessResource[], params: RequestParams = {}) =>
       this.request<void, any>({
         path: `/api/v3/manualimport`,
         method: "POST",
@@ -4646,11 +4410,7 @@ export class Api<
      * @request GET:/api/v3/mediacover/{seriesId}/{filename}
      * @secure
      */
-    v3MediacoverDetail: (
-      seriesId: number,
-      filename: string,
-      params: RequestParams = {}
-    ) =>
+    v3MediacoverDetail: (seriesId: number, filename: string, params: RequestParams = {}) =>
       this.request<void, any>({
         path: `/api/v3/mediacover/${seriesId}/${filename}`,
         method: "GET",
@@ -4683,11 +4443,7 @@ export class Api<
      * @request PUT:/api/v3/config/mediamanagement/{id}
      * @secure
      */
-    v3ConfigMediamanagementUpdate: (
-      id: string,
-      data: MediaManagementConfigResource,
-      params: RequestParams = {}
-    ) =>
+    v3ConfigMediamanagementUpdate: (id: string, data: MediaManagementConfigResource, params: RequestParams = {}) =>
       this.request<MediaManagementConfigResource, any>({
         path: `/api/v3/config/mediamanagement/${id}`,
         method: "PUT",
@@ -4746,7 +4502,7 @@ export class Api<
         /** @default false */
         forceSave?: boolean;
       },
-      params: RequestParams = {}
+      params: RequestParams = {},
     ) =>
       this.request<MetadataResource, any>({
         path: `/api/v3/metadata`,
@@ -4774,7 +4530,7 @@ export class Api<
         /** @default false */
         forceSave?: boolean;
       },
-      params: RequestParams = {}
+      params: RequestParams = {},
     ) =>
       this.request<MetadataResource, any>({
         path: `/api/v3/metadata/${id}`,
@@ -4845,10 +4601,7 @@ export class Api<
      * @request POST:/api/v3/metadata/test
      * @secure
      */
-    v3MetadataTestCreate: (
-      data: MetadataResource,
-      params: RequestParams = {}
-    ) =>
+    v3MetadataTestCreate: (data: MetadataResource, params: RequestParams = {}) =>
       this.request<void, any>({
         path: `/api/v3/metadata/test`,
         method: "POST",
@@ -4882,11 +4635,7 @@ export class Api<
      * @request POST:/api/v3/metadata/action/{name}
      * @secure
      */
-    v3MetadataActionCreate: (
-      name: string,
-      data: MetadataResource,
-      params: RequestParams = {}
-    ) =>
+    v3MetadataActionCreate: (name: string, data: MetadataResource, params: RequestParams = {}) =>
       this.request<void, any>({
         path: `/api/v3/metadata/action/${name}`,
         method: "POST",
@@ -4925,7 +4674,7 @@ export class Api<
         /** @default true */
         monitored?: boolean;
       },
-      params: RequestParams = {}
+      params: RequestParams = {},
     ) =>
       this.request<EpisodeResourcePagingResource, any>({
         path: `/api/v3/wanted/missing`,
@@ -4978,11 +4727,7 @@ export class Api<
      * @request PUT:/api/v3/config/naming/{id}
      * @secure
      */
-    v3ConfigNamingUpdate: (
-      id: string,
-      data: NamingConfigResource,
-      params: RequestParams = {}
-    ) =>
+    v3ConfigNamingUpdate: (id: string, data: NamingConfigResource, params: RequestParams = {}) =>
       this.request<NamingConfigResource, any>({
         path: `/api/v3/config/naming/${id}`,
         method: "PUT",
@@ -5036,7 +4781,7 @@ export class Api<
         id?: number;
         resourceName?: string;
       },
-      params: RequestParams = {}
+      params: RequestParams = {},
     ) =>
       this.request<void, any>({
         path: `/api/v3/config/naming/examples`,
@@ -5077,7 +4822,7 @@ export class Api<
         /** @default false */
         forceSave?: boolean;
       },
-      params: RequestParams = {}
+      params: RequestParams = {},
     ) =>
       this.request<NotificationResource, any>({
         path: `/api/v3/notification`,
@@ -5105,7 +4850,7 @@ export class Api<
         /** @default false */
         forceSave?: boolean;
       },
-      params: RequestParams = {}
+      params: RequestParams = {},
     ) =>
       this.request<NotificationResource, any>({
         path: `/api/v3/notification/${id}`,
@@ -5176,10 +4921,7 @@ export class Api<
      * @request POST:/api/v3/notification/test
      * @secure
      */
-    v3NotificationTestCreate: (
-      data: NotificationResource,
-      params: RequestParams = {}
-    ) =>
+    v3NotificationTestCreate: (data: NotificationResource, params: RequestParams = {}) =>
       this.request<void, any>({
         path: `/api/v3/notification/test`,
         method: "POST",
@@ -5213,11 +4955,7 @@ export class Api<
      * @request POST:/api/v3/notification/action/{name}
      * @secure
      */
-    v3NotificationActionCreate: (
-      name: string,
-      data: NotificationResource,
-      params: RequestParams = {}
-    ) =>
+    v3NotificationActionCreate: (name: string, data: NotificationResource, params: RequestParams = {}) =>
       this.request<void, any>({
         path: `/api/v3/notification/action/${name}`,
         method: "POST",
@@ -5240,7 +4978,7 @@ export class Api<
         title?: string;
         path?: string;
       },
-      params: RequestParams = {}
+      params: RequestParams = {},
     ) =>
       this.request<ParseResource, any>({
         path: `/api/v3/parse`,
@@ -5259,11 +4997,7 @@ export class Api<
      * @request PUT:/api/v3/qualitydefinition/{id}
      * @secure
      */
-    v3QualitydefinitionUpdate: (
-      id: string,
-      data: QualityDefinitionResource,
-      params: RequestParams = {}
-    ) =>
+    v3QualitydefinitionUpdate: (id: string, data: QualityDefinitionResource, params: RequestParams = {}) =>
       this.request<QualityDefinitionResource, any>({
         path: `/api/v3/qualitydefinition/${id}`,
         method: "PUT",
@@ -5316,10 +5050,7 @@ export class Api<
      * @request PUT:/api/v3/qualitydefinition/update
      * @secure
      */
-    v3QualitydefinitionUpdateUpdate: (
-      data: QualityDefinitionResource[],
-      params: RequestParams = {}
-    ) =>
+    v3QualitydefinitionUpdateUpdate: (data: QualityDefinitionResource[], params: RequestParams = {}) =>
       this.request<void, any>({
         path: `/api/v3/qualitydefinition/update`,
         method: "PUT",
@@ -5337,10 +5068,7 @@ export class Api<
      * @request POST:/api/v3/qualityprofile
      * @secure
      */
-    v3QualityprofileCreate: (
-      data: QualityProfileResource,
-      params: RequestParams = {}
-    ) =>
+    v3QualityprofileCreate: (data: QualityProfileResource, params: RequestParams = {}) =>
       this.request<QualityProfileResource, any>({
         path: `/api/v3/qualityprofile`,
         method: "POST",
@@ -5392,11 +5120,7 @@ export class Api<
      * @request PUT:/api/v3/qualityprofile/{id}
      * @secure
      */
-    v3QualityprofileUpdate: (
-      id: string,
-      data: QualityProfileResource,
-      params: RequestParams = {}
-    ) =>
+    v3QualityprofileUpdate: (id: string, data: QualityProfileResource, params: RequestParams = {}) =>
       this.request<QualityProfileResource, any>({
         path: `/api/v3/qualityprofile/${id}`,
         method: "PUT",
@@ -5461,7 +5185,7 @@ export class Api<
         /** @default false */
         changeCategory?: boolean;
       },
-      params: RequestParams = {}
+      params: RequestParams = {},
     ) =>
       this.request<void, any>({
         path: `/api/v3/queue/${id}`,
@@ -5491,7 +5215,7 @@ export class Api<
         /** @default false */
         changeCategory?: boolean;
       },
-      params: RequestParams = {}
+      params: RequestParams = {},
     ) =>
       this.request<void, any>({
         path: `/api/v3/queue/bulk`,
@@ -5537,7 +5261,7 @@ export class Api<
         /** @format int32 */
         quality?: number;
       },
-      params: RequestParams = {}
+      params: RequestParams = {},
     ) =>
       this.request<QueueResourcePagingResource, any>({
         path: `/api/v3/queue`,
@@ -5572,10 +5296,7 @@ export class Api<
      * @request POST:/api/v3/queue/grab/bulk
      * @secure
      */
-    v3QueueGrabBulkCreate: (
-      data: QueueBulkResource,
-      params: RequestParams = {}
-    ) =>
+    v3QueueGrabBulkCreate: (data: QueueBulkResource, params: RequestParams = {}) =>
       this.request<void, any>({
         path: `/api/v3/queue/grab/bulk`,
         method: "POST",
@@ -5603,7 +5324,7 @@ export class Api<
         /** @default false */
         includeEpisode?: boolean;
       },
-      params: RequestParams = {}
+      params: RequestParams = {},
     ) =>
       this.request<QueueResource[], any>({
         path: `/api/v3/queue/details`,
@@ -5666,7 +5387,7 @@ export class Api<
         /** @format int32 */
         seasonNumber?: number;
       },
-      params: RequestParams = {}
+      params: RequestParams = {},
     ) =>
       this.request<ReleaseResource[], any>({
         path: `/api/v3/release`,
@@ -5685,10 +5406,7 @@ export class Api<
      * @request POST:/api/v3/releaseprofile
      * @secure
      */
-    v3ReleaseprofileCreate: (
-      data: ReleaseProfileResource,
-      params: RequestParams = {}
-    ) =>
+    v3ReleaseprofileCreate: (data: ReleaseProfileResource, params: RequestParams = {}) =>
       this.request<ReleaseProfileResource, any>({
         path: `/api/v3/releaseprofile`,
         method: "POST",
@@ -5740,11 +5458,7 @@ export class Api<
      * @request PUT:/api/v3/releaseprofile/{id}
      * @secure
      */
-    v3ReleaseprofileUpdate: (
-      id: string,
-      data: ReleaseProfileResource,
-      params: RequestParams = {}
-    ) =>
+    v3ReleaseprofileUpdate: (id: string, data: ReleaseProfileResource, params: RequestParams = {}) =>
       this.request<ReleaseProfileResource, any>({
         path: `/api/v3/releaseprofile/${id}`,
         method: "PUT",
@@ -5799,10 +5513,7 @@ export class Api<
      * @request POST:/api/v3/remotepathmapping
      * @secure
      */
-    v3RemotepathmappingCreate: (
-      data: RemotePathMappingResource,
-      params: RequestParams = {}
-    ) =>
+    v3RemotepathmappingCreate: (data: RemotePathMappingResource, params: RequestParams = {}) =>
       this.request<RemotePathMappingResource, any>({
         path: `/api/v3/remotepathmapping`,
         method: "POST",
@@ -5854,11 +5565,7 @@ export class Api<
      * @request PUT:/api/v3/remotepathmapping/{id}
      * @secure
      */
-    v3RemotepathmappingUpdate: (
-      id: string,
-      data: RemotePathMappingResource,
-      params: RequestParams = {}
-    ) =>
+    v3RemotepathmappingUpdate: (id: string, data: RemotePathMappingResource, params: RequestParams = {}) =>
       this.request<RemotePathMappingResource, any>({
         path: `/api/v3/remotepathmapping/${id}`,
         method: "PUT",
@@ -5901,7 +5608,7 @@ export class Api<
         /** @format int32 */
         seasonNumber?: number;
       },
-      params: RequestParams = {}
+      params: RequestParams = {},
     ) =>
       this.request<RenameEpisodeResource[], any>({
         path: `/api/v3/rename`,
@@ -5920,10 +5627,7 @@ export class Api<
      * @request POST:/api/v3/rootfolder
      * @secure
      */
-    v3RootfolderCreate: (
-      data: RootFolderResource,
-      params: RequestParams = {}
-    ) =>
+    v3RootfolderCreate: (data: RootFolderResource, params: RequestParams = {}) =>
       this.request<RootFolderResource, any>({
         path: `/api/v3/rootfolder`,
         method: "POST",
@@ -5992,10 +5696,7 @@ export class Api<
      * @request POST:/api/v3/seasonpass
      * @secure
      */
-    v3SeasonpassCreate: (
-      data: SeasonPassResource,
-      params: RequestParams = {}
-    ) =>
+    v3SeasonpassCreate: (data: SeasonPassResource, params: RequestParams = {}) =>
       this.request<void, any>({
         path: `/api/v3/seasonpass`,
         method: "POST",
@@ -6020,7 +5721,7 @@ export class Api<
         /** @default false */
         includeSeasonImages?: boolean;
       },
-      params: RequestParams = {}
+      params: RequestParams = {},
     ) =>
       this.request<SeriesResource[], any>({
         path: `/api/v3/series`,
@@ -6064,7 +5765,7 @@ export class Api<
         /** @default false */
         includeSeasonImages?: boolean;
       },
-      params: RequestParams = {}
+      params: RequestParams = {},
     ) =>
       this.request<SeriesResource, any>({
         path: `/api/v3/series/${id}`,
@@ -6090,7 +5791,7 @@ export class Api<
         /** @default false */
         moveFiles?: boolean;
       },
-      params: RequestParams = {}
+      params: RequestParams = {},
     ) =>
       this.request<SeriesResource, any>({
         path: `/api/v3/series/${id}`,
@@ -6119,7 +5820,7 @@ export class Api<
         /** @default false */
         addImportListExclusion?: boolean;
       },
-      params: RequestParams = {}
+      params: RequestParams = {},
     ) =>
       this.request<void, any>({
         path: `/api/v3/series/${id}`,
@@ -6137,10 +5838,7 @@ export class Api<
      * @request PUT:/api/v3/series/editor
      * @secure
      */
-    v3SeriesEditorUpdate: (
-      data: SeriesEditorResource,
-      params: RequestParams = {}
-    ) =>
+    v3SeriesEditorUpdate: (data: SeriesEditorResource, params: RequestParams = {}) =>
       this.request<void, any>({
         path: `/api/v3/series/editor`,
         method: "PUT",
@@ -6158,10 +5856,7 @@ export class Api<
      * @request DELETE:/api/v3/series/editor
      * @secure
      */
-    v3SeriesEditorDelete: (
-      data: SeriesEditorResource,
-      params: RequestParams = {}
-    ) =>
+    v3SeriesEditorDelete: (data: SeriesEditorResource, params: RequestParams = {}) =>
       this.request<void, any>({
         path: `/api/v3/series/editor`,
         method: "DELETE",
@@ -6179,10 +5874,7 @@ export class Api<
      * @request POST:/api/v3/series/import
      * @secure
      */
-    v3SeriesImportCreate: (
-      data: SeriesResource[],
-      params: RequestParams = {}
-    ) =>
+    v3SeriesImportCreate: (data: SeriesResource[], params: RequestParams = {}) =>
       this.request<void, any>({
         path: `/api/v3/series/import`,
         method: "POST",
@@ -6204,7 +5896,7 @@ export class Api<
       query?: {
         term?: string;
       },
-      params: RequestParams = {}
+      params: RequestParams = {},
     ) =>
       this.request<void, any>({
         path: `/api/v3/series/lookup`,
@@ -6459,11 +6151,7 @@ export class Api<
      * @request PUT:/api/v3/config/ui/{id}
      * @secure
      */
-    v3ConfigUiUpdate: (
-      id: string,
-      data: UiConfigResource,
-      params: RequestParams = {}
-    ) =>
+    v3ConfigUiUpdate: (id: string, data: UiConfigResource, params: RequestParams = {}) =>
       this.request<UiConfigResource, any>({
         path: `/api/v3/config/ui/${id}`,
         method: "PUT",
@@ -6576,7 +6264,7 @@ export class Api<
       query?: {
         returnUrl?: string;
       },
-      params: RequestParams = {}
+      params: RequestParams = {},
     ) =>
       this.request<void, any>({
         path: `/login`,
@@ -6651,7 +6339,7 @@ export class Api<
         /** @default false */
         asAllDay?: boolean;
       },
-      params: RequestParams = {}
+      params: RequestParams = {},
     ) =>
       this.request<void, any>({
         path: `/feed/v3/calendar/sonarr.ics`,

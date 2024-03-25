@@ -20,3 +20,4 @@ Possible ideas:
 
 - [ ] Optimize types. Generated ones work for first step but not very optimal because they do not correctly represent request/response types.
 - [x] Default scores from trash guide
+- [ ] Radarr support

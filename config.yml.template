@@ -1,5 +1,7 @@
 trashGuideUrl: https://github.com/TRaSH-Guides/Guides
+#trashRevision: master # Optional to specify sha
 recyclarrConfigUrl: https://github.com/recyclarr/config-templates
+#recyclarrRevision: master # Optional to specify sha
 
 sonarr:
   series:

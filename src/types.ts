@@ -49,9 +49,7 @@ export type TrashCF = {
 
 export type ConfigarrCF = {
   configarr_id: string;
-  configarr_scores?: {
-    default: number;
-  };
+  configarr_scores?: TrashCF["trash_scores"];
 } & TrashCFResource;
 
 export type CFProcessing = {
@@ -132,7 +130,9 @@ export type RecyclarrMergedTemplates = RecyclarrTemplates &
 
 export type YamlConfig = {
   trashGuideUrl: string;
+  trashRevision?: string;
   recyclarrConfigUrl: string;
+  recyclarrRevision?: string;
   sonarr: {
     [key: string]: YamlConfigInstance;
   };
