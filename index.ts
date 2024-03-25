@@ -12,6 +12,7 @@ import {
 } from "./src/__generated__/MySuperbApi";
 import { getSonarrApi } from "./src/api";
 import { getConfig } from "./src/config";
+import { loadServerCustomFormats } from "./src/customFormats";
 import {
   calculateQualityDefinitionDiff,
   loadQualityDefinitionFromSonarr,
@@ -45,7 +46,7 @@ import {
   trashCfToValidCf,
 } from "./src/util";
 
-const api = getSonarrApi();
+export const api = getSonarrApi();
 
 const ROOT_PATH = path.resolve(process.cwd());
 
@@ -656,14 +657,6 @@ const calculateProfileActions = async (
   console.log(`Profiles to potentially update: ${update}`);
 };
 
-const getServerCFs = async (): Promise<CustomFormatResource[]> => {
-  return (await import("./tests/samples/cfs.json"))
-    .default as unknown as Promise<CustomFormatResource[]>;
-
-  const cfOnServer = await api.v3CustomformatList();
-  return cfOnServer.data;
-};
-
 const go2 = async () => {
   const yamlStuff = loadYamlFile();
   const profile = await loadQualityProfiles();
@@ -1103,7 +1096,7 @@ const pipeline = async () => {
 
   console.log(`Stuff to manage: ${Array.from(idsToManage)}`);
 
-  const serverCFs = await getServerCFs();
+  const serverCFs = await loadServerCustomFormats();
   console.log(`CFs on server: ${serverCFs.length}`);
 
   const serverCFMapping = serverCFs.reduce((p, c) => {
@@ -1196,10 +1189,14 @@ const pipeline = async () => {
 
   const qpServer = await loadQualityProfilesSonarr();
 
-  const respose = await calculateQualityProfilesDiff(
+  const { changedQPs, create, noChanges } = await calculateQualityProfilesDiff(
     qualityProfilesMerged,
     cfToQualityProfiles,
     qpServer
+  );
+
+  console.log(
+    `QPs: Create: ${create.length}, Update: ${changedQPs.length}, Unchanged: ${noChanges.length}`
   );
   /*
   - load trash

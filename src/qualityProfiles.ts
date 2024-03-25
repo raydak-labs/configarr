@@ -1,11 +1,12 @@
-import fs from "fs";
 import path from "path";
 import {
   ProfileFormatItemResource,
+  QualityDefinitionResource,
   QualityProfileQualityItemResource,
   QualityProfileResource,
 } from "./__generated__/MySuperbApi";
 import { getSonarrApi } from "./api";
+import { loadServerCustomFormats } from "./customFormats";
 import { loadQualityDefinitionFromSonarr } from "./qualityDefinition";
 import {
   CFProcessing,
@@ -78,24 +79,86 @@ export const loadQualityProfilesSonarr = async (): Promise<
   return qualityProfiles.data;
 };
 
+const mapQualities = (
+  qd: QualityDefinitionResource[],
+  value: YamlConfigQualityProfile
+) => {
+  const qdMap = new Map(qd.map((obj) => [obj.title, obj]));
+
+  const allowedQualies: QualityProfileQualityItemResource[] =
+    value.qualities.map((obj, i) => {
+      return {
+        allowed: true,
+        id: 1000 + i,
+        name: obj.name,
+        items: obj.qualities?.map<QualityProfileQualityItemResource>((obj2) => {
+          const qd = qdMap.get(obj2);
+
+          const returnObject: QualityProfileQualityItemResource = {
+            quality: {
+              id: qd?.quality?.id,
+              name: obj2,
+              resolution: qd?.quality?.resolution,
+              source: qd?.quality?.source,
+            },
+          };
+
+          qdMap.delete(obj2);
+
+          return returnObject;
+        }),
+      };
+    });
+
+  const missingQualities: QualityProfileQualityItemResource[] = [];
+
+  for (const [key, value] of qdMap.entries()) {
+    missingQualities.push({
+      allowed: false,
+      //id: qualIndex++, // ID not allowed if not enabled
+      quality: {
+        id: value.quality?.id,
+        name: key,
+        resolution: value.quality?.resolution,
+        source: value?.quality?.source,
+      },
+    });
+  }
+
+  // Ordering of items in the array matters of how they will be displayed. First is last.
+  // Need to double check if always works as expected also regarding of templates etc.
+  return [...missingQualities, ...allowedQualies.reverse()];
+};
+
 export const calculateQualityProfilesDiff = async (
   qpMerged: Map<string, YamlConfigQualityProfile>,
   scoring: Map<string, Map<string, ProfileFormatItemResource>>,
   serverQP: QualityProfileResource[]
 ): Promise<{
-  changes: string[];
-  create: [];
-  noChanges: [];
+  changedQPs: QualityProfileResource[];
+  create: QualityProfileResource[];
+  noChanges: string[];
 }> => {
   const mappedServerQP = serverQP.reduce((p, c) => {
     p.set(c.name!, c);
     return p;
   }, new Map<string, QualityProfileResource>());
 
+  // TODO can be optimized
+  const qd = await loadQualityDefinitionFromSonarr();
+  const cfsFromServer = await loadServerCustomFormats();
+  const cfsServerMap = new Map(cfsFromServer.map((obj) => [obj.name!, obj]));
+
+  const createQPs: QualityProfileResource[] = [];
+  const changedQPs: QualityProfileResource[] = [];
+  const noChangedQPs: string[] = [];
+
   const changes = new Map<string, string[]>();
 
   for (const [name, value] of qpMerged.entries()) {
     const serverMatch = mappedServerQP.get(name);
+    const scoringForQP = scoring.get(name);
+
     const resetScoreExceptions: Map<string, boolean> =
       value.reset_unmatched_scores?.except?.reduce((p, c) => {
         p.set(c, true);
@@ -105,6 +168,31 @@ export const calculateQualityProfilesDiff = async (
     if (!serverMatch) {
       console.log(`QualityProfile not found in server. Ignoring: ${name}`);
       // TODO create needed
+      const mappedQ = mapQualities(qd, value);
+      const tmpMap = new Map(mappedQ.map((obj) => [obj.name!, obj]));
+
+      const cfs: Map<string, ProfileFormatItemResource> = new Map(
+        JSON.parse(JSON.stringify(Array.from(cfsServerMap)))
+      );
+
+      if (scoringForQP) {
+        for (const [scoreKey, scoreValue] of scoringForQP.entries()) {
+          const currentCf = cfs.get(scoreKey);
+          if (currentCf) {
+            currentCf.score = scoreValue.score;
+          }
+        }
+      }
+
+      createQPs.push({
+        name: value.name,
+        items: mappedQ,
+        cutoff: tmpMap.get(value.upgrade.until_quality)?.id,
+        cutoffFormatScore: value.upgrade.until_score,
+        minFormatScore: value.min_format_score,
+        upgradeAllowed: value.upgrade.allowed,
+        formatItems: Array.from(cfs.values()),
+      });
       continue;
     }
 
@@ -141,60 +229,7 @@ export const calculateQualityProfilesDiff = async (
       diffExist = true;
 
       changeList.push(`QualityProfile items do not match`);
-
-      const qd = await loadQualityDefinitionFromSonarr();
-
-      const qdMap = new Map(qd.map((obj) => [obj.title, obj]));
-
-      // Ordering of items in the array matters of how they will be displayed. First is last.
-      // Need to double check if always works as expected also regarding of templates etc.
-
-      const allowedQualies: QualityProfileQualityItemResource[] =
-        value.qualities.map((obj, i) => {
-          return {
-            allowed: true,
-            id: 1000 + i,
-            name: obj.name,
-            items: obj.qualities?.map<QualityProfileQualityItemResource>(
-              (obj2) => {
-                const qd = qdMap.get(obj2);
-
-                const returnObject: QualityProfileQualityItemResource = {
-                  quality: {
-                    id: qd?.quality?.id,
-                    name: obj2,
-                    resolution: qd?.quality?.resolution,
-                    source: qd?.quality?.source,
-                  },
-                };
-
-                qdMap.delete(obj2);
-
-                return returnObject;
-              }
-            ),
-          };
-        });
-
-      const missingQualities: QualityProfileQualityItemResource[] = [];
-
-      for (const [key, value] of qdMap.entries()) {
-        missingQualities.push({
-          allowed: false,
-          //id: qualIndex++, // ID not allowed if not enabled
-          quality: {
-            id: value.quality?.id,
-            name: key,
-            resolution: value.quality?.resolution,
-            source: value?.quality?.source,
-          },
-        });
-      }
-
-      updatedServerObject.items = [
-        ...missingQualities,
-        ...allowedQualies.reverse(),
-      ];
+      updatedServerObject.items = mapQualities(qd, value);
     }
 
     if (value.min_format_score) {
@@ -210,8 +245,6 @@ export const calculateQualityProfilesDiff = async (
     // TODO quality_sort,reset_unmatched_score, score_set . check recyclarr
     if (value.quality_sort) {
     }
-
-    // TODO reset_unmatched_score check recyclarr
 
     if (value.upgrade) {
       if (serverMatch.upgradeAllowed !== value.upgrade.allowed) {
@@ -251,8 +284,6 @@ export const calculateQualityProfilesDiff = async (
     );
 
     let scoringDiff = false;
-
-    const scoringForQP = scoring.get(serverMatch.name!);
 
     if (scoringForQP) {
       const newCFFormats: ProfileFormatItemResource[] = [];
@@ -297,15 +328,18 @@ export const calculateQualityProfilesDiff = async (
       console.log(`No scoring for QualityProfile ${serverMatch.name!} found`);
     }
 
-    updatedServerObject.id = 24;
-    updatedServerObject.name = "TEST";
-    fs.writeFileSync("test.json", JSON.stringify(updatedServerObject, null, 2));
-
     console.log(
       `QualityProfile (${value.name}) - CF Changes: ${scoringDiff}, Some other diff: ${diffExist}`
     );
+
+    if (scoringDiff || diffExist) {
+      changedQPs.push(updatedServerObject);
+    } else {
+      noChangedQPs.push(value.name);
+    }
+
     console.log(changeList);
   }
 
-  throw new Error("STOP HERE");
+  return { create: createQPs, changedQPs: changedQPs, noChanges: noChangedQPs };
 };
