@@ -15,3 +15,7 @@ Possible ideas:
   - I don't want to fork a project to add custom things to it
 - Maybe an free GUI to sync your stuff 
 - Add additional best configuration for different languages/countries like Germany
+
+## Work TODOs
+
+- [ ] Optimize types. Generated ones work for first step but not very optimal because they do not correctly represent request/response types.
