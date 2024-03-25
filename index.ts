@@ -18,6 +18,11 @@ import {
   loadQualityDefinitionSonarrFromTrash,
 } from "./src/qualityDefinition";
 import {
+  calculateQualityProfilesDiff,
+  loadQualityProfilesSonarr,
+  mapQualityProfiles,
+} from "./src/qualityProfiles";
+import {
   cloneRecyclarritStuff,
   loadRecyclarrTemplates,
 } from "./src/recyclarrImporter";
@@ -30,6 +35,7 @@ import {
   TrashCF,
   TrashCFResource,
   TrashQualityDefintion,
+  YamlConfigQualityProfile,
   YamlInput,
 } from "./src/types";
 import {
@@ -1035,11 +1041,11 @@ const pipeline = async () => {
   const recyclarrTemplateMap = loadRecyclarrTemplates();
 
   const recylarrMergedTemplates: RecyclarrTemplates &
-    Required<Pick<RecyclarrTemplates, "custom_formats">> = {
-    custom_formats: [],
-  };
-
-  const scoring = new Map<string, { [key: string]: { score: number } }>();
+    Required<Pick<RecyclarrTemplates, "custom_formats" | "quality_profiles">> =
+    {
+      custom_formats: [],
+      quality_profiles: [],
+    };
 
   for (const test in applicationConfig.sonarr) {
     const value = applicationConfig.sonarr[test];
@@ -1061,13 +1067,24 @@ const pipeline = async () => {
             ...template.custom_formats
           );
         }
+
         if (template.quality_definition) {
           recylarrMergedTemplates.quality_definition =
             template.quality_definition;
         }
-        // TODO Quality profiles missing
+
+        if (template.quality_profiles) {
+          for (const qp of template.quality_profiles) {
+            recylarrMergedTemplates.quality_profiles.push(qp);
+          }
+        }
+
         // TODO Ignore recursive include for now
       });
+    }
+
+    if (value.custom_formats) {
+      recylarrMergedTemplates.custom_formats.push(...value.custom_formats);
     }
   }
 
@@ -1133,6 +1150,48 @@ const pipeline = async () => {
       );
     }
   }
+
+  // merge CFs of templates and custom CFs into one mapping of QualityProfile -> CFs + Score
+  // TODO traversing the merged templates probably to often once should be enough. Loop once and extract a couple of different maps, arrays as needed. Future optimization.
+  const cfToQualityProfiles = mapQualityProfiles(
+    mergedCFs,
+    recylarrMergedTemplates.custom_formats
+  );
+
+  // merge profiles from recyclarr templates into one
+  const qualityProfilesMerged = recylarrMergedTemplates.quality_profiles.reduce(
+    (p, c) => {
+      let existingQp = p.get(c.name);
+
+      if (!existingQp) {
+        p.set(c.name, { ...c });
+      } else {
+        existingQp = {
+          ...existingQp,
+          ...c,
+          // Overwriting qualities array for now
+          upgrade: { ...existingQp.upgrade, ...c.upgrade },
+        };
+        p.set(c.name, existingQp);
+      }
+
+      return p;
+    },
+    new Map<string, YamlConfigQualityProfile>()
+  );
+
+  console.log(qualityProfilesMerged);
+
+  // calculate diff from server <-> what we want to be there
+
+  const qpServer = await loadQualityProfilesSonarr();
+  console.log(qpServer);
+
+  const respose = await calculateQualityProfilesDiff(
+    qualityProfilesMerged,
+    cfToQualityProfiles,
+    qpServer
+  );
   /*
   - load trash
   - load custom resources

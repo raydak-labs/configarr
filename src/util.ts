@@ -247,3 +247,93 @@ export function compareObjectsCarr(
   const equal = changes.length === 0;
   return { equal, changes };
 }
+
+export function deepDiff(
+  object1: any,
+  object2: any
+): { equal: boolean; changes: string[] } {
+  const changes: string[] = [];
+
+  for (const key in object2) {
+    if (Object.prototype.hasOwnProperty.call(object2, key)) {
+      if (object1.hasOwnProperty(key)) {
+        const value1 = object1[key];
+        let value2 = object2[key];
+
+        // Todo remove should be already handled
+        if (key === "fields") {
+          if (!Array.isArray(value2)) {
+            value2 = [value2];
+          }
+        }
+
+        if (Array.isArray(value1)) {
+          if (!Array.isArray(value2)) {
+            changes.push(`Expected array for key ${key} in object2`);
+            continue;
+          }
+
+          if (value1.length !== value2.length) {
+            changes.push(
+              `Array length mismatch for key ${key}: object1 length ${value1.length}, object2 length ${value2.length}`
+            );
+            continue;
+          }
+
+          for (let i = 0; i < value1.length; i++) {
+            const { equal: isEqual, changes: subChanges } = deepDiff(
+              value1[i],
+              value2[i]
+            );
+            // changes.push(
+            //   ...subChanges.map((subChange) => `${key}[${i}].${subChange}`)
+            // );
+
+            if (subChanges.length > 0) {
+              changes.push(`${key}[${i}].${subChanges[0]}`);
+            }
+
+            if (!isEqual && changes.length <= 0) {
+              changes.push(
+                `Mismatch found in array element at index ${i} for key ${key}`
+              );
+            }
+          }
+        } else if (typeof value2 === "object" && value2 !== null) {
+          if (typeof value1 !== "object" || value1 === null) {
+            changes.push(`Expected object for key ${key} in object1`);
+            continue;
+          }
+
+          const { equal: isEqual, changes: subChanges } = deepDiff(
+            value1,
+            value2
+          );
+          changes.push(...subChanges.map((subChange) => `${key}.${subChange}`));
+          if (!isEqual) {
+            changes.push(`Mismatch found for key ${key}`);
+          }
+        } else {
+          if (value1 !== value2) {
+            changes.push(
+              `Mismatch found for key ${key}: server value ${value1}, value to set ${value2}`
+            );
+          }
+        }
+      } else {
+        console.log(`Ignore unknown key for comparison: ${key}.`);
+      }
+    }
+  }
+
+  const equal = changes.length === 0;
+  return { equal, changes };
+}
+
+export function notEmpty<TValue>(
+  value: TValue | null | undefined
+): value is TValue {
+  if (value === null || value === undefined) return false;
+  const testDummy: TValue = value;
+  return true;
+}

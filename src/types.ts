@@ -58,7 +58,7 @@ export type CFProcessing = {
 
 export type YamlList = {
   trash_ids?: string[];
-  quality_profiles: { name: string }[];
+  quality_profiles: { name: string; score?: number }[];
 };
 
 export type YamlInput = {
@@ -107,11 +107,14 @@ export type YamlConfigQualityProfile = {
 
 export type YamlConfigQualityProfileItems = {
   name: string;
-  qualitites: string[];
+  qualities?: string[];
 };
 
 export type RecyclarrTemplates = Partial<
-  Pick<YamlConfigInstance, "quality_definition" | "custom_formats" | "include">
+  Pick<
+    YamlConfigInstance,
+    "quality_definition" | "custom_formats" | "include" | "quality_profiles"
+  >
 >;
 
 export type YamlConfig = {
