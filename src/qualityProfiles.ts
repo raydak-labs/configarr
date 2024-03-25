@@ -10,6 +10,7 @@ import { loadServerCustomFormats } from "./customFormats";
 import { loadQualityDefinitionFromSonarr } from "./qualityDefinition";
 import {
   CFProcessing,
+  RecyclarrMergedTemplates,
   YamlConfigQualityProfile,
   YamlConfigQualityProfileItems,
   YamlList,
@@ -18,13 +19,18 @@ import { notEmpty } from "./util";
 
 export const mapQualityProfiles = (
   { carrIdMapping }: CFProcessing,
-  customFormats: YamlList[]
+  customFormats: YamlList[],
+  config: RecyclarrMergedTemplates
 ) => {
   // QualityProfile -> (CF Name -> Scoring)
   const profileScores = new Map<
     string,
     Map<string, ProfileFormatItemResource>
   >();
+
+  const defaultScoringMap = new Map(
+    config.quality_profiles.map((obj) => [obj.name, obj])
+  );
 
   for (const { trash_ids, quality_profiles } of customFormats) {
     if (!trash_ids) {
@@ -57,8 +63,20 @@ export const mapQualityProfiles = (
         }
 
         cfScore.name = carr.carrConfig.name;
+
+        const profileScoreConfig = defaultScoringMap.get(profile.name);
+
+        let score_set: number | undefined;
+
+        if (profileScoreConfig && profileScoreConfig.score_set) {
+          score_set =
+            carr.carrConfig.configarr_scores?.[profileScoreConfig.score_set];
+        }
+
         cfScore.score =
-          profile.score || carr.carrConfig.configarr_scores?.default;
+          profile.score ??
+          score_set ??
+          carr.carrConfig.configarr_scores?.default;
       }
     }
   }
@@ -131,6 +149,7 @@ const mapQualities = (
 };
 
 export const calculateQualityProfilesDiff = async (
+  cfManaged: CFProcessing,
   qpMerged: Map<string, YamlConfigQualityProfile>,
   scoring: Map<string, Map<string, ProfileFormatItemResource>>,
   serverQP: QualityProfileResource[]
@@ -179,7 +198,10 @@ export const calculateQualityProfilesDiff = async (
         for (const [scoreKey, scoreValue] of scoringForQP.entries()) {
           const currentCf = cfs.get(scoreKey);
           if (currentCf) {
-            currentCf.score = scoreValue.score;
+            currentCf.score =
+              scoreValue.score ??
+              cfManaged.cfNameToCarrConfig.get(scoreKey)?.configarr_scores
+                ?.default;
           }
         }
       }

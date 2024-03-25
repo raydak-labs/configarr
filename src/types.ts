@@ -32,7 +32,16 @@ export type TrashCFResource = Omit<CustomFormatResource, "specifications"> & {
 export type TrashCF = {
   trash_id: string;
   trash_scores?: {
-    default: number;
+    default?: number;
+    "anime-sonarr"?: number;
+    "anime-radarr"?: number;
+    "sqp-1-1080p"?: number;
+    "sqp-1-2160p"?: number;
+    "sqp-2"?: number;
+    "sqp-3"?: number;
+    "sqp-4"?: number;
+    "sqp-5"?: number;
+    "french-vostfr"?: number;
   };
   trash_regex?: string;
   trash_description?: string;
@@ -117,6 +126,9 @@ export type RecyclarrTemplates = Partial<
     "quality_definition" | "custom_formats" | "include" | "quality_profiles"
   >
 >;
+
+export type RecyclarrMergedTemplates = RecyclarrTemplates &
+  Required<Pick<RecyclarrTemplates, "custom_formats" | "quality_profiles">>;
 
 export type YamlConfig = {
   trashGuideUrl: string;

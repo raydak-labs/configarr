@@ -32,7 +32,7 @@ import {
   CFProcessing,
   ConfigarrCF,
   DynamicImportType,
-  RecyclarrTemplates,
+  RecyclarrMergedTemplates,
   TrashCF,
   TrashCFResource,
   TrashQualityDefintion,
@@ -1033,12 +1033,10 @@ const pipeline = async () => {
 
   const recyclarrTemplateMap = loadRecyclarrTemplates();
 
-  const recylarrMergedTemplates: RecyclarrTemplates &
-    Required<Pick<RecyclarrTemplates, "custom_formats" | "quality_profiles">> =
-    {
-      custom_formats: [],
-      quality_profiles: [],
-    };
+  const recylarrMergedTemplates: RecyclarrMergedTemplates = {
+    custom_formats: [],
+    quality_profiles: [],
+  };
 
   for (const test in applicationConfig.sonarr) {
     const value = applicationConfig.sonarr[test];
@@ -1152,7 +1150,8 @@ const pipeline = async () => {
   // TODO traversing the merged templates probably to often once should be enough. Loop once and extract a couple of different maps, arrays as needed. Future optimization.
   const cfToQualityProfiles = mapQualityProfiles(
     mergedCFs,
-    recylarrMergedTemplates.custom_formats
+    recylarrMergedTemplates.custom_formats,
+    recylarrMergedTemplates
   );
 
   // merge profiles from recyclarr templates into one
@@ -1190,6 +1189,7 @@ const pipeline = async () => {
   const qpServer = await loadQualityProfilesSonarr();
 
   const { changedQPs, create, noChanges } = await calculateQualityProfilesDiff(
+    mergedCFs,
     qualityProfilesMerged,
     cfToQualityProfiles,
     qpServer
