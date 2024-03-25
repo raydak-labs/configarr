@@ -1086,6 +1086,10 @@ const pipeline = async () => {
     if (value.custom_formats) {
       recylarrMergedTemplates.custom_formats.push(...value.custom_formats);
     }
+
+    if (value.quality_profiles) {
+      recylarrMergedTemplates.quality_profiles.push(...value.quality_profiles);
+    }
   }
 
   console.log(recylarrMergedTemplates);
@@ -1171,6 +1175,14 @@ const pipeline = async () => {
           ...c,
           // Overwriting qualities array for now
           upgrade: { ...existingQp.upgrade, ...c.upgrade },
+          reset_unmatched_scores: {
+            ...existingQp.reset_unmatched_scores,
+            ...c.reset_unmatched_scores,
+            enabled:
+              (c.reset_unmatched_scores?.enabled ??
+                existingQp.reset_unmatched_scores?.enabled) ||
+              false,
+          },
         };
         p.set(c.name, existingQp);
       }
@@ -1180,12 +1192,9 @@ const pipeline = async () => {
     new Map<string, YamlConfigQualityProfile>()
   );
 
-  console.log(qualityProfilesMerged);
-
   // calculate diff from server <-> what we want to be there
 
   const qpServer = await loadQualityProfilesSonarr();
-  console.log(qpServer);
 
   const respose = await calculateQualityProfilesDiff(
     qualityProfilesMerged,

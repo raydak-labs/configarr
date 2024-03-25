@@ -96,6 +96,11 @@ export const calculateQualityProfilesDiff = async (
 
   for (const [name, value] of qpMerged.entries()) {
     const serverMatch = mappedServerQP.get(name);
+    const resetScoreExceptions: Map<string, boolean> =
+      value.reset_unmatched_scores?.except?.reduce((p, c) => {
+        p.set(c, true);
+        return p;
+      }, new Map()) ?? new Map();
 
     if (!serverMatch) {
       console.log(`QualityProfile not found in server. Ignoring: ${name}`);
@@ -252,17 +257,38 @@ export const calculateQualityProfilesDiff = async (
     if (scoringForQP) {
       const newCFFormats: ProfileFormatItemResource[] = [];
 
-      for (const [key, value] of scoringForQP.entries()) {
-        const serverCF = serverCFMap.get(key);
+      for (const [scoreKey, scoreValue] of scoringForQP.entries()) {
+        const serverCF = serverCFMap.get(scoreKey);
 
-        if (value.score != null && serverCF?.score !== value.score) {
-          scoringDiff = true;
-          changeList.push(
-            `CF diff ${value.name}: server: ${serverCF?.score} - expected: ${value.score}`
+        if (scoreValue.score == null) {
+          console.log(
+            serverCF?.score,
+            value.reset_unmatched_scores?.enabled,
+            !resetScoreExceptions.has(scoreKey)
           );
-          newCFFormats.push({ ...serverCF, score: value.score });
+          if (
+            value.reset_unmatched_scores?.enabled &&
+            !resetScoreExceptions.has(scoreKey) &&
+            serverCF?.score !== 0
+          ) {
+            scoringDiff = true;
+            changeList.push(
+              `CF resetting score '${scoreValue.name}': server ${serverCF?.score} - client: 0`
+            );
+            newCFFormats.push({ ...serverCF, score: 0 });
+          } else {
+            newCFFormats.push({ ...serverCF });
+          }
         } else {
-          newCFFormats.push({ ...serverCF });
+          if (serverCF?.score !== scoreValue.score) {
+            scoringDiff = true;
+            changeList.push(
+              `CF diff ${scoreValue.name}: server: ${serverCF?.score} - expected: ${scoreValue.score}`
+            );
+            newCFFormats.push({ ...serverCF, score: scoreValue.score });
+          } else {
+            newCFFormats.push({ ...serverCF });
+          }
         }
       }
 
@@ -275,7 +301,9 @@ export const calculateQualityProfilesDiff = async (
     updatedServerObject.name = "TEST";
     fs.writeFileSync("test.json", JSON.stringify(updatedServerObject, null, 2));
 
-    console.log(`CF Changes: ${scoringDiff}, Some other diff: ${diffExist}`);
+    console.log(
+      `QualityProfile (${value.name}) - CF Changes: ${scoringDiff}, Some other diff: ${diffExist}`
+    );
     console.log(changeList);
   }
 

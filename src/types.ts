@@ -93,6 +93,7 @@ export type YamlConfigQualityProfile = {
   name: string;
   reset_unmatched_scores?: {
     enabled: boolean;
+    except?: string[];
   };
   upgrade: {
     allowed: boolean;
