@@ -9,3 +9,5 @@ repos
 
 config.yml
 secrets.yml
+
+test.json
