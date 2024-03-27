@@ -1,5 +1,6 @@
 import path from "path";
 import {
+  CustomFormatResource,
   ProfileFormatItemResource,
   QualityDefinitionResource,
   QualityProfileQualityItemResource,
@@ -202,20 +203,25 @@ export const calculateQualityProfilesDiff = async (
 
     if (!serverMatch) {
       console.log(`QualityProfile not found in server. Ignoring: ${name}`);
-      // TODO create needed
       const mappedQ = mapQualities(qd, value);
       const tmpMap = new Map(mappedQ.map((obj) => [obj.name!, obj]));
 
-      const cfs: Map<string, ProfileFormatItemResource> = new Map(JSON.parse(JSON.stringify(Array.from(cfsServerMap))));
+      const cfs: Map<string, CustomFormatResource> = new Map(JSON.parse(JSON.stringify(Array.from(cfsServerMap))));
 
-      if (scoringForQP) {
-        for (const [scoreKey, scoreValue] of scoringForQP.entries()) {
-          const currentCf = cfs.get(scoreKey);
-          if (currentCf) {
-            currentCf.score = scoreValue.score ?? cfManaged.cfNameToCarrConfig.get(scoreKey)?.configarr_scores?.default;
-          }
+      const customFormatsMapped = Array.from(cfs.values()).map<ProfileFormatItemResource>((e) => {
+        let score = 0;
+
+        if (scoringForQP) {
+          const providedScore = scoringForQP.get(e.name!);
+          score = providedScore?.score || 0;
         }
-      }
+
+        return {
+          name: e.name,
+          score: score,
+          format: e.id,
+        };
+      });
 
       createQPs.push({
         name: value.name,
@@ -224,7 +230,7 @@ export const calculateQualityProfilesDiff = async (
         cutoffFormatScore: value.upgrade.until_score,
         minFormatScore: value.min_format_score,
         upgradeAllowed: value.upgrade.allowed,
-        formatItems: Array.from(cfs.values()),
+        formatItems: customFormatsMapped,
       });
       continue;
     }
@@ -269,6 +275,14 @@ export const calculateQualityProfilesDiff = async (
 
       changeList.push(`QualityProfile items do not match`);
       updatedServerObject.items = mapQualities(qd, value);
+    } else {
+      // TODO no sure if a useful feature
+      if (value.quality_sort === "top") {
+        const length = updatedServerObject.items!.length;
+
+        // TODO sorting
+      } else {
+      }
     }
 
     if (value.min_format_score) {
@@ -277,10 +291,6 @@ export const calculateQualityProfilesDiff = async (
         diffExist = true;
         changeList.push(`MinFormatScore diff: server: ${serverMatch.minFormatScore} - expected: ${value.min_format_score}`);
       }
-    }
-
-    // TODO quality_sort,reset_unmatched_score, score_set . check recyclarr
-    if (value.quality_sort) {
     }
 
     if (value.upgrade) {
