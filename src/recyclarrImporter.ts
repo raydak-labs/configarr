@@ -39,7 +39,5 @@ export const loadRecyclarrTemplates = () => {
   fillMap(recyclarrRepoPaths.sonarrQD);
   fillMap(recyclarrRepoPaths.sonarrQP);
 
-  console.log(`loadRecyclarrTemplates: nomap log`);
-
   return map;
 };

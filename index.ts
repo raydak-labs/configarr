@@ -787,6 +787,18 @@ const pipeline = async (value: YamlConfigInstance) => {
     fs.writeFileSync(`test${i}.json`, JSON.stringify(e, null, 2), "utf-8");
   });
   console.log(`QPs: Create: ${create.length}, Update: ${changedQPs.length}, Unchanged: ${noChanges.length}`);
+
+  if (!IS_DRY_RUN) {
+    for (const element of create) {
+      const newProfile = await api.v3QualityprofileCreate(element);
+      console.log(`Created QualityProfile: ${newProfile.data.name}`);
+    }
+
+    for (const element of changedQPs) {
+      const newProfile = await api.v3QualityprofileUpdate("" + element.id, element);
+      console.log(`Updated QualityProfile: ${newProfile.data.name}`);
+    }
+  }
   /*
   - load trash
   - load custom resources

@@ -44,7 +44,7 @@ export const calculateQualityDefinitionDiff = (serverQDs: QualityDefinitionResou
       const changes: string[] = [];
 
       if (!element.maxSize) {
-        console.log("WTF");
+        console.log(`No maxSize defined: ${element.title}`);
       }
 
       if (element.minSize !== tq.min) {
