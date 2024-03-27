@@ -1,18 +1,18 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, describe } from "vitest";
 import {
   CustomFormatResource,
   PrivacyLevel,
   QualityDefinitionResource,
   QualitySource,
-} from "../src/__generated__/MySuperbApi";
+} from "./__generated__/MySuperbApi";
 import {
   calculateQualityDefinitionDiff,
   loadQualityDefinitionFromSonarr,
-} from "../src/qualityDefinition";
-import { TrashCF, TrashCFSpF, TrashQualityDefintion } from "../src/types";
-import { carrCfToValidCf, compareObjectsCarr, toCarrCF } from "../src/util";
+} from "./qualityDefinition";
+import { TrashCF, TrashCFSpF, TrashQualityDefintion } from "./types";
+import { carrCfToValidCf, compareObjectsCarr, toCarrCF } from "./util";
 
-test.describe("SizeSpecification", async () => {
+describe("SizeSpecification", async () => {
   const serverResponse: CustomFormatResource = {
     id: 103,
     name: "Size: Block More 40GB",
@@ -121,7 +121,7 @@ test.describe("SizeSpecification", async () => {
   });
 });
 
-test.describe("QualityDefinitions", async () => {
+describe("QualityDefinitions", async () => {
   const server: QualityDefinitionResource[] = [
     {
       quality: {

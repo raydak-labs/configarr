@@ -2,10 +2,12 @@
   "name": "swagger-ts-gen",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "type": "module",
   "scripts": {
-    "tsg": "swagger-to-ts -f input.json -o test.ts",
-    "go": "tsx index.ts"
+    "coverage": "vitest run --coverage",
+    "go": "tsx index.ts",
+    "test": "vitest",
+    "tsg": "swagger-to-ts -f input.json -o test.ts"
   },
   "keywords": [],
   "author": "",
@@ -22,6 +24,8 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.42.1",
-    "@types/node": "^20.11.30"
+    "@types/node": "^20.11.30",
+    "@vitest/coverage-v8": "^1.4.0",
+    "vitest": "1.4.0"
   }
 }
