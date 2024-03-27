@@ -72,7 +72,7 @@ export const manageCf = async (cfProcessing: CFProcessing, serverCfs: Map<string
           console.log(`Created CF ${tr.requestConfig.name}`);
         }
       } catch (err) {
-        console.log(`Failed creating CF ${tr.requestConfig.name}`, err.response.data);
+        throw new Error(`Failed creating CF '${tr.requestConfig.name}'. Message: ${err.response.data?.message}`);
       }
     }
   };
