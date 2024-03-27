@@ -73,7 +73,7 @@ describe("SizeSpecification", async () => {
     const copied: typeof custom = JSON.parse(JSON.stringify(custom));
 
     const result = compareObjectsCarr(serverResponse, carrCfToValidCf(toCarrCF(copied)));
-    await expect(result.equal).toBe(true);
+    expect(result.equal).toBe(true);
   });
 
   test("mismatch negate", async () => {
@@ -81,7 +81,7 @@ describe("SizeSpecification", async () => {
     copied.specifications![0].negate = true;
 
     const result = compareObjectsCarr(serverResponse, carrCfToValidCf(toCarrCF(copied)));
-    await expect(result.equal).toBe(false);
+    expect(result.equal).toBe(false);
   });
 
   test("mismatch required", async () => {
@@ -89,7 +89,7 @@ describe("SizeSpecification", async () => {
     copied.specifications![0].required = true;
 
     const result = compareObjectsCarr(serverResponse, carrCfToValidCf(toCarrCF(copied)));
-    await expect(result.equal).toBe(false);
+    expect(result.equal).toBe(false);
   });
 
   test("max differ", async () => {
@@ -97,7 +97,7 @@ describe("SizeSpecification", async () => {
     (copied.specifications![0].fields as TrashCFSpF).max = 100;
 
     const result = compareObjectsCarr(serverResponse, carrCfToValidCf(toCarrCF(copied)));
-    await expect(result.equal).toBe(false);
+    expect(result.equal).toBe(false);
   });
 });
 
@@ -152,7 +152,7 @@ describe("QualityDefinitions", async () => {
   });
 
   test("calculateQualityDefinitionDiff - no diff", async ({}) => {
-    const result = await calculateQualityDefinitionDiff(server, client);
+    const result = calculateQualityDefinitionDiff(server, client);
 
     expect(result.changeMap.size).toBe(0);
     expect(result.create).toHaveLength(0);
@@ -162,7 +162,7 @@ describe("QualityDefinitions", async () => {
     const clone: TrashQualityDefintion = JSON.parse(JSON.stringify(client));
     clone.qualities[0].min = 3;
 
-    const result = await calculateQualityDefinitionDiff(server, clone);
+    const result = calculateQualityDefinitionDiff(server, clone);
 
     expect(result.changeMap.size).toBe(1);
     expect(result.create).toHaveLength(0);
@@ -172,7 +172,7 @@ describe("QualityDefinitions", async () => {
     const clone: TrashQualityDefintion = JSON.parse(JSON.stringify(client));
     clone.qualities[0].max = 3;
 
-    const result = await calculateQualityDefinitionDiff(server, clone);
+    const result = calculateQualityDefinitionDiff(server, clone);
 
     expect(result.changeMap.size).toBe(1);
     expect(result.create).toHaveLength(0);
@@ -182,7 +182,7 @@ describe("QualityDefinitions", async () => {
     const clone: TrashQualityDefintion = JSON.parse(JSON.stringify(client));
     clone.qualities[0].preferred = 3;
 
-    const result = await calculateQualityDefinitionDiff(server, clone);
+    const result = calculateQualityDefinitionDiff(server, clone);
 
     expect(result.changeMap.size).toBe(1);
     expect(result.create).toHaveLength(0);
@@ -192,7 +192,7 @@ describe("QualityDefinitions", async () => {
     const clone: TrashQualityDefintion = JSON.parse(JSON.stringify(client));
     clone.qualities[0].quality = "New";
 
-    const result = await calculateQualityDefinitionDiff(server, clone);
+    const result = calculateQualityDefinitionDiff(server, clone);
 
     expect(result.changeMap.size).toBe(0);
     expect(result.create).toHaveLength(1);
