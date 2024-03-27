@@ -57,6 +57,7 @@ export const mapQualityProfiles = ({ carrIdMapping }: CFProcessing, customFormat
           score_set = carr.carrConfig.configarr_scores?.[profileScoreConfig.score_set];
         }
 
+        // TODO (1): Don't set to 0. If undefined will be handled by reset_unmatched_score. Or should we directly handle this here?
         cfScore.score = profile.score ?? score_set ?? carr.carrConfig.configarr_scores?.default;
       }
     }
@@ -265,9 +266,10 @@ export const calculateQualityProfilesDiff = async (
 
       for (const [scoreKey, scoreValue] of scoringForQP.entries()) {
         const serverCF = serverCFMap.get(scoreKey);
+        serverCFMap.delete(scoreKey);
 
+        // TODO (1): check where best handled
         if (scoreValue.score == null) {
-          console.log(serverCF?.score, value.reset_unmatched_scores?.enabled, !resetScoreExceptions.has(scoreKey));
           if (value.reset_unmatched_scores?.enabled && !resetScoreExceptions.has(scoreKey) && serverCF?.score !== 0) {
             scoringDiff = true;
             changeList.push(`CF resetting score '${scoreValue.name}': server ${serverCF?.score} - client: 0`);
@@ -285,6 +287,23 @@ export const calculateQualityProfilesDiff = async (
           }
         }
       }
+
+      const missingCfs = Array.from(serverCFMap.values()).reduce<ProfileFormatItemResource[]>((p, c) => {
+        const cfName = c.name!;
+        const cfScore = c.score;
+
+        if (value.reset_unmatched_scores?.enabled && !resetScoreExceptions.has(c.name!) && cfScore !== 0) {
+          scoringDiff = true;
+          changeList.push(`CF resetting score '${cfName}': server ${cfScore} - client: 0`);
+          p.push({ ...c, score: 0 });
+        } else {
+          p.push(c);
+        }
+
+        return p;
+      }, []);
+
+      newCFFormats.push(...missingCfs);
 
       updatedServerObject.formatItems = newCFFormats;
     } else {
