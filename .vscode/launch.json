@@ -3,6 +3,12 @@
 
   "configurations": [
     {
+      "command": "pnpm start",
+      "name": "pnpm start",
+      "request": "launch",
+      "type": "node-terminal"
+    },
+    {
       "name": "tsx",
       "type": "node",
       "request": "launch",
