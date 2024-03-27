@@ -155,4 +155,5 @@ dist
 config.yml
 secrets.yml
 
-test.json
+test*.json
+repos/

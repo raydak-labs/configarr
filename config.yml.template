@@ -6,7 +6,7 @@ recyclarrConfigUrl: https://github.com/recyclarr/config-templates
 sonarr:
   series:
     # Set the URL/API Key to your actual instance
-    base_url: https://sonarr.server
+    base_url: http://localhost:8989
     api_key: !secret SONARR_API_KEY
 
     # Quality definitions from the guide to sync to Sonarr. Choices: series, anime

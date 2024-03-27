@@ -1,15 +1,15 @@
 {
-  "name": "swagger-ts-gen",
-  "version": "1.0.0",
+  "name": "configarr",
+  "version": "0.0.0",
   "description": "",
   "type": "module",
   "scripts": {
     "coverage": "vitest run --coverage",
     "go": "tsx index.ts",
+    "start": "tsx index.ts",
     "test": "vitest",
     "tsg": "swagger-to-ts -f input.json -o test.ts"
   },
-  "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {

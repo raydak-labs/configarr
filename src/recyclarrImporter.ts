@@ -9,10 +9,10 @@ export const cloneRecyclarrTemplateRepo = async () => {
   const rootPath = recyclarrRepoPaths.root;
 
   if (!fs.existsSync(rootPath)) {
-    fs.mkdirSync(rootPath);
+    fs.mkdirSync(rootPath, { recursive: true });
   }
 
-  const gitClient = simpleGit(rootPath);
+  const gitClient = simpleGit({ baseDir: rootPath });
   const r = await gitClient.checkIsRepo(CheckRepoActions.IS_REPO_ROOT);
 
   const applicationConfig = getConfig();

@@ -9,7 +9,7 @@ import { carrCfToValidCf, toCarrCF, trashRepoPaths } from "./util";
 const gitStuff = async () => {
   const trashRepoPath = "./repos/trash-guides";
 
-  const gitClient = simpleGit(trashRepoPath);
+  const gitClient = simpleGit({ baseDir: trashRepoPath });
   const r = await gitClient.checkIsRepo();
 
   if (r) {
@@ -25,10 +25,10 @@ export const cloneTrashRepo = async () => {
   const rootPath = trashRepoPaths.root;
 
   if (!fs.existsSync(rootPath)) {
-    fs.mkdirSync(rootPath);
+    fs.mkdirSync(rootPath, { recursive: true });
   }
 
-  const gitClient = simpleGit(rootPath);
+  const gitClient = simpleGit({ baseDir: rootPath });
   const r = await gitClient.checkIsRepo(CheckRepoActions.IS_REPO_ROOT);
 
   const applicationConfig = getConfig();
