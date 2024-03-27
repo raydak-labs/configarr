@@ -5,6 +5,16 @@ import { getSonarrApi } from "./api";
 import { CFProcessing } from "./types";
 import { IS_DRY_RUN, IS_LOCAL_SAMPLE_MODE } from "./util";
 
+export const deleteAllCustomFormats = async () => {
+  const api = getSonarrApi();
+  const cfOnServer = await api.v3CustomformatList();
+
+  for (const cf of cfOnServer.data) {
+    await api.v3CustomfilterDelete(cf.id!);
+    console.log(`Deleted CF: '${cf.name}'`);
+  }
+};
+
 export const loadServerCustomFormats = async (): Promise<CustomFormatResource[]> => {
   if (IS_LOCAL_SAMPLE_MODE) {
     return (await import(path.resolve("./tests/samples/cfs.json"))).default as unknown as Promise<CustomFormatResource[]>;
