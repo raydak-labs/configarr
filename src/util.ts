@@ -301,3 +301,4 @@ export function notEmpty<TValue>(value: TValue | null | undefined): value is TVa
   const testDummy: TValue = value;
   return true;
 }
+export const ROOT_PATH = path.resolve(process.cwd());

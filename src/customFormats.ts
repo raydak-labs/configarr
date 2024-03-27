@@ -1,9 +1,9 @@
+import { readdirSync } from "fs";
 import path from "path";
-import { compareObjectsCarr } from "..";
 import { CustomFormatResource } from "./__generated__/MySuperbApi";
 import { getSonarrApi } from "./api";
-import { CFProcessing } from "./types";
-import { IS_DRY_RUN, IS_LOCAL_SAMPLE_MODE } from "./util";
+import { CFProcessing, ConfigarrCF, DynamicImportType, TrashCF, YamlInput } from "./types";
+import { IS_DRY_RUN, IS_LOCAL_SAMPLE_MODE, ROOT_PATH, carrCfToValidCf, compareObjectsCarr, toCarrCF } from "./util";
 
 export const deleteAllCustomFormats = async () => {
   const api = getSonarrApi();
@@ -80,4 +80,78 @@ export const manageCf = async (cfProcessing: CFProcessing, serverCfs: Map<string
   for (const cf of cfsToManage) {
     await manageSingle(cf);
   }
+};
+export const loadLocalCfs = async (): Promise<CFProcessing | null> => {
+  const sonarrLocalPath = process.env.SONARR_LOCAL_PATH;
+  if (!sonarrLocalPath) {
+    console.log("Ignoring local cfs.");
+    return null;
+  }
+
+  const files = readdirSync(`${sonarrLocalPath}`).filter((fn) => fn.endsWith("json"));
+
+  const carrIdToObject = new Map<string, { carrConfig: ConfigarrCF; requestConfig: CustomFormatResource }>();
+
+  const cfNameToCarrObject = new Map<string, ConfigarrCF>();
+
+  for (const file of files) {
+    const name = `${sonarrLocalPath}/${file}`;
+    const cf: DynamicImportType<TrashCF | ConfigarrCF> = await import(`${ROOT_PATH}/${name}`);
+
+    const cfD = toCarrCF(cf.default);
+
+    carrIdToObject.set(cfD.configarr_id, {
+      carrConfig: cfD,
+      requestConfig: carrCfToValidCf(cfD),
+    });
+
+    if (cfD.name) {
+      cfNameToCarrObject.set(cfD.name, cfD);
+    }
+  }
+
+  return {
+    carrIdMapping: carrIdToObject,
+    cfNameToCarrConfig: cfNameToCarrObject,
+  };
+};
+export const calculateCFsToManage = (yaml: YamlInput) => {
+  const cfTrashToManage: Set<string> = new Set();
+
+  yaml.custom_formats.map((cf) => {
+    if (cf.trash_ids) {
+      cf.trash_ids.forEach((tid) => cfTrashToManage.add(tid));
+    }
+  });
+
+  return cfTrashToManage;
+};
+export const mergeCfSources = (listOfCfs: (CFProcessing | null)[]): CFProcessing => {
+  return listOfCfs.reduce<CFProcessing>(
+    (p, c) => {
+      if (!c) {
+        return p;
+      }
+
+      for (const [key, value] of c.carrIdMapping.entries()) {
+        if (p.carrIdMapping.has(key)) {
+          console.log(`Overwriting ${key} during CF merge`);
+        }
+        p.carrIdMapping.set(key, value);
+      }
+
+      for (const [key, value] of c.cfNameToCarrConfig.entries()) {
+        if (p.cfNameToCarrConfig.has(key)) {
+          console.log(`Overwriting ${key} during CF merge`);
+        }
+        p.cfNameToCarrConfig.set(key, value);
+      }
+
+      return p;
+    },
+    {
+      carrIdMapping: new Map(),
+      cfNameToCarrConfig: new Map(),
+    },
+  );
 };
