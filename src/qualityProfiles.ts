@@ -9,7 +9,7 @@ import { getSonarrApi } from "./api";
 import { loadServerCustomFormats } from "./customFormats";
 import { loadQualityDefinitionFromSonarr } from "./qualityDefinition";
 import { CFProcessing, RecyclarrMergedTemplates, YamlConfigQualityProfile, YamlConfigQualityProfileItems, YamlList } from "./types";
-import { notEmpty } from "./util";
+import { IS_LOCAL_SAMPLE_MODE, notEmpty } from "./util";
 
 export const mapQualityProfiles = ({ carrIdMapping }: CFProcessing, customFormats: YamlList[], config: RecyclarrMergedTemplates) => {
   // QualityProfile -> (CF Name -> Scoring)
@@ -67,9 +67,9 @@ export const mapQualityProfiles = ({ carrIdMapping }: CFProcessing, customFormat
 };
 
 export const loadQualityProfilesSonarr = async (): Promise<QualityProfileResource[]> => {
-  // TODO mock
-  return (await import(path.resolve(`./tests/samples/quality_profiles.json`))).default;
-
+  if (IS_LOCAL_SAMPLE_MODE) {
+    return (await import(path.resolve(`./tests/samples/quality_profiles.json`))).default;
+  }
   const api = getSonarrApi();
 
   const qualityProfiles = await api.v3QualityprofileList();

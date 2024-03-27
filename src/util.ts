@@ -3,6 +3,7 @@ import { CustomFormatResource } from "./__generated__/MySuperbApi";
 import { ConfigarrCF, TrashCF, UserFriendlyField } from "./types";
 
 export const IS_DRY_RUN = process.env.DRY_RUN === "true";
+export const IS_LOCAL_SAMPLE_MODE = process.env.LOAD_LOCAL_SAMPLES === "true";
 
 export const repoPath = path.resolve(process.env.CUSTOM_REPO_ROOT || "./repos");
 

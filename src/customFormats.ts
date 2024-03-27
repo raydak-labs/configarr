@@ -3,11 +3,12 @@ import { compareObjectsCarr } from "..";
 import { CustomFormatResource } from "./__generated__/MySuperbApi";
 import { getSonarrApi } from "./api";
 import { CFProcessing } from "./types";
-import { IS_DRY_RUN } from "./util";
+import { IS_DRY_RUN, IS_LOCAL_SAMPLE_MODE } from "./util";
 
 export const loadServerCustomFormats = async (): Promise<CustomFormatResource[]> => {
-  return (await import(path.resolve("./tests/samples/cfs.json"))).default as unknown as Promise<CustomFormatResource[]>;
-
+  if (IS_LOCAL_SAMPLE_MODE) {
+    return (await import(path.resolve("./tests/samples/cfs.json"))).default as unknown as Promise<CustomFormatResource[]>;
+  }
   const api = getSonarrApi();
   const cfOnServer = await api.v3CustomformatList();
   return cfOnServer.data;

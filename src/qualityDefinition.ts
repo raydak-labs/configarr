@@ -2,7 +2,7 @@ import path from "path";
 import { QualityDefinitionResource } from "./__generated__/MySuperbApi";
 import { getSonarrApi } from "./api";
 import { TrashQualityDefintion, TrashQualityDefintionQuality } from "./types";
-import { trashRepoPaths } from "./util";
+import { IS_LOCAL_SAMPLE_MODE, trashRepoPaths } from "./util";
 
 // anime and series exists in trash guide
 export type QualityDefintionsSonarr = "anime" | "series" | "custom";
@@ -21,8 +21,9 @@ export const loadQualityDefinitionSonarrFromTrash = async (qdType: QualityDefint
 };
 
 export const loadQualityDefinitionFromSonarr = async (): Promise<QualityDefinitionResource[]> => {
-  // TODO mock
-  return (await import(path.resolve("./tests/samples/qualityDefinition.json"))).default;
+  if (IS_LOCAL_SAMPLE_MODE) {
+    return (await import(path.resolve("./tests/samples/qualityDefinition.json"))).default;
+  }
   return (await getSonarrApi().v3QualitydefinitionList()).data;
 };
 
