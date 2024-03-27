@@ -8,29 +8,14 @@ import {
 import { getSonarrApi } from "./api";
 import { loadServerCustomFormats } from "./customFormats";
 import { loadQualityDefinitionFromSonarr } from "./qualityDefinition";
-import {
-  CFProcessing,
-  RecyclarrMergedTemplates,
-  YamlConfigQualityProfile,
-  YamlConfigQualityProfileItems,
-  YamlList,
-} from "./types";
+import { CFProcessing, RecyclarrMergedTemplates, YamlConfigQualityProfile, YamlConfigQualityProfileItems, YamlList } from "./types";
 import { notEmpty } from "./util";
 
-export const mapQualityProfiles = (
-  { carrIdMapping }: CFProcessing,
-  customFormats: YamlList[],
-  config: RecyclarrMergedTemplates
-) => {
+export const mapQualityProfiles = ({ carrIdMapping }: CFProcessing, customFormats: YamlList[], config: RecyclarrMergedTemplates) => {
   // QualityProfile -> (CF Name -> Scoring)
-  const profileScores = new Map<
-    string,
-    Map<string, ProfileFormatItemResource>
-  >();
+  const profileScores = new Map<string, Map<string, ProfileFormatItemResource>>();
 
-  const defaultScoringMap = new Map(
-    config.quality_profiles.map((obj) => [obj.name, obj])
-  );
+  const defaultScoringMap = new Map(config.quality_profiles.map((obj) => [obj.name, obj]));
 
   for (const { trash_ids, quality_profiles } of customFormats) {
     if (!trash_ids) {
@@ -69,14 +54,10 @@ export const mapQualityProfiles = (
         let score_set: number | undefined;
 
         if (profileScoreConfig && profileScoreConfig.score_set) {
-          score_set =
-            carr.carrConfig.configarr_scores?.[profileScoreConfig.score_set];
+          score_set = carr.carrConfig.configarr_scores?.[profileScoreConfig.score_set];
         }
 
-        cfScore.score =
-          profile.score ??
-          score_set ??
-          carr.carrConfig.configarr_scores?.default;
+        cfScore.score = profile.score ?? score_set ?? carr.carrConfig.configarr_scores?.default;
       }
     }
   }
@@ -84,12 +65,9 @@ export const mapQualityProfiles = (
   return profileScores;
 };
 
-export const loadQualityProfilesSonarr = async (): Promise<
-  QualityProfileResource[]
-> => {
+export const loadQualityProfilesSonarr = async (): Promise<QualityProfileResource[]> => {
   // TODO mock
-  return (await import(path.resolve(`./tests/samples/quality_profiles.json`)))
-    .default;
+  return (await import(path.resolve(`./tests/samples/quality_profiles.json`))).default;
 
   const api = getSonarrApi();
 
@@ -97,36 +75,32 @@ export const loadQualityProfilesSonarr = async (): Promise<
   return qualityProfiles.data;
 };
 
-const mapQualities = (
-  qd: QualityDefinitionResource[],
-  value: YamlConfigQualityProfile
-) => {
+const mapQualities = (qd: QualityDefinitionResource[], value: YamlConfigQualityProfile) => {
   const qdMap = new Map(qd.map((obj) => [obj.title, obj]));
 
-  const allowedQualies: QualityProfileQualityItemResource[] =
-    value.qualities.map((obj, i) => {
-      return {
-        allowed: true,
-        id: 1000 + i,
-        name: obj.name,
-        items: obj.qualities?.map<QualityProfileQualityItemResource>((obj2) => {
-          const qd = qdMap.get(obj2);
+  const allowedQualies: QualityProfileQualityItemResource[] = value.qualities.map((obj, i) => {
+    return {
+      allowed: true,
+      id: 1000 + i,
+      name: obj.name,
+      items: obj.qualities?.map<QualityProfileQualityItemResource>((obj2) => {
+        const qd = qdMap.get(obj2);
 
-          const returnObject: QualityProfileQualityItemResource = {
-            quality: {
-              id: qd?.quality?.id,
-              name: obj2,
-              resolution: qd?.quality?.resolution,
-              source: qd?.quality?.source,
-            },
-          };
+        const returnObject: QualityProfileQualityItemResource = {
+          quality: {
+            id: qd?.quality?.id,
+            name: obj2,
+            resolution: qd?.quality?.resolution,
+            source: qd?.quality?.source,
+          },
+        };
 
-          qdMap.delete(obj2);
+        qdMap.delete(obj2);
 
-          return returnObject;
-        }),
-      };
-    });
+        return returnObject;
+      }),
+    };
+  });
 
   const missingQualities: QualityProfileQualityItemResource[] = [];
 
@@ -152,7 +126,7 @@ export const calculateQualityProfilesDiff = async (
   cfManaged: CFProcessing,
   qpMerged: Map<string, YamlConfigQualityProfile>,
   scoring: Map<string, Map<string, ProfileFormatItemResource>>,
-  serverQP: QualityProfileResource[]
+  serverQP: QualityProfileResource[],
 ): Promise<{
   changedQPs: QualityProfileResource[];
   create: QualityProfileResource[];
@@ -190,18 +164,13 @@ export const calculateQualityProfilesDiff = async (
       const mappedQ = mapQualities(qd, value);
       const tmpMap = new Map(mappedQ.map((obj) => [obj.name!, obj]));
 
-      const cfs: Map<string, ProfileFormatItemResource> = new Map(
-        JSON.parse(JSON.stringify(Array.from(cfsServerMap)))
-      );
+      const cfs: Map<string, ProfileFormatItemResource> = new Map(JSON.parse(JSON.stringify(Array.from(cfsServerMap))));
 
       if (scoringForQP) {
         for (const [scoreKey, scoreValue] of scoringForQP.entries()) {
           const currentCf = cfs.get(scoreKey);
           if (currentCf) {
-            currentCf.score =
-              scoreValue.score ??
-              cfManaged.cfNameToCarrConfig.get(scoreKey)?.configarr_scores
-                ?.default;
+            currentCf.score = scoreValue.score ?? cfManaged.cfNameToCarrConfig.get(scoreKey)?.configarr_scores?.default;
           }
         }
       }
@@ -221,15 +190,11 @@ export const calculateQualityProfilesDiff = async (
     const changeList: string[] = [];
     changes.set(serverMatch.name!, changeList);
 
-    const updatedServerObject: QualityProfileResource = JSON.parse(
-      JSON.stringify(serverMatch)
-    );
+    const updatedServerObject: QualityProfileResource = JSON.parse(JSON.stringify(serverMatch));
 
     let diffExist = false;
 
-    const valueQualityMap = new Map(
-      value.qualities.map((obj) => [obj.name, obj])
-    );
+    const valueQualityMap = new Map(value.qualities.map((obj) => [obj.name, obj]));
 
     const resut: YamlConfigQualityProfileItems[] = (serverMatch.items || [])
       .map((obj) => {
@@ -258,9 +223,7 @@ export const calculateQualityProfilesDiff = async (
       if (serverMatch.minFormatScore !== value.min_format_score) {
         updatedServerObject.minFormatScore = value.min_format_score;
         diffExist = true;
-        changeList.push(
-          `MinFormatScore diff: server: ${serverMatch.minFormatScore} - expected: ${value.min_format_score}`
-        );
+        changeList.push(`MinFormatScore diff: server: ${serverMatch.minFormatScore} - expected: ${value.min_format_score}`);
       }
     }
 
@@ -273,37 +236,27 @@ export const calculateQualityProfilesDiff = async (
         updatedServerObject.upgradeAllowed = value.upgrade.allowed;
         diffExist = true;
 
-        changeList.push(
-          `UpgradeAllowed diff: server: ${serverMatch.upgradeAllowed} - expected: ${value.upgrade.allowed}`
-        );
+        changeList.push(`UpgradeAllowed diff: server: ${serverMatch.upgradeAllowed} - expected: ${value.upgrade.allowed}`);
       }
 
-      const upgradeUntil = updatedServerObject.items?.find(
-        (e) => e.name === value.upgrade.until_quality
-      );
+      const upgradeUntil = updatedServerObject.items?.find((e) => e.name === value.upgrade.until_quality);
 
       if (serverMatch.cutoff !== upgradeUntil?.id) {
         updatedServerObject.cutoff = upgradeUntil?.id;
         diffExist = true;
-        changeList.push(
-          `Upgrade until quality diff: server: ${serverMatch.cutoff} - expected: ${upgradeUntil?.id}`
-        );
+        changeList.push(`Upgrade until quality diff: server: ${serverMatch.cutoff} - expected: ${upgradeUntil?.id}`);
       }
 
       if (serverMatch.cutoffFormatScore !== value.upgrade.until_score) {
         updatedServerObject.cutoffFormatScore = value.upgrade.until_score;
         diffExist = true;
 
-        changeList.push(
-          `Upgrade until score diff: server: ${serverMatch.cutoffFormatScore} - expected: ${value.upgrade.until_score}`
-        );
+        changeList.push(`Upgrade until score diff: server: ${serverMatch.cutoffFormatScore} - expected: ${value.upgrade.until_score}`);
       }
     }
 
     // CFs matching
-    const serverCFMap = new Map(
-      serverMatch.formatItems!.map((obj) => [obj.name!, obj])
-    );
+    const serverCFMap = new Map(serverMatch.formatItems!.map((obj) => [obj.name!, obj]));
 
     let scoringDiff = false;
 
@@ -314,20 +267,10 @@ export const calculateQualityProfilesDiff = async (
         const serverCF = serverCFMap.get(scoreKey);
 
         if (scoreValue.score == null) {
-          console.log(
-            serverCF?.score,
-            value.reset_unmatched_scores?.enabled,
-            !resetScoreExceptions.has(scoreKey)
-          );
-          if (
-            value.reset_unmatched_scores?.enabled &&
-            !resetScoreExceptions.has(scoreKey) &&
-            serverCF?.score !== 0
-          ) {
+          console.log(serverCF?.score, value.reset_unmatched_scores?.enabled, !resetScoreExceptions.has(scoreKey));
+          if (value.reset_unmatched_scores?.enabled && !resetScoreExceptions.has(scoreKey) && serverCF?.score !== 0) {
             scoringDiff = true;
-            changeList.push(
-              `CF resetting score '${scoreValue.name}': server ${serverCF?.score} - client: 0`
-            );
+            changeList.push(`CF resetting score '${scoreValue.name}': server ${serverCF?.score} - client: 0`);
             newCFFormats.push({ ...serverCF, score: 0 });
           } else {
             newCFFormats.push({ ...serverCF });
@@ -335,9 +278,7 @@ export const calculateQualityProfilesDiff = async (
         } else {
           if (serverCF?.score !== scoreValue.score) {
             scoringDiff = true;
-            changeList.push(
-              `CF diff ${scoreValue.name}: server: ${serverCF?.score} - expected: ${scoreValue.score}`
-            );
+            changeList.push(`CF diff ${scoreValue.name}: server: ${serverCF?.score} - expected: ${scoreValue.score}`);
             newCFFormats.push({ ...serverCF, score: scoreValue.score });
           } else {
             newCFFormats.push({ ...serverCF });
@@ -350,9 +291,7 @@ export const calculateQualityProfilesDiff = async (
       console.log(`No scoring for QualityProfile ${serverMatch.name!} found`);
     }
 
-    console.log(
-      `QualityProfile (${value.name}) - CF Changes: ${scoringDiff}, Some other diff: ${diffExist}`
-    );
+    console.log(`QualityProfile (${value.name}) - CF Changes: ${scoringDiff}, Some other diff: ${diffExist}`);
 
     if (scoringDiff || diffExist) {
       changedQPs.push(updatedServerObject);

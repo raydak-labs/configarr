@@ -15,10 +15,7 @@ const gitStuff = async () => {
   if (r) {
     await gitClient.pull();
   } else {
-    await simpleGit().clone(
-      "https://github.com/BlackDark/fork-TRASH-Guides",
-      "."
-    );
+    await simpleGit().clone("https://github.com/BlackDark/fork-TRASH-Guides", ".");
   }
 
   console.log(`Git Check`, r);
@@ -54,21 +51,13 @@ export const loadSonarrTrashCFs = async (): Promise<CFProcessing> => {
   const trashSonarrPath = `${trashJsonDir}/sonarr`;
   const trashSonarrCfPath = `${trashSonarrPath}/cf`;
 
-  const files = fs
-    .readdirSync(`${trashRepoPath}/${trashSonarrCfPath}`)
-    .filter((fn) => fn.endsWith("json"));
+  const files = fs.readdirSync(`${trashRepoPath}/${trashSonarrCfPath}`).filter((fn) => fn.endsWith("json"));
 
-  const trashIdToObject = new Map<
-    string,
-    { trashConfig: TrashCF; requestConfig: CustomFormatResource }
-  >();
+  const trashIdToObject = new Map<string, { trashConfig: TrashCF; requestConfig: CustomFormatResource }>();
 
   const cfNameToTrashId = new Map<string, string>();
 
-  const carrIdToObject = new Map<
-    string,
-    { carrConfig: ConfigarrCF; requestConfig: CustomFormatResource }
-  >();
+  const carrIdToObject = new Map<string, { carrConfig: ConfigarrCF; requestConfig: CustomFormatResource }>();
 
   const cfNameToCarrObject = new Map<string, ConfigarrCF>();
 

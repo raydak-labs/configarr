@@ -5,26 +5,16 @@ import { getSonarrApi } from "./api";
 import { CFProcessing } from "./types";
 import { IS_DRY_RUN } from "./util";
 
-export const loadServerCustomFormats = async (): Promise<
-  CustomFormatResource[]
-> => {
-  return (await import(path.resolve("./tests/samples/cfs.json")))
-    .default as unknown as Promise<CustomFormatResource[]>;
+export const loadServerCustomFormats = async (): Promise<CustomFormatResource[]> => {
+  return (await import(path.resolve("./tests/samples/cfs.json"))).default as unknown as Promise<CustomFormatResource[]>;
 
   const api = getSonarrApi();
   const cfOnServer = await api.v3CustomformatList();
   return cfOnServer.data;
 };
 
-export const manageCf = async (
-  cfProcessing: CFProcessing,
-  serverCfs: Map<string, CustomFormatResource>,
-  cfsToManage: Set<string>
-) => {
-  const {
-    carrIdMapping: trashIdToObject,
-    cfNameToCarrConfig: existingCfToObject,
-  } = cfProcessing;
+export const manageCf = async (cfProcessing: CFProcessing, serverCfs: Map<string, CustomFormatResource>, cfsToManage: Set<string>) => {
+  const { carrIdMapping: trashIdToObject, cfNameToCarrConfig: existingCfToObject } = cfProcessing;
 
   const api = getSonarrApi();
 
@@ -43,24 +33,16 @@ export const manageCf = async (
       const comparison = compareObjectsCarr(existingCf, tr.requestConfig);
 
       if (!comparison.equal) {
-        console.log(
-          `Found mismatch for ${tr.requestConfig.name}.`,
-          comparison.changes
-        );
+        console.log(`Found mismatch for ${tr.requestConfig.name}.`, comparison.changes);
 
         try {
           if (IS_DRY_RUN) {
-            console.log(
-              `DryRun: Would update CF: ${existingCf.id} - ${existingCf.name}`
-            );
+            console.log(`DryRun: Would update CF: ${existingCf.id} - ${existingCf.name}`);
           } else {
-            const updateResult = await api.v3CustomformatUpdate(
-              existingCf.id + "",
-              {
-                id: existingCf.id,
-                ...tr.requestConfig,
-              }
-            );
+            const updateResult = await api.v3CustomformatUpdate(existingCf.id + "", {
+              id: existingCf.id,
+              ...tr.requestConfig,
+            });
             console.log(`Updated CF ${tr.requestConfig.name}`);
           }
         } catch (err) {

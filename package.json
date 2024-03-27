@@ -26,6 +26,7 @@
     "@playwright/test": "^1.42.1",
     "@types/node": "^20.11.30",
     "@vitest/coverage-v8": "^1.4.0",
+    "prettier": "3.2.5",
     "vitest": "1.4.0"
   }
 }

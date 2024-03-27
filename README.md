@@ -9,11 +9,12 @@ This is in very early development and trial stage to see if this is something we
 > :warning: **This is in very early development and trial stage to see if this is something we want to offer or not.**
 
 Possible ideas:
+
 - keep support for syncing trash guides
   - I like the possible configuration in recyclarr but I miss some features
 - add support for local configuration to include
   - I don't want to fork a project to add custom things to it
-- Maybe an free GUI to sync your stuff 
+- Maybe an free GUI to sync your stuff
 - Add additional best configuration for different languages/countries like Germany
 
 ## Work TODOs

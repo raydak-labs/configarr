@@ -32,12 +32,7 @@ export const loadRecyclarrTemplates = () => {
   const fillMap = (path: string) => {
     const files = fs.readdirSync(`${path}`).filter((fn) => fn.endsWith("yml"));
 
-    files.forEach((f) =>
-      map.set(
-        f.substring(0, f.lastIndexOf(".")),
-        yaml.parse(fs.readFileSync(`${path}/${f}`, "utf8"))
-      )
-    );
+    files.forEach((f) => map.set(f.substring(0, f.lastIndexOf(".")), yaml.parse(fs.readFileSync(`${path}/${f}`, "utf8"))));
   };
 
   fillMap(recyclarrRepoPaths.sonarrCF);

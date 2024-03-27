@@ -43,12 +43,7 @@ export const recyclarrRepoPaths = {
   radarrQP: `${recyclarrRadarrQPs}`,
 };
 
-export const trashToCarrCF = ({
-  trash_id,
-  trash_regex,
-  trash_scores,
-  ...rest
-}: TrashCF): ConfigarrCF => {
+export const trashToCarrCF = ({ trash_id, trash_regex, trash_scores, ...rest }: TrashCF): ConfigarrCF => {
   return {
     ...rest,
     configarr_id: trash_id,
@@ -166,10 +161,7 @@ export const carrCfToValidCf = (cf: ConfigarrCF): CustomFormatResource => {
   return { ...rest, specifications: specs };
 };
 
-export function compareObjectsCarr(
-  object1: CustomFormatResource,
-  object2: CustomFormatResource
-): { equal: boolean; changes: string[] } {
+export function compareObjectsCarr(object1: CustomFormatResource, object2: CustomFormatResource): { equal: boolean; changes: string[] } {
   const changes: string[] = [];
 
   for (const key in object2) {
@@ -192,17 +184,12 @@ export function compareObjectsCarr(
           }
 
           if (value1.length !== value2.length) {
-            changes.push(
-              `Array length mismatch for key ${key}: object1 length ${value1.length}, object2 length ${value2.length}`
-            );
+            changes.push(`Array length mismatch for key ${key}: object1 length ${value1.length}, object2 length ${value2.length}`);
             continue;
           }
 
           for (let i = 0; i < value1.length; i++) {
-            const { equal: isEqual, changes: subChanges } = compareObjectsCarr(
-              value1[i],
-              value2[i]
-            );
+            const { equal: isEqual, changes: subChanges } = compareObjectsCarr(value1[i], value2[i]);
             // changes.push(
             //   ...subChanges.map((subChange) => `${key}[${i}].${subChange}`)
             // );
@@ -212,9 +199,7 @@ export function compareObjectsCarr(
             }
 
             if (!isEqual && changes.length <= 0) {
-              changes.push(
-                `Mismatch found in array element at index ${i} for key ${key}`
-              );
+              changes.push(`Mismatch found in array element at index ${i} for key ${key}`);
             }
           }
         } else if (typeof value2 === "object" && value2 !== null) {
@@ -223,19 +208,14 @@ export function compareObjectsCarr(
             continue;
           }
 
-          const { equal: isEqual, changes: subChanges } = compareObjectsCarr(
-            value1,
-            value2
-          );
+          const { equal: isEqual, changes: subChanges } = compareObjectsCarr(value1, value2);
           changes.push(...subChanges.map((subChange) => `${key}.${subChange}`));
           if (!isEqual) {
             changes.push(`Mismatch found for key ${key}`);
           }
         } else {
           if (value1 !== value2) {
-            changes.push(
-              `Mismatch found for key ${key}: server value ${value1}, value to set ${value2}`
-            );
+            changes.push(`Mismatch found for key ${key}: server value ${value1}, value to set ${value2}`);
           }
         }
       } else {
@@ -248,10 +228,7 @@ export function compareObjectsCarr(
   return { equal, changes };
 }
 
-export function deepDiff(
-  object1: any,
-  object2: any
-): { equal: boolean; changes: string[] } {
+export function deepDiff(object1: any, object2: any): { equal: boolean; changes: string[] } {
   const changes: string[] = [];
 
   for (const key in object2) {
@@ -274,17 +251,12 @@ export function deepDiff(
           }
 
           if (value1.length !== value2.length) {
-            changes.push(
-              `Array length mismatch for key ${key}: object1 length ${value1.length}, object2 length ${value2.length}`
-            );
+            changes.push(`Array length mismatch for key ${key}: object1 length ${value1.length}, object2 length ${value2.length}`);
             continue;
           }
 
           for (let i = 0; i < value1.length; i++) {
-            const { equal: isEqual, changes: subChanges } = deepDiff(
-              value1[i],
-              value2[i]
-            );
+            const { equal: isEqual, changes: subChanges } = deepDiff(value1[i], value2[i]);
             // changes.push(
             //   ...subChanges.map((subChange) => `${key}[${i}].${subChange}`)
             // );
@@ -294,9 +266,7 @@ export function deepDiff(
             }
 
             if (!isEqual && changes.length <= 0) {
-              changes.push(
-                `Mismatch found in array element at index ${i} for key ${key}`
-              );
+              changes.push(`Mismatch found in array element at index ${i} for key ${key}`);
             }
           }
         } else if (typeof value2 === "object" && value2 !== null) {
@@ -305,19 +275,14 @@ export function deepDiff(
             continue;
           }
 
-          const { equal: isEqual, changes: subChanges } = deepDiff(
-            value1,
-            value2
-          );
+          const { equal: isEqual, changes: subChanges } = deepDiff(value1, value2);
           changes.push(...subChanges.map((subChange) => `${key}.${subChange}`));
           if (!isEqual) {
             changes.push(`Mismatch found for key ${key}`);
           }
         } else {
           if (value1 !== value2) {
-            changes.push(
-              `Mismatch found for key ${key}: server value ${value1}, value to set ${value2}`
-            );
+            changes.push(`Mismatch found for key ${key}: server value ${value1}, value to set ${value2}`);
           }
         }
       } else {
@@ -330,9 +295,7 @@ export function deepDiff(
   return { equal, changes };
 }
 
-export function notEmpty<TValue>(
-  value: TValue | null | undefined
-): value is TValue {
+export function notEmpty<TValue>(value: TValue | null | undefined): value is TValue {
   if (value === null || value === undefined) return false;
   const testDummy: TValue = value;
   return true;

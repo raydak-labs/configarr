@@ -3,11 +3,7 @@ import "dotenv/config";
 import fs, { readFileSync, readdirSync } from "fs";
 import path from "path";
 import { parse } from "yaml";
-import {
-  CustomFormatResource,
-  PrivacyLevel,
-  QualityProfileResource,
-} from "./src/__generated__/MySuperbApi";
+import { CustomFormatResource, PrivacyLevel, QualityProfileResource } from "./src/__generated__/MySuperbApi";
 import { configureSonarrApi, getSonarrApi } from "./src/api";
 import { getConfig } from "./src/config";
 import { loadServerCustomFormats, manageCf } from "./src/customFormats";
@@ -16,15 +12,8 @@ import {
   loadQualityDefinitionFromSonarr,
   loadQualityDefinitionSonarrFromTrash,
 } from "./src/qualityDefinition";
-import {
-  calculateQualityProfilesDiff,
-  loadQualityProfilesSonarr,
-  mapQualityProfiles,
-} from "./src/qualityProfiles";
-import {
-  cloneRecyclarrTemplateRepo,
-  loadRecyclarrTemplates,
-} from "./src/recyclarrImporter";
+import { calculateQualityProfilesDiff, loadQualityProfilesSonarr, mapQualityProfiles } from "./src/qualityProfiles";
+import { cloneRecyclarrTemplateRepo, loadRecyclarrTemplates } from "./src/recyclarrImporter";
 import { cloneTrashRepo, loadSonarrTrashCFs } from "./src/trashGuide";
 import {
   CFProcessing,
@@ -37,12 +26,7 @@ import {
   YamlConfigQualityProfile,
   YamlInput,
 } from "./src/types";
-import {
-  IS_DRY_RUN,
-  carrCfToValidCf,
-  toCarrCF,
-  trashCfToValidCf,
-} from "./src/util";
+import { IS_DRY_RUN, carrCfToValidCf, toCarrCF, trashCfToValidCf } from "./src/util";
 
 const ROOT_PATH = path.resolve(process.cwd());
 
@@ -157,10 +141,7 @@ const testGo = async () => {
   };
 };
 
-function compareObjects2(
-  object1: CustomFormatResource,
-  object2: Partial<TrashCF>
-): { equal: boolean; changes: string[] } {
+function compareObjects2(object1: CustomFormatResource, object2: Partial<TrashCF>): { equal: boolean; changes: string[] } {
   const changes: string[] = [];
 
   for (const key in object2) {
@@ -182,17 +163,12 @@ function compareObjects2(
           }
 
           if (value1.length !== value2.length) {
-            changes.push(
-              `Array length mismatch for key ${key}: object1 length ${value1.length}, object2 length ${value2.length}`
-            );
+            changes.push(`Array length mismatch for key ${key}: object1 length ${value1.length}, object2 length ${value2.length}`);
             continue;
           }
 
           for (let i = 0; i < value1.length; i++) {
-            const { equal: isEqual, changes: subChanges } = compareObjects2(
-              value1[i],
-              value2[i]
-            );
+            const { equal: isEqual, changes: subChanges } = compareObjects2(value1[i], value2[i]);
             // changes.push(
             //   ...subChanges.map((subChange) => `${key}[${i}].${subChange}`)
             // );
@@ -202,9 +178,7 @@ function compareObjects2(
             }
 
             if (!isEqual && changes.length <= 0) {
-              changes.push(
-                `Mismatch found in array element at index ${i} for key ${key}`
-              );
+              changes.push(`Mismatch found in array element at index ${i} for key ${key}`);
             }
           }
         } else if (typeof value1 === "object" && value1 !== null) {
@@ -213,19 +187,14 @@ function compareObjects2(
             continue;
           }
 
-          const { equal: isEqual, changes: subChanges } = compareObjects2(
-            value1,
-            value2
-          );
+          const { equal: isEqual, changes: subChanges } = compareObjects2(value1, value2);
           changes.push(...subChanges.map((subChange) => `${key}.${subChange}`));
           if (!isEqual) {
             changes.push(`Mismatch found for key ${key}`);
           }
         } else {
           if (value1 !== value2) {
-            changes.push(
-              `Mismatch found for key ${key}: server value ${value1}, value to set ${value2}`
-            );
+            changes.push(`Mismatch found for key ${key}: server value ${value1}, value to set ${value2}`);
           }
         }
       } else {
@@ -237,10 +206,7 @@ function compareObjects2(
   return { equal, changes };
 }
 
-function compareObjects3(
-  object1: CustomFormatResource,
-  trashCf: TrashCF
-): { equal: boolean; changes: string[] } {
+function compareObjects3(object1: CustomFormatResource, trashCf: TrashCF): { equal: boolean; changes: string[] } {
   const changes: string[] = [];
 
   const object2 = trashCfToValidCf(trashCf);
@@ -264,17 +230,12 @@ function compareObjects3(
           }
 
           if (value1.length !== value2.length) {
-            changes.push(
-              `Array length mismatch for key ${key}: object1 length ${value1.length}, object2 length ${value2.length}`
-            );
+            changes.push(`Array length mismatch for key ${key}: object1 length ${value1.length}, object2 length ${value2.length}`);
             continue;
           }
 
           for (let i = 0; i < value1.length; i++) {
-            const { equal: isEqual, changes: subChanges } = compareObjects2(
-              value1[i],
-              value2[i]
-            );
+            const { equal: isEqual, changes: subChanges } = compareObjects2(value1[i], value2[i]);
             // changes.push(
             //   ...subChanges.map((subChange) => `${key}[${i}].${subChange}`)
             // );
@@ -284,9 +245,7 @@ function compareObjects3(
             }
 
             if (!isEqual && changes.length <= 0) {
-              changes.push(
-                `Mismatch found in array element at index ${i} for key ${key}`
-              );
+              changes.push(`Mismatch found in array element at index ${i} for key ${key}`);
             }
           }
         } else if (typeof value1 === "object" && value1 !== null) {
@@ -295,19 +254,14 @@ function compareObjects3(
             continue;
           }
 
-          const { equal: isEqual, changes: subChanges } = compareObjects2(
-            value1,
-            value2
-          );
+          const { equal: isEqual, changes: subChanges } = compareObjects2(value1, value2);
           changes.push(...subChanges.map((subChange) => `${key}.${subChange}`));
           if (!isEqual) {
             changes.push(`Mismatch found for key ${key}`);
           }
         } else {
           if (value1 !== value2) {
-            changes.push(
-              `Mismatch found for key ${key}: server value ${value1}, value to set ${value2}`
-            );
+            changes.push(`Mismatch found for key ${key}: server value ${value1}, value to set ${value2}`);
           }
         }
       } else {
@@ -319,10 +273,7 @@ function compareObjects3(
   return { equal, changes };
 }
 
-export function compareObjectsCarr(
-  object1: CustomFormatResource,
-  object2: CustomFormatResource
-): { equal: boolean; changes: string[] } {
+export function compareObjectsCarr(object1: CustomFormatResource, object2: CustomFormatResource): { equal: boolean; changes: string[] } {
   const changes: string[] = [];
 
   for (const key in object2) {
@@ -345,17 +296,12 @@ export function compareObjectsCarr(
           }
 
           if (value1.length !== value2.length) {
-            changes.push(
-              `Array length mismatch for key ${key}: object1 length ${value1.length}, object2 length ${value2.length}`
-            );
+            changes.push(`Array length mismatch for key ${key}: object1 length ${value1.length}, object2 length ${value2.length}`);
             continue;
           }
 
           for (let i = 0; i < value1.length; i++) {
-            const { equal: isEqual, changes: subChanges } = compareObjectsCarr(
-              value1[i],
-              value2[i]
-            );
+            const { equal: isEqual, changes: subChanges } = compareObjectsCarr(value1[i], value2[i]);
             // changes.push(
             //   ...subChanges.map((subChange) => `${key}[${i}].${subChange}`)
             // );
@@ -365,9 +311,7 @@ export function compareObjectsCarr(
             }
 
             if (!isEqual && changes.length <= 0) {
-              changes.push(
-                `Mismatch found in array element at index ${i} for key ${key}`
-              );
+              changes.push(`Mismatch found in array element at index ${i} for key ${key}`);
             }
           }
         } else if (typeof value2 === "object" && value2 !== null) {
@@ -376,19 +320,14 @@ export function compareObjectsCarr(
             continue;
           }
 
-          const { equal: isEqual, changes: subChanges } = compareObjectsCarr(
-            value1,
-            value2
-          );
+          const { equal: isEqual, changes: subChanges } = compareObjectsCarr(value1, value2);
           changes.push(...subChanges.map((subChange) => `${key}.${subChange}`));
           if (!isEqual) {
             changes.push(`Mismatch found for key ${key}`);
           }
         } else {
           if (value1 !== value2) {
-            changes.push(
-              `Mismatch found for key ${key}: server value ${value1}, value to set ${value2}`
-            );
+            changes.push(`Mismatch found for key ${key}: server value ${value1}, value to set ${value2}`);
           }
         }
       } else {
@@ -429,22 +368,15 @@ const loadLocalCfs = async (): Promise<CFProcessing | null> => {
     return null;
   }
 
-  const files = readdirSync(`${sonarrLocalPath}`).filter((fn) =>
-    fn.endsWith("json")
-  );
+  const files = readdirSync(`${sonarrLocalPath}`).filter((fn) => fn.endsWith("json"));
 
-  const carrIdToObject = new Map<
-    string,
-    { carrConfig: ConfigarrCF; requestConfig: CustomFormatResource }
-  >();
+  const carrIdToObject = new Map<string, { carrConfig: ConfigarrCF; requestConfig: CustomFormatResource }>();
 
   const cfNameToCarrObject = new Map<string, ConfigarrCF>();
 
   for (const file of files) {
     const name = `${sonarrLocalPath}/${file}`;
-    const cf: DynamicImportType<TrashCF | ConfigarrCF> = await import(
-      `${ROOT_PATH}/${name}`
-    );
+    const cf: DynamicImportType<TrashCF | ConfigarrCF> = await import(`${ROOT_PATH}/${name}`);
 
     const cfD = toCarrCF(cf.default);
 
@@ -470,10 +402,7 @@ const loadQualityProfiles = async () => {
   return qualityProfile.data;
 };
 
-const calculateProfileActions = async (
-  yaml: YamlInput,
-  profiles: QualityProfileResource[]
-) => {
+const calculateProfileActions = async (yaml: YamlInput, profiles: QualityProfileResource[]) => {
   const configProfiles: Set<string> = new Set();
   const serverProfiles = profiles.map((sp) => sp.name!);
 
@@ -500,7 +429,7 @@ const calculateProfileActions = async (
     {
       create: [],
       update: [],
-    }
+    },
   );
 
   console.log(`Profiles to create: ${create}`);
@@ -534,14 +463,9 @@ const go = async () => {
   const trashSonarrPath = `${trashJsonDir}/sonarr`;
   const trashSonarrCfPath = `${trashSonarrPath}/cf`;
 
-  const files = readdirSync(`${trashRepoPath}/${trashSonarrCfPath}`).filter(
-    (fn) => fn.endsWith("json")
-  );
+  const files = readdirSync(`${trashRepoPath}/${trashSonarrCfPath}`).filter((fn) => fn.endsWith("json"));
 
-  const trashIdToObject = new Map<
-    string,
-    { trashConfig: TrashCF; requestConfig: CustomFormatResource }
-  >();
+  const trashIdToObject = new Map<string, { trashConfig: TrashCF; requestConfig: CustomFormatResource }>();
   const cfNameToTrashId = new Map<string, string>();
 
   for (const file of files) {
@@ -594,10 +518,7 @@ const go = async () => {
       const comparison = compareObjects3(existingCf, tr.trashConfig);
 
       if (!comparison.equal) {
-        console.log(
-          `Found mismatch for ${tr.requestConfig.name}.`,
-          comparison.changes
-        );
+        console.log(`Found mismatch for ${tr.requestConfig.name}.`, comparison.changes);
 
         try {
           const updateResult = await api.v3CustomformatUpdate(existingCf.id, {
@@ -659,10 +580,7 @@ const go = async () => {
   //     }
   //   }
 
-  console.log(
-    `Unknown CF names found on server: ${unknownCfToObject.size}`,
-    unknownCfToObject.keys()
-  );
+  console.log(`Unknown CF names found on server: ${unknownCfToObject.size}`, unknownCfToObject.keys());
 
   return;
 
@@ -719,7 +637,7 @@ const mergeCfSources = (listOfCfs: (CFProcessing | null)[]): CFProcessing => {
     {
       carrIdMapping: new Map(),
       cfNameToCarrConfig: new Map(),
-    }
+    },
   );
 };
 
@@ -743,14 +661,11 @@ const pipeline = async (value: YamlConfigInstance) => {
       }
 
       if (template.custom_formats) {
-        recylarrMergedTemplates.custom_formats?.push(
-          ...template.custom_formats
-        );
+        recylarrMergedTemplates.custom_formats?.push(...template.custom_formats);
       }
 
       if (template.quality_definition) {
-        recylarrMergedTemplates.quality_definition =
-          template.quality_definition;
+        recylarrMergedTemplates.quality_definition = template.quality_definition;
       }
 
       if (template.quality_profiles) {
@@ -810,10 +725,7 @@ const pipeline = async (value: YamlConfigInstance) => {
         throw new Error(`Unsupported quality defintion ${qualityDefinition}`);
     }
 
-    const { changeMap, create, restData } = calculateQualityDefinitionDiff(
-      qdSonarr,
-      qdTrash
-    );
+    const { changeMap, create, restData } = calculateQualityDefinitionDiff(qdSonarr, qdTrash);
 
     if (changeMap.size > 0) {
       if (IS_DRY_RUN) {
@@ -828,49 +740,37 @@ const pipeline = async (value: YamlConfigInstance) => {
     }
 
     if (create.length > 0) {
-      console.log(
-        `Currently not implemented this case for quality definitions.`
-      );
+      console.log(`Currently not implemented this case for quality definitions.`);
     }
   }
 
   // merge CFs of templates and custom CFs into one mapping of QualityProfile -> CFs + Score
   // TODO traversing the merged templates probably to often once should be enough. Loop once and extract a couple of different maps, arrays as needed. Future optimization.
-  const cfToQualityProfiles = mapQualityProfiles(
-    mergedCFs,
-    recylarrMergedTemplates.custom_formats,
-    recylarrMergedTemplates
-  );
+  const cfToQualityProfiles = mapQualityProfiles(mergedCFs, recylarrMergedTemplates.custom_formats, recylarrMergedTemplates);
 
   // merge profiles from recyclarr templates into one
-  const qualityProfilesMerged = recylarrMergedTemplates.quality_profiles.reduce(
-    (p, c) => {
-      let existingQp = p.get(c.name);
+  const qualityProfilesMerged = recylarrMergedTemplates.quality_profiles.reduce((p, c) => {
+    let existingQp = p.get(c.name);
 
-      if (!existingQp) {
-        p.set(c.name, { ...c });
-      } else {
-        existingQp = {
-          ...existingQp,
-          ...c,
-          // Overwriting qualities array for now
-          upgrade: { ...existingQp.upgrade, ...c.upgrade },
-          reset_unmatched_scores: {
-            ...existingQp.reset_unmatched_scores,
-            ...c.reset_unmatched_scores,
-            enabled:
-              (c.reset_unmatched_scores?.enabled ??
-                existingQp.reset_unmatched_scores?.enabled) ||
-              false,
-          },
-        };
-        p.set(c.name, existingQp);
-      }
+    if (!existingQp) {
+      p.set(c.name, { ...c });
+    } else {
+      existingQp = {
+        ...existingQp,
+        ...c,
+        // Overwriting qualities array for now
+        upgrade: { ...existingQp.upgrade, ...c.upgrade },
+        reset_unmatched_scores: {
+          ...existingQp.reset_unmatched_scores,
+          ...c.reset_unmatched_scores,
+          enabled: (c.reset_unmatched_scores?.enabled ?? existingQp.reset_unmatched_scores?.enabled) || false,
+        },
+      };
+      p.set(c.name, existingQp);
+    }
 
-      return p;
-    },
-    new Map<string, YamlConfigQualityProfile>()
-  );
+    return p;
+  }, new Map<string, YamlConfigQualityProfile>());
 
   // calculate diff from server <-> what we want to be there
 
@@ -880,15 +780,13 @@ const pipeline = async (value: YamlConfigInstance) => {
     mergedCFs,
     qualityProfilesMerged,
     cfToQualityProfiles,
-    qpServer
+    qpServer,
   );
 
   changedQPs.forEach((e, i) => {
     fs.writeFileSync(`test${i}.json`, JSON.stringify(e, null, 2), "utf-8");
   });
-  console.log(
-    `QPs: Create: ${create.length}, Update: ${changedQPs.length}, Unchanged: ${noChanges.length}`
-  );
+  console.log(`QPs: Create: ${create.length}, Update: ${changedQPs.length}, Unchanged: ${noChanges.length}`);
   /*
   - load trash
   - load custom resources

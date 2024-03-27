@@ -1,14 +1,6 @@
-import { expect, test, describe } from "vitest";
-import {
-  CustomFormatResource,
-  PrivacyLevel,
-  QualityDefinitionResource,
-  QualitySource,
-} from "./__generated__/MySuperbApi";
-import {
-  calculateQualityDefinitionDiff,
-  loadQualityDefinitionFromSonarr,
-} from "./qualityDefinition";
+import { describe, expect, test } from "vitest";
+import { CustomFormatResource, PrivacyLevel, QualityDefinitionResource, QualitySource } from "./__generated__/MySuperbApi";
+import { calculateQualityDefinitionDiff, loadQualityDefinitionFromSonarr } from "./qualityDefinition";
 import { TrashCF, TrashCFSpF, TrashQualityDefintion } from "./types";
 import { carrCfToValidCf, compareObjectsCarr, toCarrCF } from "./util";
 
@@ -80,10 +72,7 @@ describe("SizeSpecification", async () => {
   test("equal", async () => {
     const copied: typeof custom = JSON.parse(JSON.stringify(custom));
 
-    const result = compareObjectsCarr(
-      serverResponse,
-      carrCfToValidCf(toCarrCF(copied))
-    );
+    const result = compareObjectsCarr(serverResponse, carrCfToValidCf(toCarrCF(copied)));
     await expect(result.equal).toBe(true);
   });
 
@@ -91,10 +80,7 @@ describe("SizeSpecification", async () => {
     const copied = JSON.parse(JSON.stringify(custom));
     copied.specifications![0].negate = true;
 
-    const result = compareObjectsCarr(
-      serverResponse,
-      carrCfToValidCf(toCarrCF(copied))
-    );
+    const result = compareObjectsCarr(serverResponse, carrCfToValidCf(toCarrCF(copied)));
     await expect(result.equal).toBe(false);
   });
 
@@ -102,10 +88,7 @@ describe("SizeSpecification", async () => {
     const copied: typeof custom = JSON.parse(JSON.stringify(custom));
     copied.specifications![0].required = true;
 
-    const result = compareObjectsCarr(
-      serverResponse,
-      carrCfToValidCf(toCarrCF(copied))
-    );
+    const result = compareObjectsCarr(serverResponse, carrCfToValidCf(toCarrCF(copied)));
     await expect(result.equal).toBe(false);
   });
 
@@ -113,10 +96,7 @@ describe("SizeSpecification", async () => {
     const copied: typeof custom = JSON.parse(JSON.stringify(custom));
     (copied.specifications![0].fields as TrashCFSpF).max = 100;
 
-    const result = compareObjectsCarr(
-      serverResponse,
-      carrCfToValidCf(toCarrCF(copied))
-    );
+    const result = compareObjectsCarr(serverResponse, carrCfToValidCf(toCarrCF(copied)));
     await expect(result.equal).toBe(false);
   });
 });

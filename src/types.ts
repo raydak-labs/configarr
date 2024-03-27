@@ -1,7 +1,4 @@
-import {
-  CustomFormatResource,
-  CustomFormatSpecificationSchema,
-} from "./__generated__/MySuperbApi";
+import { CustomFormatResource, CustomFormatSpecificationSchema } from "./__generated__/MySuperbApi";
 
 export type DynamicImportType<T> = { default: T };
 
@@ -119,14 +116,10 @@ export type YamlConfigQualityProfileItems = {
 };
 
 export type RecyclarrTemplates = Partial<
-  Pick<
-    YamlConfigInstance,
-    "quality_definition" | "custom_formats" | "include" | "quality_profiles"
-  >
+  Pick<YamlConfigInstance, "quality_definition" | "custom_formats" | "include" | "quality_profiles">
 >;
 
-export type RecyclarrMergedTemplates = RecyclarrTemplates &
-  Required<Pick<RecyclarrTemplates, "custom_formats" | "quality_profiles">>;
+export type RecyclarrMergedTemplates = RecyclarrTemplates & Required<Pick<RecyclarrTemplates, "custom_formats" | "quality_profiles">>;
 
 export type YamlConfig = {
   trashGuideUrl: string;

@@ -7,20 +7,12 @@ import { trashRepoPaths } from "./util";
 // anime and series exists in trash guide
 export type QualityDefintionsSonarr = "anime" | "series" | "custom";
 
-export const loadQualityDefinitionSonarrFromTrash = async (
-  qdType: QualityDefintionsSonarr
-): Promise<TrashQualityDefintion> => {
+export const loadQualityDefinitionSonarrFromTrash = async (qdType: QualityDefintionsSonarr): Promise<TrashQualityDefintion> => {
   switch (qdType) {
     case "anime":
-      return (
-        await import(path.resolve(`${trashRepoPaths.sonarrQuality}/anime.json`))
-      ).default;
+      return (await import(path.resolve(`${trashRepoPaths.sonarrQuality}/anime.json`))).default;
     case "series":
-      return (
-        await import(
-          path.resolve(`${trashRepoPaths.sonarrQuality}/series.json`)
-        )
-      ).default;
+      return (await import(path.resolve(`${trashRepoPaths.sonarrQuality}/series.json`))).default;
     case "custom":
       throw new Error("Not implemented yet");
     default:
@@ -28,19 +20,13 @@ export const loadQualityDefinitionSonarrFromTrash = async (
   }
 };
 
-export const loadQualityDefinitionFromSonarr = async (): Promise<
-  QualityDefinitionResource[]
-> => {
+export const loadQualityDefinitionFromSonarr = async (): Promise<QualityDefinitionResource[]> => {
   // TODO mock
-  return (await import(path.resolve("./tests/samples/qualityDefinition.json")))
-    .default;
+  return (await import(path.resolve("./tests/samples/qualityDefinition.json"))).default;
   return (await getSonarrApi().v3QualitydefinitionList()).data;
 };
 
-export const calculateQualityDefinitionDiff = (
-  serverQDs: QualityDefinitionResource[],
-  trashQD: TrashQualityDefintion
-) => {
+export const calculateQualityDefinitionDiff = (serverQDs: QualityDefinitionResource[], trashQD: TrashQualityDefintion) => {
   const serverMap = serverQDs.reduce((p, c) => {
     p.set(c.title!, c);
     return p;
@@ -68,9 +54,7 @@ export const calculateQualityDefinitionDiff = (
         changes.push(`MaxSize diff: ${element.maxSize} - ${tq.max}`);
       }
       if (element.preferredSize !== tq.preferred) {
-        changes.push(
-          `PreferredSize diff: ${element.preferredSize} - ${tq.preferred}`
-        );
+        changes.push(`PreferredSize diff: ${element.preferredSize} - ${tq.preferred}`);
       }
 
       if (changes.length > 0) {
