@@ -123,6 +123,47 @@ const mapQualities = (qd: QualityDefinitionResource[], value: YamlConfigQualityP
   return [...missingQualities, ...allowedQualies.reverse()];
 };
 
+export const compareQualities = (obj1: YamlConfigQualityProfileItems[], obj2: YamlConfigQualityProfileItems[]) => {
+  function arraysEqual(arr1: string[], arr2: string[]): boolean {
+    if (arr1.length !== arr2.length) {
+      return false;
+    }
+
+    const sortedArr1 = arr1.slice().sort();
+    const sortedArr2 = arr2.slice().sort();
+
+    for (let i = 0; i < sortedArr1.length; i++) {
+      if (sortedArr1[i] !== sortedArr2[i]) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  if (obj1.length !== obj2.length) {
+    return false;
+  }
+
+  const sorted1 = obj1.sort((a, b) => (a.name < b.name ? -1 : 1));
+  const sorted2 = obj2.sort((a, b) => (a.name < b.name ? -1 : 1));
+
+  for (let index = 0; index < sorted1.length; index++) {
+    const element1 = sorted1[index];
+    const element2 = sorted2[index];
+
+    if (element1.name !== element2.name) {
+      return false;
+    }
+
+    if (!arraysEqual(element1.qualities ?? [], element2.qualities ?? [])) {
+      return false;
+    }
+  }
+
+  return true;
+};
+
 export const calculateQualityProfilesDiff = async (
   cfManaged: CFProcessing,
   qpMerged: Map<string, YamlConfigQualityProfile>,
@@ -198,21 +239,31 @@ export const calculateQualityProfilesDiff = async (
     const valueQualityMap = new Map(value.qualities.map((obj) => [obj.name, obj]));
 
     const resut: YamlConfigQualityProfileItems[] = (serverMatch.items || [])
-      .map((obj) => {
-        if (!valueQualityMap.has(obj.name!)) {
+      .map((obj): YamlConfigQualityProfileItems | null => {
+        if (!valueQualityMap.has(obj.name!) && !obj.allowed) {
+          // Only return null if quality not specified and not enabled in arr. If enabled we need to disable it.
           return null;
         }
 
-        return {
-          name: obj.name!,
-          qualitites: (obj.items || [])?.map((qObj) => {
-            return qObj.quality!.name;
-          }),
-        } as YamlConfigQualityProfileItems;
+        // if ID it is a grouping
+        if (obj.id) {
+          return {
+            name: obj.name!,
+            qualities: (obj.items || []).map((qObj) => {
+              return qObj.quality!.name!;
+            }),
+          };
+        } else {
+          return {
+            name: obj.quality?.name!,
+            qualities: [],
+          };
+        }
       })
       .filter(notEmpty);
 
-    if (JSON.stringify(value.qualities) !== JSON.stringify(resut)) {
+    // TODO do we want to enforce the whole structure or only match those which are enabled by us?
+    if (!compareQualities(value.qualities, resut)) {
       console.log(`QualityProfile Items mismatch will update whole array`);
       diffExist = true;
 
