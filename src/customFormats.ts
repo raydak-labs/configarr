@@ -46,7 +46,7 @@ export const manageCf = async (cfProcessing: CFProcessing, serverCfs: Map<string
             console.log(`Updated CF ${tr.requestConfig.name}`);
           }
         } catch (err) {
-          console.log(`Failed updating CF ${tr.requestConfig.name}`, err.error);
+          console.log(`Failed updating CF ${tr.requestConfig.name}`, err.response.data);
         }
       } else {
         console.log(`CF ${tr.requestConfig.name} does not need update.`);
@@ -61,7 +61,7 @@ export const manageCf = async (cfProcessing: CFProcessing, serverCfs: Map<string
           console.log(`Created CF ${tr.requestConfig.name}`);
         }
       } catch (err) {
-        console.log(`Failed creating CF ${tr.requestConfig.name}`, err.error);
+        console.log(`Failed creating CF ${tr.requestConfig.name}`, err.response.data);
       }
     }
   };
