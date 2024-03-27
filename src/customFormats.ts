@@ -76,5 +76,8 @@ export const manageCf = async (cfProcessing: CFProcessing, serverCfs: Map<string
       }
     }
   };
-  cfsToManage.forEach((cf) => manageSingle(cf));
+
+  for (const cf of cfsToManage) {
+    await manageSingle(cf);
+  }
 };
