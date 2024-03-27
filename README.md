@@ -25,3 +25,6 @@ Possible ideas:
 - [ ] Debug logging switchable
 - [ ] Improved Diff output
 - [ ] Feature completion with recyclarr
+- [ ] Cross references to:
+  - [ ] https://github.com/PCJones/radarr-sonarr-german-dual-language
+  - [ ] https://github.com/PCJones/usenet-guide
