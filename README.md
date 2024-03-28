@@ -47,19 +47,23 @@ Possible ideas:
 
 - [ ] Optimize types. Generated ones work for first step but not very optimal because they do not correctly represent request/response types.
 - [x] Default scores from trash guide
-- [ ] Radarr support
+- [x] Radarr support
 - [ ] Debug logging switchable
 - [ ] Improved Diff output
 - [ ] Feature completion with recyclarr
 - [ ] Cross references to:
   - [ ] https://github.com/PCJones/radarr-sonarr-german-dual-language
   - [ ] https://github.com/PCJones/usenet-guide
+- [ ] Build docker container
+- [ ] Build multi arch containers
+- [ ] Add Github Actions stuff
+- [ ] Improve code & tidy up lint errors
 
 ## Development
 
 1. Optionally setup the local sonarr instance
    1. Run `docker compose up -d` to run the container
-   2. Open sonarr in your browser at http://localhost:8989
+   2. Open sonarr in your browser at http://localhost:8989 / radarr @ http://localhost:7878
    3. Configure basic authentication, disable local authentication and create an initial user by specifying the e-mail and password
 2. Open the sonarr [Settings > General](http://localhost:8989/settings/general) page and copy the API key
 3. Create a `secrets.yml` from the template
