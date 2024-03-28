@@ -2,8 +2,9 @@ import { readdirSync } from "fs";
 import path from "path";
 import { CustomFormatResource } from "./__generated__/generated-sonarr-api";
 import { getArrApi } from "./api";
+import { getConfig } from "./config";
 import { CFProcessing, ConfigarrCF, DynamicImportType, TrashCF, YamlInput } from "./types";
-import { IS_DRY_RUN, IS_LOCAL_SAMPLE_MODE, ROOT_PATH, carrCfToValidCf, compareObjectsCarr, toCarrCF } from "./util";
+import { IS_DRY_RUN, IS_LOCAL_SAMPLE_MODE, carrCfToValidCf, compareObjectsCarr, toCarrCF } from "./util";
 
 export const deleteAllCustomFormats = async () => {
   const api = getArrApi();
@@ -82,21 +83,21 @@ export const manageCf = async (cfProcessing: CFProcessing, serverCfs: Map<string
   }
 };
 export const loadLocalCfs = async (): Promise<CFProcessing | null> => {
-  const sonarrLocalPath = process.env.SONARR_LOCAL_PATH;
-  if (!sonarrLocalPath) {
-    console.log("Ignoring local cfs.");
+  const config = getConfig();
+
+  if (config.localCustomFormatsPath == null) {
+    console.log(`No local custom formats specified. Skipping.`);
     return null;
   }
 
-  const files = readdirSync(`${sonarrLocalPath}`).filter((fn) => fn.endsWith("json"));
-
+  const cfPath = path.resolve(config.localCustomFormatsPath);
+  const files = readdirSync(`${cfPath}`).filter((fn) => fn.endsWith("json"));
   const carrIdToObject = new Map<string, { carrConfig: ConfigarrCF; requestConfig: CustomFormatResource }>();
-
   const cfNameToCarrObject = new Map<string, ConfigarrCF>();
 
   for (const file of files) {
-    const name = `${sonarrLocalPath}/${file}`;
-    const cf: DynamicImportType<TrashCF | ConfigarrCF> = await import(`${ROOT_PATH}/${name}`);
+    const name = `${cfPath}/${file}`;
+    const cf: DynamicImportType<TrashCF | ConfigarrCF> = await import(`${name}`);
 
     const cfD = toCarrCF(cf.default);
 
