@@ -80,7 +80,7 @@ export const loadQualityProfilesFromServer = async (): Promise<QualityProfileRes
 const mapQualities = (qd: QualityDefinitionResource[], value: YamlConfigQualityProfile) => {
   const qdMap = new Map(qd.map((obj) => [obj.title, obj]));
 
-  const allowedQualies: QualityProfileQualityItemResource[] = value.qualities.map((obj, i) => {
+  const allowedQualities: QualityProfileQualityItemResource[] = value.qualities.map((obj, i) => {
     if (obj.qualities?.length && obj.qualities.length > 0) {
       return {
         allowed: true,
@@ -134,7 +134,7 @@ const mapQualities = (qd: QualityDefinitionResource[], value: YamlConfigQualityP
 
   // Ordering of items in the array matters of how they will be displayed. First is last.
   // Need to double check if always works as expected also regarding of templates etc.
-  return [...missingQualities, ...allowedQualies.reverse()];
+  return [...missingQualities, ...allowedQualities.reverse()];
 };
 
 export const compareQualities = (obj1: YamlConfigQualityProfileItems[], obj2: YamlConfigQualityProfileItems[]) => {
@@ -270,7 +270,7 @@ export const calculateQualityProfilesDiff = async (
     const valueQualityMap = new Map(value.qualities.map((obj) => [obj.name, obj]));
 
     // TODO need to better validate if this quality transforming works as expected in different cases
-    const resut: YamlConfigQualityProfileItems[] = (serverMatch.items || [])
+    const serverQualitiesMapped: YamlConfigQualityProfileItems[] = (serverMatch.items || [])
       .map((obj): YamlConfigQualityProfileItems | null => {
         let qualityName: string;
 
@@ -303,7 +303,7 @@ export const calculateQualityProfilesDiff = async (
       .filter(notEmpty);
 
     // TODO do we want to enforce the whole structure or only match those which are enabled by us?
-    if (!compareQualities(value.qualities, resut)) {
+    if (!compareQualities(value.qualities, serverQualitiesMapped)) {
       console.log(`QualityProfile Items mismatch will update whole array`);
       diffExist = true;
 
