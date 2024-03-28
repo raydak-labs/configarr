@@ -58,6 +58,9 @@ Possible ideas:
 - [ ] Build multi arch containers
 - [ ] Add Github Actions stuff
 - [ ] Improve code & tidy up lint errors
+- [ ] write docs for running with container
+  - [ ] Plain docker
+  - [ ] Kubernetes
 
 ## Development
 
