@@ -1,5 +1,5 @@
 import path from "path";
-import { CustomFormatResource } from "./__generated__/MySuperbApi";
+import { CustomFormatResource } from "./__generated__/GeneratedSonarrApi";
 import { ConfigarrCF, TrashCF, UserFriendlyField } from "./types";
 
 export const IS_DRY_RUN = process.env.DRY_RUN === "true";
@@ -301,4 +301,5 @@ export function notEmpty<TValue>(value: TValue | null | undefined): value is TVa
   const testDummy: TValue = value;
   return true;
 }
+
 export const ROOT_PATH = path.resolve(process.cwd());

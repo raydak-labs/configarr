@@ -1,4 +1,4 @@
-import { CustomFormatResource, CustomFormatSpecificationSchema } from "./__generated__/MySuperbApi";
+import { CustomFormatResource, CustomFormatSpecificationSchema } from "./__generated__/GeneratedSonarrApi";
 
 export type DynamicImportType<T> = { default: T };
 
@@ -133,3 +133,8 @@ export type YamlConfig = {
     [key: string]: YamlConfigInstance;
   };
 };
+
+export type ArrType = "SONARR" | "RADARR"; // anime and series exists in trash guide
+
+export type QualityDefintionsSonarr = "anime" | "series" | "custom";
+export type QualityDefintionsRadarr = "movie" | "custom";

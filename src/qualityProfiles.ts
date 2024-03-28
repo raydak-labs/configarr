@@ -5,10 +5,10 @@ import {
   QualityDefinitionResource,
   QualityProfileQualityItemResource,
   QualityProfileResource,
-} from "./__generated__/MySuperbApi";
-import { getSonarrApi } from "./api";
+} from "./__generated__/GeneratedSonarrApi";
+import { getArrApi } from "./api";
 import { loadServerCustomFormats } from "./customFormats";
-import { loadQualityDefinitionFromSonarr } from "./qualityDefinition";
+import { loadQualityDefinitionFromServer } from "./qualityDefinition";
 import { CFProcessing, RecyclarrMergedTemplates, YamlConfigQualityProfile, YamlConfigQualityProfileItems, YamlList } from "./types";
 import { IS_LOCAL_SAMPLE_MODE, notEmpty } from "./util";
 
@@ -67,11 +67,11 @@ export const mapQualityProfiles = ({ carrIdMapping }: CFProcessing, customFormat
   return profileScores;
 };
 
-export const loadQualityProfilesSonarr = async (): Promise<QualityProfileResource[]> => {
+export const loadQualityProfilesFromServer = async (): Promise<QualityProfileResource[]> => {
   if (IS_LOCAL_SAMPLE_MODE) {
     return (await import(path.resolve(`./tests/samples/quality_profiles.json`))).default;
   }
-  const api = getSonarrApi();
+  const api = getArrApi();
 
   const qualityProfiles = await api.v3QualityprofileList();
   return qualityProfiles.data;
@@ -181,7 +181,7 @@ export const calculateQualityProfilesDiff = async (
   }, new Map<string, QualityProfileResource>());
 
   // TODO can be optimized
-  const qd = await loadQualityDefinitionFromSonarr();
+  const qd = await loadQualityDefinitionFromServer();
   const cfsFromServer = await loadServerCustomFormats();
   const cfsServerMap = new Map(cfsFromServer.map((obj) => [obj.name!, obj]));
 

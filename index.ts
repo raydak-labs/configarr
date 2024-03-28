@@ -1,24 +1,20 @@
 import "dotenv/config";
 
 import fs from "fs";
-import { CustomFormatResource } from "./src/__generated__/MySuperbApi";
-import { configureSonarrApi, getSonarrApi } from "./src/api";
+import { CustomFormatResource } from "./src/__generated__/GeneratedSonarrApi";
+import { configureRadarrApi, configureSonarrApi, getArrApi, unsetApi } from "./src/api";
 import { getConfig } from "./src/config";
 import { calculateCFsToManage, loadLocalCfs, loadServerCustomFormats, manageCf, mergeCfSources } from "./src/customFormats";
-import {
-  calculateQualityDefinitionDiff,
-  loadQualityDefinitionFromSonarr,
-  loadQualityDefinitionSonarrFromTrash,
-} from "./src/qualityDefinition";
-import { calculateQualityProfilesDiff, loadQualityProfilesSonarr, mapQualityProfiles } from "./src/qualityProfiles";
+import { calculateQualityDefinitionDiff, loadQualityDefinitionFromServer } from "./src/qualityDefinition";
+import { calculateQualityProfilesDiff, loadQualityProfilesFromServer, mapQualityProfiles } from "./src/qualityProfiles";
 import { cloneRecyclarrTemplateRepo, loadRecyclarrTemplates } from "./src/recyclarrImporter";
-import { cloneTrashRepo, loadSonarrTrashCFs } from "./src/trashGuide";
-import { RecyclarrMergedTemplates, TrashQualityDefintion, YamlConfigInstance, YamlConfigQualityProfile } from "./src/types";
+import { cloneTrashRepo, loadQualityDefinitionSonarrFromTrash, loadSonarrTrashCFs } from "./src/trashGuide";
+import { ArrType, RecyclarrMergedTemplates, TrashQualityDefintion, YamlConfigInstance, YamlConfigQualityProfile } from "./src/types";
 import { IS_DRY_RUN } from "./src/util";
 
-const pipeline = async (value: YamlConfigInstance) => {
-  const api = getSonarrApi();
-  const recyclarrTemplateMap = loadRecyclarrTemplates();
+const pipeline = async (value: YamlConfigInstance, arrType: ArrType) => {
+  const api = getArrApi();
+  const recyclarrTemplateMap = loadRecyclarrTemplates(arrType);
 
   const recylarrMergedTemplates: RecyclarrMergedTemplates = {
     custom_formats: [],
@@ -64,7 +60,7 @@ const pipeline = async (value: YamlConfigInstance) => {
   console.log(recylarrMergedTemplates);
 
   const result = await loadLocalCfs();
-  const trashCFs = await loadSonarrTrashCFs();
+  const trashCFs = await loadSonarrTrashCFs(arrType);
   const mergedCFs = mergeCfSources([trashCFs, result]);
 
   const idsToManage = calculateCFsToManage(recylarrMergedTemplates);
@@ -85,15 +81,18 @@ const pipeline = async (value: YamlConfigInstance) => {
   const qualityDefinition = recylarrMergedTemplates.quality_definition?.type;
 
   if (qualityDefinition) {
-    const qdSonarr = await loadQualityDefinitionFromSonarr();
+    const qdSonarr = await loadQualityDefinitionFromServer();
     let qdTrash: TrashQualityDefintion;
 
     switch (qualityDefinition) {
       case "anime":
-        qdTrash = await loadQualityDefinitionSonarrFromTrash("anime");
+        qdTrash = await loadQualityDefinitionSonarrFromTrash("anime", "SONARR");
         break;
       case "series":
-        qdTrash = await loadQualityDefinitionSonarrFromTrash("series");
+        qdTrash = await loadQualityDefinitionSonarrFromTrash("series", "SONARR");
+        break;
+      case "movie":
+        qdTrash = await loadQualityDefinitionSonarrFromTrash("movie", "RADARR");
         break;
       default:
         throw new Error(`Unsupported quality defintion ${qualityDefinition}`);
@@ -148,7 +147,7 @@ const pipeline = async (value: YamlConfigInstance) => {
 
   // calculate diff from server <-> what we want to be there
 
-  const qpServer = await loadQualityProfilesSonarr();
+  const qpServer = await loadQualityProfilesFromServer();
 
   const { changedQPs, create, noChanges } = await calculateQualityProfilesDiff(
     mergedCFs,
@@ -157,20 +156,61 @@ const pipeline = async (value: YamlConfigInstance) => {
     qpServer,
   );
 
-  changedQPs.forEach((e, i) => {
+  create.concat(changedQPs).forEach((e, i) => {
     fs.writeFileSync(`test${i}.json`, JSON.stringify(e, null, 2), "utf-8");
   });
   console.log(`QPs: Create: ${create.length}, Update: ${changedQPs.length}, Unchanged: ${noChanges.length}`);
 
   if (!IS_DRY_RUN) {
     for (const element of create) {
-      const newProfile = await api.v3QualityprofileCreate(element);
-      console.log(`Created QualityProfile: ${newProfile.data.name}`);
+      try {
+        const newProfile = await api.v3QualityprofileCreate(element);
+        console.log(`Created QualityProfile: ${newProfile.data.name}`);
+      } catch (error) {
+        let message;
+
+        if (error.response) {
+          console.log(error.response);
+          // The request was made and the server responded with a status code
+          // that falls out of the range of 2xx
+          message = `Failed creating QualityProfile (${element.name}): Data ${JSON.stringify(error.response.data)}`;
+        } else if (error.request) {
+          // The request was made but no response was received
+          // `error.request` is an instance of XMLHttpRequest in the browser and an instance of
+          // http.ClientRequest in node.js
+          console.log(error.request);
+        } else {
+          // Something happened in setting up the request that triggered an Error
+          console.log("Error", error.message);
+        }
+
+        throw new Error(message);
+      }
     }
 
     for (const element of changedQPs) {
-      const newProfile = await api.v3QualityprofileUpdate("" + element.id, element);
-      console.log(`Updated QualityProfile: ${newProfile.data.name}`);
+      try {
+        const newProfile = await api.v3QualityprofileUpdate("" + element.id, element);
+        console.log(`Updated QualityProfile: ${newProfile.data.name}`);
+      } catch (error) {
+        let message;
+
+        if (error.response) {
+          // The request was made and the server responded with a status code
+          // that falls out of the range of 2xx
+          message = `Failed updating QualityProfile (${element.name}): Data ${JSON.stringify(error.response.data)}`;
+        } else if (error.request) {
+          // The request was made but no response was received
+          // `error.request` is an instance of XMLHttpRequest in the browser and an instance of
+          // http.ClientRequest in node.js
+          console.log(error.request);
+        } else {
+          // Something happened in setting up the request that triggered an Error
+          console.log("Error", error.message);
+        }
+
+        throw new Error(message);
+      }
     }
   }
   /*
@@ -196,22 +236,17 @@ const run = async () => {
     const instance = applicationConfig.sonarr[instanceName];
     console.log(`Processing Sonarr Instance: ${instanceName}`);
     await configureSonarrApi(instance.base_url, instance.api_key);
-    await pipeline(instance);
+    await pipeline(instance, "SONARR");
+    unsetApi();
   }
 
   for (const instanceName in applicationConfig.radarr) {
     console.log(`Processing Radarr instance: ${instanceName}`);
-    console.log(`Currently not implemented`);
-    continue;
-
-    const instance = applicationConfig.sonarr[instanceName];
-    console.log(`Processing Sonarr Instance: ${instanceName}`);
-    await pipeline(instance);
+    const instance = applicationConfig.radarr[instanceName];
+    await configureRadarrApi(instance.base_url, instance.api_key);
+    await pipeline(instance, "RADARR");
+    unsetApi();
   }
 };
 
 run();
-//go();
-//go2();
-//testGo();
-//testCompare();

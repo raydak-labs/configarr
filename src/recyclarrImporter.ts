@@ -2,7 +2,7 @@ import { default as fs } from "fs";
 import simpleGit, { CheckRepoActions } from "simple-git";
 import yaml from "yaml";
 import { getConfig } from "./config";
-import { RecyclarrTemplates } from "./types";
+import { ArrType, RecyclarrTemplates } from "./types";
 import { recyclarrRepoPaths } from "./util";
 
 export const cloneRecyclarrTemplateRepo = async () => {
@@ -26,7 +26,7 @@ export const cloneRecyclarrTemplateRepo = async () => {
   console.log(`Recyclarr Git Check`, r);
 };
 
-export const loadRecyclarrTemplates = () => {
+export const loadRecyclarrTemplates = (arrType: ArrType) => {
   const map = new Map<string, RecyclarrTemplates>();
 
   const fillMap = (path: string) => {
@@ -35,9 +35,15 @@ export const loadRecyclarrTemplates = () => {
     files.forEach((f) => map.set(f.substring(0, f.lastIndexOf(".")), yaml.parse(fs.readFileSync(`${path}/${f}`, "utf8"))));
   };
 
-  fillMap(recyclarrRepoPaths.sonarrCF);
-  fillMap(recyclarrRepoPaths.sonarrQD);
-  fillMap(recyclarrRepoPaths.sonarrQP);
+  if (arrType === "RADARR") {
+    fillMap(recyclarrRepoPaths.radarrCF);
+    fillMap(recyclarrRepoPaths.radarrQD);
+    fillMap(recyclarrRepoPaths.radarrQP);
+  } else {
+    fillMap(recyclarrRepoPaths.sonarrCF);
+    fillMap(recyclarrRepoPaths.sonarrQD);
+    fillMap(recyclarrRepoPaths.sonarrQP);
+  }
 
   return map;
 };

@@ -1,30 +1,14 @@
 import path from "path";
-import { QualityDefinitionResource } from "./__generated__/MySuperbApi";
-import { getSonarrApi } from "./api";
+import { QualityDefinitionResource } from "./__generated__/GeneratedSonarrApi";
+import { getArrApi } from "./api";
 import { TrashQualityDefintion, TrashQualityDefintionQuality } from "./types";
-import { IS_LOCAL_SAMPLE_MODE, trashRepoPaths } from "./util";
+import { IS_LOCAL_SAMPLE_MODE } from "./util";
 
-// anime and series exists in trash guide
-export type QualityDefintionsSonarr = "anime" | "series" | "custom";
-
-export const loadQualityDefinitionSonarrFromTrash = async (qdType: QualityDefintionsSonarr): Promise<TrashQualityDefintion> => {
-  switch (qdType) {
-    case "anime":
-      return (await import(path.resolve(`${trashRepoPaths.sonarrQuality}/anime.json`))).default;
-    case "series":
-      return (await import(path.resolve(`${trashRepoPaths.sonarrQuality}/series.json`))).default;
-    case "custom":
-      throw new Error("Not implemented yet");
-    default:
-      throw new Error(`Unknown QualityDefintion type: ${qdType}`);
-  }
-};
-
-export const loadQualityDefinitionFromSonarr = async (): Promise<QualityDefinitionResource[]> => {
+export const loadQualityDefinitionFromServer = async (): Promise<QualityDefinitionResource[]> => {
   if (IS_LOCAL_SAMPLE_MODE) {
     return (await import(path.resolve("./tests/samples/qualityDefinition.json"))).default;
   }
-  return (await getSonarrApi().v3QualitydefinitionList()).data;
+  return (await getArrApi().v3QualitydefinitionList()).data;
 };
 
 export const calculateQualityDefinitionDiff = (serverQDs: QualityDefinitionResource[], trashQD: TrashQualityDefintion) => {

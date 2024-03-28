@@ -12,5 +12,19 @@ services:
       - 8989:8989
     restart: unless-stopped
 
+  radarr:
+    image: lscr.io/linuxserver/radarr:5.3.6
+    container_name: radarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+    volumes:
+      - radarr:/config
+    ports:
+      - 7878:7878
+    restart: unless-stopped
+
 volumes:
   sonarr:
+  radarr:

@@ -1,16 +1,16 @@
 import { readdirSync } from "fs";
 import path from "path";
-import { CustomFormatResource } from "./__generated__/MySuperbApi";
-import { getSonarrApi } from "./api";
+import { CustomFormatResource } from "./__generated__/GeneratedSonarrApi";
+import { getArrApi } from "./api";
 import { CFProcessing, ConfigarrCF, DynamicImportType, TrashCF, YamlInput } from "./types";
 import { IS_DRY_RUN, IS_LOCAL_SAMPLE_MODE, ROOT_PATH, carrCfToValidCf, compareObjectsCarr, toCarrCF } from "./util";
 
 export const deleteAllCustomFormats = async () => {
-  const api = getSonarrApi();
+  const api = getArrApi();
   const cfOnServer = await api.v3CustomformatList();
 
   for (const cf of cfOnServer.data) {
-    await api.v3CustomfilterDelete(cf.id!);
+    await api.v3CustomformatDelete(cf.id!);
     console.log(`Deleted CF: '${cf.name}'`);
   }
 };
@@ -19,7 +19,7 @@ export const loadServerCustomFormats = async (): Promise<CustomFormatResource[]>
   if (IS_LOCAL_SAMPLE_MODE) {
     return (await import(path.resolve("./tests/samples/cfs.json"))).default as unknown as Promise<CustomFormatResource[]>;
   }
-  const api = getSonarrApi();
+  const api = getArrApi();
   const cfOnServer = await api.v3CustomformatList();
   return cfOnServer.data;
 };
@@ -27,7 +27,7 @@ export const loadServerCustomFormats = async (): Promise<CustomFormatResource[]>
 export const manageCf = async (cfProcessing: CFProcessing, serverCfs: Map<string, CustomFormatResource>, cfsToManage: Set<string>) => {
   const { carrIdMapping: trashIdToObject, cfNameToCarrConfig: existingCfToObject } = cfProcessing;
 
-  const api = getSonarrApi();
+  const api = getArrApi();
 
   const manageSingle = async (carrId: string) => {
     const tr = trashIdToObject.get(carrId);
