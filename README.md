@@ -42,6 +42,7 @@ Possible ideas:
 - Include own defined custom formats
 - Custom defined formats for different languages/countries like Germany
 - Support all CustomFormat specifications
+- Maybe this?: https://github.com/recyclarr/recyclarr/issues/225
 
 ## Work TODOs
 
