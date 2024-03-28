@@ -126,6 +126,7 @@ export type YamlConfig = {
   trashRevision?: string;
   recyclarrConfigUrl: string;
   recyclarrRevision?: string;
+  localCustomFormatsPath?: string;
   sonarr: {
     [key: string]: YamlConfigInstance;
   };

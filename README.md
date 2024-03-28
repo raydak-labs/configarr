@@ -62,6 +62,7 @@ Possible ideas:
 - [ ] write docs for running with container
   - [ ] Plain docker
   - [ ] Kubernetes
+- [ ] Simple Config validation
 
 ## Development
 
@@ -77,3 +78,36 @@ Possible ideas:
    1. `cp config.yml.template config.yml`
    2. Overwrite the hosts in case you are not using the local setup with docker compose
 5. Run the app with `pnpm start` or with the vscode task
+
+## How to run
+
+Required files:
+- `config.yml`
+- `secrets.yml`
+
+Optional:
+- Custom Formats in folders
+
+### Docker
+
+`docker run --rm -v ./:/app/config configarr:test`
+
+### Docker-compose
+
+```yml
+
+services:
+  configarr:
+    image: configarr:test
+    build: .
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+    volumes:
+      - ./config:/app/config # Contains the config.yml and secrets.yml
+      - ./dockerrepos:/app/repos # Cache repositories
+      - ./custom/cfs:/app/cfs # Optional if custom formats locally provided
+```
+
+### Kubernetes

@@ -1,7 +1,10 @@
 import { readFileSync } from "fs";
-import path from "path";
 import yaml from "yaml";
 import { YamlConfig } from "./types";
+import { ROOT_PATH } from "./util";
+
+const CONFIG_LOCATION = process.env.CONFIG_LOCATION ?? `${ROOT_PATH}/config.yml`;
+const SECRETS_LOCATION = process.env.SECRETS_LOCATION ?? `${ROOT_PATH}/secrets.yml`;
 
 let config: YamlConfig;
 let secrets: any;
@@ -14,13 +17,13 @@ const secretsTag = {
   },
 };
 
+// TODO some schema validation. For now only check if something can be imported
 export const getConfig = (): YamlConfig => {
   if (config) {
     return config;
   }
 
-  const BASE_PATH = path.resolve(process.cwd(), ".");
-  const file = readFileSync(`${BASE_PATH}/config.yml`, "utf8");
+  const file = readFileSync(CONFIG_LOCATION, "utf8");
   config = yaml.parse(file, { customTags: [secretsTag] }) as YamlConfig;
   return config;
 };
@@ -30,8 +33,7 @@ export const getSecrets = () => {
     return secrets;
   }
 
-  const BASE_PATH = path.resolve(process.cwd(), ".");
-  const file = readFileSync(`${BASE_PATH}/secrets.yml`, "utf8");
+  const file = readFileSync(SECRETS_LOCATION, "utf8");
   config = yaml.parse(file);
   return config;
 };

@@ -3,6 +3,9 @@ trashGuideUrl: https://github.com/TRaSH-Guides/Guides
 recyclarrConfigUrl: https://github.com/recyclarr/config-templates
 #recyclarrRevision: master # Optional to specify sha
 
+# Optional if you want to add custom formats locally
+#localCustomFormatsPath: ./custom/cfs
+
 sonarr:
   series:
     # Set the URL/API Key to your actual instance
