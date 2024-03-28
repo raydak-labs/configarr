@@ -15,6 +15,8 @@ import {
 } from "./types";
 import { carrCfToValidCf, toCarrCF, trashRepoPaths } from "./util";
 
+const DEFAULT_TRASH_GIT_URL = "https://github.com/TRaSH-Guides/Guides";
+
 export const cloneTrashRepo = async () => {
   const rootPath = trashRepoPaths.root;
 
@@ -28,7 +30,7 @@ export const cloneTrashRepo = async () => {
   const applicationConfig = getConfig();
 
   if (!r) {
-    await simpleGit().clone(applicationConfig.trashGuideUrl, rootPath);
+    await simpleGit().clone(applicationConfig.trashGuideUrl ?? DEFAULT_TRASH_GIT_URL, rootPath);
   }
 
   await gitClient.checkout(applicationConfig.trashRevision ?? "master");

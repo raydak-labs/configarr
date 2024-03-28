@@ -5,6 +5,8 @@ import { getConfig } from "./config";
 import { ArrType, RecyclarrTemplates } from "./types";
 import { recyclarrRepoPaths } from "./util";
 
+const DEFAULT_RECYCLARR_GIT_URL = "https://github.com/recyclarr/config-templates";
+
 export const cloneRecyclarrTemplateRepo = async () => {
   const rootPath = recyclarrRepoPaths.root;
 
@@ -18,7 +20,7 @@ export const cloneRecyclarrTemplateRepo = async () => {
   const applicationConfig = getConfig();
 
   if (!r) {
-    await simpleGit().clone(applicationConfig.recyclarrConfigUrl, rootPath);
+    await simpleGit().clone(applicationConfig.recyclarrConfigUrl ?? DEFAULT_RECYCLARR_GIT_URL, rootPath);
   }
 
   await gitClient.checkout(applicationConfig.trashRevision ?? "master");
