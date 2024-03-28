@@ -1,14 +1,14 @@
 import "dotenv/config";
 
 import fs from "fs";
-import { CustomFormatResource } from "./src/__generated__/GeneratedSonarrApi";
+import { CustomFormatResource } from "./src/__generated__/generated-sonarr-api";
 import { configureRadarrApi, configureSonarrApi, getArrApi, unsetApi } from "./src/api";
 import { getConfig } from "./src/config";
-import { calculateCFsToManage, loadLocalCfs, loadServerCustomFormats, manageCf, mergeCfSources } from "./src/customFormats";
-import { calculateQualityDefinitionDiff, loadQualityDefinitionFromServer } from "./src/qualityDefinition";
-import { calculateQualityProfilesDiff, loadQualityProfilesFromServer, mapQualityProfiles } from "./src/qualityProfiles";
-import { cloneRecyclarrTemplateRepo, loadRecyclarrTemplates } from "./src/recyclarrImporter";
-import { cloneTrashRepo, loadQualityDefinitionSonarrFromTrash, loadSonarrTrashCFs } from "./src/trashGuide";
+import { calculateCFsToManage, loadLocalCfs, loadServerCustomFormats, manageCf, mergeCfSources } from "./src/custom-formats";
+import { calculateQualityDefinitionDiff, loadQualityDefinitionFromServer } from "./src/quality-definitions";
+import { calculateQualityProfilesDiff, loadQualityProfilesFromServer, mapQualityProfiles } from "./src/quality-profiles";
+import { cloneRecyclarrTemplateRepo, loadRecyclarrTemplates } from "./src/recyclarr-importer";
+import { cloneTrashRepo, loadQualityDefinitionSonarrFromTrash, loadSonarrTrashCFs } from "./src/trash-guide";
 import { ArrType, RecyclarrMergedTemplates, TrashQualityDefintion, YamlConfigInstance, YamlConfigQualityProfile } from "./src/types";
 import { IS_DRY_RUN } from "./src/util";
 

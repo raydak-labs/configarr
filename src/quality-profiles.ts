@@ -5,10 +5,10 @@ import {
   QualityDefinitionResource,
   QualityProfileQualityItemResource,
   QualityProfileResource,
-} from "./__generated__/GeneratedSonarrApi";
+} from "./__generated__/generated-sonarr-api";
 import { getArrApi } from "./api";
-import { loadServerCustomFormats } from "./customFormats";
-import { loadQualityDefinitionFromServer } from "./qualityDefinition";
+import { loadServerCustomFormats } from "./custom-formats";
+import { loadQualityDefinitionFromServer } from "./quality-definitions";
 import { CFProcessing, RecyclarrMergedTemplates, YamlConfigQualityProfile, YamlConfigQualityProfileItems, YamlList } from "./types";
 import { IS_LOCAL_SAMPLE_MODE, notEmpty } from "./util";
 

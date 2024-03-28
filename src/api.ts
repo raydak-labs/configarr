@@ -1,5 +1,5 @@
-import { Api as RadarrApi } from "./__generated__/GeneratedRadarrApi";
-import { Api as SonarrApi } from "./__generated__/GeneratedSonarrApi";
+import { Api as RadarrApi } from "./__generated__/generated-radarr-api";
+import { Api as SonarrApi } from "./__generated__/generated-sonarr-api";
 
 let sonarrClient: SonarrApi<unknown>["api"] | undefined;
 let radarrClient: RadarrApi<unknown>["api"] | undefined;

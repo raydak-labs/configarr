@@ -1,4 +1,4 @@
-import { CustomFormatResource, CustomFormatSpecificationSchema } from "./__generated__/GeneratedSonarrApi";
+import { CustomFormatResource, CustomFormatSpecificationSchema } from "./__generated__/generated-sonarr-api";
 
 export type DynamicImportType<T> = { default: T };
 

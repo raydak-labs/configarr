@@ -5,8 +5,7 @@
   "type": "module",
   "scripts": {
     "coverage": "vitest run --coverage",
-    "go": "tsx index.ts",
-    "generateApi": "tsx generateApi",
+    "generateApi": "tsx generate-api.js",
     "start": "tsx index.ts",
     "test": "vitest",
     "tsg": "swagger-to-ts -f input.json -o test.ts"

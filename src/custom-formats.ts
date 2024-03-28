@@ -1,6 +1,6 @@
 import { readdirSync } from "fs";
 import path from "path";
-import { CustomFormatResource } from "./__generated__/GeneratedSonarrApi";
+import { CustomFormatResource } from "./__generated__/generated-sonarr-api";
 import { getArrApi } from "./api";
 import { CFProcessing, ConfigarrCF, DynamicImportType, TrashCF, YamlInput } from "./types";
 import { IS_DRY_RUN, IS_LOCAL_SAMPLE_MODE, ROOT_PATH, carrCfToValidCf, compareObjectsCarr, toCarrCF } from "./util";

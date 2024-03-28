@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import simpleGit, { CheckRepoActions } from "simple-git";
-import { CustomFormatResource } from "./__generated__/GeneratedSonarrApi";
+import { CustomFormatResource } from "./__generated__/generated-sonarr-api";
 import { getConfig } from "./config";
 import {
   ArrType,

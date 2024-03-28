@@ -1,5 +1,5 @@
 import path from "path";
-import { CustomFormatResource } from "./__generated__/GeneratedSonarrApi";
+import { CustomFormatResource } from "./__generated__/generated-sonarr-api";
 import { ConfigarrCF, TrashCF, UserFriendlyField } from "./types";
 
 export const IS_DRY_RUN = process.env.DRY_RUN === "true";

@@ -1,5 +1,5 @@
 import path from "path";
-import { QualityDefinitionResource } from "./__generated__/GeneratedSonarrApi";
+import { QualityDefinitionResource } from "./__generated__/generated-sonarr-api";
 import { getArrApi } from "./api";
 import { TrashQualityDefintion, TrashQualityDefintionQuality } from "./types";
 import { IS_LOCAL_SAMPLE_MODE } from "./util";
