@@ -8,7 +8,8 @@
     "generateApi": "tsx generate-api.js",
     "start": "tsx index.ts",
     "test": "vitest",
-    "tsg": "swagger-to-ts -f input.json -o test.ts"
+    "tsg": "swagger-to-ts -f input.json -o test.ts",
+    "type-check": "tsc --noEmit"
   },
   "author": "",
   "license": "ISC",
@@ -27,6 +28,7 @@
     "@types/node": "^20.11.30",
     "@vitest/coverage-v8": "^1.4.0",
     "prettier": "3.2.5",
+    "typescript": "5.4.3",
     "vitest": "1.4.0"
   }
 }
