@@ -6,7 +6,12 @@ import { configureRadarrApi, configureSonarrApi, getArrApi, unsetApi } from "./s
 import { getConfig } from "./src/config";
 import { calculateCFsToManage, loadLocalCfs, loadServerCustomFormats, manageCf, mergeCfSources } from "./src/custom-formats";
 import { calculateQualityDefinitionDiff, loadQualityDefinitionFromServer } from "./src/quality-definitions";
-import { calculateQualityProfilesDiff, loadQualityProfilesFromServer, mapQualityProfiles } from "./src/quality-profiles";
+import {
+  calculateQualityProfilesDiff,
+  filterInvalidQualityProfiles,
+  loadQualityProfilesFromServer,
+  mapQualityProfiles,
+} from "./src/quality-profiles";
 import { cloneRecyclarrTemplateRepo, loadRecyclarrTemplates } from "./src/recyclarr-importer";
 import { cloneTrashRepo, loadQualityDefinitionSonarrFromTrash, loadSonarrTrashCFs } from "./src/trash-guide";
 import { ArrType, RecyclarrMergedTemplates, TrashQualityDefintion, YamlConfigInstance, YamlConfigQualityProfile } from "./src/types";
@@ -56,6 +61,10 @@ const pipeline = async (value: YamlConfigInstance, arrType: ArrType) => {
   if (value.quality_profiles) {
     recylarrMergedTemplates.quality_profiles.push(...value.quality_profiles);
   }
+
+  // TODO "real" merge missing of profiles?
+
+  recylarrMergedTemplates.quality_profiles = filterInvalidQualityProfiles(recylarrMergedTemplates.quality_profiles);
 
   console.log(recylarrMergedTemplates);
 

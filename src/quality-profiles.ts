@@ -435,3 +435,22 @@ export const calculateQualityProfilesDiff = async (
 
   return { create: createQPs, changedQPs: changedQPs, noChanges: noChangedQPs };
 };
+
+export const filterInvalidQualityProfiles = (profiles: YamlConfigQualityProfile[]): YamlConfigQualityProfile[] => {
+  return profiles.filter((p) => {
+    if (p.name == null) {
+      console.log(`QP filtered because no name provided`);
+      return false;
+    }
+    if (p.qualities == null) {
+      console.log(`QP ${p.name} filtered because no qualities provided`);
+      return false;
+    }
+    if (p.upgrade == null) {
+      console.log(`QP ${p.name} filtered because no upgrade definition provided`);
+      return false;
+    }
+
+    return true;
+  });
+};
