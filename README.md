@@ -63,6 +63,8 @@ Possible ideas:
   - [ ] Plain docker
   - [ ] Kubernetes
 - [ ] Simple Config validation
+- [ ] Custom recyclarr templates?
+  - [ ] Lets say you want the same template but with a different name
 
 ## Development
 
@@ -90,7 +92,7 @@ Optional:
 
 ### Docker
 
-`docker run --rm -v ./:/app/config configarr:test`
+`docker run --rm -v ./:/app/config ghcr.io/raydak-labs/configarr:work`
 
 ### Docker-compose
 
@@ -98,7 +100,7 @@ Optional:
 
 services:
   configarr:
-    image: configarr:test
+    image: ghcr.io/raydak-labs/configarr:work
     build: .
     environment:
       - PUID=1000
@@ -111,3 +113,92 @@ services:
 ```
 
 ### Kubernetes
+
+Example how to run `CronJob` which will regulary sync your configs.
+
+```yml
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: configarr
+spec:
+  schedule: "0 * * * *"
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: configarr
+              image: ghcr.io/raydak-labs/configarr:work
+              imagePullPolicy: Always
+              envFrom:
+                - configMapRef:
+                    name: common-deployment-environment
+              volumeMounts:
+                - mountPath: /app/repos # Cache repositories
+                  name: app-data
+                  subPath: configarr-repos
+                - name: config-volume # Mount specifc config
+                  mountPath: /app/config/config.yml
+                  subPath: config.yml
+                - name: secret-volume
+                  mountPath: /app/config/secrets.yml # Mount secrets
+                  subPath: secrets.yml
+          volumes:
+            - name: app-data
+              persistentVolumeClaim:
+                claimName: media-app-data
+            - name: config-volume
+              configMap:
+                name: configarr
+            - name: secret-volume
+              secret:
+                secretName: configarr
+          restartPolicy: Never
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: configarr
+type: Opaque
+stringData:
+  secrets.yml: |
+    SONARR_API_KEY: "{{ configarr.sonarrApiKey }}"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: configarr
+data:
+  config.yml: |
+    trashGuideUrl: https://github.com/TRaSH-Guides/Guides
+    recyclarrConfigUrl: https://github.com/recyclarr/config-templates
+
+    sonarr:
+      series:
+        # Set the URL/API Key to your actual instance
+        base_url: http://sonarr:8989
+        api_key: !secret SONARR_API_KEY
+
+        # Quality definitions from the guide to sync to Sonarr. Choices: series, anime
+        quality_definition:
+          type: series
+
+        include:
+          # Comment out any of the following includes to disable them
+          #### WEB-1080p
+          - template: sonarr-quality-definition-series
+          - template: sonarr-v4-quality-profile-web-1080p
+          - template: sonarr-v4-custom-formats-web-1080p
+
+          #### WEB-2160p
+          - template: sonarr-v4-quality-profile-web-2160p
+          - template: sonarr-v4-custom-formats-web-2160p
+
+        # Custom Formats: https://recyclarr.dev/wiki/yaml/config-reference/custom-formats/
+        custom_formats: []
+    radarr: {}
+```
