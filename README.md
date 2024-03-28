@@ -18,6 +18,30 @@ Possible ideas:
   - I don't want to fork a project to add custom things to it
 - Maybe an free GUI to sync your stuff
 - Add additional best configuration for different languages/countries like Germany
+- Define CustomFormats directly in configuration maybe something like (directly translated JSON -> YAML?)
+  Not sure if useful if we already have to capability to provide own formats via JSON folder (additional those JSON are directly compatible with UI Import)
+  ```yaml
+  customFormats:
+  - name: NewCF
+    score: 125
+    includeCustomFormatWhenRenaming: false
+    specifications:
+    - name: Size
+      implementation: SizeSpecification
+      negate: false
+      required: true
+      fields:
+        min: 1
+        max: 9
+  ```
+
+## Features
+
+- Use TrashGuide defined custom formats
+- Compatible with recyclarr templates
+- Include own defined custom formats
+- Custom defined formats for different languages/countries like Germany
+- Support all CustomFormat specifications
 
 ## Work TODOs
 
