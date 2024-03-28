@@ -81,27 +81,40 @@ const mapQualities = (qd: QualityDefinitionResource[], value: YamlConfigQualityP
   const qdMap = new Map(qd.map((obj) => [obj.title, obj]));
 
   const allowedQualies: QualityProfileQualityItemResource[] = value.qualities.map((obj, i) => {
-    return {
-      allowed: true,
-      id: 1000 + i,
-      name: obj.name,
-      items: obj.qualities?.map<QualityProfileQualityItemResource>((obj2) => {
-        const qd = qdMap.get(obj2);
+    if (obj.qualities?.length && obj.qualities.length > 0) {
+      return {
+        allowed: true,
+        id: 1000 + i,
+        name: obj.name,
+        items: obj.qualities?.map<QualityProfileQualityItemResource>((obj2) => {
+          const qd = qdMap.get(obj2);
 
-        const returnObject: QualityProfileQualityItemResource = {
-          quality: {
-            id: qd?.quality?.id,
-            name: obj2,
-            resolution: qd?.quality?.resolution,
-            source: qd?.quality?.source,
-          },
-        };
+          const returnObject: QualityProfileQualityItemResource = {
+            quality: {
+              id: qd?.quality?.id,
+              name: obj2,
+              resolution: qd?.quality?.resolution,
+              source: qd?.quality?.source,
+            },
+          };
 
-        qdMap.delete(obj2);
+          qdMap.delete(obj2);
 
-        return returnObject;
-      }),
-    };
+          return returnObject;
+        }),
+      };
+    } else {
+      const serverQD = qdMap.get(obj.name);
+      qdMap.delete(obj.name);
+
+      return {
+        allowed: true,
+        items: [],
+        quality: {
+          ...serverQD?.quality,
+        },
+      };
+    }
   });
 
   const missingQualities: QualityProfileQualityItemResource[] = [];
@@ -204,7 +217,19 @@ export const calculateQualityProfilesDiff = async (
     if (!serverMatch) {
       console.log(`QualityProfile not found in server. Ignoring: ${name}`);
       const mappedQ = mapQualities(qd, value);
-      const tmpMap = new Map(mappedQ.map((obj) => [obj.name!, obj]));
+
+      const qualityToId = mappedQ.reduce<Map<string, number>>((p, c) => {
+        const id = c.id ?? c.quality?.id;
+        const qName = c.name ?? c.quality?.name;
+
+        if (id == null || qName == null) {
+          throw new Error(`No ID (${id}) or name ${qName} found for quality? QP: ${name}`);
+        }
+
+        p.set(qName, id);
+
+        return p;
+      }, new Map());
 
       const cfs: Map<string, CustomFormatResource> = new Map(JSON.parse(JSON.stringify(Array.from(cfsServerMap))));
 
@@ -226,7 +251,7 @@ export const calculateQualityProfilesDiff = async (
       createQPs.push({
         name: value.name,
         items: mappedQ,
-        cutoff: tmpMap.get(value.upgrade.until_quality)?.id,
+        cutoff: qualityToId.get(value.upgrade.until_quality),
         cutoffFormatScore: value.upgrade.until_score,
         minFormatScore: value.min_format_score,
         upgradeAllowed: value.upgrade.allowed,
@@ -244,9 +269,18 @@ export const calculateQualityProfilesDiff = async (
 
     const valueQualityMap = new Map(value.qualities.map((obj) => [obj.name, obj]));
 
+    // TODO need to better validate if this quality transforming works as expected in different cases
     const resut: YamlConfigQualityProfileItems[] = (serverMatch.items || [])
       .map((obj): YamlConfigQualityProfileItems | null => {
-        if (!valueQualityMap.has(obj.name!) && !obj.allowed) {
+        let qualityName: string;
+
+        if (obj.id) {
+          qualityName = obj.name!;
+        } else {
+          qualityName = obj.quality?.name!;
+        }
+
+        if (!valueQualityMap.has(qualityName) && !obj.allowed) {
           // Only return null if quality not specified and not enabled in arr. If enabled we need to disable it.
           return null;
         }
@@ -254,14 +288,14 @@ export const calculateQualityProfilesDiff = async (
         // if ID it is a grouping
         if (obj.id) {
           return {
-            name: obj.name!,
+            name: qualityName,
             qualities: (obj.items || []).map((qObj) => {
               return qObj.quality!.name!;
             }),
           };
         } else {
           return {
-            name: obj.quality?.name!,
+            name: qualityName,
             qualities: [],
           };
         }
@@ -285,6 +319,19 @@ export const calculateQualityProfilesDiff = async (
       }
     }
 
+    const qualityToId = updatedServerObject.items!.reduce<Map<string, number>>((p, c) => {
+      const id = c.id ?? c.quality?.id;
+      const qName = c.name ?? c.quality?.name;
+
+      if (id == null || qName == null) {
+        throw new Error(`No ID (${id}) or name ${qName} found for quality? QP: ${name}`);
+      }
+
+      p.set(qName, id);
+
+      return p;
+    }, new Map());
+
     if (value.min_format_score) {
       if (serverMatch.minFormatScore !== value.min_format_score) {
         updatedServerObject.minFormatScore = value.min_format_score;
@@ -301,12 +348,16 @@ export const calculateQualityProfilesDiff = async (
         changeList.push(`UpgradeAllowed diff: server: ${serverMatch.upgradeAllowed} - expected: ${value.upgrade.allowed}`);
       }
 
-      const upgradeUntil = updatedServerObject.items?.find((e) => e.name === value.upgrade.until_quality);
+      const upgradeUntil = qualityToId.get(value.upgrade.until_quality);
 
-      if (serverMatch.cutoff !== upgradeUntil?.id) {
-        updatedServerObject.cutoff = upgradeUntil?.id;
+      if (!upgradeUntil) {
+        throw new Error(`Did not find expected Quality to upgrade until: ${value.upgrade.until_quality}`);
+      }
+
+      if (serverMatch.cutoff !== upgradeUntil) {
+        updatedServerObject.cutoff = upgradeUntil;
         diffExist = true;
-        changeList.push(`Upgrade until quality diff: server: ${serverMatch.cutoff} - expected: ${upgradeUntil?.id}`);
+        changeList.push(`Upgrade until quality diff: server: ${serverMatch.cutoff} - expected: ${upgradeUntil}`);
       }
 
       if (serverMatch.cutoffFormatScore !== value.upgrade.until_score) {
