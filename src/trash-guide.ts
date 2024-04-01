@@ -35,7 +35,7 @@ export const cloneTrashRepo = async () => {
 
   await gitClient.checkout(applicationConfig.trashRevision ?? "master");
 
-  console.log(`TrashGuide Git Check`, r);
+  console.log(`Updating TrashGuide repo`);
 };
 
 export const loadSonarrTrashCFs = async (arrType: ArrType): Promise<CFProcessing> => {

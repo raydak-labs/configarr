@@ -430,7 +430,11 @@ export const calculateQualityProfilesDiff = async (
       noChangedQPs.push(value.name);
     }
 
-    console.log(changeList);
+    if (changeList.length > 0) {
+      console.log(`ChangeList for QualityProfile:\n`, changeList);
+    } else {
+      console.log(`QualityProfile has no changes.`);
+    }
   }
 
   return { create: createQPs, changedQPs: changedQPs, noChanges: noChangedQPs };

@@ -25,7 +25,7 @@ export const cloneRecyclarrTemplateRepo = async () => {
 
   await gitClient.checkout(applicationConfig.trashRevision ?? "master");
 
-  console.log(`Recyclarr Git Check`, r);
+  console.log(`Updating Recyclarr repo`);
 };
 
 export const loadRecyclarrTemplates = (arrType: ArrType) => {

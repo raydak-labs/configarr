@@ -15,7 +15,7 @@ import {
 import { cloneRecyclarrTemplateRepo, loadRecyclarrTemplates } from "./src/recyclarr-importer";
 import { cloneTrashRepo, loadQualityDefinitionSonarrFromTrash, loadSonarrTrashCFs } from "./src/trash-guide";
 import { ArrType, RecyclarrMergedTemplates, TrashQualityDefintion, YamlConfigInstance, YamlConfigQualityProfile } from "./src/types";
-import { IS_DRY_RUN } from "./src/util";
+import { DEBUG_CREATE_FILES, IS_DRY_RUN } from "./src/util";
 
 const pipeline = async (value: YamlConfigInstance, arrType: ArrType) => {
   const api = getArrApi();
@@ -27,7 +27,7 @@ const pipeline = async (value: YamlConfigInstance, arrType: ArrType) => {
   };
 
   if (value.include) {
-    console.log(`Recyclarr Includes: ${value.include}`);
+    console.log(`Recyclarr Includes:\n${value.include.map((e) => e.template).join("\n")}`);
     value.include.forEach((e) => {
       const template = recyclarrTemplateMap.get(e.template);
 
@@ -65,8 +65,6 @@ const pipeline = async (value: YamlConfigInstance, arrType: ArrType) => {
   // TODO "real" merge missing of profiles?
 
   recylarrMergedTemplates.quality_profiles = filterInvalidQualityProfiles(recylarrMergedTemplates.quality_profiles);
-
-  console.log(recylarrMergedTemplates);
 
   const result = await loadLocalCfs();
   const trashCFs = await loadSonarrTrashCFs(arrType);
@@ -165,9 +163,12 @@ const pipeline = async (value: YamlConfigInstance, arrType: ArrType) => {
     qpServer,
   );
 
-  create.concat(changedQPs).forEach((e, i) => {
-    fs.writeFileSync(`test${i}.json`, JSON.stringify(e, null, 2), "utf-8");
-  });
+  if (DEBUG_CREATE_FILES) {
+    create.concat(changedQPs).forEach((e, i) => {
+      fs.writeFileSync(`test${i}.json`, JSON.stringify(e, null, 2), "utf-8");
+    });
+  }
+
   console.log(`QPs: Create: ${create.length}, Update: ${changedQPs.length}, Unchanged: ${noChanges.length}`);
 
   if (!IS_DRY_RUN) {
@@ -249,12 +250,30 @@ const run = async () => {
     unsetApi();
   }
 
+  if (
+    typeof applicationConfig.sonarr === "object" &&
+    !Array.isArray(applicationConfig.sonarr) &&
+    applicationConfig.sonarr !== null &&
+    Object.keys(applicationConfig.sonarr).length <= 0
+  ) {
+    console.log(`No sonarr instances defined.`);
+  }
+
   for (const instanceName in applicationConfig.radarr) {
     console.log(`Processing Radarr instance: ${instanceName}`);
     const instance = applicationConfig.radarr[instanceName];
     await configureRadarrApi(instance.base_url, instance.api_key);
     await pipeline(instance, "RADARR");
     unsetApi();
+  }
+
+  if (
+    typeof applicationConfig.radarr === "object" &&
+    !Array.isArray(applicationConfig.radarr) &&
+    applicationConfig.radarr !== null &&
+    Object.keys(applicationConfig.radarr).length <= 0
+  ) {
+    console.log(`No radarr instances defined.`);
   }
 };
 
