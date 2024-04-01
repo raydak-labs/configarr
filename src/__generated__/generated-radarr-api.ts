@@ -9,22 +9,33 @@
  * ---------------------------------------------------------------
  */
 
-export interface AddSeriesOptions {
+export enum AddMovieMethod {
+  Manual = "manual",
+  List = "list",
+  Collection = "collection",
+}
+
+export interface AddMovieOptions {
   ignoreEpisodesWithFiles?: boolean;
   ignoreEpisodesWithoutFiles?: boolean;
   monitor?: MonitorTypes;
-  searchForMissingEpisodes?: boolean;
-  searchForCutoffUnmetEpisodes?: boolean;
+  searchForMovie?: boolean;
+  addMethod?: AddMovieMethod;
 }
 
-export interface AlternateTitleResource {
+export interface AlternativeTitleResource {
+  /** @format int32 */
+  id?: number;
+  sourceType?: SourceType;
+  /** @format int32 */
+  movieMetadataId?: number;
   title?: string | null;
-  /** @format int32 */
-  seasonNumber?: number | null;
-  /** @format int32 */
-  sceneSeasonNumber?: number | null;
-  sceneOrigin?: string | null;
-  comment?: string | null;
+  cleanTitle?: string | null;
+}
+
+export interface ApiInfoResource {
+  current?: string | null;
+  deprecated?: string[] | null;
 }
 
 export enum ApplyTags {
@@ -92,8 +103,7 @@ export interface BlocklistResource {
   /** @format int32 */
   id?: number;
   /** @format int32 */
-  seriesId?: number;
-  episodeIds?: number[] | null;
+  movieId?: number;
   sourceTitle?: string | null;
   languages?: Language[] | null;
   quality?: QualityModel;
@@ -103,7 +113,7 @@ export interface BlocklistResource {
   protocol?: DownloadProtocol;
   indexer?: string | null;
   message?: string | null;
-  series?: SeriesResource;
+  movie?: MovieResource;
 }
 
 export interface BlocklistResourcePagingResource {
@@ -124,12 +134,72 @@ export enum CertificateValidationType {
   Disabled = "disabled",
 }
 
+export interface CollectionMovieResource {
+  /** @format int32 */
+  tmdbId?: number;
+  imdbId?: string | null;
+  title?: string | null;
+  cleanTitle?: string | null;
+  sortTitle?: string | null;
+  status?: MovieStatusType;
+  overview?: string | null;
+  /** @format int32 */
+  runtime?: number;
+  images?: MediaCover[] | null;
+  /** @format int32 */
+  year?: number;
+  ratings?: Ratings;
+  genres?: string[] | null;
+  folder?: string | null;
+}
+
+export interface CollectionResource {
+  /** @format int32 */
+  id?: number;
+  title?: string | null;
+  sortTitle?: string | null;
+  /** @format int32 */
+  tmdbId?: number;
+  images?: MediaCover[] | null;
+  overview?: string | null;
+  monitored?: boolean;
+  rootFolderPath?: string | null;
+  /** @format int32 */
+  qualityProfileId?: number;
+  searchOnAdd?: boolean;
+  minimumAvailability?: MovieStatusType;
+  movies?: CollectionMovieResource[] | null;
+  /** @format int32 */
+  missingMovies?: number;
+  /** @uniqueItems true */
+  tags?: number[] | null;
+}
+
+export interface CollectionUpdateResource {
+  collectionIds?: number[] | null;
+  monitored?: boolean | null;
+  monitorMovies?: boolean | null;
+  searchOnAdd?: boolean | null;
+  /** @format int32 */
+  qualityProfileId?: number | null;
+  rootFolderPath?: string | null;
+  minimumAvailability?: MovieStatusType;
+}
+
+export enum ColonReplacementFormat {
+  Delete = "delete",
+  Dash = "dash",
+  SpaceDash = "spaceDash",
+  SpaceDashSpace = "spaceDashSpace",
+}
+
 export interface Command {
   sendUpdatesToClient?: boolean;
   updateScheduledTask?: boolean;
   completionMessage?: string | null;
   requiresDiskAccess?: boolean;
   isExclusive?: boolean;
+  isTypeExclusive?: boolean;
   isLongRunning?: boolean;
   name?: string | null;
   /** @format date-time */
@@ -195,6 +265,29 @@ export enum CommandTrigger {
   Unspecified = "unspecified",
   Manual = "manual",
   Scheduled = "scheduled",
+}
+
+export interface CreditResource {
+  /** @format int32 */
+  id?: number;
+  personName?: string | null;
+  creditTmdbId?: string | null;
+  /** @format int32 */
+  personTmdbId?: number;
+  /** @format int32 */
+  movieMetadataId?: number;
+  images?: MediaCover[] | null;
+  department?: string | null;
+  job?: string | null;
+  character?: string | null;
+  /** @format int32 */
+  order?: number;
+  type?: CreditType;
+}
+
+export enum CreditType {
+  Cast = "cast",
+  Crew = "crew",
 }
 
 export interface CustomFilterResource {
@@ -278,6 +371,8 @@ export interface DownloadClientConfigResource {
   id?: number;
   downloadClientWorkingFolders?: string | null;
   enableCompletedDownloadHandling?: boolean;
+  /** @format int32 */
+  checkForFinishedDownloadInterval?: number;
   autoRedownloadFailed?: boolean;
   autoRedownloadFailedFromInteractiveSearch?: boolean;
 }
@@ -309,117 +404,22 @@ export enum DownloadProtocol {
   Torrent = "torrent",
 }
 
-export interface EpisodeFileListResource {
-  episodeFileIds?: number[] | null;
-  languages?: Language[] | null;
-  quality?: QualityModel;
-  sceneName?: string | null;
-  releaseGroup?: string | null;
-}
-
-export interface EpisodeFileResource {
+export interface ExtraFileResource {
   /** @format int32 */
   id?: number;
   /** @format int32 */
-  seriesId?: number;
+  movieId?: number;
   /** @format int32 */
-  seasonNumber?: number;
+  movieFileId?: number | null;
   relativePath?: string | null;
-  path?: string | null;
-  /** @format int64 */
-  size?: number;
-  /** @format date-time */
-  dateAdded?: string;
-  sceneName?: string | null;
-  releaseGroup?: string | null;
-  languages?: Language[] | null;
-  quality?: QualityModel;
-  customFormats?: CustomFormatResource[] | null;
-  /** @format int32 */
-  customFormatScore?: number;
-  /** @format int32 */
-  indexerFlags?: number | null;
-  /** @format int32 */
-  releaseType?: number | null;
-  mediaInfo?: MediaInfoResource;
-  qualityCutoffNotMet?: boolean;
+  extension?: string | null;
+  type?: ExtraFileType;
 }
 
-export enum EpisodeHistoryEventType {
-  Unknown = "unknown",
-  Grabbed = "grabbed",
-  SeriesFolderImported = "seriesFolderImported",
-  DownloadFolderImported = "downloadFolderImported",
-  DownloadFailed = "downloadFailed",
-  EpisodeFileDeleted = "episodeFileDeleted",
-  EpisodeFileRenamed = "episodeFileRenamed",
-  DownloadIgnored = "downloadIgnored",
-}
-
-export interface EpisodeResource {
-  /** @format int32 */
-  id?: number;
-  /** @format int32 */
-  seriesId?: number;
-  /** @format int32 */
-  tvdbId?: number;
-  /** @format int32 */
-  episodeFileId?: number;
-  /** @format int32 */
-  seasonNumber?: number;
-  /** @format int32 */
-  episodeNumber?: number;
-  title?: string | null;
-  airDate?: string | null;
-  /** @format date-time */
-  airDateUtc?: string | null;
-  /** @format int32 */
-  runtime?: number;
-  finaleType?: string | null;
-  overview?: string | null;
-  episodeFile?: EpisodeFileResource;
-  hasFile?: boolean;
-  monitored?: boolean;
-  /** @format int32 */
-  absoluteEpisodeNumber?: number | null;
-  /** @format int32 */
-  sceneAbsoluteEpisodeNumber?: number | null;
-  /** @format int32 */
-  sceneEpisodeNumber?: number | null;
-  /** @format int32 */
-  sceneSeasonNumber?: number | null;
-  unverifiedSceneNumbering?: boolean;
-  /** @format date-time */
-  endTime?: string | null;
-  /** @format date-time */
-  grabDate?: string | null;
-  seriesTitle?: string | null;
-  series?: SeriesResource;
-  images?: MediaCover[] | null;
-  grabbed?: boolean;
-}
-
-export interface EpisodeResourcePagingResource {
-  /** @format int32 */
-  page?: number;
-  /** @format int32 */
-  pageSize?: number;
-  sortKey?: string | null;
-  sortDirection?: SortDirection;
-  /** @format int32 */
-  totalRecords?: number;
-  records?: EpisodeResource[] | null;
-}
-
-export enum EpisodeTitleRequiredType {
-  Always = "always",
-  BulkSeasonReleases = "bulkSeasonReleases",
-  Never = "never",
-}
-
-export interface EpisodesMonitoredResource {
-  episodeIds?: number[] | null;
-  monitored?: boolean;
+export enum ExtraFileType {
+  Subtitle = "subtitle",
+  Metadata = "metadata",
+  Other = "other",
 }
 
 export interface Field {
@@ -445,8 +445,8 @@ export interface Field {
 
 export enum FileDateType {
   None = "none",
-  LocalAirDate = "localAirDate",
-  UtcAirDate = "utcAirDate",
+  Cinemas = "cinemas",
+  Release = "release",
 }
 
 export enum HealthCheckResult {
@@ -469,9 +469,7 @@ export interface HistoryResource {
   /** @format int32 */
   id?: number;
   /** @format int32 */
-  episodeId?: number;
-  /** @format int32 */
-  seriesId?: number;
+  movieId?: number;
   sourceTitle?: string | null;
   languages?: Language[] | null;
   quality?: QualityModel;
@@ -482,10 +480,9 @@ export interface HistoryResource {
   /** @format date-time */
   date?: string;
   downloadId?: string | null;
-  eventType?: EpisodeHistoryEventType;
+  eventType?: MovieHistoryEventType;
   data?: Record<string, string | null>;
-  episode?: EpisodeResource;
-  series?: SeriesResource;
+  movie?: MovieResource;
 }
 
 export interface HistoryResourcePagingResource {
@@ -556,42 +553,43 @@ export interface HttpUri {
   fragment?: string | null;
 }
 
+export interface ImportExclusionsResource {
+  /** @format int32 */
+  id?: number;
+  name?: string | null;
+  fields?: Field[] | null;
+  implementationName?: string | null;
+  implementation?: string | null;
+  configContract?: string | null;
+  infoLink?: string | null;
+  message?: ProviderMessage;
+  /** @uniqueItems true */
+  tags?: number[] | null;
+  presets?: ImportExclusionsResource[] | null;
+  /** @format int32 */
+  tmdbId?: number;
+  movieTitle?: string | null;
+  /** @format int32 */
+  movieYear?: number;
+}
+
 export interface ImportListBulkResource {
   ids?: number[] | null;
   tags?: number[] | null;
   applyTags?: ApplyTags;
-  enableAutomaticAdd?: boolean | null;
+  enabled?: boolean | null;
+  enableAuto?: boolean | null;
   rootFolderPath?: string | null;
   /** @format int32 */
   qualityProfileId?: number | null;
+  minimumAvailability?: MovieStatusType;
 }
 
 export interface ImportListConfigResource {
   /** @format int32 */
   id?: number;
-  listSyncLevel?: ListSyncLevelType;
-  /** @format int32 */
-  listSyncTag?: number;
-}
-
-export interface ImportListExclusionResource {
-  /** @format int32 */
-  id?: number;
-  /** @format int32 */
-  tvdbId?: number;
-  title?: string | null;
-}
-
-export interface ImportListExclusionResourcePagingResource {
-  /** @format int32 */
-  page?: number;
-  /** @format int32 */
-  pageSize?: number;
-  sortKey?: string | null;
-  sortDirection?: SortDirection;
-  /** @format int32 */
-  totalRecords?: number;
-  records?: ImportListExclusionResource[] | null;
+  listSyncLevel?: string | null;
+  importExclusions?: string | null;
 }
 
 export interface ImportListResource {
@@ -607,15 +605,14 @@ export interface ImportListResource {
   /** @uniqueItems true */
   tags?: number[] | null;
   presets?: ImportListResource[] | null;
-  enableAutomaticAdd?: boolean;
-  searchForMissingEpisodes?: boolean;
-  shouldMonitor?: MonitorTypes;
-  monitorNewItems?: NewItemMonitorTypes;
+  enabled?: boolean;
+  enableAuto?: boolean;
+  monitor?: MonitorTypes;
   rootFolderPath?: string | null;
   /** @format int32 */
   qualityProfileId?: number;
-  seriesType?: SeriesTypes;
-  seasonFolder?: boolean;
+  searchOnAdd?: boolean;
+  minimumAvailability?: MovieStatusType;
   listType?: ImportListType;
   /** @format int32 */
   listOrder?: number;
@@ -624,8 +621,9 @@ export interface ImportListResource {
 
 export enum ImportListType {
   Program = "program",
-  Plex = "plex",
+  Tmdb = "tmdb",
   Trakt = "trakt",
+  Plex = "plex",
   Simkl = "simkl",
   Other = "other",
   Advanced = "advanced",
@@ -648,11 +646,16 @@ export interface IndexerConfigResource {
   /** @format int32 */
   minimumAge?: number;
   /** @format int32 */
-  retention?: number;
-  /** @format int32 */
   maximumSize?: number;
   /** @format int32 */
+  retention?: number;
+  /** @format int32 */
   rssSyncInterval?: number;
+  preferIndexerFlags?: boolean;
+  /** @format int32 */
+  availabilityDelay?: number;
+  allowHardcodedSubs?: boolean;
+  whitelistedHardcodedSubs?: string | null;
 }
 
 export interface IndexerFlagResource {
@@ -684,8 +687,6 @@ export interface IndexerResource {
   /** @format int32 */
   priority?: number;
   /** @format int32 */
-  seasonSearchMaximumSingleEpisodeAge?: number;
-  /** @format int32 */
   downloadClientId?: number;
 }
 
@@ -695,22 +696,6 @@ export interface Language {
   name?: string | null;
 }
 
-export interface LanguageProfileItemResource {
-  /** @format int32 */
-  id?: number;
-  language?: Language;
-  allowed?: boolean;
-}
-
-export interface LanguageProfileResource {
-  /** @format int32 */
-  id?: number;
-  name?: string | null;
-  upgradeAllowed?: boolean;
-  cutoff?: Language;
-  languages?: LanguageProfileItemResource[] | null;
-}
-
 export interface LanguageResource {
   /** @format int32 */
   id?: number;
@@ -718,21 +703,8 @@ export interface LanguageResource {
   nameLower?: string | null;
 }
 
-export enum ListSyncLevelType {
-  Disabled = "disabled",
-  LogOnly = "logOnly",
-  KeepAndUnmonitor = "keepAndUnmonitor",
-  KeepAndTag = "keepAndTag",
-}
-
 export interface LocalizationLanguageResource {
   identifier?: string | null;
-}
-
-export interface LocalizationResource {
-  /** @format int32 */
-  id?: number;
-  strings?: Record<string, string | null>;
 }
 
 export interface LogFileResource {
@@ -775,11 +747,8 @@ export interface ManualImportReprocessResource {
   id?: number;
   path?: string | null;
   /** @format int32 */
-  seriesId?: number;
-  /** @format int32 */
-  seasonNumber?: number | null;
-  episodes?: EpisodeResource[] | null;
-  episodeIds?: number[] | null;
+  movieId?: number;
+  movie?: MovieResource;
   quality?: QualityModel;
   languages?: Language[] | null;
   releaseGroup?: string | null;
@@ -789,7 +758,6 @@ export interface ManualImportReprocessResource {
   customFormatScore?: number;
   /** @format int32 */
   indexerFlags?: number;
-  releaseType?: ReleaseType;
   rejections?: Rejection[] | null;
 }
 
@@ -802,15 +770,10 @@ export interface ManualImportResource {
   name?: string | null;
   /** @format int64 */
   size?: number;
-  series?: SeriesResource;
-  /** @format int32 */
-  seasonNumber?: number | null;
-  episodes?: EpisodeResource[] | null;
-  /** @format int32 */
-  episodeFileId?: number | null;
-  releaseGroup?: string | null;
+  movie?: MovieResource;
   quality?: QualityModel;
   languages?: Language[] | null;
+  releaseGroup?: string | null;
   /** @format int32 */
   qualityWeight?: number;
   downloadId?: string | null;
@@ -819,7 +782,6 @@ export interface ManualImportResource {
   customFormatScore?: number;
   /** @format int32 */
   indexerFlags?: number;
-  releaseType?: ReleaseType;
   rejections?: Rejection[] | null;
 }
 
@@ -868,19 +830,20 @@ export interface MediaInfoResource {
 export interface MediaManagementConfigResource {
   /** @format int32 */
   id?: number;
-  autoUnmonitorPreviouslyDownloadedEpisodes?: boolean;
+  autoUnmonitorPreviouslyDownloadedMovies?: boolean;
   recycleBin?: string | null;
   /** @format int32 */
   recycleBinCleanupDays?: number;
   downloadPropersAndRepacks?: ProperDownloadTypes;
-  createEmptySeriesFolders?: boolean;
+  createEmptyMovieFolders?: boolean;
   deleteEmptyFolders?: boolean;
   fileDate?: FileDateType;
   rescanAfterRefresh?: RescanAfterRefreshType;
+  autoRenameFolders?: boolean;
+  pathsDefaultStatic?: boolean;
   setPermissionsLinux?: boolean;
   chmodFolder?: string | null;
   chownGroup?: string | null;
-  episodeTitleRequired?: EpisodeTitleRequiredType;
   skipFreeSpaceCheckWhenImporting?: boolean;
   /** @format int32 */
   minimumFreeSpaceWhenImporting?: number;
@@ -890,6 +853,12 @@ export interface MediaManagementConfigResource {
   importExtraFiles?: boolean;
   extraFileExtensions?: string | null;
   enableMediaInfo?: boolean;
+}
+
+export interface MetadataConfigResource {
+  /** @format int32 */
+  id?: number;
+  certificationCountry?: TMDbCountryCode;
 }
 
 export interface MetadataResource {
@@ -908,49 +877,180 @@ export interface MetadataResource {
   enable?: boolean;
 }
 
-export enum MonitorTypes {
-  Unknown = "unknown",
-  All = "all",
-  Future = "future",
-  Missing = "missing",
-  Existing = "existing",
-  FirstSeason = "firstSeason",
-  LastSeason = "lastSeason",
-  LatestSeason = "latestSeason",
-  Pilot = "pilot",
-  Recent = "recent",
-  MonitorSpecials = "monitorSpecials",
-  UnmonitorSpecials = "unmonitorSpecials",
+export enum Modifier {
   None = "none",
-  Skip = "skip",
+  Regional = "regional",
+  Screener = "screener",
+  Rawhd = "rawhd",
+  Brdisk = "brdisk",
+  Remux = "remux",
 }
 
-export interface MonitoringOptions {
-  ignoreEpisodesWithFiles?: boolean;
-  ignoreEpisodesWithoutFiles?: boolean;
-  monitor?: MonitorTypes;
+export enum MonitorTypes {
+  MovieOnly = "movieOnly",
+  MovieAndCollection = "movieAndCollection",
+  None = "none",
+}
+
+export interface MovieCollectionResource {
+  title?: string | null;
+  /** @format int32 */
+  tmdbId?: number;
+}
+
+export interface MovieEditorResource {
+  movieIds?: number[] | null;
+  monitored?: boolean | null;
+  /** @format int32 */
+  qualityProfileId?: number | null;
+  minimumAvailability?: MovieStatusType;
+  rootFolderPath?: string | null;
+  tags?: number[] | null;
+  applyTags?: ApplyTags;
+  moveFiles?: boolean;
+  deleteFiles?: boolean;
+  addImportExclusion?: boolean;
+}
+
+export interface MovieFileListResource {
+  movieFileIds?: number[] | null;
+  languages?: Language[] | null;
+  quality?: QualityModel;
+  edition?: string | null;
+  releaseGroup?: string | null;
+  sceneName?: string | null;
+  /** @format int32 */
+  indexerFlags?: number | null;
+}
+
+export interface MovieFileResource {
+  /** @format int32 */
+  id?: number;
+  /** @format int32 */
+  movieId?: number;
+  relativePath?: string | null;
+  path?: string | null;
+  /** @format int64 */
+  size?: number;
+  /** @format date-time */
+  dateAdded?: string;
+  sceneName?: string | null;
+  releaseGroup?: string | null;
+  edition?: string | null;
+  languages?: Language[] | null;
+  quality?: QualityModel;
+  customFormats?: CustomFormatResource[] | null;
+  /** @format int32 */
+  customFormatScore?: number;
+  /** @format int32 */
+  indexerFlags?: number | null;
+  mediaInfo?: MediaInfoResource;
+  originalFilePath?: string | null;
+  qualityCutoffNotMet?: boolean;
+}
+
+export enum MovieHistoryEventType {
+  Unknown = "unknown",
+  Grabbed = "grabbed",
+  DownloadFolderImported = "downloadFolderImported",
+  DownloadFailed = "downloadFailed",
+  MovieFileDeleted = "movieFileDeleted",
+  MovieFolderImported = "movieFolderImported",
+  MovieFileRenamed = "movieFileRenamed",
+  DownloadIgnored = "downloadIgnored",
+}
+
+export interface MovieResource {
+  /** @format int32 */
+  id?: number;
+  title?: string | null;
+  originalTitle?: string | null;
+  originalLanguage?: Language;
+  alternateTitles?: AlternativeTitleResource[] | null;
+  /** @format int32 */
+  secondaryYear?: number | null;
+  /** @format int32 */
+  secondaryYearSourceId?: number;
+  sortTitle?: string | null;
+  /** @format int64 */
+  sizeOnDisk?: number | null;
+  status?: MovieStatusType;
+  overview?: string | null;
+  /** @format date-time */
+  inCinemas?: string | null;
+  /** @format date-time */
+  physicalRelease?: string | null;
+  /** @format date-time */
+  digitalRelease?: string | null;
+  physicalReleaseNote?: string | null;
+  images?: MediaCover[] | null;
+  website?: string | null;
+  remotePoster?: string | null;
+  /** @format int32 */
+  year?: number;
+  youTubeTrailerId?: string | null;
+  studio?: string | null;
+  path?: string | null;
+  /** @format int32 */
+  qualityProfileId?: number;
+  hasFile?: boolean | null;
+  monitored?: boolean;
+  minimumAvailability?: MovieStatusType;
+  isAvailable?: boolean;
+  folderName?: string | null;
+  /** @format int32 */
+  runtime?: number;
+  cleanTitle?: string | null;
+  imdbId?: string | null;
+  /** @format int32 */
+  tmdbId?: number;
+  titleSlug?: string | null;
+  rootFolderPath?: string | null;
+  folder?: string | null;
+  certification?: string | null;
+  genres?: string[] | null;
+  /** @uniqueItems true */
+  tags?: number[] | null;
+  /** @format date-time */
+  added?: string;
+  addOptions?: AddMovieOptions;
+  ratings?: Ratings;
+  movieFile?: MovieFileResource;
+  collection?: MovieCollectionResource;
+  /** @format float */
+  popularity?: number;
+  statistics?: MovieStatisticsResource;
+}
+
+export enum MovieRuntimeFormatType {
+  HoursMinutes = "hoursMinutes",
+  Minutes = "minutes",
+}
+
+export interface MovieStatisticsResource {
+  /** @format int32 */
+  movieFileCount?: number;
+  /** @format int64 */
+  sizeOnDisk?: number;
+  releaseGroups?: string[] | null;
+}
+
+export enum MovieStatusType {
+  Tba = "tba",
+  Announced = "announced",
+  InCinemas = "inCinemas",
+  Released = "released",
+  Deleted = "deleted",
 }
 
 export interface NamingConfigResource {
   /** @format int32 */
   id?: number;
-  renameEpisodes?: boolean;
+  renameMovies?: boolean;
   replaceIllegalCharacters?: boolean;
-  /** @format int32 */
-  colonReplacementFormat?: number;
-  /** @format int32 */
-  multiEpisodeStyle?: number;
-  standardEpisodeFormat?: string | null;
-  dailyEpisodeFormat?: string | null;
-  animeEpisodeFormat?: string | null;
-  seriesFolderFormat?: string | null;
-  seasonFolderFormat?: string | null;
-  specialsFolderFormat?: string | null;
-}
-
-export enum NewItemMonitorTypes {
-  All = "all",
-  None = "none",
+  colonReplacementFormat?: ColonReplacementFormat;
+  standardMovieFormat?: string | null;
+  movieFolderFormat?: string | null;
 }
 
 export interface NotificationResource {
@@ -971,10 +1071,10 @@ export interface NotificationResource {
   onDownload?: boolean;
   onUpgrade?: boolean;
   onRename?: boolean;
-  onSeriesAdd?: boolean;
-  onSeriesDelete?: boolean;
-  onEpisodeFileDelete?: boolean;
-  onEpisodeFileDeleteForUpgrade?: boolean;
+  onMovieAdded?: boolean;
+  onMovieDelete?: boolean;
+  onMovieFileDelete?: boolean;
+  onMovieFileDeleteForUpgrade?: boolean;
   onHealthIssue?: boolean;
   onHealthRestored?: boolean;
   onApplicationUpdate?: boolean;
@@ -983,10 +1083,10 @@ export interface NotificationResource {
   supportsOnDownload?: boolean;
   supportsOnUpgrade?: boolean;
   supportsOnRename?: boolean;
-  supportsOnSeriesAdd?: boolean;
-  supportsOnSeriesDelete?: boolean;
-  supportsOnEpisodeFileDelete?: boolean;
-  supportsOnEpisodeFileDeleteForUpgrade?: boolean;
+  supportsOnMovieAdded?: boolean;
+  supportsOnMovieDelete?: boolean;
+  supportsOnMovieFileDelete?: boolean;
+  supportsOnMovieFileDeleteForUpgrade?: boolean;
   supportsOnHealthIssue?: boolean;
   supportsOnHealthRestored?: boolean;
   supportsOnApplicationUpdate?: boolean;
@@ -999,45 +1099,32 @@ export interface ParseResource {
   /** @format int32 */
   id?: number;
   title?: string | null;
-  parsedEpisodeInfo?: ParsedEpisodeInfo;
-  series?: SeriesResource;
-  episodes?: EpisodeResource[] | null;
+  parsedMovieInfo?: ParsedMovieInfo;
+  movie?: MovieResource;
   languages?: Language[] | null;
   customFormats?: CustomFormatResource[] | null;
   /** @format int32 */
   customFormatScore?: number;
 }
 
-export interface ParsedEpisodeInfo {
+export interface ParsedMovieInfo {
+  movieTitles?: string[] | null;
+  originalTitle?: string | null;
   releaseTitle?: string | null;
-  seriesTitle?: string | null;
-  seriesTitleInfo?: SeriesTitleInfo;
+  simpleReleaseTitle?: string | null;
   quality?: QualityModel;
-  /** @format int32 */
-  seasonNumber?: number;
-  episodeNumbers?: number[] | null;
-  absoluteEpisodeNumbers?: number[] | null;
-  specialAbsoluteEpisodeNumbers?: number[] | null;
-  airDate?: string | null;
   languages?: Language[] | null;
-  fullSeason?: boolean;
-  isPartialSeason?: boolean;
-  isMultiSeason?: boolean;
-  isSeasonExtra?: boolean;
-  isSplitEpisode?: boolean;
-  special?: boolean;
   releaseGroup?: string | null;
   releaseHash?: string | null;
+  edition?: string | null;
   /** @format int32 */
-  seasonPart?: number;
-  releaseTokens?: string | null;
+  year?: number;
+  imdbId?: string | null;
   /** @format int32 */
-  dailyPart?: number | null;
-  isDaily?: boolean;
-  isAbsoluteNumbering?: boolean;
-  isPossibleSpecialEpisode?: boolean;
-  isPossibleSceneSeasonSpecial?: boolean;
-  releaseType?: ReleaseType;
+  tmdbId?: number;
+  hardcodedSubs?: string | null;
+  movieTitle?: string | null;
+  primaryMovieTitle?: string | null;
 }
 
 export interface PingResource {
@@ -1091,6 +1178,7 @@ export interface Quality {
   source?: QualitySource;
   /** @format int32 */
   resolution?: number;
+  modifier?: Modifier;
 }
 
 export interface QualityDefinitionResource {
@@ -1135,17 +1223,20 @@ export interface QualityProfileResource {
   /** @format int32 */
   cutoffFormatScore?: number;
   formatItems?: ProfileFormatItemResource[] | null;
+  language?: Language;
 }
 
 export enum QualitySource {
   Unknown = "unknown",
-  Television = "television",
-  TelevisionRaw = "televisionRaw",
-  Web = "web",
-  WebRip = "webRip",
+  Cam = "cam",
+  Telesync = "telesync",
+  Telecine = "telecine",
+  Workprint = "workprint",
   Dvd = "dvd",
+  Tv = "tv",
+  Webdl = "webdl",
+  Webrip = "webrip",
   Bluray = "bluray",
-  BlurayRaw = "blurayRaw",
 }
 
 export interface QueueBulkResource {
@@ -1156,13 +1247,8 @@ export interface QueueResource {
   /** @format int32 */
   id?: number;
   /** @format int32 */
-  seriesId?: number | null;
-  /** @format int32 */
-  episodeId?: number | null;
-  /** @format int32 */
-  seasonNumber?: number | null;
-  series?: SeriesResource;
-  episode?: EpisodeResource;
+  movieId?: number | null;
+  movie?: MovieResource;
   languages?: Language[] | null;
   quality?: QualityModel;
   customFormats?: CustomFormatResource[] | null;
@@ -1189,7 +1275,6 @@ export interface QueueResource {
   downloadClientHasPostImportCategory?: boolean;
   indexer?: string | null;
   outputPath?: string | null;
-  episodeHasFile?: boolean;
 }
 
 export interface QueueResourcePagingResource {
@@ -1219,11 +1304,24 @@ export interface QueueStatusResource {
   unknownWarnings?: boolean;
 }
 
-export interface Ratings {
+export interface RatingChild {
   /** @format int32 */
   votes?: number;
   /** @format double */
   value?: number;
+  type?: RatingType;
+}
+
+export enum RatingType {
+  User = "user",
+  Critic = "critic",
+}
+
+export interface Ratings {
+  imdb?: RatingChild;
+  tmdb?: RatingChild;
+  metacritic?: RatingChild;
+  rottenTomatoes?: RatingChild;
 }
 
 export interface Rejection {
@@ -1234,18 +1332,6 @@ export interface Rejection {
 export enum RejectionType {
   Permanent = "permanent",
   Temporary = "temporary",
-}
-
-export interface ReleaseEpisodeResource {
-  /** @format int32 */
-  id?: number;
-  /** @format int32 */
-  seasonNumber?: number;
-  /** @format int32 */
-  episodeNumber?: number;
-  /** @format int32 */
-  absoluteEpisodeNumber?: number | null;
-  title?: string | null;
 }
 
 export interface ReleaseProfileResource {
@@ -1266,6 +1352,9 @@ export interface ReleaseResource {
   id?: number;
   guid?: string | null;
   quality?: QualityModel;
+  customFormats?: CustomFormatResource[] | null;
+  /** @format int32 */
+  customFormatScore?: number;
   /** @format int32 */
   qualityWeight?: number;
   /** @format int32 */
@@ -1283,45 +1372,28 @@ export interface ReleaseResource {
   subGroup?: string | null;
   releaseHash?: string | null;
   title?: string | null;
-  fullSeason?: boolean;
   sceneSource?: boolean;
-  /** @format int32 */
-  seasonNumber?: number;
+  movieTitles?: string[] | null;
   languages?: Language[] | null;
   /** @format int32 */
-  languageWeight?: number;
-  airDate?: string | null;
-  seriesTitle?: string | null;
-  episodeNumbers?: number[] | null;
-  absoluteEpisodeNumbers?: number[] | null;
-  /** @format int32 */
-  mappedSeasonNumber?: number | null;
-  mappedEpisodeNumbers?: number[] | null;
-  mappedAbsoluteEpisodeNumbers?: number[] | null;
-  /** @format int32 */
-  mappedSeriesId?: number | null;
-  mappedEpisodeInfo?: ReleaseEpisodeResource[] | null;
+  mappedMovieId?: number | null;
   approved?: boolean;
   temporarilyRejected?: boolean;
   rejected?: boolean;
   /** @format int32 */
-  tvdbId?: number;
+  tmdbId?: number;
   /** @format int32 */
-  tvRageId?: number;
+  imdbId?: number;
   rejections?: string[] | null;
   /** @format date-time */
   publishDate?: string;
   commentUrl?: string | null;
   downloadUrl?: string | null;
   infoUrl?: string | null;
-  episodeRequested?: boolean;
   downloadAllowed?: boolean;
   /** @format int32 */
   releaseWeight?: number;
-  customFormats?: CustomFormatResource[] | null;
-  /** @format int32 */
-  customFormatScore?: number;
-  sceneMapping?: AlternateTitleResource;
+  edition?: string | null;
   magnetUrl?: string | null;
   infoHash?: string | null;
   /** @format int32 */
@@ -1329,28 +1401,13 @@ export interface ReleaseResource {
   /** @format int32 */
   leechers?: number | null;
   protocol?: DownloadProtocol;
+  indexerFlags?: string[] | null;
   /** @format int32 */
-  indexerFlags?: number;
-  isDaily?: boolean;
-  isAbsoluteNumbering?: boolean;
-  isPossibleSpecialEpisode?: boolean;
-  special?: boolean;
-  /** @format int32 */
-  seriesId?: number | null;
-  /** @format int32 */
-  episodeId?: number | null;
-  episodeIds?: number[] | null;
+  movieId?: number | null;
   /** @format int32 */
   downloadClientId?: number | null;
   downloadClient?: string | null;
   shouldOverride?: boolean | null;
-}
-
-export enum ReleaseType {
-  Unknown = "unknown",
-  SingleEpisode = "singleEpisode",
-  MultiEpisode = "multiEpisode",
-  SeasonPack = "seasonPack",
 }
 
 export interface RemotePathMappingResource {
@@ -1361,16 +1418,13 @@ export interface RemotePathMappingResource {
   localPath?: string | null;
 }
 
-export interface RenameEpisodeResource {
+export interface RenameMovieResource {
   /** @format int32 */
   id?: number;
   /** @format int32 */
-  seriesId?: number;
+  movieId?: number;
   /** @format int32 */
-  seasonNumber?: number;
-  episodeNumbers?: number[] | null;
-  /** @format int32 */
-  episodeFileId?: number;
+  movieFileId?: number;
   existingPath?: string | null;
   newPath?: string | null;
 }
@@ -1405,44 +1459,6 @@ export enum RuntimeMode {
   Tray = "tray",
 }
 
-export interface SeasonPassResource {
-  series?: SeasonPassSeriesResource[] | null;
-  monitoringOptions?: MonitoringOptions;
-}
-
-export interface SeasonPassSeriesResource {
-  /** @format int32 */
-  id?: number;
-  monitored?: boolean | null;
-  seasons?: SeasonResource[] | null;
-}
-
-export interface SeasonResource {
-  /** @format int32 */
-  seasonNumber?: number;
-  monitored?: boolean;
-  statistics?: SeasonStatisticsResource;
-  images?: MediaCover[] | null;
-}
-
-export interface SeasonStatisticsResource {
-  /** @format date-time */
-  nextAiring?: string | null;
-  /** @format date-time */
-  previousAiring?: string | null;
-  /** @format int32 */
-  episodeFileCount?: number;
-  /** @format int32 */
-  episodeCount?: number;
-  /** @format int32 */
-  totalEpisodeCount?: number;
-  /** @format int64 */
-  sizeOnDisk?: number;
-  releaseGroups?: string[] | null;
-  /** @format double */
-  percentOfEpisodes?: number;
-}
-
 export interface SelectOption {
   /** @format int32 */
   value?: number;
@@ -1450,129 +1466,20 @@ export interface SelectOption {
   /** @format int32 */
   order?: number;
   hint?: string | null;
-}
-
-export interface SeriesEditorResource {
-  seriesIds?: number[] | null;
-  monitored?: boolean | null;
-  monitorNewItems?: NewItemMonitorTypes;
-  /** @format int32 */
-  qualityProfileId?: number | null;
-  seriesType?: SeriesTypes;
-  seasonFolder?: boolean | null;
-  rootFolderPath?: string | null;
-  tags?: number[] | null;
-  applyTags?: ApplyTags;
-  moveFiles?: boolean;
-  deleteFiles?: boolean;
-  addImportListExclusion?: boolean;
-}
-
-export interface SeriesResource {
-  /** @format int32 */
-  id?: number;
-  title?: string | null;
-  alternateTitles?: AlternateTitleResource[] | null;
-  sortTitle?: string | null;
-  status?: SeriesStatusType;
-  ended?: boolean;
-  profileName?: string | null;
-  overview?: string | null;
-  /** @format date-time */
-  nextAiring?: string | null;
-  /** @format date-time */
-  previousAiring?: string | null;
-  network?: string | null;
-  airTime?: string | null;
-  images?: MediaCover[] | null;
-  originalLanguage?: Language;
-  remotePoster?: string | null;
-  seasons?: SeasonResource[] | null;
-  /** @format int32 */
-  year?: number;
-  path?: string | null;
-  /** @format int32 */
-  qualityProfileId?: number;
-  seasonFolder?: boolean;
-  monitored?: boolean;
-  monitorNewItems?: NewItemMonitorTypes;
-  useSceneNumbering?: boolean;
-  /** @format int32 */
-  runtime?: number;
-  /** @format int32 */
-  tvdbId?: number;
-  /** @format int32 */
-  tvRageId?: number;
-  /** @format int32 */
-  tvMazeId?: number;
-  /** @format date-time */
-  firstAired?: string | null;
-  /** @format date-time */
-  lastAired?: string | null;
-  seriesType?: SeriesTypes;
-  cleanTitle?: string | null;
-  imdbId?: string | null;
-  titleSlug?: string | null;
-  rootFolderPath?: string | null;
-  folder?: string | null;
-  certification?: string | null;
-  genres?: string[] | null;
-  /** @uniqueItems true */
-  tags?: number[] | null;
-  /** @format date-time */
-  added?: string;
-  addOptions?: AddSeriesOptions;
-  ratings?: Ratings;
-  statistics?: SeriesStatisticsResource;
-  episodesChanged?: boolean | null;
-  /**
-   * @deprecated
-   * @format int32
-   */
-  languageProfileId?: number;
-}
-
-export interface SeriesStatisticsResource {
-  /** @format int32 */
-  seasonCount?: number;
-  /** @format int32 */
-  episodeFileCount?: number;
-  /** @format int32 */
-  episodeCount?: number;
-  /** @format int32 */
-  totalEpisodeCount?: number;
-  /** @format int64 */
-  sizeOnDisk?: number;
-  releaseGroups?: string[] | null;
-  /** @format double */
-  percentOfEpisodes?: number;
-}
-
-export enum SeriesStatusType {
-  Continuing = "continuing",
-  Ended = "ended",
-  Upcoming = "upcoming",
-  Deleted = "deleted",
-}
-
-export interface SeriesTitleInfo {
-  title?: string | null;
-  titleWithoutYear?: string | null;
-  /** @format int32 */
-  year?: number;
-  allTitles?: string[] | null;
-}
-
-export enum SeriesTypes {
-  Standard = "standard",
-  Daily = "daily",
-  Anime = "anime",
+  dividerAfter?: boolean;
 }
 
 export enum SortDirection {
   Default = "default",
   Ascending = "ascending",
   Descending = "descending",
+}
+
+export enum SourceType {
+  Tmdb = "tmdb",
+  Mappings = "mappings",
+  User = "user",
+  Indexer = "indexer",
 }
 
 export interface SystemResource {
@@ -1596,8 +1503,9 @@ export interface SystemResource {
   isDocker?: boolean;
   mode?: RuntimeMode;
   branch?: string | null;
+  databaseType?: DatabaseType;
+  databaseVersion?: Version;
   authentication?: AuthenticationType;
-  sqliteVersion?: Version;
   /** @format int32 */
   migrationVersion?: number;
   urlBase?: string | null;
@@ -1609,8 +1517,20 @@ export interface SystemResource {
   packageAuthor?: string | null;
   packageUpdateMechanism?: UpdateMechanism;
   packageUpdateMechanismMessage?: string | null;
-  databaseVersion?: Version;
-  databaseType?: DatabaseType;
+}
+
+export enum TMDbCountryCode {
+  Au = "au",
+  Br = "br",
+  Ca = "ca",
+  Fr = "fr",
+  De = "de",
+  Gb = "gb",
+  Ie = "ie",
+  It = "it",
+  Es = "es",
+  Us = "us",
+  Nz = "nz",
 }
 
 export interface TagDetailsResource {
@@ -1620,11 +1540,11 @@ export interface TagDetailsResource {
   delayProfileIds?: number[] | null;
   importListIds?: number[] | null;
   notificationIds?: number[] | null;
-  restrictionIds?: number[] | null;
+  releaseProfileIds?: number[] | null;
   indexerIds?: number[] | null;
   downloadClientIds?: number[] | null;
   autoTagIds?: number[] | null;
-  seriesIds?: number[] | null;
+  movieIds?: number[] | null;
 }
 
 export interface TagResource {
@@ -1701,14 +1621,17 @@ export interface UiConfigResource {
   /** @format int32 */
   firstDayOfWeek?: number;
   calendarWeekColumnHeader?: string | null;
+  movieRuntimeFormat?: MovieRuntimeFormatType;
   shortDateFormat?: string | null;
   longDateFormat?: string | null;
   timeFormat?: string | null;
   showRelativeDates?: boolean;
   enableColorImpairedMode?: boolean;
-  theme?: string | null;
+  /** @format int32 */
+  movieInfoLanguage?: number;
   /** @format int32 */
   uiLanguage?: number;
+  theme?: string | null;
 }
 
 export interface UnmappedFolder {
@@ -1763,10 +1686,12 @@ export interface Version {
   minorRevision?: number;
 }
 
-export type QueryParamsType = Record<string | number, any>;
-export type ResponseFormat = keyof Omit<Body, "body" | "bodyUsed">;
+import type { AxiosInstance, AxiosRequestConfig, AxiosResponse, HeadersDefaults, ResponseType } from "axios";
+import axios from "axios";
 
-export interface FullRequestParams extends Omit<RequestInit, "body"> {
+export type QueryParamsType = Record<string | number, any>;
+
+export interface FullRequestParams extends Omit<AxiosRequestConfig, "data" | "params" | "url" | "responseType"> {
   /** set parameter to `true` for call `securityWorker` for this request */
   secure?: boolean;
   /** request path */
@@ -1776,36 +1701,18 @@ export interface FullRequestParams extends Omit<RequestInit, "body"> {
   /** query params */
   query?: QueryParamsType;
   /** format of response (i.e. response.json() -> format: "json") */
-  format?: ResponseFormat;
+  format?: ResponseType;
   /** request body */
   body?: unknown;
-  /** base url */
-  baseUrl?: string;
-  /** request cancellation token */
-  cancelToken?: CancelToken;
 }
 
-export type RequestParams = Omit<
-  FullRequestParams,
-  "body" | "method" | "query" | "path"
->;
+export type RequestParams = Omit<FullRequestParams, "body" | "method" | "query" | "path">;
 
-export interface ApiConfig<SecurityDataType = unknown> {
-  baseUrl?: string;
-  baseApiParams?: Omit<RequestParams, "baseUrl" | "cancelToken" | "signal">;
-  securityWorker?: (
-    securityData: SecurityDataType | null
-  ) => Promise<RequestParams | void> | RequestParams | void;
-  customFetch?: typeof fetch;
+export interface ApiConfig<SecurityDataType = unknown> extends Omit<AxiosRequestConfig, "data" | "cancelToken"> {
+  securityWorker?: (securityData: SecurityDataType | null) => Promise<AxiosRequestConfig | void> | AxiosRequestConfig | void;
+  secure?: boolean;
+  format?: ResponseType;
 }
-
-export interface HttpResponse<D extends unknown, E extends unknown = unknown>
-  extends Response {
-  data: D;
-  error: E;
-}
-
-type CancelToken = Symbol | string | number;
 
 export enum ContentType {
   Json = "application/json",
@@ -1815,213 +1722,105 @@ export enum ContentType {
 }
 
 export class HttpClient<SecurityDataType = unknown> {
-  public baseUrl: string = "{protocol}://{hostpath}";
+  public instance: AxiosInstance;
   private securityData: SecurityDataType | null = null;
   private securityWorker?: ApiConfig<SecurityDataType>["securityWorker"];
-  private abortControllers = new Map<CancelToken, AbortController>();
-  private customFetch = (...fetchParams: Parameters<typeof fetch>) =>
-    fetch(...fetchParams);
+  private secure?: boolean;
+  private format?: ResponseType;
 
-  private baseApiParams: RequestParams = {
-    credentials: "same-origin",
-    headers: {},
-    redirect: "follow",
-    referrerPolicy: "no-referrer",
-  };
-
-  constructor(apiConfig: ApiConfig<SecurityDataType> = {}) {
-    Object.assign(this, apiConfig);
+  constructor({ securityWorker, secure, format, ...axiosConfig }: ApiConfig<SecurityDataType> = {}) {
+    this.instance = axios.create({ ...axiosConfig, baseURL: axiosConfig.baseURL || "{protocol}://{hostpath}" });
+    this.secure = secure;
+    this.format = format;
+    this.securityWorker = securityWorker;
   }
 
   public setSecurityData = (data: SecurityDataType | null) => {
     this.securityData = data;
   };
 
-  protected encodeQueryParam(key: string, value: any) {
-    const encodedKey = encodeURIComponent(key);
-    return `${encodedKey}=${encodeURIComponent(
-      typeof value === "number" ? value : `${value}`
-    )}`;
-  }
+  protected mergeRequestParams(params1: AxiosRequestConfig, params2?: AxiosRequestConfig): AxiosRequestConfig {
+    const method = params1.method || (params2 && params2.method);
 
-  protected addQueryParam(query: QueryParamsType, key: string) {
-    return this.encodeQueryParam(key, query[key]);
-  }
-
-  protected addArrayQueryParam(query: QueryParamsType, key: string) {
-    const value = query[key];
-    return value.map((v: any) => this.encodeQueryParam(key, v)).join("&");
-  }
-
-  protected toQueryString(rawQuery?: QueryParamsType): string {
-    const query = rawQuery || {};
-    const keys = Object.keys(query).filter(
-      (key) => "undefined" !== typeof query[key]
-    );
-    return keys
-      .map((key) =>
-        Array.isArray(query[key])
-          ? this.addArrayQueryParam(query, key)
-          : this.addQueryParam(query, key)
-      )
-      .join("&");
-  }
-
-  protected addQueryParams(rawQuery?: QueryParamsType): string {
-    const queryString = this.toQueryString(rawQuery);
-    return queryString ? `?${queryString}` : "";
-  }
-
-  private contentFormatters: Record<ContentType, (input: any) => any> = {
-    [ContentType.Json]: (input: any) =>
-      input !== null && (typeof input === "object" || typeof input === "string")
-        ? JSON.stringify(input)
-        : input,
-    [ContentType.Text]: (input: any) =>
-      input !== null && typeof input !== "string"
-        ? JSON.stringify(input)
-        : input,
-    [ContentType.FormData]: (input: any) =>
-      Object.keys(input || {}).reduce((formData, key) => {
-        const property = input[key];
-        formData.append(
-          key,
-          property instanceof Blob
-            ? property
-            : typeof property === "object" && property !== null
-            ? JSON.stringify(property)
-            : `${property}`
-        );
-        return formData;
-      }, new FormData()),
-    [ContentType.UrlEncoded]: (input: any) => this.toQueryString(input),
-  };
-
-  protected mergeRequestParams(
-    params1: RequestParams,
-    params2?: RequestParams
-  ): RequestParams {
     return {
-      ...this.baseApiParams,
+      ...this.instance.defaults,
       ...params1,
       ...(params2 || {}),
       headers: {
-        ...(this.baseApiParams.headers || {}),
+        ...((method && this.instance.defaults.headers[method.toLowerCase() as keyof HeadersDefaults]) || {}),
         ...(params1.headers || {}),
         ...((params2 && params2.headers) || {}),
       },
     };
   }
 
-  protected createAbortSignal = (
-    cancelToken: CancelToken
-  ): AbortSignal | undefined => {
-    if (this.abortControllers.has(cancelToken)) {
-      const abortController = this.abortControllers.get(cancelToken);
-      if (abortController) {
-        return abortController.signal;
+  protected stringifyFormItem(formItem: unknown) {
+    if (typeof formItem === "object" && formItem !== null) {
+      return JSON.stringify(formItem);
+    } else {
+      return `${formItem}`;
+    }
+  }
+
+  protected createFormData(input: Record<string, unknown>): FormData {
+    return Object.keys(input || {}).reduce((formData, key) => {
+      const property = input[key];
+      const propertyContent: any[] = property instanceof Array ? property : [property];
+
+      for (const formItem of propertyContent) {
+        const isFileType = formItem instanceof Blob || formItem instanceof File;
+        formData.append(key, isFileType ? formItem : this.stringifyFormItem(formItem));
       }
-      return void 0;
-    }
 
-    const abortController = new AbortController();
-    this.abortControllers.set(cancelToken, abortController);
-    return abortController.signal;
-  };
+      return formData;
+    }, new FormData());
+  }
 
-  public abortRequest = (cancelToken: CancelToken) => {
-    const abortController = this.abortControllers.get(cancelToken);
-
-    if (abortController) {
-      abortController.abort();
-      this.abortControllers.delete(cancelToken);
-    }
-  };
-
-  public request = async <T = any, E = any>({
-    body,
+  public request = async <T = any, _E = any>({
     secure,
     path,
     type,
     query,
     format,
-    baseUrl,
-    cancelToken,
+    body,
     ...params
-  }: FullRequestParams): Promise<HttpResponse<T, E>> => {
+  }: FullRequestParams): Promise<AxiosResponse<T>> => {
     const secureParams =
-      ((typeof secure === "boolean" ? secure : this.baseApiParams.secure) &&
-        this.securityWorker &&
-        (await this.securityWorker(this.securityData))) ||
-      {};
+      ((typeof secure === "boolean" ? secure : this.secure) && this.securityWorker && (await this.securityWorker(this.securityData))) || {};
     const requestParams = this.mergeRequestParams(params, secureParams);
-    const queryString = query && this.toQueryString(query);
-    const payloadFormatter = this.contentFormatters[type || ContentType.Json];
-    const responseFormat = format || requestParams.format;
+    const responseFormat = format || this.format || undefined;
 
-    return this.customFetch(
-      `${baseUrl || this.baseUrl || ""}${path}${
-        queryString ? `?${queryString}` : ""
-      }`,
-      {
-        ...requestParams,
-        headers: {
-          ...(requestParams.headers || {}),
-          ...(type && type !== ContentType.FormData
-            ? { "Content-Type": type }
-            : {}),
-        },
-        signal:
-          (cancelToken
-            ? this.createAbortSignal(cancelToken)
-            : requestParams.signal) || null,
-        body:
-          typeof body === "undefined" || body === null
-            ? null
-            : payloadFormatter(body),
-      }
-    ).then(async (response) => {
-      const r = response as HttpResponse<T, E>;
-      r.data = null as unknown as T;
-      r.error = null as unknown as E;
+    if (type === ContentType.FormData && body && body !== null && typeof body === "object") {
+      body = this.createFormData(body as Record<string, unknown>);
+    }
 
-      const data = !responseFormat
-        ? r
-        : await response[responseFormat]()
-            .then((data) => {
-              if (r.ok) {
-                r.data = data;
-              } else {
-                r.error = data;
-              }
-              return r;
-            })
-            .catch((e) => {
-              r.error = e;
-              return r;
-            });
+    if (type === ContentType.Text && body && body !== null && typeof body !== "string") {
+      body = JSON.stringify(body);
+    }
 
-      if (cancelToken) {
-        this.abortControllers.delete(cancelToken);
-      }
-
-      if (!response.ok) throw data;
-      return data;
+    return this.instance.request({
+      ...requestParams,
+      headers: {
+        ...(requestParams.headers || {}),
+        ...(type && type !== ContentType.FormData ? { "Content-Type": type } : {}),
+      },
+      params: query,
+      responseType: responseFormat,
+      data: body,
+      url: path,
     });
   };
 }
 
 /**
- * @title Sonarr
+ * @title Radarr
  * @version 3.0.0
- * @license GPL-3.0 (https://github.com/Sonarr/Sonarr/blob/develop/LICENSE)
+ * @license GPL-3.0 (https://github.com/Radarr/Radarr/blob/develop/LICENSE)
  * @baseUrl {protocol}://{hostpath}
  *
- * Sonarr API docs - The v3 API docs apply to both v3 and v4 versions of Sonarr. Some functionality may only be available in v4 of the Sonarr application.
+ * Radarr API docs
  */
-export class Api<
-  SecurityDataType extends unknown
-> extends HttpClient<SecurityDataType> {
+export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDataType> {
   /**
    * No description
    *
@@ -2042,16 +1841,60 @@ export class Api<
     /**
      * No description
      *
+     * @tags AlternativeTitle
+     * @name V3AlttitleList
+     * @request GET:/api/v3/alttitle
+     * @secure
+     */
+    v3AlttitleList: (
+      query?: {
+        /** @format int32 */
+        movieId?: number;
+        /** @format int32 */
+        movieMetadataId?: number;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<AlternativeTitleResource[], any>({
+        path: `/api/v3/alttitle`,
+        method: "GET",
+        query: query,
+        secure: true,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags AlternativeTitle
+     * @name V3AlttitleDetail
+     * @request GET:/api/v3/alttitle/{id}
+     * @secure
+     */
+    v3AlttitleDetail: (id: number, params: RequestParams = {}) =>
+      this.request<AlternativeTitleResource, any>({
+        path: `/api/v3/alttitle/${id}`,
+        method: "GET",
+        secure: true,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
      * @tags ApiInfo
      * @name GetApi
      * @request GET:/api
      * @secure
      */
     getApi: (params: RequestParams = {}) =>
-      this.request<void, any>({
+      this.request<ApiInfoResource, any>({
         path: `/api`,
         method: "GET",
         secure: true,
+        format: "json",
         ...params,
       }),
 
@@ -2063,10 +1906,7 @@ export class Api<
      * @request POST:/api/v3/autotagging
      * @secure
      */
-    v3AutotaggingCreate: (
-      data: AutoTaggingResource,
-      params: RequestParams = {}
-    ) =>
+    v3AutotaggingCreate: (data: AutoTaggingResource, params: RequestParams = {}) =>
       this.request<AutoTaggingResource, any>({
         path: `/api/v3/autotagging`,
         method: "POST",
@@ -2102,11 +1942,7 @@ export class Api<
      * @request PUT:/api/v3/autotagging/{id}
      * @secure
      */
-    v3AutotaggingUpdate: (
-      id: string,
-      data: AutoTaggingResource,
-      params: RequestParams = {}
-    ) =>
+    v3AutotaggingUpdate: (id: string, data: AutoTaggingResource, params: RequestParams = {}) =>
       this.request<AutoTaggingResource, any>({
         path: `/api/v3/autotagging/${id}`,
         method: "PUT",
@@ -2254,10 +2090,34 @@ export class Api<
         sortKey?: string;
         sortDirection?: SortDirection;
       },
-      params: RequestParams = {}
+      params: RequestParams = {},
     ) =>
       this.request<BlocklistResourcePagingResource, any>({
         path: `/api/v3/blocklist`,
+        method: "GET",
+        query: query,
+        secure: true,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Blocklist
+     * @name V3BlocklistMovieList
+     * @request GET:/api/v3/blocklist/movie
+     * @secure
+     */
+    v3BlocklistMovieList: (
+      query?: {
+        /** @format int32 */
+        movieId?: number;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<BlocklistResource[], any>({
+        path: `/api/v3/blocklist/movie`,
         method: "GET",
         query: query,
         secure: true,
@@ -2289,10 +2149,7 @@ export class Api<
      * @request DELETE:/api/v3/blocklist/bulk
      * @secure
      */
-    v3BlocklistBulkDelete: (
-      data: BlocklistBulkResource,
-      params: RequestParams = {}
-    ) =>
+    v3BlocklistBulkDelete: (data: BlocklistBulkResource, params: RequestParams = {}) =>
       this.request<void, any>({
         path: `/api/v3/blocklist/bulk`,
         method: "DELETE",
@@ -2318,18 +2175,12 @@ export class Api<
         end?: string;
         /** @default false */
         unmonitored?: boolean;
-        /** @default false */
-        includeSeries?: boolean;
-        /** @default false */
-        includeEpisodeFile?: boolean;
-        /** @default false */
-        includeEpisodeImages?: boolean;
         /** @default "" */
         tags?: string;
       },
-      params: RequestParams = {}
+      params: RequestParams = {},
     ) =>
-      this.request<EpisodeResource[], any>({
+      this.request<MovieResource[], any>({
         path: `/api/v3/calendar`,
         method: "GET",
         query: query,
@@ -2347,8 +2198,88 @@ export class Api<
      * @secure
      */
     v3CalendarDetail: (id: number, params: RequestParams = {}) =>
-      this.request<EpisodeResource, any>({
+      this.request<MovieResource, any>({
         path: `/api/v3/calendar/${id}`,
+        method: "GET",
+        secure: true,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Collection
+     * @name V3CollectionList
+     * @request GET:/api/v3/collection
+     * @secure
+     */
+    v3CollectionList: (
+      query?: {
+        /** @format int32 */
+        tmdbId?: number;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<CollectionResource[], any>({
+        path: `/api/v3/collection`,
+        method: "GET",
+        query: query,
+        secure: true,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Collection
+     * @name V3CollectionUpdate
+     * @request PUT:/api/v3/collection
+     * @secure
+     */
+    v3CollectionUpdate: (data: CollectionUpdateResource, params: RequestParams = {}) =>
+      this.request<void, any>({
+        path: `/api/v3/collection`,
+        method: "PUT",
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Collection
+     * @name V3CollectionUpdate2
+     * @request PUT:/api/v3/collection/{id}
+     * @originalName v3CollectionUpdate
+     * @duplicate
+     * @secure
+     */
+    v3CollectionUpdate2: (id: string, data: CollectionResource, params: RequestParams = {}) =>
+      this.request<CollectionResource, any>({
+        path: `/api/v3/collection/${id}`,
+        method: "PUT",
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Collection
+     * @name V3CollectionDetail
+     * @request GET:/api/v3/collection/{id}
+     * @secure
+     */
+    v3CollectionDetail: (id: number, params: RequestParams = {}) =>
+      this.request<CollectionResource, any>({
+        path: `/api/v3/collection/${id}`,
         method: "GET",
         secure: true,
         format: "json",
@@ -2427,6 +2358,48 @@ export class Api<
     /**
      * No description
      *
+     * @tags Credit
+     * @name V3CreditList
+     * @request GET:/api/v3/credit
+     * @secure
+     */
+    v3CreditList: (
+      query?: {
+        /** @format int32 */
+        movieId?: number;
+        /** @format int32 */
+        movieMetadataId?: number;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<void, any>({
+        path: `/api/v3/credit`,
+        method: "GET",
+        query: query,
+        secure: true,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Credit
+     * @name V3CreditDetail
+     * @request GET:/api/v3/credit/{id}
+     * @secure
+     */
+    v3CreditDetail: (id: number, params: RequestParams = {}) =>
+      this.request<CreditResource, any>({
+        path: `/api/v3/credit/${id}`,
+        method: "GET",
+        secure: true,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
      * @tags CustomFilter
      * @name V3CustomfilterList
      * @request GET:/api/v3/customfilter
@@ -2449,10 +2422,7 @@ export class Api<
      * @request POST:/api/v3/customfilter
      * @secure
      */
-    v3CustomfilterCreate: (
-      data: CustomFilterResource,
-      params: RequestParams = {}
-    ) =>
+    v3CustomfilterCreate: (data: CustomFilterResource, params: RequestParams = {}) =>
       this.request<CustomFilterResource, any>({
         path: `/api/v3/customfilter`,
         method: "POST",
@@ -2471,11 +2441,7 @@ export class Api<
      * @request PUT:/api/v3/customfilter/{id}
      * @secure
      */
-    v3CustomfilterUpdate: (
-      id: string,
-      data: CustomFilterResource,
-      params: RequestParams = {}
-    ) =>
+    v3CustomfilterUpdate: (id: string, data: CustomFilterResource, params: RequestParams = {}) =>
       this.request<CustomFilterResource, any>({
         path: `/api/v3/customfilter/${id}`,
         method: "PUT",
@@ -2527,10 +2493,7 @@ export class Api<
      * @request POST:/api/v3/customformat
      * @secure
      */
-    v3CustomformatCreate: (
-      data: CustomFormatResource,
-      params: RequestParams = {}
-    ) =>
+    v3CustomformatCreate: (data: CustomFormatResource, params: RequestParams = {}) =>
       this.request<CustomFormatResource, any>({
         path: `/api/v3/customformat`,
         method: "POST",
@@ -2566,11 +2529,7 @@ export class Api<
      * @request PUT:/api/v3/customformat/{id}
      * @secure
      */
-    v3CustomformatUpdate: (
-      id: string,
-      data: CustomFormatResource,
-      params: RequestParams = {}
-    ) =>
+    v3CustomformatUpdate: (id: string, data: CustomFormatResource, params: RequestParams = {}) =>
       this.request<CustomFormatResource, any>({
         path: `/api/v3/customformat/${id}`,
         method: "PUT",
@@ -2633,74 +2592,12 @@ export class Api<
     /**
      * No description
      *
-     * @tags Cutoff
-     * @name V3WantedCutoffList
-     * @request GET:/api/v3/wanted/cutoff
-     * @secure
-     */
-    v3WantedCutoffList: (
-      query?: {
-        /**
-         * @format int32
-         * @default 1
-         */
-        page?: number;
-        /**
-         * @format int32
-         * @default 10
-         */
-        pageSize?: number;
-        sortKey?: string;
-        sortDirection?: SortDirection;
-        /** @default false */
-        includeSeries?: boolean;
-        /** @default false */
-        includeEpisodeFile?: boolean;
-        /** @default false */
-        includeImages?: boolean;
-        /** @default true */
-        monitored?: boolean;
-      },
-      params: RequestParams = {}
-    ) =>
-      this.request<EpisodeResourcePagingResource, any>({
-        path: `/api/v3/wanted/cutoff`,
-        method: "GET",
-        query: query,
-        secure: true,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Cutoff
-     * @name V3WantedCutoffDetail
-     * @request GET:/api/v3/wanted/cutoff/{id}
-     * @secure
-     */
-    v3WantedCutoffDetail: (id: number, params: RequestParams = {}) =>
-      this.request<EpisodeResource, any>({
-        path: `/api/v3/wanted/cutoff/${id}`,
-        method: "GET",
-        secure: true,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
      * @tags DelayProfile
      * @name V3DelayprofileCreate
      * @request POST:/api/v3/delayprofile
      * @secure
      */
-    v3DelayprofileCreate: (
-      data: DelayProfileResource,
-      params: RequestParams = {}
-    ) =>
+    v3DelayprofileCreate: (data: DelayProfileResource, params: RequestParams = {}) =>
       this.request<DelayProfileResource, any>({
         path: `/api/v3/delayprofile`,
         method: "POST",
@@ -2752,11 +2649,7 @@ export class Api<
      * @request PUT:/api/v3/delayprofile/{id}
      * @secure
      */
-    v3DelayprofileUpdate: (
-      id: string,
-      data: DelayProfileResource,
-      params: RequestParams = {}
-    ) =>
+    v3DelayprofileUpdate: (id: string, data: DelayProfileResource, params: RequestParams = {}) =>
       this.request<DelayProfileResource, any>({
         path: `/api/v3/delayprofile/${id}`,
         method: "PUT",
@@ -2779,31 +2672,6 @@ export class Api<
       this.request<DelayProfileResource, any>({
         path: `/api/v3/delayprofile/${id}`,
         method: "GET",
-        secure: true,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags DelayProfile
-     * @name V3DelayprofileReorderUpdate
-     * @request PUT:/api/v3/delayprofile/reorder/{id}
-     * @secure
-     */
-    v3DelayprofileReorderUpdate: (
-      id: number,
-      query?: {
-        /** @format int32 */
-        after?: number;
-      },
-      params: RequestParams = {}
-    ) =>
-      this.request<DelayProfileResource[], any>({
-        path: `/api/v3/delayprofile/reorder/${id}`,
-        method: "PUT",
-        query: query,
         secure: true,
         format: "json",
         ...params,
@@ -2857,7 +2725,7 @@ export class Api<
         /** @default false */
         forceSave?: boolean;
       },
-      params: RequestParams = {}
+      params: RequestParams = {},
     ) =>
       this.request<DownloadClientResource, any>({
         path: `/api/v3/downloadclient`,
@@ -2885,7 +2753,7 @@ export class Api<
         /** @default false */
         forceSave?: boolean;
       },
-      params: RequestParams = {}
+      params: RequestParams = {},
     ) =>
       this.request<DownloadClientResource, any>({
         path: `/api/v3/downloadclient/${id}`,
@@ -2939,10 +2807,7 @@ export class Api<
      * @request PUT:/api/v3/downloadclient/bulk
      * @secure
      */
-    v3DownloadclientBulkUpdate: (
-      data: DownloadClientBulkResource,
-      params: RequestParams = {}
-    ) =>
+    v3DownloadclientBulkUpdate: (data: DownloadClientBulkResource, params: RequestParams = {}) =>
       this.request<DownloadClientResource, any>({
         path: `/api/v3/downloadclient/bulk`,
         method: "PUT",
@@ -2961,10 +2826,7 @@ export class Api<
      * @request DELETE:/api/v3/downloadclient/bulk
      * @secure
      */
-    v3DownloadclientBulkDelete: (
-      data: DownloadClientBulkResource,
-      params: RequestParams = {}
-    ) =>
+    v3DownloadclientBulkDelete: (data: DownloadClientBulkResource, params: RequestParams = {}) =>
       this.request<void, any>({
         path: `/api/v3/downloadclient/bulk`,
         method: "DELETE",
@@ -2999,10 +2861,7 @@ export class Api<
      * @request POST:/api/v3/downloadclient/test
      * @secure
      */
-    v3DownloadclientTestCreate: (
-      data: DownloadClientResource,
-      params: RequestParams = {}
-    ) =>
+    v3DownloadclientTestCreate: (data: DownloadClientResource, params: RequestParams = {}) =>
       this.request<void, any>({
         path: `/api/v3/downloadclient/test`,
         method: "POST",
@@ -3036,11 +2895,7 @@ export class Api<
      * @request POST:/api/v3/downloadclient/action/{name}
      * @secure
      */
-    v3DownloadclientActionCreate: (
-      name: string,
-      data: DownloadClientResource,
-      params: RequestParams = {}
-    ) =>
+    v3DownloadclientActionCreate: (name: string, data: DownloadClientResource, params: RequestParams = {}) =>
       this.request<void, any>({
         path: `/api/v3/downloadclient/action/${name}`,
         method: "POST",
@@ -3075,11 +2930,7 @@ export class Api<
      * @request PUT:/api/v3/config/downloadclient/{id}
      * @secure
      */
-    v3ConfigDownloadclientUpdate: (
-      id: string,
-      data: DownloadClientConfigResource,
-      params: RequestParams = {}
-    ) =>
+    v3ConfigDownloadclientUpdate: (id: string, data: DownloadClientConfigResource, params: RequestParams = {}) =>
       this.request<DownloadClientConfigResource, any>({
         path: `/api/v3/config/downloadclient/${id}`,
         method: "PUT",
@@ -3110,241 +2961,24 @@ export class Api<
     /**
      * No description
      *
-     * @tags Episode
-     * @name V3EpisodeList
-     * @request GET:/api/v3/episode
+     * @tags ExtraFile
+     * @name V3ExtrafileList
+     * @request GET:/api/v3/extrafile
      * @secure
      */
-    v3EpisodeList: (
+    v3ExtrafileList: (
       query?: {
         /** @format int32 */
-        seriesId?: number;
-        /** @format int32 */
-        seasonNumber?: number;
-        episodeIds?: number[];
-        /** @format int32 */
-        episodeFileId?: number;
-        /** @default false */
-        includeImages?: boolean;
+        movieId?: number;
       },
-      params: RequestParams = {}
+      params: RequestParams = {},
     ) =>
-      this.request<EpisodeResource[], any>({
-        path: `/api/v3/episode`,
+      this.request<ExtraFileResource[], any>({
+        path: `/api/v3/extrafile`,
         method: "GET",
         query: query,
         secure: true,
         format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Episode
-     * @name V3EpisodeUpdate
-     * @request PUT:/api/v3/episode/{id}
-     * @secure
-     */
-    v3EpisodeUpdate: (
-      id: number,
-      data: EpisodeResource,
-      params: RequestParams = {}
-    ) =>
-      this.request<EpisodeResource, any>({
-        path: `/api/v3/episode/${id}`,
-        method: "PUT",
-        body: data,
-        secure: true,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Episode
-     * @name V3EpisodeDetail
-     * @request GET:/api/v3/episode/{id}
-     * @secure
-     */
-    v3EpisodeDetail: (id: number, params: RequestParams = {}) =>
-      this.request<EpisodeResource, any>({
-        path: `/api/v3/episode/${id}`,
-        method: "GET",
-        secure: true,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Episode
-     * @name V3EpisodeMonitorUpdate
-     * @request PUT:/api/v3/episode/monitor
-     * @secure
-     */
-    v3EpisodeMonitorUpdate: (
-      data: EpisodesMonitoredResource,
-      query?: {
-        /** @default false */
-        includeImages?: boolean;
-      },
-      params: RequestParams = {}
-    ) =>
-      this.request<void, any>({
-        path: `/api/v3/episode/monitor`,
-        method: "PUT",
-        query: query,
-        body: data,
-        secure: true,
-        type: ContentType.Json,
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags EpisodeFile
-     * @name V3EpisodefileList
-     * @request GET:/api/v3/episodefile
-     * @secure
-     */
-    v3EpisodefileList: (
-      query?: {
-        /** @format int32 */
-        seriesId?: number;
-        episodeFileIds?: number[];
-      },
-      params: RequestParams = {}
-    ) =>
-      this.request<EpisodeFileResource[], any>({
-        path: `/api/v3/episodefile`,
-        method: "GET",
-        query: query,
-        secure: true,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags EpisodeFile
-     * @name V3EpisodefileUpdate
-     * @request PUT:/api/v3/episodefile/{id}
-     * @secure
-     */
-    v3EpisodefileUpdate: (
-      id: string,
-      data: EpisodeFileResource,
-      params: RequestParams = {}
-    ) =>
-      this.request<EpisodeFileResource, any>({
-        path: `/api/v3/episodefile/${id}`,
-        method: "PUT",
-        body: data,
-        secure: true,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags EpisodeFile
-     * @name V3EpisodefileDelete
-     * @request DELETE:/api/v3/episodefile/{id}
-     * @secure
-     */
-    v3EpisodefileDelete: (id: number, params: RequestParams = {}) =>
-      this.request<void, any>({
-        path: `/api/v3/episodefile/${id}`,
-        method: "DELETE",
-        secure: true,
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags EpisodeFile
-     * @name V3EpisodefileDetail
-     * @request GET:/api/v3/episodefile/{id}
-     * @secure
-     */
-    v3EpisodefileDetail: (id: number, params: RequestParams = {}) =>
-      this.request<EpisodeFileResource, any>({
-        path: `/api/v3/episodefile/${id}`,
-        method: "GET",
-        secure: true,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags EpisodeFile
-     * @name V3EpisodefileEditorUpdate
-     * @request PUT:/api/v3/episodefile/editor
-     * @secure
-     */
-    v3EpisodefileEditorUpdate: (
-      data: EpisodeFileListResource,
-      params: RequestParams = {}
-    ) =>
-      this.request<void, any>({
-        path: `/api/v3/episodefile/editor`,
-        method: "PUT",
-        body: data,
-        secure: true,
-        type: ContentType.Json,
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags EpisodeFile
-     * @name V3EpisodefileBulkDelete
-     * @request DELETE:/api/v3/episodefile/bulk
-     * @secure
-     */
-    v3EpisodefileBulkDelete: (
-      data: EpisodeFileListResource,
-      params: RequestParams = {}
-    ) =>
-      this.request<void, any>({
-        path: `/api/v3/episodefile/bulk`,
-        method: "DELETE",
-        body: data,
-        secure: true,
-        type: ContentType.Json,
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags EpisodeFile
-     * @name V3EpisodefileBulkUpdate
-     * @request PUT:/api/v3/episodefile/bulk
-     * @secure
-     */
-    v3EpisodefileBulkUpdate: (
-      data: EpisodeFileResource[],
-      params: RequestParams = {}
-    ) =>
-      this.request<void, any>({
-        path: `/api/v3/episodefile/bulk`,
-        method: "PUT",
-        body: data,
-        secure: true,
-        type: ContentType.Json,
         ...params,
       }),
 
@@ -3364,7 +2998,7 @@ export class Api<
         /** @default false */
         allowFoldersWithoutTrailingSlashes?: boolean;
       },
-      params: RequestParams = {}
+      params: RequestParams = {},
     ) =>
       this.request<void, any>({
         path: `/api/v3/filesystem`,
@@ -3386,7 +3020,7 @@ export class Api<
       query?: {
         path?: string;
       },
-      params: RequestParams = {}
+      params: RequestParams = {},
     ) =>
       this.request<void, any>({
         path: `/api/v3/filesystem/type`,
@@ -3408,7 +3042,7 @@ export class Api<
       query?: {
         path?: string;
       },
-      params: RequestParams = {}
+      params: RequestParams = {},
     ) =>
       this.request<void, any>({
         path: `/api/v3/filesystem/mediafiles`,
@@ -3438,6 +3072,23 @@ export class Api<
     /**
      * No description
      *
+     * @tags Health
+     * @name V3HealthDetail
+     * @request GET:/api/v3/health/{id}
+     * @secure
+     */
+    v3HealthDetail: (id: number, params: RequestParams = {}) =>
+      this.request<HealthResource, any>({
+        path: `/api/v3/health/${id}`,
+        method: "GET",
+        secure: true,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
      * @tags History
      * @name V3HistoryList
      * @request GET:/api/v3/history
@@ -3457,17 +3108,14 @@ export class Api<
         pageSize?: number;
         sortKey?: string;
         sortDirection?: SortDirection;
-        includeSeries?: boolean;
-        includeEpisode?: boolean;
+        includeMovie?: boolean;
         eventType?: number[];
-        /** @format int32 */
-        episodeId?: number;
         downloadId?: string;
-        seriesIds?: number[];
+        movieIds?: number[];
         languages?: number[];
         quality?: number[];
       },
-      params: RequestParams = {}
+      params: RequestParams = {},
     ) =>
       this.request<HistoryResourcePagingResource, any>({
         path: `/api/v3/history`,
@@ -3490,13 +3138,11 @@ export class Api<
       query?: {
         /** @format date-time */
         date?: string;
-        eventType?: EpisodeHistoryEventType;
+        eventType?: MovieHistoryEventType;
         /** @default false */
-        includeSeries?: boolean;
-        /** @default false */
-        includeEpisode?: boolean;
+        includeMovie?: boolean;
       },
-      params: RequestParams = {}
+      params: RequestParams = {},
     ) =>
       this.request<HistoryResource[], any>({
         path: `/api/v3/history/since`,
@@ -3511,26 +3157,22 @@ export class Api<
      * No description
      *
      * @tags History
-     * @name V3HistorySeriesList
-     * @request GET:/api/v3/history/series
+     * @name V3HistoryMovieList
+     * @request GET:/api/v3/history/movie
      * @secure
      */
-    v3HistorySeriesList: (
+    v3HistoryMovieList: (
       query?: {
         /** @format int32 */
-        seriesId?: number;
-        /** @format int32 */
-        seasonNumber?: number;
-        eventType?: EpisodeHistoryEventType;
+        movieId?: number;
+        eventType?: MovieHistoryEventType;
         /** @default false */
-        includeSeries?: boolean;
-        /** @default false */
-        includeEpisode?: boolean;
+        includeMovie?: boolean;
       },
-      params: RequestParams = {}
+      params: RequestParams = {},
     ) =>
       this.request<HistoryResource[], any>({
-        path: `/api/v3/history/series`,
+        path: `/api/v3/history/movie`,
         method: "GET",
         query: query,
         secure: true,
@@ -3579,11 +3221,7 @@ export class Api<
      * @request PUT:/api/v3/config/host/{id}
      * @secure
      */
-    v3ConfigHostUpdate: (
-      id: string,
-      data: HostConfigResource,
-      params: RequestParams = {}
-    ) =>
+    v3ConfigHostUpdate: (id: string, data: HostConfigResource, params: RequestParams = {}) =>
       this.request<HostConfigResource, any>({
         path: `/api/v3/config/host/${id}`,
         method: "PUT",
@@ -3608,6 +3246,112 @@ export class Api<
         method: "GET",
         secure: true,
         format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ImportExclusions
+     * @name V3ExclusionsList
+     * @request GET:/api/v3/exclusions
+     * @secure
+     */
+    v3ExclusionsList: (params: RequestParams = {}) =>
+      this.request<ImportExclusionsResource[], any>({
+        path: `/api/v3/exclusions`,
+        method: "GET",
+        secure: true,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ImportExclusions
+     * @name V3ExclusionsCreate
+     * @request POST:/api/v3/exclusions
+     * @secure
+     */
+    v3ExclusionsCreate: (data: ImportExclusionsResource, params: RequestParams = {}) =>
+      this.request<ImportExclusionsResource, any>({
+        path: `/api/v3/exclusions`,
+        method: "POST",
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ImportExclusions
+     * @name V3ExclusionsUpdate
+     * @request PUT:/api/v3/exclusions/{id}
+     * @secure
+     */
+    v3ExclusionsUpdate: (id: string, data: ImportExclusionsResource, params: RequestParams = {}) =>
+      this.request<ImportExclusionsResource, any>({
+        path: `/api/v3/exclusions/${id}`,
+        method: "PUT",
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ImportExclusions
+     * @name V3ExclusionsDelete
+     * @request DELETE:/api/v3/exclusions/{id}
+     * @secure
+     */
+    v3ExclusionsDelete: (id: number, params: RequestParams = {}) =>
+      this.request<void, any>({
+        path: `/api/v3/exclusions/${id}`,
+        method: "DELETE",
+        secure: true,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ImportExclusions
+     * @name V3ExclusionsDetail
+     * @request GET:/api/v3/exclusions/{id}
+     * @secure
+     */
+    v3ExclusionsDetail: (id: number, params: RequestParams = {}) =>
+      this.request<ImportExclusionsResource, any>({
+        path: `/api/v3/exclusions/${id}`,
+        method: "GET",
+        secure: true,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ImportExclusions
+     * @name V3ExclusionsBulkCreate
+     * @request POST:/api/v3/exclusions/bulk
+     * @secure
+     */
+    v3ExclusionsBulkCreate: (data: ImportExclusionsResource[], params: RequestParams = {}) =>
+      this.request<void, any>({
+        path: `/api/v3/exclusions/bulk`,
+        method: "POST",
+        body: data,
+        secure: true,
+        type: ContentType.Json,
         ...params,
       }),
 
@@ -3642,7 +3386,7 @@ export class Api<
         /** @default false */
         forceSave?: boolean;
       },
-      params: RequestParams = {}
+      params: RequestParams = {},
     ) =>
       this.request<ImportListResource, any>({
         path: `/api/v3/importlist`,
@@ -3670,7 +3414,7 @@ export class Api<
         /** @default false */
         forceSave?: boolean;
       },
-      params: RequestParams = {}
+      params: RequestParams = {},
     ) =>
       this.request<ImportListResource, any>({
         path: `/api/v3/importlist/${id}`,
@@ -3724,10 +3468,7 @@ export class Api<
      * @request PUT:/api/v3/importlist/bulk
      * @secure
      */
-    v3ImportlistBulkUpdate: (
-      data: ImportListBulkResource,
-      params: RequestParams = {}
-    ) =>
+    v3ImportlistBulkUpdate: (data: ImportListBulkResource, params: RequestParams = {}) =>
       this.request<ImportListResource, any>({
         path: `/api/v3/importlist/bulk`,
         method: "PUT",
@@ -3746,10 +3487,7 @@ export class Api<
      * @request DELETE:/api/v3/importlist/bulk
      * @secure
      */
-    v3ImportlistBulkDelete: (
-      data: ImportListBulkResource,
-      params: RequestParams = {}
-    ) =>
+    v3ImportlistBulkDelete: (data: ImportListBulkResource, params: RequestParams = {}) =>
       this.request<void, any>({
         path: `/api/v3/importlist/bulk`,
         method: "DELETE",
@@ -3784,10 +3522,7 @@ export class Api<
      * @request POST:/api/v3/importlist/test
      * @secure
      */
-    v3ImportlistTestCreate: (
-      data: ImportListResource,
-      params: RequestParams = {}
-    ) =>
+    v3ImportlistTestCreate: (data: ImportListResource, params: RequestParams = {}) =>
       this.request<void, any>({
         path: `/api/v3/importlist/test`,
         method: "POST",
@@ -3821,11 +3556,7 @@ export class Api<
      * @request POST:/api/v3/importlist/action/{name}
      * @secure
      */
-    v3ImportlistActionCreate: (
-      name: string,
-      data: ImportListResource,
-      params: RequestParams = {}
-    ) =>
+    v3ImportlistActionCreate: (name: string, data: ImportListResource, params: RequestParams = {}) =>
       this.request<void, any>({
         path: `/api/v3/importlist/action/${name}`,
         method: "POST",
@@ -3860,11 +3591,7 @@ export class Api<
      * @request PUT:/api/v3/config/importlist/{id}
      * @secure
      */
-    v3ConfigImportlistUpdate: (
-      id: string,
-      data: ImportListConfigResource,
-      params: RequestParams = {}
-    ) =>
+    v3ConfigImportlistUpdate: (id: string, data: ImportListConfigResource, params: RequestParams = {}) =>
       this.request<ImportListConfigResource, any>({
         path: `/api/v3/config/importlist/${id}`,
         method: "PUT",
@@ -3895,130 +3622,45 @@ export class Api<
     /**
      * No description
      *
-     * @tags ImportListExclusion
-     * @name V3ImportlistexclusionList
-     * @request GET:/api/v3/importlistexclusion
-     * @deprecated
+     * @tags ImportListMovies
+     * @name V3ImportlistMovieList
+     * @request GET:/api/v3/importlist/movie
      * @secure
      */
-    v3ImportlistexclusionList: (params: RequestParams = {}) =>
-      this.request<ImportListExclusionResource[], any>({
-        path: `/api/v3/importlistexclusion`,
+    v3ImportlistMovieList: (
+      query?: {
+        /** @default false */
+        includeRecommendations?: boolean;
+        /** @default false */
+        includeTrending?: boolean;
+        /** @default false */
+        includePopular?: boolean;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<void, any>({
+        path: `/api/v3/importlist/movie`,
         method: "GET",
+        query: query,
         secure: true,
-        format: "json",
         ...params,
       }),
 
     /**
      * No description
      *
-     * @tags ImportListExclusion
-     * @name V3ImportlistexclusionCreate
-     * @request POST:/api/v3/importlistexclusion
+     * @tags ImportListMovies
+     * @name V3ImportlistMovieCreate
+     * @request POST:/api/v3/importlist/movie
      * @secure
      */
-    v3ImportlistexclusionCreate: (
-      data: ImportListExclusionResource,
-      params: RequestParams = {}
-    ) =>
-      this.request<ImportListExclusionResource, any>({
-        path: `/api/v3/importlistexclusion`,
+    v3ImportlistMovieCreate: (data: MovieResource[], params: RequestParams = {}) =>
+      this.request<void, any>({
+        path: `/api/v3/importlist/movie`,
         method: "POST",
         body: data,
         secure: true,
         type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags ImportListExclusion
-     * @name V3ImportlistexclusionPagedList
-     * @request GET:/api/v3/importlistexclusion/paged
-     * @secure
-     */
-    v3ImportlistexclusionPagedList: (
-      query?: {
-        /**
-         * @format int32
-         * @default 1
-         */
-        page?: number;
-        /**
-         * @format int32
-         * @default 10
-         */
-        pageSize?: number;
-        sortKey?: string;
-        sortDirection?: SortDirection;
-      },
-      params: RequestParams = {}
-    ) =>
-      this.request<ImportListExclusionResourcePagingResource, any>({
-        path: `/api/v3/importlistexclusion/paged`,
-        method: "GET",
-        query: query,
-        secure: true,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags ImportListExclusion
-     * @name V3ImportlistexclusionUpdate
-     * @request PUT:/api/v3/importlistexclusion/{id}
-     * @secure
-     */
-    v3ImportlistexclusionUpdate: (
-      id: string,
-      data: ImportListExclusionResource,
-      params: RequestParams = {}
-    ) =>
-      this.request<ImportListExclusionResource, any>({
-        path: `/api/v3/importlistexclusion/${id}`,
-        method: "PUT",
-        body: data,
-        secure: true,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags ImportListExclusion
-     * @name V3ImportlistexclusionDelete
-     * @request DELETE:/api/v3/importlistexclusion/{id}
-     * @secure
-     */
-    v3ImportlistexclusionDelete: (id: number, params: RequestParams = {}) =>
-      this.request<void, any>({
-        path: `/api/v3/importlistexclusion/${id}`,
-        method: "DELETE",
-        secure: true,
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags ImportListExclusion
-     * @name V3ImportlistexclusionDetail
-     * @request GET:/api/v3/importlistexclusion/{id}
-     * @secure
-     */
-    v3ImportlistexclusionDetail: (id: number, params: RequestParams = {}) =>
-      this.request<ImportListExclusionResource, any>({
-        path: `/api/v3/importlistexclusion/${id}`,
-        method: "GET",
-        secure: true,
-        format: "json",
         ...params,
       }),
 
@@ -4053,7 +3695,7 @@ export class Api<
         /** @default false */
         forceSave?: boolean;
       },
-      params: RequestParams = {}
+      params: RequestParams = {},
     ) =>
       this.request<IndexerResource, any>({
         path: `/api/v3/indexer`,
@@ -4081,7 +3723,7 @@ export class Api<
         /** @default false */
         forceSave?: boolean;
       },
-      params: RequestParams = {}
+      params: RequestParams = {},
     ) =>
       this.request<IndexerResource, any>({
         path: `/api/v3/indexer/${id}`,
@@ -4135,10 +3777,7 @@ export class Api<
      * @request PUT:/api/v3/indexer/bulk
      * @secure
      */
-    v3IndexerBulkUpdate: (
-      data: IndexerBulkResource,
-      params: RequestParams = {}
-    ) =>
+    v3IndexerBulkUpdate: (data: IndexerBulkResource, params: RequestParams = {}) =>
       this.request<IndexerResource, any>({
         path: `/api/v3/indexer/bulk`,
         method: "PUT",
@@ -4157,10 +3796,7 @@ export class Api<
      * @request DELETE:/api/v3/indexer/bulk
      * @secure
      */
-    v3IndexerBulkDelete: (
-      data: IndexerBulkResource,
-      params: RequestParams = {}
-    ) =>
+    v3IndexerBulkDelete: (data: IndexerBulkResource, params: RequestParams = {}) =>
       this.request<void, any>({
         path: `/api/v3/indexer/bulk`,
         method: "DELETE",
@@ -4229,11 +3865,7 @@ export class Api<
      * @request POST:/api/v3/indexer/action/{name}
      * @secure
      */
-    v3IndexerActionCreate: (
-      name: string,
-      data: IndexerResource,
-      params: RequestParams = {}
-    ) =>
+    v3IndexerActionCreate: (name: string, data: IndexerResource, params: RequestParams = {}) =>
       this.request<void, any>({
         path: `/api/v3/indexer/action/${name}`,
         method: "POST",
@@ -4268,11 +3900,7 @@ export class Api<
      * @request PUT:/api/v3/config/indexer/{id}
      * @secure
      */
-    v3ConfigIndexerUpdate: (
-      id: string,
-      data: IndexerConfigResource,
-      params: RequestParams = {}
-    ) =>
+    v3ConfigIndexerUpdate: (id: string, data: IndexerConfigResource, params: RequestParams = {}) =>
       this.request<IndexerConfigResource, any>({
         path: `/api/v3/config/indexer/${id}`,
         method: "PUT",
@@ -4354,130 +3982,13 @@ export class Api<
     /**
      * No description
      *
-     * @tags LanguageProfile
-     * @name V3LanguageprofileCreate
-     * @request POST:/api/v3/languageprofile
-     * @deprecated
-     * @secure
-     */
-    v3LanguageprofileCreate: (
-      data: LanguageProfileResource,
-      params: RequestParams = {}
-    ) =>
-      this.request<LanguageProfileResource, any>({
-        path: `/api/v3/languageprofile`,
-        method: "POST",
-        body: data,
-        secure: true,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags LanguageProfile
-     * @name V3LanguageprofileList
-     * @request GET:/api/v3/languageprofile
-     * @deprecated
-     * @secure
-     */
-    v3LanguageprofileList: (params: RequestParams = {}) =>
-      this.request<LanguageProfileResource[], any>({
-        path: `/api/v3/languageprofile`,
-        method: "GET",
-        secure: true,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags LanguageProfile
-     * @name V3LanguageprofileDelete
-     * @request DELETE:/api/v3/languageprofile/{id}
-     * @deprecated
-     * @secure
-     */
-    v3LanguageprofileDelete: (id: number, params: RequestParams = {}) =>
-      this.request<void, any>({
-        path: `/api/v3/languageprofile/${id}`,
-        method: "DELETE",
-        secure: true,
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags LanguageProfile
-     * @name V3LanguageprofileUpdate
-     * @request PUT:/api/v3/languageprofile/{id}
-     * @deprecated
-     * @secure
-     */
-    v3LanguageprofileUpdate: (
-      id: string,
-      data: LanguageProfileResource,
-      params: RequestParams = {}
-    ) =>
-      this.request<LanguageProfileResource, any>({
-        path: `/api/v3/languageprofile/${id}`,
-        method: "PUT",
-        body: data,
-        secure: true,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags LanguageProfile
-     * @name V3LanguageprofileDetail
-     * @request GET:/api/v3/languageprofile/{id}
-     * @secure
-     */
-    v3LanguageprofileDetail: (id: number, params: RequestParams = {}) =>
-      this.request<LanguageProfileResource, any>({
-        path: `/api/v3/languageprofile/${id}`,
-        method: "GET",
-        secure: true,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags LanguageProfileSchema
-     * @name V3LanguageprofileSchemaList
-     * @request GET:/api/v3/languageprofile/schema
-     * @deprecated
-     * @secure
-     */
-    v3LanguageprofileSchemaList: (params: RequestParams = {}) =>
-      this.request<LanguageProfileResource, any>({
-        path: `/api/v3/languageprofile/schema`,
-        method: "GET",
-        secure: true,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
      * @tags Localization
      * @name V3LocalizationList
      * @request GET:/api/v3/localization
      * @secure
      */
     v3LocalizationList: (params: RequestParams = {}) =>
-      this.request<LocalizationResource, any>({
+      this.request<string, any>({
         path: `/api/v3/localization`,
         method: "GET",
         secure: true,
@@ -4496,23 +4007,6 @@ export class Api<
     v3LocalizationLanguageList: (params: RequestParams = {}) =>
       this.request<LocalizationLanguageResource, any>({
         path: `/api/v3/localization/language`,
-        method: "GET",
-        secure: true,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Localization
-     * @name V3LocalizationDetail
-     * @request GET:/api/v3/localization/{id}
-     * @secure
-     */
-    v3LocalizationDetail: (id: number, params: RequestParams = {}) =>
-      this.request<LocalizationResource, any>({
-        path: `/api/v3/localization/${id}`,
         method: "GET",
         secure: true,
         format: "json",
@@ -4543,7 +4037,7 @@ export class Api<
         sortDirection?: SortDirection;
         level?: string;
       },
-      params: RequestParams = {}
+      params: RequestParams = {},
     ) =>
       this.request<LogResourcePagingResource, any>({
         path: `/api/v3/log`,
@@ -4600,13 +4094,11 @@ export class Api<
         folder?: string;
         downloadId?: string;
         /** @format int32 */
-        seriesId?: number;
-        /** @format int32 */
-        seasonNumber?: number;
+        movieId?: number;
         /** @default true */
         filterExistingFiles?: boolean;
       },
-      params: RequestParams = {}
+      params: RequestParams = {},
     ) =>
       this.request<ManualImportResource[], any>({
         path: `/api/v3/manualimport`,
@@ -4625,10 +4117,7 @@ export class Api<
      * @request POST:/api/v3/manualimport
      * @secure
      */
-    v3ManualimportCreate: (
-      data: ManualImportReprocessResource[],
-      params: RequestParams = {}
-    ) =>
+    v3ManualimportCreate: (data: ManualImportReprocessResource[], params: RequestParams = {}) =>
       this.request<void, any>({
         path: `/api/v3/manualimport`,
         method: "POST",
@@ -4643,16 +4132,12 @@ export class Api<
      *
      * @tags MediaCover
      * @name V3MediacoverDetail
-     * @request GET:/api/v3/mediacover/{seriesId}/{filename}
+     * @request GET:/api/v3/mediacover/{movieId}/{filename}
      * @secure
      */
-    v3MediacoverDetail: (
-      seriesId: number,
-      filename: string,
-      params: RequestParams = {}
-    ) =>
+    v3MediacoverDetail: (movieId: number, filename: string, params: RequestParams = {}) =>
       this.request<void, any>({
-        path: `/api/v3/mediacover/${seriesId}/${filename}`,
+        path: `/api/v3/mediacover/${movieId}/${filename}`,
         method: "GET",
         secure: true,
         ...params,
@@ -4683,11 +4168,7 @@ export class Api<
      * @request PUT:/api/v3/config/mediamanagement/{id}
      * @secure
      */
-    v3ConfigMediamanagementUpdate: (
-      id: string,
-      data: MediaManagementConfigResource,
-      params: RequestParams = {}
-    ) =>
+    v3ConfigMediamanagementUpdate: (id: string, data: MediaManagementConfigResource, params: RequestParams = {}) =>
       this.request<MediaManagementConfigResource, any>({
         path: `/api/v3/config/mediamanagement/${id}`,
         method: "PUT",
@@ -4746,7 +4227,7 @@ export class Api<
         /** @default false */
         forceSave?: boolean;
       },
-      params: RequestParams = {}
+      params: RequestParams = {},
     ) =>
       this.request<MetadataResource, any>({
         path: `/api/v3/metadata`,
@@ -4774,7 +4255,7 @@ export class Api<
         /** @default false */
         forceSave?: boolean;
       },
-      params: RequestParams = {}
+      params: RequestParams = {},
     ) =>
       this.request<MetadataResource, any>({
         path: `/api/v3/metadata/${id}`,
@@ -4845,10 +4326,7 @@ export class Api<
      * @request POST:/api/v3/metadata/test
      * @secure
      */
-    v3MetadataTestCreate: (
-      data: MetadataResource,
-      params: RequestParams = {}
-    ) =>
+    v3MetadataTestCreate: (data: MetadataResource, params: RequestParams = {}) =>
       this.request<void, any>({
         path: `/api/v3/metadata/test`,
         method: "POST",
@@ -4882,11 +4360,7 @@ export class Api<
      * @request POST:/api/v3/metadata/action/{name}
      * @secure
      */
-    v3MetadataActionCreate: (
-      name: string,
-      data: MetadataResource,
-      params: RequestParams = {}
-    ) =>
+    v3MetadataActionCreate: (name: string, data: MetadataResource, params: RequestParams = {}) =>
       this.request<void, any>({
         path: `/api/v3/metadata/action/${name}`,
         method: "POST",
@@ -4899,36 +4373,75 @@ export class Api<
     /**
      * No description
      *
-     * @tags Missing
-     * @name V3WantedMissingList
-     * @request GET:/api/v3/wanted/missing
+     * @tags MetadataConfig
+     * @name V3ConfigMetadataList
+     * @request GET:/api/v3/config/metadata
      * @secure
      */
-    v3WantedMissingList: (
+    v3ConfigMetadataList: (params: RequestParams = {}) =>
+      this.request<MetadataConfigResource, any>({
+        path: `/api/v3/config/metadata`,
+        method: "GET",
+        secure: true,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags MetadataConfig
+     * @name V3ConfigMetadataUpdate
+     * @request PUT:/api/v3/config/metadata/{id}
+     * @secure
+     */
+    v3ConfigMetadataUpdate: (id: string, data: MetadataConfigResource, params: RequestParams = {}) =>
+      this.request<MetadataConfigResource, any>({
+        path: `/api/v3/config/metadata/${id}`,
+        method: "PUT",
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags MetadataConfig
+     * @name V3ConfigMetadataDetail
+     * @request GET:/api/v3/config/metadata/{id}
+     * @secure
+     */
+    v3ConfigMetadataDetail: (id: number, params: RequestParams = {}) =>
+      this.request<MetadataConfigResource, any>({
+        path: `/api/v3/config/metadata/${id}`,
+        method: "GET",
+        secure: true,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Movie
+     * @name V3MovieList
+     * @request GET:/api/v3/movie
+     * @secure
+     */
+    v3MovieList: (
       query?: {
-        /**
-         * @format int32
-         * @default 1
-         */
-        page?: number;
-        /**
-         * @format int32
-         * @default 10
-         */
-        pageSize?: number;
-        sortKey?: string;
-        sortDirection?: SortDirection;
+        /** @format int32 */
+        tmdbId?: number;
         /** @default false */
-        includeSeries?: boolean;
-        /** @default false */
-        includeImages?: boolean;
-        /** @default true */
-        monitored?: boolean;
+        excludeLocalCovers?: boolean;
       },
-      params: RequestParams = {}
+      params: RequestParams = {},
     ) =>
-      this.request<EpisodeResourcePagingResource, any>({
-        path: `/api/v3/wanted/missing`,
+      this.request<MovieResource[], any>({
+        path: `/api/v3/movie`,
         method: "GET",
         query: query,
         secure: true,
@@ -4939,14 +4452,354 @@ export class Api<
     /**
      * No description
      *
-     * @tags Missing
-     * @name V3WantedMissingDetail
-     * @request GET:/api/v3/wanted/missing/{id}
+     * @tags Movie
+     * @name V3MovieCreate
+     * @request POST:/api/v3/movie
      * @secure
      */
-    v3WantedMissingDetail: (id: number, params: RequestParams = {}) =>
-      this.request<EpisodeResource, any>({
-        path: `/api/v3/wanted/missing/${id}`,
+    v3MovieCreate: (data: MovieResource, params: RequestParams = {}) =>
+      this.request<MovieResource, any>({
+        path: `/api/v3/movie`,
+        method: "POST",
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Movie
+     * @name V3MovieUpdate
+     * @request PUT:/api/v3/movie/{id}
+     * @secure
+     */
+    v3MovieUpdate: (
+      id: string,
+      data: MovieResource,
+      query?: {
+        /** @default false */
+        moveFiles?: boolean;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<MovieResource, any>({
+        path: `/api/v3/movie/${id}`,
+        method: "PUT",
+        query: query,
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Movie
+     * @name V3MovieDelete
+     * @request DELETE:/api/v3/movie/{id}
+     * @secure
+     */
+    v3MovieDelete: (
+      id: number,
+      query?: {
+        /** @default false */
+        deleteFiles?: boolean;
+        /** @default false */
+        addImportExclusion?: boolean;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<void, any>({
+        path: `/api/v3/movie/${id}`,
+        method: "DELETE",
+        query: query,
+        secure: true,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Movie
+     * @name V3MovieDetail
+     * @request GET:/api/v3/movie/{id}
+     * @secure
+     */
+    v3MovieDetail: (id: number, params: RequestParams = {}) =>
+      this.request<MovieResource, any>({
+        path: `/api/v3/movie/${id}`,
+        method: "GET",
+        secure: true,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags MovieEditor
+     * @name V3MovieEditorUpdate
+     * @request PUT:/api/v3/movie/editor
+     * @secure
+     */
+    v3MovieEditorUpdate: (data: MovieEditorResource, params: RequestParams = {}) =>
+      this.request<void, any>({
+        path: `/api/v3/movie/editor`,
+        method: "PUT",
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags MovieEditor
+     * @name V3MovieEditorDelete
+     * @request DELETE:/api/v3/movie/editor
+     * @secure
+     */
+    v3MovieEditorDelete: (data: MovieEditorResource, params: RequestParams = {}) =>
+      this.request<void, any>({
+        path: `/api/v3/movie/editor`,
+        method: "DELETE",
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags MovieFile
+     * @name V3MoviefileList
+     * @request GET:/api/v3/moviefile
+     * @secure
+     */
+    v3MoviefileList: (
+      query?: {
+        movieId?: number[];
+        movieFileIds?: number[];
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<MovieFileResource[], any>({
+        path: `/api/v3/moviefile`,
+        method: "GET",
+        query: query,
+        secure: true,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags MovieFile
+     * @name V3MoviefileUpdate
+     * @request PUT:/api/v3/moviefile/{id}
+     * @secure
+     */
+    v3MoviefileUpdate: (id: string, data: MovieFileResource, params: RequestParams = {}) =>
+      this.request<MovieFileResource, any>({
+        path: `/api/v3/moviefile/${id}`,
+        method: "PUT",
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags MovieFile
+     * @name V3MoviefileDelete
+     * @request DELETE:/api/v3/moviefile/{id}
+     * @secure
+     */
+    v3MoviefileDelete: (id: number, params: RequestParams = {}) =>
+      this.request<void, any>({
+        path: `/api/v3/moviefile/${id}`,
+        method: "DELETE",
+        secure: true,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags MovieFile
+     * @name V3MoviefileDetail
+     * @request GET:/api/v3/moviefile/{id}
+     * @secure
+     */
+    v3MoviefileDetail: (id: number, params: RequestParams = {}) =>
+      this.request<MovieFileResource, any>({
+        path: `/api/v3/moviefile/${id}`,
+        method: "GET",
+        secure: true,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags MovieFile
+     * @name V3MoviefileEditorUpdate
+     * @request PUT:/api/v3/moviefile/editor
+     * @secure
+     */
+    v3MoviefileEditorUpdate: (data: MovieFileListResource, params: RequestParams = {}) =>
+      this.request<void, any>({
+        path: `/api/v3/moviefile/editor`,
+        method: "PUT",
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags MovieFile
+     * @name V3MoviefileBulkDelete
+     * @request DELETE:/api/v3/moviefile/bulk
+     * @secure
+     */
+    v3MoviefileBulkDelete: (data: MovieFileListResource, params: RequestParams = {}) =>
+      this.request<void, any>({
+        path: `/api/v3/moviefile/bulk`,
+        method: "DELETE",
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags MovieImport
+     * @name V3MovieImportCreate
+     * @request POST:/api/v3/movie/import
+     * @secure
+     */
+    v3MovieImportCreate: (data: MovieResource[], params: RequestParams = {}) =>
+      this.request<void, any>({
+        path: `/api/v3/movie/import`,
+        method: "POST",
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags MovieImport
+     * @name V3MovieImportDetail
+     * @request GET:/api/v3/movie/import/{id}
+     * @secure
+     */
+    v3MovieImportDetail: (id: number, params: RequestParams = {}) =>
+      this.request<MovieResource, any>({
+        path: `/api/v3/movie/import/${id}`,
+        method: "GET",
+        secure: true,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags MovieLookup
+     * @name V3MovieLookupTmdbList
+     * @request GET:/api/v3/movie/lookup/tmdb
+     * @secure
+     */
+    v3MovieLookupTmdbList: (
+      query?: {
+        /** @format int32 */
+        tmdbId?: number;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<void, any>({
+        path: `/api/v3/movie/lookup/tmdb`,
+        method: "GET",
+        query: query,
+        secure: true,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags MovieLookup
+     * @name V3MovieLookupImdbList
+     * @request GET:/api/v3/movie/lookup/imdb
+     * @secure
+     */
+    v3MovieLookupImdbList: (
+      query?: {
+        imdbId?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<void, any>({
+        path: `/api/v3/movie/lookup/imdb`,
+        method: "GET",
+        query: query,
+        secure: true,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags MovieLookup
+     * @name V3MovieLookupList
+     * @request GET:/api/v3/movie/lookup
+     * @secure
+     */
+    v3MovieLookupList: (
+      query?: {
+        term?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<void, any>({
+        path: `/api/v3/movie/lookup`,
+        method: "GET",
+        query: query,
+        secure: true,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags MovieLookup
+     * @name V3MovieLookupDetail
+     * @request GET:/api/v3/movie/lookup/{id}
+     * @secure
+     */
+    v3MovieLookupDetail: (id: number, params: RequestParams = {}) =>
+      this.request<MovieResource, any>({
+        path: `/api/v3/movie/lookup/${id}`,
         method: "GET",
         secure: true,
         format: "json",
@@ -4978,11 +4831,7 @@ export class Api<
      * @request PUT:/api/v3/config/naming/{id}
      * @secure
      */
-    v3ConfigNamingUpdate: (
-      id: string,
-      data: NamingConfigResource,
-      params: RequestParams = {}
-    ) =>
+    v3ConfigNamingUpdate: (id: string, data: NamingConfigResource, params: RequestParams = {}) =>
       this.request<NamingConfigResource, any>({
         path: `/api/v3/config/naming/${id}`,
         method: "PUT",
@@ -5020,23 +4869,16 @@ export class Api<
      */
     v3ConfigNamingExamplesList: (
       query?: {
-        renameEpisodes?: boolean;
+        renameMovies?: boolean;
         replaceIllegalCharacters?: boolean;
-        /** @format int32 */
-        colonReplacementFormat?: number;
-        /** @format int32 */
-        multiEpisodeStyle?: number;
-        standardEpisodeFormat?: string;
-        dailyEpisodeFormat?: string;
-        animeEpisodeFormat?: string;
-        seriesFolderFormat?: string;
-        seasonFolderFormat?: string;
-        specialsFolderFormat?: string;
+        colonReplacementFormat?: ColonReplacementFormat;
+        standardMovieFormat?: string;
+        movieFolderFormat?: string;
         /** @format int32 */
         id?: number;
         resourceName?: string;
       },
-      params: RequestParams = {}
+      params: RequestParams = {},
     ) =>
       this.request<void, any>({
         path: `/api/v3/config/naming/examples`,
@@ -5077,7 +4919,7 @@ export class Api<
         /** @default false */
         forceSave?: boolean;
       },
-      params: RequestParams = {}
+      params: RequestParams = {},
     ) =>
       this.request<NotificationResource, any>({
         path: `/api/v3/notification`,
@@ -5105,7 +4947,7 @@ export class Api<
         /** @default false */
         forceSave?: boolean;
       },
-      params: RequestParams = {}
+      params: RequestParams = {},
     ) =>
       this.request<NotificationResource, any>({
         path: `/api/v3/notification/${id}`,
@@ -5176,10 +5018,7 @@ export class Api<
      * @request POST:/api/v3/notification/test
      * @secure
      */
-    v3NotificationTestCreate: (
-      data: NotificationResource,
-      params: RequestParams = {}
-    ) =>
+    v3NotificationTestCreate: (data: NotificationResource, params: RequestParams = {}) =>
       this.request<void, any>({
         path: `/api/v3/notification/test`,
         method: "POST",
@@ -5213,11 +5052,7 @@ export class Api<
      * @request POST:/api/v3/notification/action/{name}
      * @secure
      */
-    v3NotificationActionCreate: (
-      name: string,
-      data: NotificationResource,
-      params: RequestParams = {}
-    ) =>
+    v3NotificationActionCreate: (name: string, data: NotificationResource, params: RequestParams = {}) =>
       this.request<void, any>({
         path: `/api/v3/notification/action/${name}`,
         method: "POST",
@@ -5238,9 +5073,8 @@ export class Api<
     v3ParseList: (
       query?: {
         title?: string;
-        path?: string;
       },
-      params: RequestParams = {}
+      params: RequestParams = {},
     ) =>
       this.request<ParseResource, any>({
         path: `/api/v3/parse`,
@@ -5259,11 +5093,7 @@ export class Api<
      * @request PUT:/api/v3/qualitydefinition/{id}
      * @secure
      */
-    v3QualitydefinitionUpdate: (
-      id: string,
-      data: QualityDefinitionResource,
-      params: RequestParams = {}
-    ) =>
+    v3QualitydefinitionUpdate: (id: string, data: QualityDefinitionResource, params: RequestParams = {}) =>
       this.request<QualityDefinitionResource, any>({
         path: `/api/v3/qualitydefinition/${id}`,
         method: "PUT",
@@ -5316,10 +5146,7 @@ export class Api<
      * @request PUT:/api/v3/qualitydefinition/update
      * @secure
      */
-    v3QualitydefinitionUpdateUpdate: (
-      data: QualityDefinitionResource[],
-      params: RequestParams = {}
-    ) =>
+    v3QualitydefinitionUpdateUpdate: (data: QualityDefinitionResource[], params: RequestParams = {}) =>
       this.request<void, any>({
         path: `/api/v3/qualitydefinition/update`,
         method: "PUT",
@@ -5337,10 +5164,7 @@ export class Api<
      * @request POST:/api/v3/qualityprofile
      * @secure
      */
-    v3QualityprofileCreate: (
-      data: QualityProfileResource,
-      params: RequestParams = {}
-    ) =>
+    v3QualityprofileCreate: (data: QualityProfileResource, params: RequestParams = {}) =>
       this.request<QualityProfileResource, any>({
         path: `/api/v3/qualityprofile`,
         method: "POST",
@@ -5392,11 +5216,7 @@ export class Api<
      * @request PUT:/api/v3/qualityprofile/{id}
      * @secure
      */
-    v3QualityprofileUpdate: (
-      id: string,
-      data: QualityProfileResource,
-      params: RequestParams = {}
-    ) =>
+    v3QualityprofileUpdate: (id: string, data: QualityProfileResource, params: RequestParams = {}) =>
       this.request<QualityProfileResource, any>({
         path: `/api/v3/qualityprofile/${id}`,
         method: "PUT",
@@ -5461,13 +5281,30 @@ export class Api<
         /** @default false */
         changeCategory?: boolean;
       },
-      params: RequestParams = {}
+      params: RequestParams = {},
     ) =>
       this.request<void, any>({
         path: `/api/v3/queue/${id}`,
         method: "DELETE",
         query: query,
         secure: true,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Queue
+     * @name V3QueueDetail
+     * @request GET:/api/v3/queue/{id}
+     * @secure
+     */
+    v3QueueDetail: (id: number, params: RequestParams = {}) =>
+      this.request<QueueResource, any>({
+        path: `/api/v3/queue/${id}`,
+        method: "GET",
+        secure: true,
+        format: "json",
         ...params,
       }),
 
@@ -5491,7 +5328,7 @@ export class Api<
         /** @default false */
         changeCategory?: boolean;
       },
-      params: RequestParams = {}
+      params: RequestParams = {},
     ) =>
       this.request<void, any>({
         path: `/api/v3/queue/bulk`,
@@ -5526,18 +5363,16 @@ export class Api<
         sortKey?: string;
         sortDirection?: SortDirection;
         /** @default false */
-        includeUnknownSeriesItems?: boolean;
+        includeUnknownMovieItems?: boolean;
         /** @default false */
-        includeSeries?: boolean;
-        /** @default false */
-        includeEpisode?: boolean;
-        seriesIds?: number[];
+        includeMovie?: boolean;
+        movieIds?: number[];
         protocol?: DownloadProtocol;
         languages?: number[];
         /** @format int32 */
         quality?: number;
       },
-      params: RequestParams = {}
+      params: RequestParams = {},
     ) =>
       this.request<QueueResourcePagingResource, any>({
         path: `/api/v3/queue`,
@@ -5572,10 +5407,7 @@ export class Api<
      * @request POST:/api/v3/queue/grab/bulk
      * @secure
      */
-    v3QueueGrabBulkCreate: (
-      data: QueueBulkResource,
-      params: RequestParams = {}
-    ) =>
+    v3QueueGrabBulkCreate: (data: QueueBulkResource, params: RequestParams = {}) =>
       this.request<void, any>({
         path: `/api/v3/queue/grab/bulk`,
         method: "POST",
@@ -5596,19 +5428,33 @@ export class Api<
     v3QueueDetailsList: (
       query?: {
         /** @format int32 */
-        seriesId?: number;
-        episodeIds?: number[];
+        movieId?: number;
         /** @default false */
-        includeSeries?: boolean;
-        /** @default false */
-        includeEpisode?: boolean;
+        includeMovie?: boolean;
       },
-      params: RequestParams = {}
+      params: RequestParams = {},
     ) =>
       this.request<QueueResource[], any>({
         path: `/api/v3/queue/details`,
         method: "GET",
         query: query,
+        secure: true,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags QueueDetails
+     * @name V3QueueDetailsDetail
+     * @request GET:/api/v3/queue/details/{id}
+     * @secure
+     */
+    v3QueueDetailsDetail: (id: number, params: RequestParams = {}) =>
+      this.request<QueueResource, any>({
+        path: `/api/v3/queue/details/${id}`,
+        method: "GET",
         secure: true,
         format: "json",
         ...params,
@@ -5625,6 +5471,23 @@ export class Api<
     v3QueueStatusList: (params: RequestParams = {}) =>
       this.request<QueueStatusResource, any>({
         path: `/api/v3/queue/status`,
+        method: "GET",
+        secure: true,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags QueueStatus
+     * @name V3QueueStatusDetail
+     * @request GET:/api/v3/queue/status/{id}
+     * @secure
+     */
+    v3QueueStatusDetail: (id: number, params: RequestParams = {}) =>
+      this.request<QueueStatusResource, any>({
+        path: `/api/v3/queue/status/${id}`,
         method: "GET",
         secure: true,
         format: "json",
@@ -5660,13 +5523,9 @@ export class Api<
     v3ReleaseList: (
       query?: {
         /** @format int32 */
-        seriesId?: number;
-        /** @format int32 */
-        episodeId?: number;
-        /** @format int32 */
-        seasonNumber?: number;
+        movieId?: number;
       },
-      params: RequestParams = {}
+      params: RequestParams = {},
     ) =>
       this.request<ReleaseResource[], any>({
         path: `/api/v3/release`,
@@ -5680,15 +5539,29 @@ export class Api<
     /**
      * No description
      *
+     * @tags Release
+     * @name V3ReleaseDetail
+     * @request GET:/api/v3/release/{id}
+     * @secure
+     */
+    v3ReleaseDetail: (id: number, params: RequestParams = {}) =>
+      this.request<ReleaseResource, any>({
+        path: `/api/v3/release/${id}`,
+        method: "GET",
+        secure: true,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
      * @tags ReleaseProfile
      * @name V3ReleaseprofileCreate
      * @request POST:/api/v3/releaseprofile
      * @secure
      */
-    v3ReleaseprofileCreate: (
-      data: ReleaseProfileResource,
-      params: RequestParams = {}
-    ) =>
+    v3ReleaseprofileCreate: (data: ReleaseProfileResource, params: RequestParams = {}) =>
       this.request<ReleaseProfileResource, any>({
         path: `/api/v3/releaseprofile`,
         method: "POST",
@@ -5740,11 +5613,7 @@ export class Api<
      * @request PUT:/api/v3/releaseprofile/{id}
      * @secure
      */
-    v3ReleaseprofileUpdate: (
-      id: string,
-      data: ReleaseProfileResource,
-      params: RequestParams = {}
-    ) =>
+    v3ReleaseprofileUpdate: (id: string, data: ReleaseProfileResource, params: RequestParams = {}) =>
       this.request<ReleaseProfileResource, any>({
         path: `/api/v3/releaseprofile/${id}`,
         method: "PUT",
@@ -5794,15 +5663,29 @@ export class Api<
     /**
      * No description
      *
+     * @tags ReleasePush
+     * @name V3ReleasePushDetail
+     * @request GET:/api/v3/release/push/{id}
+     * @secure
+     */
+    v3ReleasePushDetail: (id: number, params: RequestParams = {}) =>
+      this.request<ReleaseResource, any>({
+        path: `/api/v3/release/push/${id}`,
+        method: "GET",
+        secure: true,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
      * @tags RemotePathMapping
      * @name V3RemotepathmappingCreate
      * @request POST:/api/v3/remotepathmapping
      * @secure
      */
-    v3RemotepathmappingCreate: (
-      data: RemotePathMappingResource,
-      params: RequestParams = {}
-    ) =>
+    v3RemotepathmappingCreate: (data: RemotePathMappingResource, params: RequestParams = {}) =>
       this.request<RemotePathMappingResource, any>({
         path: `/api/v3/remotepathmapping`,
         method: "POST",
@@ -5854,11 +5737,7 @@ export class Api<
      * @request PUT:/api/v3/remotepathmapping/{id}
      * @secure
      */
-    v3RemotepathmappingUpdate: (
-      id: string,
-      data: RemotePathMappingResource,
-      params: RequestParams = {}
-    ) =>
+    v3RemotepathmappingUpdate: (id: string, data: RemotePathMappingResource, params: RequestParams = {}) =>
       this.request<RemotePathMappingResource, any>({
         path: `/api/v3/remotepathmapping/${id}`,
         method: "PUT",
@@ -5889,7 +5768,7 @@ export class Api<
     /**
      * No description
      *
-     * @tags RenameEpisode
+     * @tags RenameMovie
      * @name V3RenameList
      * @request GET:/api/v3/rename
      * @secure
@@ -5897,13 +5776,11 @@ export class Api<
     v3RenameList: (
       query?: {
         /** @format int32 */
-        seriesId?: number;
-        /** @format int32 */
-        seasonNumber?: number;
+        movieId?: number;
       },
-      params: RequestParams = {}
+      params: RequestParams = {},
     ) =>
-      this.request<RenameEpisodeResource[], any>({
+      this.request<RenameMovieResource[], any>({
         path: `/api/v3/rename`,
         method: "GET",
         query: query,
@@ -5920,10 +5797,7 @@ export class Api<
      * @request POST:/api/v3/rootfolder
      * @secure
      */
-    v3RootfolderCreate: (
-      data: RootFolderResource,
-      params: RequestParams = {}
-    ) =>
+    v3RootfolderCreate: (data: RootFolderResource, params: RequestParams = {}) =>
       this.request<RootFolderResource, any>({
         path: `/api/v3/rootfolder`,
         method: "POST",
@@ -5981,236 +5855,6 @@ export class Api<
         method: "GET",
         secure: true,
         format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags SeasonPass
-     * @name V3SeasonpassCreate
-     * @request POST:/api/v3/seasonpass
-     * @secure
-     */
-    v3SeasonpassCreate: (
-      data: SeasonPassResource,
-      params: RequestParams = {}
-    ) =>
-      this.request<void, any>({
-        path: `/api/v3/seasonpass`,
-        method: "POST",
-        body: data,
-        secure: true,
-        type: ContentType.Json,
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Series
-     * @name V3SeriesList
-     * @request GET:/api/v3/series
-     * @secure
-     */
-    v3SeriesList: (
-      query?: {
-        /** @format int32 */
-        tvdbId?: number;
-        /** @default false */
-        includeSeasonImages?: boolean;
-      },
-      params: RequestParams = {}
-    ) =>
-      this.request<SeriesResource[], any>({
-        path: `/api/v3/series`,
-        method: "GET",
-        query: query,
-        secure: true,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Series
-     * @name V3SeriesCreate
-     * @request POST:/api/v3/series
-     * @secure
-     */
-    v3SeriesCreate: (data: SeriesResource, params: RequestParams = {}) =>
-      this.request<SeriesResource, any>({
-        path: `/api/v3/series`,
-        method: "POST",
-        body: data,
-        secure: true,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Series
-     * @name V3SeriesDetail
-     * @request GET:/api/v3/series/{id}
-     * @secure
-     */
-    v3SeriesDetail: (
-      id: number,
-      query?: {
-        /** @default false */
-        includeSeasonImages?: boolean;
-      },
-      params: RequestParams = {}
-    ) =>
-      this.request<SeriesResource, any>({
-        path: `/api/v3/series/${id}`,
-        method: "GET",
-        query: query,
-        secure: true,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Series
-     * @name V3SeriesUpdate
-     * @request PUT:/api/v3/series/{id}
-     * @secure
-     */
-    v3SeriesUpdate: (
-      id: string,
-      data: SeriesResource,
-      query?: {
-        /** @default false */
-        moveFiles?: boolean;
-      },
-      params: RequestParams = {}
-    ) =>
-      this.request<SeriesResource, any>({
-        path: `/api/v3/series/${id}`,
-        method: "PUT",
-        query: query,
-        body: data,
-        secure: true,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Series
-     * @name V3SeriesDelete
-     * @request DELETE:/api/v3/series/{id}
-     * @secure
-     */
-    v3SeriesDelete: (
-      id: number,
-      query?: {
-        /** @default false */
-        deleteFiles?: boolean;
-        /** @default false */
-        addImportListExclusion?: boolean;
-      },
-      params: RequestParams = {}
-    ) =>
-      this.request<void, any>({
-        path: `/api/v3/series/${id}`,
-        method: "DELETE",
-        query: query,
-        secure: true,
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags SeriesEditor
-     * @name V3SeriesEditorUpdate
-     * @request PUT:/api/v3/series/editor
-     * @secure
-     */
-    v3SeriesEditorUpdate: (
-      data: SeriesEditorResource,
-      params: RequestParams = {}
-    ) =>
-      this.request<void, any>({
-        path: `/api/v3/series/editor`,
-        method: "PUT",
-        body: data,
-        secure: true,
-        type: ContentType.Json,
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags SeriesEditor
-     * @name V3SeriesEditorDelete
-     * @request DELETE:/api/v3/series/editor
-     * @secure
-     */
-    v3SeriesEditorDelete: (
-      data: SeriesEditorResource,
-      params: RequestParams = {}
-    ) =>
-      this.request<void, any>({
-        path: `/api/v3/series/editor`,
-        method: "DELETE",
-        body: data,
-        secure: true,
-        type: ContentType.Json,
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags SeriesImport
-     * @name V3SeriesImportCreate
-     * @request POST:/api/v3/series/import
-     * @secure
-     */
-    v3SeriesImportCreate: (
-      data: SeriesResource[],
-      params: RequestParams = {}
-    ) =>
-      this.request<void, any>({
-        path: `/api/v3/series/import`,
-        method: "POST",
-        body: data,
-        secure: true,
-        type: ContentType.Json,
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags SeriesLookup
-     * @name V3SeriesLookupList
-     * @request GET:/api/v3/series/lookup
-     * @secure
-     */
-    v3SeriesLookupList: (
-      query?: {
-        term?: string;
-      },
-      params: RequestParams = {}
-    ) =>
-      this.request<void, any>({
-        path: `/api/v3/series/lookup`,
-        method: "GET",
-        query: query,
-        secure: true,
         ...params,
       }),
 
@@ -6459,11 +6103,7 @@ export class Api<
      * @request PUT:/api/v3/config/ui/{id}
      * @secure
      */
-    v3ConfigUiUpdate: (
-      id: string,
-      data: UiConfigResource,
-      params: RequestParams = {}
-    ) =>
+    v3ConfigUiUpdate: (id: string, data: UiConfigResource, params: RequestParams = {}) =>
       this.request<UiConfigResource, any>({
         path: `/api/v3/config/ui/${id}`,
         method: "PUT",
@@ -6576,7 +6216,7 @@ export class Api<
       query?: {
         returnUrl?: string;
       },
-      params: RequestParams = {}
+      params: RequestParams = {},
     ) =>
       this.request<void, any>({
         path: `/login`,
@@ -6626,11 +6266,11 @@ export class Api<
      * No description
      *
      * @tags CalendarFeed
-     * @name V3CalendarSonarrIcsList
-     * @request GET:/feed/v3/calendar/sonarr.ics
+     * @name V3CalendarRadarrIcsList
+     * @request GET:/feed/v3/calendar/radarr.ics
      * @secure
      */
-    v3CalendarSonarrIcsList: (
+    v3CalendarRadarrIcsList: (
       query?: {
         /**
          * @format int32
@@ -6646,15 +6286,11 @@ export class Api<
         tags?: string;
         /** @default false */
         unmonitored?: boolean;
-        /** @default false */
-        premieresOnly?: boolean;
-        /** @default false */
-        asAllDay?: boolean;
       },
-      params: RequestParams = {}
+      params: RequestParams = {},
     ) =>
       this.request<void, any>({
-        path: `/feed/v3/calendar/sonarr.ics`,
+        path: `/feed/v3/calendar/radarr.ics`,
         method: "GET",
         query: query,
         secure: true,

@@ -1,14 +1,16 @@
 {
-  "name": "swagger-ts-gen",
-  "version": "1.0.0",
+  "name": "configarr",
+  "version": "0.0.0",
   "description": "",
-  "main": "index.js",
+  "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "coverage": "vitest run --coverage",
+    "generateApi": "tsx generate-api.js",
+    "start": "tsx index.ts",
+    "test": "vitest",
     "tsg": "swagger-to-ts -f input.json -o test.ts",
-    "go": "tsx index.ts"
+    "type-check": "tsc --noEmit"
   },
-  "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
@@ -20,5 +22,13 @@
     "swagger-typescript-api": "^13.0.3",
     "tsx": "^4.7.1",
     "yaml": "^2.4.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.42.1",
+    "@types/node": "^20.11.30",
+    "@vitest/coverage-v8": "^1.4.0",
+    "prettier": "3.2.5",
+    "typescript": "5.4.3",
+    "vitest": "1.4.0"
   }
 }

@@ -1,0 +1,35 @@
+trashGuideUrl: https://github.com/TRaSH-Guides/Guides
+#trashRevision: master # Optional to specify sha
+recyclarrConfigUrl: https://github.com/recyclarr/config-templates
+#recyclarrRevision: master # Optional to specify sha
+
+# Optional if you want to add custom formats locally
+#localCustomFormatsPath: ./custom/cfs
+
+sonarr:
+  series:
+    # Set the URL/API Key to your actual instance
+    base_url: http://localhost:8989
+    api_key: !secret SONARR_API_KEY
+
+    # Quality definitions from the guide to sync to Sonarr. Choices: series, anime
+    quality_definition:
+      type: series
+
+    include:
+      # Comment out any of the following includes to disable them
+      #### WEB-1080p
+      - template: sonarr-quality-definition-series
+      - template: sonarr-v4-quality-profile-web-1080p
+      - template: sonarr-v4-custom-formats-web-1080p
+
+      #### WEB-2160p
+      - template: sonarr-v4-quality-profile-web-2160p
+      - template: sonarr-v4-custom-formats-web-2160p
+
+    # Custom Formats: https://recyclarr.dev/wiki/yaml/config-reference/custom-formats/
+    custom_formats: []
+
+radarr:
+  instance1:
+    define: true
