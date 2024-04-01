@@ -1,4 +1,4 @@
-import { readdirSync } from "fs";
+import fs, { readdirSync } from "fs";
 import path from "path";
 import { CustomFormatResource } from "./__generated__/generated-sonarr-api";
 import { getArrApi } from "./api";
@@ -91,6 +91,12 @@ export const loadLocalCfs = async (): Promise<CFProcessing | null> => {
   }
 
   const cfPath = path.resolve(config.localCustomFormatsPath);
+
+  if (!fs.existsSync(cfPath)) {
+    console.log(`Provided local custom formats path '${config.localCustomFormatsPath}' does not exist.`);
+    return null;
+  }
+
   const files = readdirSync(`${cfPath}`).filter((fn) => fn.endsWith("json"));
   const carrIdToObject = new Map<string, { carrConfig: ConfigarrCF; requestConfig: CustomFormatResource }>();
   const cfNameToCarrObject = new Map<string, ConfigarrCF>();
