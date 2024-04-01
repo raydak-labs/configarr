@@ -13,7 +13,7 @@ import {
   TrashCF,
   TrashQualityDefintion,
 } from "./types";
-import { carrCfToValidCf, toCarrCF, trashRepoPaths } from "./util";
+import { mapImportCfToRequestCf, toCarrCF, trashRepoPaths } from "./util";
 
 const DEFAULT_TRASH_GIT_URL = "https://github.com/TRaSH-Guides/Guides";
 
@@ -70,7 +70,7 @@ export const loadSonarrTrashCFs = async (arrType: ArrType): Promise<CFProcessing
 
     carrIdToObject.set(carrConfig.configarr_id, {
       carrConfig: carrConfig,
-      requestConfig: carrCfToValidCf(carrConfig),
+      requestConfig: mapImportCfToRequestCf(carrConfig),
     });
 
     if (carrConfig.name) {

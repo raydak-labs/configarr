@@ -74,7 +74,7 @@ export const loadQualityProfilesFromServer = async (): Promise<QualityProfileRes
   const api = getArrApi();
 
   const qualityProfiles = await api.v3QualityprofileList();
-  return qualityProfiles.data;
+  return qualityProfiles.data as QualityProfileResource[];
 };
 
 const mapQualities = (qd: QualityDefinitionResource[], value: YamlConfigQualityProfile) => {

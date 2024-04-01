@@ -1,8 +1,78 @@
 import { describe, expect, test } from "vitest";
-import { CustomFormatResource, PrivacyLevel, QualityDefinitionResource, QualitySource } from "./__generated__/MySuperbApi";
-import { calculateQualityDefinitionDiff, loadQualityDefinitionFromSonarr } from "./qualityDefinition";
+import { CustomFormatResource, PrivacyLevel, QualityDefinitionResource, QualitySource } from "./__generated__/generated-sonarr-api";
+import { calculateQualityDefinitionDiff, loadQualityDefinitionFromServer } from "./quality-definitions";
 import { TrashCF, TrashCFSpF, TrashQualityDefintion } from "./types";
-import { carrCfToValidCf, compareObjectsCarr, toCarrCF } from "./util";
+import { compareObjectsCarr, mapImportCfToRequestCf, toCarrCF } from "./util";
+
+const exampleCFImplementations = {
+  name: "TestSpec",
+  includeCustomFormatWhenRenaming: false,
+  specifications: [
+    {
+      name: "ReleaseTitleSpec",
+      implementation: "ReleaseTitleSpecification",
+      negate: false,
+      required: false,
+      fields: {
+        value: "expres",
+      },
+    },
+    {
+      name: "LanguageUnknown",
+      implementation: "LanguageSpecification",
+      negate: false,
+      required: false,
+      fields: {
+        value: 0,
+      },
+    },
+    {
+      name: "LanguageOrgi",
+      implementation: "LanguageSpecification",
+      negate: false,
+      required: false,
+      fields: {
+        value: -2,
+      },
+    },
+    {
+      name: "IndexerFlag",
+      implementation: "IndexerFlagSpecification",
+      negate: false,
+      required: false,
+      fields: {
+        value: 1,
+      },
+    },
+    {
+      name: "SourceSpec",
+      implementation: "SourceSpecification",
+      negate: false,
+      required: false,
+      fields: {
+        value: 6,
+      },
+    },
+    {
+      name: "Resolution",
+      implementation: "ResolutionSpecification",
+      negate: false,
+      required: false,
+      fields: {
+        value: 540,
+      },
+    },
+    {
+      name: "ReleaseGroup",
+      implementation: "ReleaseGroupSpecification",
+      negate: false,
+      required: false,
+      fields: {
+        value: "regex",
+      },
+    },
+  ],
+};
 
 describe("SizeSpecification", async () => {
   const serverResponse: CustomFormatResource = {
@@ -72,7 +142,7 @@ describe("SizeSpecification", async () => {
   test("equal", async () => {
     const copied: typeof custom = JSON.parse(JSON.stringify(custom));
 
-    const result = compareObjectsCarr(serverResponse, carrCfToValidCf(toCarrCF(copied)));
+    const result = compareObjectsCarr(serverResponse, mapImportCfToRequestCf(toCarrCF(copied)));
     expect(result.equal).toBe(true);
   });
 
@@ -80,7 +150,7 @@ describe("SizeSpecification", async () => {
     const copied = JSON.parse(JSON.stringify(custom));
     copied.specifications![0].negate = true;
 
-    const result = compareObjectsCarr(serverResponse, carrCfToValidCf(toCarrCF(copied)));
+    const result = compareObjectsCarr(serverResponse, mapImportCfToRequestCf(toCarrCF(copied)));
     expect(result.equal).toBe(false);
   });
 
@@ -88,7 +158,7 @@ describe("SizeSpecification", async () => {
     const copied: typeof custom = JSON.parse(JSON.stringify(custom));
     copied.specifications![0].required = true;
 
-    const result = compareObjectsCarr(serverResponse, carrCfToValidCf(toCarrCF(copied)));
+    const result = compareObjectsCarr(serverResponse, mapImportCfToRequestCf(toCarrCF(copied)));
     expect(result.equal).toBe(false);
   });
 
@@ -96,7 +166,7 @@ describe("SizeSpecification", async () => {
     const copied: typeof custom = JSON.parse(JSON.stringify(custom));
     (copied.specifications![0].fields as TrashCFSpF).max = 100;
 
-    const result = compareObjectsCarr(serverResponse, carrCfToValidCf(toCarrCF(copied)));
+    const result = compareObjectsCarr(serverResponse, mapImportCfToRequestCf(toCarrCF(copied)));
     expect(result.equal).toBe(false);
   });
 });
@@ -146,7 +216,7 @@ describe("QualityDefinitions", async () => {
     ],
   };
   test("test import", async ({}) => {
-    const result = await loadQualityDefinitionFromSonarr();
+    const result = await loadQualityDefinitionFromServer();
 
     console.log(result);
   });

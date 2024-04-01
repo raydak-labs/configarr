@@ -10,6 +10,20 @@ export type UserFriendlyField = {
 
 export type TrashCFSpF = { min: number; max: number };
 
+/*
+Language values:
+0 = Unknown
+-2 = Original
+*/
+export type CustomFormatImportImplementation =
+  | "ReleaseTitleSpecification" // Value string
+  | "LanguageSpecification" // value number
+  | "SizeSpecification" // special
+  | "IndexerFlagSpecification" // value number
+  | "SourceSpecification" // value number
+  | "ResolutionSpecification" // value number
+  | "ReleaseGroupSpecification"; // value string
+
 export type TC1 = Omit<CustomFormatSpecificationSchema, "fields"> & {
   implementation: "ReleaseTitleSpecification" | "LanguageSpecification";
   fields?: UserFriendlyField | null;
@@ -22,7 +36,7 @@ export type TC2 = Omit<CustomFormatSpecificationSchema, "fields"> & {
 
 export type TCM = TC1 | TC2;
 
-export type TrashCFResource = Omit<CustomFormatResource, "specifications"> & {
+export type ImportCF = Omit<CustomFormatResource, "specifications"> & {
   specifications?: TCM[] | null;
 };
 
@@ -42,12 +56,12 @@ export type TrashCF = {
   };
   trash_regex?: string;
   trash_description?: string;
-} & TrashCFResource;
+} & ImportCF;
 
 export type ConfigarrCF = {
   configarr_id: string;
   configarr_scores?: TrashCF["trash_scores"];
-} & TrashCFResource;
+} & ImportCF;
 
 export type CFProcessing = {
   carrIdMapping: Map<
@@ -105,7 +119,7 @@ export type YamlConfigQualityProfile = {
     until_score: number;
   };
   min_format_score: number;
-  score_set: string;
+  score_set: keyof TrashCF["trash_scores"];
   quality_sort: string;
   qualities: YamlConfigQualityProfileItems[];
 };

@@ -114,7 +114,7 @@ const pipeline = async (value: YamlConfigInstance, arrType: ArrType) => {
         console.log("DryRun: Would update QualityDefinitions.");
       } else {
         console.log(`Diffs in quality definitions found`, changeMap.values());
-        await api.v3QualitydefinitionUpdateUpdate(restData);
+        await api.v3QualitydefinitionUpdateUpdate(restData as any); // Ignore types
         console.log(`Updated QualityDefinitions`);
       }
     } else {
@@ -173,9 +173,9 @@ const pipeline = async (value: YamlConfigInstance, arrType: ArrType) => {
   if (!IS_DRY_RUN) {
     for (const element of create) {
       try {
-        const newProfile = await api.v3QualityprofileCreate(element);
+        const newProfile = await api.v3QualityprofileCreate(element as any); // Ignore types
         console.log(`Created QualityProfile: ${newProfile.data.name}`);
-      } catch (error) {
+      } catch (error: any) {
         let message;
 
         if (error.response) {
@@ -199,9 +199,9 @@ const pipeline = async (value: YamlConfigInstance, arrType: ArrType) => {
 
     for (const element of changedQPs) {
       try {
-        const newProfile = await api.v3QualityprofileUpdate("" + element.id, element);
+        const newProfile = await api.v3QualityprofileUpdate("" + element.id, element as any); // Ignore types
         console.log(`Updated QualityProfile: ${newProfile.data.name}`);
-      } catch (error) {
+      } catch (error: any) {
         let message;
 
         if (error.response) {

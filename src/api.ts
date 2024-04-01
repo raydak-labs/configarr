@@ -49,7 +49,7 @@ export const configureSonarrApi = async (url: string, apiKey: string) => {
 
   try {
     await sonarrClient.v3MetadataList();
-  } catch (error) {
+  } catch (error: any) {
     let message;
 
     if (error.response) {
@@ -102,7 +102,7 @@ export const configureRadarrApi = async (url: string, apiKey: string) => {
 
   try {
     await radarrClient.v3MetadataList();
-  } catch (error) {
+  } catch (error: any) {
     let message;
 
     if (error.response) {

@@ -8,7 +8,7 @@ export const loadQualityDefinitionFromServer = async (): Promise<QualityDefiniti
   if (IS_LOCAL_SAMPLE_MODE) {
     return (await import(path.resolve("./tests/samples/qualityDefinition.json"))).default;
   }
-  return (await getArrApi().v3QualitydefinitionList()).data;
+  return (await getArrApi().v3QualitydefinitionList()).data as QualityDefinitionResource[];
 };
 
 export const calculateQualityDefinitionDiff = (serverQDs: QualityDefinitionResource[], trashQD: TrashQualityDefintion) => {

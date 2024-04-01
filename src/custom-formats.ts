@@ -4,7 +4,7 @@ import { CustomFormatResource } from "./__generated__/generated-sonarr-api";
 import { getArrApi } from "./api";
 import { getConfig } from "./config";
 import { CFProcessing, ConfigarrCF, DynamicImportType, TrashCF, YamlInput } from "./types";
-import { IS_DRY_RUN, IS_LOCAL_SAMPLE_MODE, carrCfToValidCf, compareObjectsCarr, toCarrCF } from "./util";
+import { IS_DRY_RUN, IS_LOCAL_SAMPLE_MODE, compareObjectsCarr, mapImportCfToRequestCf, toCarrCF } from "./util";
 
 export const deleteAllCustomFormats = async () => {
   const api = getArrApi();
@@ -26,7 +26,7 @@ export const loadServerCustomFormats = async (): Promise<CustomFormatResource[]>
 };
 
 export const manageCf = async (cfProcessing: CFProcessing, serverCfs: Map<string, CustomFormatResource>, cfsToManage: Set<string>) => {
-  const { carrIdMapping: trashIdToObject, cfNameToCarrConfig: existingCfToObject } = cfProcessing;
+  const { carrIdMapping: trashIdToObject } = cfProcessing;
 
   const api = getArrApi();
 
@@ -57,7 +57,7 @@ export const manageCf = async (cfProcessing: CFProcessing, serverCfs: Map<string
             });
             console.log(`Updated CF ${tr.requestConfig.name}`);
           }
-        } catch (err) {
+        } catch (err: any) {
           console.log(`Failed updating CF ${tr.requestConfig.name}`, err.response.data);
         }
       } else {
@@ -72,7 +72,7 @@ export const manageCf = async (cfProcessing: CFProcessing, serverCfs: Map<string
           const createResult = await api.v3CustomformatCreate(tr.requestConfig);
           console.log(`Created CF ${tr.requestConfig.name}`);
         }
-      } catch (err) {
+      } catch (err: any) {
         throw new Error(`Failed creating CF '${tr.requestConfig.name}'. Message: ${err.response.data?.message}`);
       }
     }
@@ -109,7 +109,7 @@ export const loadLocalCfs = async (): Promise<CFProcessing | null> => {
 
     carrIdToObject.set(cfD.configarr_id, {
       carrConfig: cfD,
-      requestConfig: carrCfToValidCf(cfD),
+      requestConfig: mapImportCfToRequestCf(cfD),
     });
 
     if (cfD.name) {

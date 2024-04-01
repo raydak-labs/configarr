@@ -10,9 +10,9 @@ let config: YamlConfig;
 let secrets: any;
 
 const secretsTag = {
-  identify: (value) => value instanceof String,
+  identify: (value: any) => value instanceof String,
   tag: "!secret",
-  resolve(str) {
+  resolve(str: string) {
     return getSecrets()[str];
   },
 };
