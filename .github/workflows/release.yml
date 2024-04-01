@@ -5,7 +5,6 @@ on:
   push:
     branches:
       - "main"
-      - "work"
     tags:
       - "v*.*.*"
 
@@ -66,8 +65,7 @@ jobs:
           context: .
           file: ./Dockerfile
           platforms: linux/amd64,linux/arm64,linux/arm/v7
-          push: false # TODO enable when we are ready
-          #push: ${{ github.event_name != 'pull_request' }}
+          push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta_pms.outputs.tags }}
           labels: ${{ steps.meta_pms.outputs.labels }}
       # - name: Docker Hub Description
