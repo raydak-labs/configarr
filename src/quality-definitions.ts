@@ -7,7 +7,11 @@ import { IS_LOCAL_SAMPLE_MODE } from "./util";
 
 export const loadQualityDefinitionFromServer = async (): Promise<QualityDefinitionResource[]> => {
   if (IS_LOCAL_SAMPLE_MODE) {
-    return (await import(path.resolve("./tests/samples/qualityDefinition.json"))).default;
+    return (
+      await import(path.resolve("./tests/samples/qualityDefinition.json"), {
+        with: { type: "json" },
+      })
+    ).default;
   }
   return (await getArrApi().v3QualitydefinitionList()).data as QualityDefinitionResource[];
 };

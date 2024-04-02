@@ -68,6 +68,7 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta_pms.outputs.tags }}
           labels: ${{ steps.meta_pms.outputs.labels }}
+          target: prod
       # - name: Docker Hub Description
       #   if: github.event_name != 'pull_request'
       #   uses: peter-evans/dockerhub-description@v3

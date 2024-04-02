@@ -73,7 +73,9 @@ export const loadSonarrTrashCFs = async (arrType: ArrType): Promise<CFProcessing
   for (const file of files) {
     const name = `${pathForFiles}/${file}`;
 
-    const cf: DynamicImportType<TrashCF> = await import(path.resolve(name));
+    const cf: DynamicImportType<TrashCF> = await import(path.resolve(name), {
+      with: { type: "json" },
+    });
 
     const carrConfig = toCarrCF(cf.default);
 
@@ -103,11 +105,23 @@ export const loadQualityDefinitionSonarrFromTrash = async (
 
   switch (qdType) {
     case "anime":
-      return (await import(path.resolve(`${trashPath}/anime.json`))).default;
+      return (
+        await import(path.resolve(`${trashPath}/anime.json`), {
+          with: { type: "json" },
+        })
+      ).default;
     case "series":
-      return (await import(path.resolve(`${trashPath}/series.json`))).default;
+      return (
+        await import(path.resolve(`${trashPath}/series.json`), {
+          with: { type: "json" },
+        })
+      ).default;
     case "movie":
-      return (await import(path.resolve(`${trashPath}/movie.json`))).default;
+      return (
+        await import(path.resolve(`${trashPath}/movie.json`), {
+          with: { type: "json" },
+        })
+      ).default;
     case "custom":
       throw new Error("Not implemented yet");
     default:

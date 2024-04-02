@@ -1,4 +1,4 @@
-import fs, { readdirSync } from "node:fs";
+import fs from "node:fs";
 import path from "node:path";
 import { CustomFormatResource } from "./__generated__/generated-sonarr-api";
 import { getArrApi } from "./api";
@@ -19,7 +19,11 @@ export const deleteAllCustomFormats = async () => {
 
 export const loadServerCustomFormats = async (): Promise<CustomFormatResource[]> => {
   if (IS_LOCAL_SAMPLE_MODE) {
-    return (await import(path.resolve("./tests/samples/cfs.json"))).default as unknown as Promise<CustomFormatResource[]>;
+    return (
+      await import(path.resolve("./tests/samples/cfs.json"), {
+        with: { type: "json" },
+      })
+    ).default as unknown as Promise<CustomFormatResource[]>;
   }
   const api = getArrApi();
   const cfOnServer = await api.v3CustomformatList();
@@ -112,13 +116,15 @@ export const loadLocalCfs = async (): Promise<CFProcessing | null> => {
     return null;
   }
 
-  const files = readdirSync(`${cfPath}`).filter((fn) => fn.endsWith("json"));
+  const files = fs.readdirSync(`${cfPath}`).filter((fn) => fn.endsWith("json"));
   const carrIdToObject = new Map<string, { carrConfig: ConfigarrCF; requestConfig: CustomFormatResource }>();
   const cfNameToCarrObject = new Map<string, ConfigarrCF>();
 
   for (const file of files) {
     const name = `${cfPath}/${file}`;
-    const cf: DynamicImportType<TrashCF | ConfigarrCF> = await import(`${name}`);
+    const cf: DynamicImportType<TrashCF | ConfigarrCF> = await import(`${name}`, {
+      with: { type: "json" },
+    });
 
     const cfD = toCarrCF(cf.default);
 

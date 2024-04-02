@@ -15,19 +15,32 @@ RUN corepack enable \
     && corepack prepare pnpm@9 --activate \
     && corepack use pnpm@9
 
-FROM base AS prod-deps
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --prod --frozen-lockfile
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
 
-FROM base
-COPY --from=prod-deps /app/node_modules /app/node_modules
-COPY index.ts /app/
-COPY src/ /app/src/
+FROM base AS builder
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
+COPY . .
+RUN pnpm run build
+
+
+FROM base AS dev
+WORKDIR /app
+ENV CONFIG_LOCATION=/app/config/config.yml
+ENV SECRETS_LOCATION=/app/config/secrets.yml
+CMD [ "pnpm", "start" ]
+
+# https://github.com/evanw/esbuild/issues/1921
+FROM node:22.9.0-alpine as prod
+WORKDIR /app
+
+RUN apk add --no-cache libstdc++ dumb-init git
+
+#USER node
+
+COPY --from=builder /app/bundle.cjs /app/index.js
 
 ENV CONFIG_LOCATION=/app/config/config.yml
 ENV SECRETS_LOCATION=/app/config/secrets.yml
 
-RUN chmod uga+rw -R /app/package.json
-
-#USER node
-
-CMD [ "pnpm", "start" ]
+# Run with dumb-init to not start node with PID=1, since Node.js was not designed to run as PID 1
+CMD ["dumb-init", "node", "index.js"]
