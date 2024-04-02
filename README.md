@@ -63,8 +63,8 @@ Possible ideas:
   - [ ] Plain docker
   - [ ] Kubernetes
 - [ ] Simple Config validation
-- [ ] Custom recyclarr templates?
-  - [ ] Lets say you want the same template but with a different name
+- [x] Local recyclarr templates to include
+- [ ] Clone existing templates: Lets say you want the same template but with a different name?
 
 ## Development
 
@@ -110,6 +110,7 @@ services:
       - ./config:/app/config # Contains the config.yml and secrets.yml
       - ./dockerrepos:/app/repos # Cache repositories
       - ./custom/cfs:/app/cfs # Optional if custom formats locally provided
+      - ./custom/templates:/app/templates # Optional if custom templates
 ```
 
 ### Kubernetes

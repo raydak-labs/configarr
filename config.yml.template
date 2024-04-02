@@ -5,6 +5,7 @@ recyclarrConfigUrl: https://github.com/recyclarr/config-templates
 
 # Optional if you want to add custom formats locally
 #localCustomFormatsPath: ./custom/cfs
+#localConfigTemplatesPath: /app/templates
 
 sonarr:
   series:
