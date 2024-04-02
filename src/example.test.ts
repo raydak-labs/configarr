@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { CustomFormatResource, PrivacyLevel, QualityDefinitionResource, QualitySource } from "./__generated__/generated-sonarr-api";
-import { calculateQualityDefinitionDiff, loadQualityDefinitionFromServer } from "./quality-definitions";
+import { calculateQualityDefinitionDiff } from "./quality-definitions";
 import { TrashCF, TrashCFSpF, TrashQualityDefintion } from "./types";
 import { compareObjectsCarr, mapImportCfToRequestCf, toCarrCF } from "./util";
 
@@ -215,11 +215,6 @@ describe("QualityDefinitions", async () => {
       },
     ],
   };
-  test("test import", async ({}) => {
-    const result = await loadQualityDefinitionFromServer();
-
-    console.log(result);
-  });
 
   test("calculateQualityDefinitionDiff - no diff", async ({}) => {
     const result = calculateQualityDefinitionDiff(server, client);

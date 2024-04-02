@@ -3,6 +3,7 @@ import path from "path";
 import simpleGit, { CheckRepoActions } from "simple-git";
 import yaml from "yaml";
 import { getConfig } from "./config";
+import { logger } from "./logger";
 import { ArrType, RecyclarrTemplates } from "./types";
 import { recyclarrRepoPaths } from "./util";
 
@@ -26,21 +27,21 @@ export const cloneRecyclarrTemplateRepo = async () => {
 
   await gitClient.checkout(applicationConfig.trashRevision ?? "master");
 
-  console.log(`Updating Recyclarr repo`);
+  logger.info(`Updating Recyclarr repo`);
 };
 
 export const getLocalTemplatePath = () => {
   const config = getConfig();
 
   if (config.localConfigTemplatesPath == null) {
-    console.log(`No local templates specified. Skipping.`);
+    logger.debug(`No local templates specified. Skipping.`);
     return null;
   }
 
   const customPath = path.resolve(config.localConfigTemplatesPath);
 
   if (!fs.existsSync(customPath)) {
-    console.log(`Provided local templates path '${config.localCustomFormatsPath}' does not exist.`);
+    logger.info(`Provided local templates path '${config.localCustomFormatsPath}' does not exist.`);
     return null;
   }
 

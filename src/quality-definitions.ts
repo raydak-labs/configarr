@@ -1,6 +1,7 @@
 import path from "path";
 import { QualityDefinitionResource } from "./__generated__/generated-sonarr-api";
 import { getArrApi } from "./api";
+import { logger } from "./logger";
 import { TrashQualityDefintion, TrashQualityDefintionQuality } from "./types";
 import { IS_LOCAL_SAMPLE_MODE } from "./util";
 
@@ -29,7 +30,7 @@ export const calculateQualityDefinitionDiff = (serverQDs: QualityDefinitionResou
       const changes: string[] = [];
 
       if (!element.maxSize) {
-        console.log(`No maxSize defined: ${element.title}`);
+        logger.info(`No maxSize defined: ${element.title}`);
       }
 
       if (element.minSize !== tq.min) {

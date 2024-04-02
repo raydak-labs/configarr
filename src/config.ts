@@ -5,6 +5,7 @@ import { ROOT_PATH } from "./util";
 
 const CONFIG_LOCATION = process.env.CONFIG_LOCATION ?? `${ROOT_PATH}/config.yml`;
 const SECRETS_LOCATION = process.env.SECRETS_LOCATION ?? `${ROOT_PATH}/secrets.yml`;
+export const LOG_LEVEL = process.env.LOG_LEVEL ?? `info`;
 
 let config: YamlConfig;
 let secrets: any;

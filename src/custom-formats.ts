@@ -3,6 +3,7 @@ import path from "path";
 import { CustomFormatResource } from "./__generated__/generated-sonarr-api";
 import { getArrApi } from "./api";
 import { getConfig } from "./config";
+import { logger } from "./logger";
 import { CFProcessing, ConfigarrCF, DynamicImportType, TrashCF, YamlInput } from "./types";
 import { IS_DRY_RUN, IS_LOCAL_SAMPLE_MODE, compareObjectsCarr, mapImportCfToRequestCf, toCarrCF } from "./util";
 
@@ -12,7 +13,7 @@ export const deleteAllCustomFormats = async () => {
 
   for (const cf of cfOnServer.data) {
     await api.v3CustomformatDelete(cf.id!);
-    console.log(`Deleted CF: '${cf.name}'`);
+    logger.info(`Deleted CF: '${cf.name}'`);
   }
 };
 
@@ -27,14 +28,19 @@ export const loadServerCustomFormats = async (): Promise<CustomFormatResource[]>
 
 export const manageCf = async (cfProcessing: CFProcessing, serverCfs: Map<string, CustomFormatResource>, cfsToManage: Set<string>) => {
   const { carrIdMapping: trashIdToObject } = cfProcessing;
-
   const api = getArrApi();
+
+  let updatedCFs = 0;
+  let errorCFs = 0;
+  let validCFs = 0;
+  let createCFs = 0;
 
   const manageSingle = async (carrId: string) => {
     const tr = trashIdToObject.get(carrId);
 
     if (!tr) {
-      console.log(`TrashID to manage ${carrId} does not exists`);
+      logger.info(`TrashID to manage ${carrId} does not exists`);
+      errorCFs++;
       return;
     }
 
@@ -45,34 +51,40 @@ export const manageCf = async (cfProcessing: CFProcessing, serverCfs: Map<string
       const comparison = compareObjectsCarr(existingCf, tr.requestConfig);
 
       if (!comparison.equal) {
-        console.log(`Found mismatch for ${tr.requestConfig.name}.`, comparison.changes);
+        logger.info(`Found mismatch for ${tr.requestConfig.name}. ${comparison.changes}`);
 
         try {
           if (IS_DRY_RUN) {
-            console.log(`DryRun: Would update CF: ${existingCf.id} - ${existingCf.name}`);
+            logger.info(`DryRun: Would update CF: ${existingCf.id} - ${existingCf.name}`);
           } else {
             const updateResult = await api.v3CustomformatUpdate(existingCf.id + "", {
               id: existingCf.id,
               ...tr.requestConfig,
             });
-            console.log(`Updated CF ${tr.requestConfig.name}`);
+            logger.debug(`Updated CF ${tr.requestConfig.name}`);
+            updatedCFs++;
           }
         } catch (err: any) {
-          console.log(`Failed updating CF ${tr.requestConfig.name}`, err.response.data);
+          logger.error(err.response.data, `Failed updating CF ${tr.requestConfig.name}`);
+          throw new Error(`Failed updating CF ${tr.requestConfig.name}`);
+          errorCFs++;
         }
       } else {
-        console.log(`CF ${tr.requestConfig.name} does not need update.`);
+        logger.debug(`CF ${tr.requestConfig.name} does not need update.`);
+        validCFs++;
       }
     } else {
       // Create
       try {
         if (IS_DRY_RUN) {
-          console.log(`Would create CF: ${tr.requestConfig.name}`);
+          logger.info(`Would create CF: ${tr.requestConfig.name}`);
         } else {
           const createResult = await api.v3CustomformatCreate(tr.requestConfig);
-          console.log(`Created CF ${tr.requestConfig.name}`);
+          logger.info(`Created CF ${tr.requestConfig.name}`);
+          createCFs++;
         }
       } catch (err: any) {
+        logger.error(err.response.data?.message, `Failed updating CF ${tr.requestConfig.name}`);
         throw new Error(`Failed creating CF '${tr.requestConfig.name}'. Message: ${err.response.data?.message}`);
       }
     }
@@ -81,19 +93,21 @@ export const manageCf = async (cfProcessing: CFProcessing, serverCfs: Map<string
   for (const cf of cfsToManage) {
     await manageSingle(cf);
   }
+
+  logger.info(`Created CFs: ${createCFs}, Updated CFs: ${updatedCFs}, Untouched CFs: ${validCFs}, Error CFs: ${errorCFs}`);
 };
 export const loadLocalCfs = async (): Promise<CFProcessing | null> => {
   const config = getConfig();
 
   if (config.localCustomFormatsPath == null) {
-    console.log(`No local custom formats specified. Skipping.`);
+    logger.debug(`No local custom formats specified. Skipping.`);
     return null;
   }
 
   const cfPath = path.resolve(config.localCustomFormatsPath);
 
   if (!fs.existsSync(cfPath)) {
-    console.log(`Provided local custom formats path '${config.localCustomFormatsPath}' does not exist.`);
+    logger.info(`Provided local custom formats path '${config.localCustomFormatsPath}' does not exist.`);
     return null;
   }
 
@@ -142,14 +156,14 @@ export const mergeCfSources = (listOfCfs: (CFProcessing | null)[]): CFProcessing
 
       for (const [key, value] of c.carrIdMapping.entries()) {
         if (p.carrIdMapping.has(key)) {
-          console.log(`Overwriting ${key} during CF merge`);
+          logger.info(`Overwriting ${key} during CF merge`);
         }
         p.carrIdMapping.set(key, value);
       }
 
       for (const [key, value] of c.cfNameToCarrConfig.entries()) {
         if (p.cfNameToCarrConfig.has(key)) {
-          console.log(`Overwriting ${key} during CF merge`);
+          logger.info(`Overwriting ${key} during CF merge`);
         }
         p.cfNameToCarrConfig.set(key, value);
       }

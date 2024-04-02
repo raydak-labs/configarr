@@ -8,6 +8,7 @@ import {
 } from "./__generated__/generated-sonarr-api";
 import { getArrApi } from "./api";
 import { loadServerCustomFormats } from "./custom-formats";
+import { logger } from "./logger";
 import { loadQualityDefinitionFromServer } from "./quality-definitions";
 import { CFProcessing, RecyclarrMergedTemplates, YamlConfigQualityProfile, YamlConfigQualityProfileItems, YamlList } from "./types";
 import { IS_LOCAL_SAMPLE_MODE, notEmpty } from "./util";
@@ -28,7 +29,7 @@ export const mapQualityProfiles = ({ carrIdMapping }: CFProcessing, customFormat
         const carr = carrIdMapping.get(trashId);
 
         if (!carr) {
-          console.log(`Unknown ID for CF. ${trashId}`);
+          logger.info(`Unknown ID for CF. ${trashId}`);
           continue;
         }
 
@@ -215,7 +216,7 @@ export const calculateQualityProfilesDiff = async (
       }, new Map()) ?? new Map();
 
     if (!serverMatch) {
-      console.log(`QualityProfile not found in server. Ignoring: ${name}`);
+      logger.info(`QualityProfile not found in server. Ignoring: ${name}`);
       const mappedQ = mapQualities(qd, value);
 
       const qualityToId = mappedQ.reduce<Map<string, number>>((p, c) => {
@@ -304,7 +305,7 @@ export const calculateQualityProfilesDiff = async (
 
     // TODO do we want to enforce the whole structure or only match those which are enabled by us?
     if (!compareQualities(value.qualities, serverQualitiesMapped)) {
-      console.log(`QualityProfile Items mismatch will update whole array`);
+      logger.info(`QualityProfile items mismatch will update whole array`);
       diffExist = true;
 
       changeList.push(`QualityProfile items do not match`);
@@ -419,10 +420,10 @@ export const calculateQualityProfilesDiff = async (
 
       updatedServerObject.formatItems = newCFFormats;
     } else {
-      console.log(`No scoring for QualityProfile ${serverMatch.name!} found`);
+      logger.info(`No scoring for QualityProfile ${serverMatch.name!} found`);
     }
 
-    console.log(`QualityProfile (${value.name}) - CF Changes: ${scoringDiff}, Some other diff: ${diffExist}`);
+    logger.debug(`QualityProfile (${value.name}) - CF Changes: ${scoringDiff}, Some other diff: ${diffExist}`);
 
     if (scoringDiff || diffExist) {
       changedQPs.push(updatedServerObject);
@@ -431,9 +432,10 @@ export const calculateQualityProfilesDiff = async (
     }
 
     if (changeList.length > 0) {
-      console.log(`ChangeList for QualityProfile:\n`, changeList);
+      logger.debug(`QualityProfile '${value.name}' is not in sync. Will be updated.`);
+      logger.debug(changeList, `ChangeList for QualityProfile`);
     } else {
-      console.log(`QualityProfile has no changes.`);
+      logger.debug(`QualityProfile '${value.name}' is in sync.`);
     }
   }
 
@@ -443,15 +445,15 @@ export const calculateQualityProfilesDiff = async (
 export const filterInvalidQualityProfiles = (profiles: YamlConfigQualityProfile[]): YamlConfigQualityProfile[] => {
   return profiles.filter((p) => {
     if (p.name == null) {
-      console.log(`QP filtered because no name provided`);
+      logger.info(p, `QualityProfile filtered because no name provided`);
       return false;
     }
     if (p.qualities == null) {
-      console.log(`QP ${p.name} filtered because no qualities provided`);
+      logger.info(`QualityProfile: '${p.name}' filtered because no qualities provided`);
       return false;
     }
     if (p.upgrade == null) {
-      console.log(`QP ${p.name} filtered because no upgrade definition provided`);
+      logger.info(`QualityProfile: '${p.name}' filtered because no upgrade definition provided`);
       return false;
     }
 

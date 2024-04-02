@@ -18,6 +18,8 @@
     "axios": "^1.6.8",
     "dotenv": "^16.4.5",
     "node-ts": "^6.0.1",
+    "pino": "^8.19.0",
+    "pino-pretty": "^11.0.0",
     "simple-git": "^3.23.0",
     "swagger-typescript-api": "^13.0.3",
     "tsx": "^4.7.1",
