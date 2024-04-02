@@ -1,7 +1,9 @@
 import { default as fs } from "fs";
+import path from "path";
 import simpleGit, { CheckRepoActions } from "simple-git";
 import yaml from "yaml";
 import { getConfig } from "./config";
+import { logger } from "./logger";
 import { ArrType, RecyclarrTemplates } from "./types";
 import { recyclarrRepoPaths } from "./util";
 
@@ -25,14 +27,32 @@ export const cloneRecyclarrTemplateRepo = async () => {
 
   await gitClient.checkout(applicationConfig.trashRevision ?? "master");
 
-  console.log(`Updating Recyclarr repo`);
+  logger.info(`Updating Recyclarr repo`);
+};
+
+export const getLocalTemplatePath = () => {
+  const config = getConfig();
+
+  if (config.localConfigTemplatesPath == null) {
+    logger.debug(`No local templates specified. Skipping.`);
+    return null;
+  }
+
+  const customPath = path.resolve(config.localConfigTemplatesPath);
+
+  if (!fs.existsSync(customPath)) {
+    logger.info(`Provided local templates path '${config.localCustomFormatsPath}' does not exist.`);
+    return null;
+  }
+
+  return customPath;
 };
 
 export const loadRecyclarrTemplates = (arrType: ArrType) => {
   const map = new Map<string, RecyclarrTemplates>();
 
   const fillMap = (path: string) => {
-    const files = fs.readdirSync(`${path}`).filter((fn) => fn.endsWith("yml"));
+    const files = fs.readdirSync(`${path}`).filter((fn) => fn.endsWith("yaml") || fn.endsWith("yml"));
 
     files.forEach((f) => map.set(f.substring(0, f.lastIndexOf(".")), yaml.parse(fs.readFileSync(`${path}/${f}`, "utf8"))));
   };
@@ -45,6 +65,12 @@ export const loadRecyclarrTemplates = (arrType: ArrType) => {
     fillMap(recyclarrRepoPaths.sonarrCF);
     fillMap(recyclarrRepoPaths.sonarrQD);
     fillMap(recyclarrRepoPaths.sonarrQP);
+  }
+
+  const localPath = getLocalTemplatePath();
+
+  if (localPath) {
+    fillMap(localPath);
   }
 
   return map;

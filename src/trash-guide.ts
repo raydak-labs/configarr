@@ -3,6 +3,7 @@ import path from "path";
 import simpleGit, { CheckRepoActions } from "simple-git";
 import { CustomFormatResource } from "./__generated__/generated-sonarr-api";
 import { getConfig } from "./config";
+import { logger } from "./logger";
 import {
   ArrType,
   CFProcessing,
@@ -35,7 +36,7 @@ export const cloneTrashRepo = async () => {
 
   await gitClient.checkout(applicationConfig.trashRevision ?? "master");
 
-  console.log(`Updating TrashGuide repo`);
+  logger.info(`Updating TrashGuide repo`);
 };
 
 export const loadSonarrTrashCFs = async (arrType: ArrType): Promise<CFProcessing> => {
@@ -47,7 +48,6 @@ export const loadSonarrTrashCFs = async (arrType: ArrType): Promise<CFProcessing
   const trashSonarrPath = `${trashJsonDir}/sonarr`;
   const trashSonarrCfPath = `${trashSonarrPath}/cf`;
 
-  const trashIdToObject = new Map<string, { trashConfig: TrashCF; requestConfig: CustomFormatResource }>();
   const carrIdToObject = new Map<string, { carrConfig: ConfigarrCF; requestConfig: CustomFormatResource }>();
   const cfNameToCarrObject = new Map<string, ConfigarrCF>();
 
@@ -78,7 +78,7 @@ export const loadSonarrTrashCFs = async (arrType: ArrType): Promise<CFProcessing
     }
   }
 
-  console.log(`Trash CFs: ${trashIdToObject.size}`);
+  logger.info(`Trash CFs: ${carrIdToObject.size}`);
 
   return {
     carrIdMapping: carrIdToObject,

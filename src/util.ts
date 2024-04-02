@@ -1,5 +1,6 @@
 import path from "path";
 import { CustomFormatResource } from "./__generated__/generated-sonarr-api";
+import { logger } from "./logger";
 import { ConfigarrCF, ImportCF, TrashCF, UserFriendlyField } from "./types";
 
 export const IS_DRY_RUN = process.env.DRY_RUN === "true";
@@ -76,7 +77,7 @@ export const mapImportCfToRequestCf = (cf: TrashCF | ConfigarrCF): CustomFormatR
   }
 
   if (!rest.specifications) {
-    console.log(`ImportCF is wrong ${customId}, ${cf.name}.`);
+    logger.info(`ImportCF is wrong ${customId}, ${cf.name}.`);
     throw new Error("ImportCF wrong");
   }
 
@@ -84,7 +85,7 @@ export const mapImportCfToRequestCf = (cf: TrashCF | ConfigarrCF): CustomFormatR
     const newFields: UserFriendlyField[] = [];
 
     if (!spec.fields) {
-      console.log(`Spec: ${spec.name} fields is not defined`);
+      logger.info(`Spec: ${spec.name} fields is not defined`);
       throw new Error(`Spec is not correctly defined: ${spec.name}`);
     }
 
@@ -181,7 +182,7 @@ export function compareObjectsCarr(object1: any, object2: any): { equal: boolean
           }
         }
       } else {
-        console.log(`Ignore unknown key for comparison.`);
+        logger.debug(`Ignore unknown key '${key}' for comparison.`);
       }
     }
   }

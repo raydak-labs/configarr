@@ -5,6 +5,7 @@ import { CustomFormatResource } from "./src/__generated__/generated-sonarr-api";
 import { configureRadarrApi, configureSonarrApi, getArrApi, unsetApi } from "./src/api";
 import { getConfig } from "./src/config";
 import { calculateCFsToManage, loadLocalCfs, loadServerCustomFormats, manageCf, mergeCfSources } from "./src/custom-formats";
+import { logHeading, logger } from "./src/logger";
 import { calculateQualityDefinitionDiff, loadQualityDefinitionFromServer } from "./src/quality-definitions";
 import {
   calculateQualityProfilesDiff,
@@ -27,12 +28,17 @@ const pipeline = async (value: YamlConfigInstance, arrType: ArrType) => {
   };
 
   if (value.include) {
-    console.log(`Recyclarr Includes:\n${value.include.map((e) => e.template).join("\n")}`);
+    logger.info(`Recyclarr includes ${value.include.length} templates`);
+    logger.debug(
+      value.include.map((e) => e.template),
+      "Included templates",
+    );
+
     value.include.forEach((e) => {
       const template = recyclarrTemplateMap.get(e.template);
 
       if (!template) {
-        console.log(`Unknown recyclarr template requested: ${e.template}`);
+        logger.info(`Unknown recyclarr template requested: ${e.template}`);
         return;
       }
 
@@ -72,10 +78,10 @@ const pipeline = async (value: YamlConfigInstance, arrType: ArrType) => {
 
   const idsToManage = calculateCFsToManage(recylarrMergedTemplates);
 
-  console.log(`Stuff to manage: ${Array.from(idsToManage)}`);
+  logger.debug(Array.from(idsToManage), `CustomFormats to manage`);
 
   const serverCFs = await loadServerCustomFormats();
-  console.log(`CFs on server: ${serverCFs.length}`);
+  logger.info(`CustomFormats on server: ${serverCFs.length}`);
 
   const serverCFMapping = serverCFs.reduce((p, c) => {
     p.set(c.name!, c);
@@ -83,7 +89,7 @@ const pipeline = async (value: YamlConfigInstance, arrType: ArrType) => {
   }, new Map<string, CustomFormatResource>());
 
   await manageCf(mergedCFs, serverCFMapping, idsToManage);
-  console.log(`CustomFormats should be in sync`);
+  logger.info(`CustomFormats synchronized`);
 
   const qualityDefinition = recylarrMergedTemplates.quality_definition?.type;
 
@@ -109,18 +115,18 @@ const pipeline = async (value: YamlConfigInstance, arrType: ArrType) => {
 
     if (changeMap.size > 0) {
       if (IS_DRY_RUN) {
-        console.log("DryRun: Would update QualityDefinitions.");
+        logger.info("DryRun: Would update QualityDefinitions.");
       } else {
-        console.log(`Diffs in quality definitions found`, changeMap.values());
+        logger.info(`Diffs in quality definitions found`, changeMap.values());
         await api.v3QualitydefinitionUpdateUpdate(restData as any); // Ignore types
-        console.log(`Updated QualityDefinitions`);
+        logger.info(`Updated QualityDefinitions`);
       }
     } else {
-      console.log(`QualityDefinitions do not need update!`);
+      logger.info(`QualityDefinitions do not need update!`);
     }
 
     if (create.length > 0) {
-      console.log(`Currently not implemented this case for quality definitions.`);
+      logger.info(`Currently not implemented this case for quality definitions.`);
     }
   }
 
@@ -169,18 +175,18 @@ const pipeline = async (value: YamlConfigInstance, arrType: ArrType) => {
     });
   }
 
-  console.log(`QPs: Create: ${create.length}, Update: ${changedQPs.length}, Unchanged: ${noChanges.length}`);
+  logger.info(`QualityProfiles: Create: ${create.length}, Update: ${changedQPs.length}, Unchanged: ${noChanges.length}`);
 
   if (!IS_DRY_RUN) {
     for (const element of create) {
       try {
         const newProfile = await api.v3QualityprofileCreate(element as any); // Ignore types
-        console.log(`Created QualityProfile: ${newProfile.data.name}`);
+        logger.info(`Created QualityProfile: ${newProfile.data.name}`);
       } catch (error: any) {
         let message;
 
         if (error.response) {
-          console.log(error.response);
+          logger.info(error.response);
           // The request was made and the server responded with a status code
           // that falls out of the range of 2xx
           message = `Failed creating QualityProfile (${element.name}): Data ${JSON.stringify(error.response.data)}`;
@@ -188,10 +194,10 @@ const pipeline = async (value: YamlConfigInstance, arrType: ArrType) => {
           // The request was made but no response was received
           // `error.request` is an instance of XMLHttpRequest in the browser and an instance of
           // http.ClientRequest in node.js
-          console.log(error.request);
+          logger.info(error.request);
         } else {
           // Something happened in setting up the request that triggered an Error
-          console.log("Error", error.message);
+          logger.info("Error", error.message);
         }
 
         throw new Error(message);
@@ -201,7 +207,7 @@ const pipeline = async (value: YamlConfigInstance, arrType: ArrType) => {
     for (const element of changedQPs) {
       try {
         const newProfile = await api.v3QualityprofileUpdate("" + element.id, element as any); // Ignore types
-        console.log(`Updated QualityProfile: ${newProfile.data.name}`);
+        logger.info(`Updated QualityProfile: ${newProfile.data.name}`);
       } catch (error: any) {
         let message;
 
@@ -213,10 +219,10 @@ const pipeline = async (value: YamlConfigInstance, arrType: ArrType) => {
           // The request was made but no response was received
           // `error.request` is an instance of XMLHttpRequest in the browser and an instance of
           // http.ClientRequest in node.js
-          console.log(error.request);
+          logger.info(error.request);
         } else {
           // Something happened in setting up the request that triggered an Error
-          console.log("Error", error.message);
+          logger.info("Error", error.message);
         }
 
         throw new Error(message);
@@ -242,9 +248,11 @@ const run = async () => {
 
   // TODO currently this has to be run sequentially because of the centrally configured api
 
+  logHeading(`Processing Sonarr ...`);
+
   for (const instanceName in applicationConfig.sonarr) {
     const instance = applicationConfig.sonarr[instanceName];
-    console.log(`Processing Sonarr Instance: ${instanceName}`);
+    logger.info(`Processing Sonarr Instance: ${instanceName}`);
     await configureSonarrApi(instance.base_url, instance.api_key);
     await pipeline(instance, "SONARR");
     unsetApi();
@@ -256,11 +264,13 @@ const run = async () => {
     applicationConfig.sonarr !== null &&
     Object.keys(applicationConfig.sonarr).length <= 0
   ) {
-    console.log(`No sonarr instances defined.`);
+    logger.info(`No sonarr instances defined.`);
   }
 
+  logHeading(`Processing Radarr ...`);
+
   for (const instanceName in applicationConfig.radarr) {
-    console.log(`Processing Radarr instance: ${instanceName}`);
+    logger.info(`Processing Radarr instance: ${instanceName}`);
     const instance = applicationConfig.radarr[instanceName];
     await configureRadarrApi(instance.base_url, instance.api_key);
     await pipeline(instance, "RADARR");
@@ -273,7 +283,7 @@ const run = async () => {
     applicationConfig.radarr !== null &&
     Object.keys(applicationConfig.radarr).length <= 0
   ) {
-    console.log(`No radarr instances defined.`);
+    logger.info(`No radarr instances defined.`);
   }
 };
 

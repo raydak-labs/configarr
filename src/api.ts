@@ -1,5 +1,6 @@
 import { Api as RadarrApi } from "./__generated__/generated-radarr-api";
 import { Api as SonarrApi } from "./__generated__/generated-sonarr-api";
+import { logger } from "./logger";
 
 let sonarrClient: SonarrApi<unknown>["api"] | undefined;
 let radarrClient: RadarrApi<unknown>["api"] | undefined;
@@ -60,10 +61,10 @@ export const configureSonarrApi = async (url: string, apiKey: string) => {
       // The request was made but no response was received
       // `error.request` is an instance of XMLHttpRequest in the browser and an instance of
       // http.ClientRequest in node.js
-      console.log(error.request);
+      logger.error(error.request);
     } else {
       // Something happened in setting up the request that triggered an Error
-      console.log("Error", error.message);
+      logger.error("Error", error.message);
     }
 
     throw new Error(message);
@@ -113,10 +114,10 @@ export const configureRadarrApi = async (url: string, apiKey: string) => {
       // The request was made but no response was received
       // `error.request` is an instance of XMLHttpRequest in the browser and an instance of
       // http.ClientRequest in node.js
-      console.log(error.request);
+      logger.error(error.request);
     } else {
       // Something happened in setting up the request that triggered an Error
-      console.log("Error", error.message);
+      logger.error("Error", error.message);
     }
 
     throw new Error(message);
