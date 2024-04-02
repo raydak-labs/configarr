@@ -68,7 +68,30 @@ const pipeline = async (value: YamlConfigInstance, arrType: ArrType) => {
     recylarrMergedTemplates.quality_profiles.push(...value.quality_profiles);
   }
 
-  // TODO "real" merge missing of profiles?
+  const recyclarrProfilesMerged = recylarrMergedTemplates.quality_profiles.reduce<Map<string, YamlConfigQualityProfile>>((p, c) => {
+    const profile = p.get(c.name);
+
+    if (profile == null) {
+      p.set(c.name, c);
+    } else {
+      p.set(c.name, {
+        ...profile,
+        ...c,
+        reset_unmatched_scores: {
+          enabled: c.reset_unmatched_scores?.enabled ?? profile.reset_unmatched_scores?.enabled ?? true,
+          except: c.reset_unmatched_scores?.except ?? profile.reset_unmatched_scores?.except,
+        },
+        upgrade: {
+          ...profile.upgrade,
+          ...c.upgrade,
+        },
+      });
+    }
+
+    return p;
+  }, new Map());
+
+  recylarrMergedTemplates.quality_profiles = Array.from(recyclarrProfilesMerged.values());
 
   recylarrMergedTemplates.quality_profiles = filterInvalidQualityProfiles(recylarrMergedTemplates.quality_profiles);
 
