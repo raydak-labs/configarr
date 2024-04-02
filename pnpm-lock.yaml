@@ -37,6 +37,9 @@ dependencies:
     version: 2.4.1
 
 devDependencies:
+  '@hyrious/esbuild-plugin-commonjs':
+    specifier: ^0.2.4
+    version: 0.2.4(esbuild@0.20.2)
   '@playwright/test':
     specifier: ^1.42.1
     version: 1.42.1
@@ -46,6 +49,9 @@ devDependencies:
   '@vitest/coverage-v8':
     specifier: ^1.4.0
     version: 1.4.0(vitest@1.4.0)
+  esbuild:
+    specifier: ^0.20.2
+    version: 0.20.2
   prettier:
     specifier: 3.2.5
     version: 3.2.5
@@ -600,6 +606,19 @@ packages:
   /@humanwhocodes/object-schema@2.0.2:
     resolution: {integrity: sha512-6EwiSjwWYP7pTckG6I5eyFANjPhmPjUX9JRLUSfNPC7FX7zK9gyZAfUEaECL6ALTpGX5AjnBq3C9XmVWPitNpw==}
     dev: false
+
+  /@hyrious/esbuild-plugin-commonjs@0.2.4(esbuild@0.20.2):
+    resolution: {integrity: sha512-NKR8bsDbNP7EpM//cjoo8Bpihmc97gPpnwrggG+18iSGow6oaJpfmy3Bv+oBgPkPlxcGzC9SXh+6szoCoKFvCw==}
+    engines: {node: '>=14'}
+    peerDependencies:
+      cjs-module-lexer: '*'
+      esbuild: '*'
+    peerDependenciesMeta:
+      cjs-module-lexer:
+        optional: true
+    dependencies:
+      esbuild: 0.20.2
+    dev: true
 
   /@infinite-debugger/rmk-js-extensions@0.1.0-alpha.28:
     resolution: {integrity: sha512-Vmdq3aQdllHsncxx7uPwd21AFMdY9YeXU1AknioY7Roh+FcjcwkMwZmEb9EVcqxXfqOVKpmAIs9z3qulGi7bfA==}

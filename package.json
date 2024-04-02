@@ -9,7 +9,8 @@
     "start": "tsx index.ts",
     "test": "vitest",
     "tsg": "swagger-to-ts -f input.json -o test.ts",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "build": "tsx esbuild.ts"
   },
   "author": "",
   "license": "ISC",
@@ -26,9 +27,11 @@
     "yaml": "^2.4.1"
   },
   "devDependencies": {
+    "@hyrious/esbuild-plugin-commonjs": "^0.2.4",
     "@playwright/test": "^1.42.1",
     "@types/node": "^20.11.30",
     "@vitest/coverage-v8": "^1.4.0",
+    "esbuild": "^0.20.2",
     "prettier": "3.2.5",
     "typescript": "5.4.3",
     "vitest": "1.4.0"
