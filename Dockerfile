@@ -25,7 +25,7 @@ RUN apk add --no-cache libstdc++ dumb-init git
 
 USER node
 
-COPY --from=builder /app/out2.js /app/index.js
+COPY --from=builder /app/out2.cjs /app/index.js
 
 ENV CONFIG_LOCATION=/app/config/config.yml
 ENV SECRETS_LOCATION=/app/config/secrets.yml

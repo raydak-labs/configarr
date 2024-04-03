@@ -1,4 +1,4 @@
-import { default as fs } from "fs";
+import fs from "fs";
 import path from "path";
 import simpleGit, { CheckRepoActions } from "simple-git";
 import yaml from "yaml";
