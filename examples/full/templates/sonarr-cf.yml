@@ -1,0 +1,17 @@
+custom_formats:
+  - trash_ids:
+      # Can be copied from recyclarr
+
+      # HQ Source Groups
+      - e6258996055b9fbab7e9cb2f75819294 # WEB Tier 01
+      - 58790d4e2fdcd9733aa7ae68ba2bb503 # WEB Tier 02
+      - d84935abd3f8556dcd51d4f27e22d0a6 # WEB Tier 03
+      - d0c516558625b04b363fa6c5c2c7cfd4 # WEB Scene
+    quality_profiles:
+      - name: ExampleProfile
+
+  - trash_ids:
+      - custom-size-more-40gb # custom language
+    quality_profiles:
+      - name: ExampleProfile
+        score: -10000

@@ -1,0 +1,22 @@
+{
+  "trash_id": "custom-size-more-40gb",
+  "trash_scores": {
+    "default": -10000
+  },
+  "trash_description": "Size: Block sizes over 40GB",
+  "custom_inf": "Does not work because SizeSpecification is not supported by recyclarr",
+  "name": "Size: Block More 40GB",
+  "includeCustomFormatWhenRenaming": false,
+  "specifications": [
+    {
+      "name": "Size",
+      "implementation": "SizeSpecification",
+      "negate": false,
+      "required": true,
+      "fields": {
+        "min": 1,
+        "max": 9
+      }
+    }
+  ]
+}

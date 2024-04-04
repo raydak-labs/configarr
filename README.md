@@ -81,6 +81,10 @@ Possible ideas:
    2. Overwrite the hosts in case you are not using the local setup with docker compose
 5. Run the app with `pnpm start` or with the vscode task
 
+## Examples
+
+Some examples for configuration are provided [Examples](./examples/)
+
 ## How to run
 
 Required files:
@@ -92,7 +96,7 @@ Optional:
 
 ### Docker
 
-`docker run --rm -v ./:/app/config ghcr.io/raydak-labs/configarr:work`
+`docker run --rm -v ./:/app/config ghcr.io/raydak-labs/configarr:latest`
 
 ### Docker-compose
 
@@ -100,12 +104,8 @@ Optional:
 
 services:
   configarr:
-    image: ghcr.io/raydak-labs/configarr:work
-    build: .
-    environment:
-      - PUID=1000
-      - PGID=1000
-      - TZ=Etc/UTC
+    image: ghcr.io/raydak-labs/configarr:latest
+
     volumes:
       - ./config:/app/config # Contains the config.yml and secrets.yml
       - ./dockerrepos:/app/repos # Cache repositories
@@ -133,7 +133,7 @@ spec:
         spec:
           containers:
             - name: configarr
-              image: ghcr.io/raydak-labs/configarr:work
+              image: ghcr.io/raydak-labs/configarr:latest
               imagePullPolicy: Always
               envFrom:
                 - configMapRef:

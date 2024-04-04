@@ -1,0 +1,67 @@
+#trashGuideUrl: https://github.com/BlackDark/fork-TRASH-Guides
+#recyclarrConfigUrl: https://github.com/BlackDark/fork-recyclarr-configs
+localCustomFormatsPath: /app/cfs
+localConfigTemplatesPath: /app/templates
+
+sonarr:
+  instance1:
+    # Set the URL/API Key to your actual instance
+    base_url: http://sonarr:8989
+    #base_url: https://sonarr.oci.eduard-marbach.de/
+    api_key: !secret SONARR_API_KEY
+
+    quality_definition:
+      type: series
+
+    include:
+      #### Custom
+      - template: sonarr-cf
+      - template: sonarr-quality
+
+    custom_formats:
+      # Movie Versions
+      - trash_ids:
+          - 9f6cbff8cfe4ebbc1bde14c7b7bec0de # IMAX Enhanced
+        quality_profiles:
+          - name: ExampleProfile
+            # score: 0 # Uncomment this line to disable prioritised IMAX Enhanced releases
+
+radarr:
+  instance1:
+    # Set the URL/API Key to your actual instance
+    base_url: http://radarr:7878
+    #base_url: https://sonarr.oci.eduard-marbach.de/
+    api_key: !secret RADARR_API_KEY
+
+    quality_definition:
+      type: movies
+
+    include:
+      # Comment out any of the following includes to disable them
+      #- template: radarr-quality-definition-movie
+      #- template: radarr-quality-profile-hd-bluray-web
+      #- template: radarr-custom-formats-hd-bluray-web
+
+      # - template: radarr-quality-profile-uhd-bluray-web
+      # - template: radarr-custom-formats-uhd-bluray-web
+
+      # - template: radarr-quality-profile-remux-web-1080p
+      # - template: radarr-custom-formats-remux-web-1080p
+
+      # - template: radarr-quality-profile-remux-web-2160p
+      # - template: radarr-custom-formats-remux-web-2160p
+
+      # - template: radarr-quality-profile-anime
+      # - template: radarr-custom-formats-anime
+
+      #### Custom
+      - template: radarr-cf
+      - template: radarr-quality
+
+    custom_formats:
+      # Movie Versions
+      - trash_ids:
+          - 9f6cbff8cfe4ebbc1bde14c7b7bec0de # IMAX Enhanced
+        quality_profiles:
+          - name: ExampleProfile
+            # score: 0 # Uncomment this line to disable prioritised IMAX Enhanced releases

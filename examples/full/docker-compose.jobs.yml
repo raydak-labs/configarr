@@ -1,0 +1,15 @@
+services:
+  configarr:
+    image: ghcr.io/raydak-labs/configarr:latest
+    networks:
+      - configarr-full
+    volumes:
+      - ./config:/app/config
+      - ./dockerrepos:/app/repos
+      - ./cfs:/app/cfs
+      - ./templates:/app/templates
+
+networks:
+  configarr-full:
+    name: configarr-full
+    external: true
