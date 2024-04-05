@@ -4,7 +4,14 @@ import fs from "fs";
 import { CustomFormatResource } from "./src/__generated__/generated-sonarr-api";
 import { configureRadarrApi, configureSonarrApi, getArrApi, unsetApi } from "./src/api";
 import { getConfig } from "./src/config";
-import { calculateCFsToManage, loadLocalCfs, loadServerCustomFormats, manageCf, mergeCfSources } from "./src/custom-formats";
+import {
+  calculateCFsToManage,
+  loadCFFromConfig,
+  loadLocalCfs,
+  loadServerCustomFormats,
+  manageCf,
+  mergeCfSources,
+} from "./src/custom-formats";
 import { logHeading, logger } from "./src/logger";
 import { calculateQualityDefinitionDiff, loadQualityDefinitionFromServer } from "./src/quality-definitions";
 import {
@@ -95,9 +102,10 @@ const pipeline = async (value: YamlConfigInstance, arrType: ArrType) => {
 
   recylarrMergedTemplates.quality_profiles = filterInvalidQualityProfiles(recylarrMergedTemplates.quality_profiles);
 
-  const result = await loadLocalCfs();
   const trashCFs = await loadSonarrTrashCFs(arrType);
-  const mergedCFs = mergeCfSources([trashCFs, result]);
+  const localFileCFs = await loadLocalCfs();
+  const configCFDefinition = loadCFFromConfig();
+  const mergedCFs = mergeCfSources([trashCFs, localFileCFs, configCFDefinition]);
 
   const idsToManage = calculateCFsToManage(recylarrMergedTemplates);
 

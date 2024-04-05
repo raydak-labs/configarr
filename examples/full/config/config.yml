@@ -3,6 +3,21 @@
 localCustomFormatsPath: /app/cfs
 localConfigTemplatesPath: /app/templates
 
+customFormatDefinitions:
+  - trash_id: example-in-config-cf
+    trash_scores:
+      default: -10000
+    trash_description: "Language: German Only"
+    name: "Language: Not German"
+    includeCustomFormatWhenRenaming: false
+    specifications:
+      - name: Not German Language
+        implementation: LanguageSpecification
+        negate: true
+        required: false
+        fields:
+          value: 4
+
 sonarr:
   instance1:
     # Set the URL/API Key to your actual instance
