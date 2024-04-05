@@ -216,7 +216,7 @@ export const calculateQualityProfilesDiff = async (
       }, new Map()) ?? new Map();
 
     if (!serverMatch) {
-      logger.info(`QualityProfile not found in server. Ignoring: ${name}`);
+      logger.info(`QualityProfile '${name}' not found in server. Will be created.`);
       const mappedQ = mapQualities(qd, value);
 
       const qualityToId = mappedQ.reduce<Map<string, number>>((p, c) => {
