@@ -6,6 +6,7 @@ import { configureRadarrApi, configureSonarrApi, getArrApi, unsetApi } from "./s
 import { getConfig } from "./src/config";
 import { calculateCFsToManage, loadLocalCfs, loadServerCustomFormats, manageCf, mergeCfSources } from "./src/custom-formats";
 import { logHeading, logger } from "./src/logger";
+import { calculateManagementDiff, calculateNamingDiff } from "./src/media-management";
 import { calculateQualityDefinitionDiff, loadQualityDefinitionFromServer } from "./src/quality-definitions";
 import {
   calculateQualityProfilesDiff,
@@ -56,8 +57,26 @@ const pipeline = async (value: YamlConfigInstance, arrType: ArrType) => {
         }
       }
 
-      // TODO Ignore recursive include for now
+      if (template.media_management) {
+        recylarrMergedTemplates.media_management = { ...recylarrMergedTemplates.media_management, ...template.media_management };
+      }
+
+      if (template.media_naming) {
+        recylarrMergedTemplates.media_naming = { ...recylarrMergedTemplates.media_naming, ...template.media_naming };
+      }
+
+      if (template.include) {
+        logger.warn(`Currently recursive templates includes are not implemented.`);
+      }
     });
+  }
+
+  if (value.media_management) {
+    recylarrMergedTemplates.media_management = { ...recylarrMergedTemplates.media_management, ...value.media_management };
+  }
+
+  if (value.media_naming) {
+    recylarrMergedTemplates.media_naming = { ...recylarrMergedTemplates.media_naming, ...value.media_naming };
   }
 
   if (value.custom_formats) {
@@ -150,6 +169,30 @@ const pipeline = async (value: YamlConfigInstance, arrType: ArrType) => {
 
     if (create.length > 0) {
       logger.info(`Currently not implemented this case for quality definitions.`);
+    }
+  }
+
+  const namingDiff = await calculateNamingDiff(recylarrMergedTemplates.media_naming);
+
+  if (namingDiff) {
+    if (IS_DRY_RUN) {
+      logger.info("DryRun: Would update MediaNaming.");
+    } else {
+      // TODO this will need a radarr/sonarr separation for sure to have good and correct typings
+      await api.v3ConfigNamingUpdate(namingDiff.updatedData.id! + "", namingDiff.updatedData as any); // Ignore types
+      logger.info(`Updated MediaNaming`);
+    }
+  }
+
+  const managementDiff = await calculateManagementDiff(recylarrMergedTemplates.media_management);
+
+  if (managementDiff) {
+    if (IS_DRY_RUN) {
+      logger.info("DryRun: Would update MediaManagement.");
+    } else {
+      // TODO this will need a radarr/sonarr separation for sure to have good and correct typings
+      await api.v3ConfigMediamanagementUpdate(managementDiff.updatedData.id! + "", managementDiff.updatedData as any); // Ignore types
+      logger.info(`Updated MediaManagement`);
     }
   }
 

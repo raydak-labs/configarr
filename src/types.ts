@@ -1,4 +1,5 @@
-import { CustomFormatResource, CustomFormatSpecificationSchema } from "./__generated__/generated-sonarr-api";
+import { Api as GeneratedRadarrApi } from "./__generated__/generated-radarr-api";
+import { CustomFormatResource, CustomFormatSpecificationSchema, Api as GeneratedSonarrApi } from "./__generated__/generated-sonarr-api";
 
 export type DynamicImportType<T> = { default: T };
 
@@ -105,6 +106,8 @@ export type YamlConfigInstance = {
   include?: { template: string }[];
   custom_formats: YamlList[];
   quality_profiles: YamlConfigQualityProfile[];
+  media_management?: MediaManagementType;
+  media_naming?: MediaNamingType;
 };
 
 export type YamlConfigQualityProfile = {
@@ -130,7 +133,7 @@ export type YamlConfigQualityProfileItems = {
 };
 
 export type RecyclarrTemplates = Partial<
-  Pick<YamlConfigInstance, "quality_definition" | "custom_formats" | "include" | "quality_profiles">
+  Pick<YamlConfigInstance, "quality_definition" | "custom_formats" | "include" | "quality_profiles" | "media_management" | "media_naming">
 >;
 
 export type RecyclarrMergedTemplates = RecyclarrTemplates & Required<Pick<RecyclarrTemplates, "custom_formats" | "quality_profiles">>;
@@ -154,3 +157,43 @@ export type ArrType = "SONARR" | "RADARR"; // anime and series exists in trash g
 
 export type QualityDefintionsSonarr = "anime" | "series" | "custom";
 export type QualityDefintionsRadarr = "movie" | "custom";
+
+// TODO configure all configs in recyclarr?
+export type MediaManagementType = {
+  autoUnmonitorPreviouslyDownloadedEpisodes?: boolean;
+  recycleBin?: string;
+  recycleBinCleanupDays?: number;
+  downloadPropersAndRepacks?: string;
+  createEmptySeriesFolders?: boolean;
+  deleteEmptyFolders?: boolean;
+  fileDate?: string;
+  rescanAfterRefresh?: string;
+  setPermissionsLinux?: boolean;
+  chmodFolder?: string;
+  chownGroup?: string;
+  episodeTitleRequired?: string;
+  skipFreeSpaceCheckWhenImporting?: boolean;
+  minimumFreeSpaceWhenImporting?: number;
+  copyUsingHardlinks?: boolean;
+  useScriptImport?: boolean;
+  scriptImportPath?: string;
+  importExtraFiles?: boolean;
+  extraFileExtensions?: string;
+  enableMediaInfo?: boolean;
+};
+
+export type MediaNamingType = {
+  renameEpisodes?: boolean;
+  replaceIllegalCharacters?: boolean;
+  colonReplacementFormat?: number;
+  multiEpisodeStyle?: number;
+  standardEpisodeFormat?: string;
+  dailyEpisodeFormat?: string;
+  animeEpisodeFormat?: string;
+  seriesFolderFormat?: string;
+  seasonFolderFormat?: string;
+  specialsFolderFormat?: string;
+};
+
+export type SonarrApiType = GeneratedSonarrApi<unknown>["api"];
+export type RadarrApiType = GeneratedRadarrApi<unknown>["api"];

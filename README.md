@@ -44,6 +44,10 @@ Possible ideas:
 - Support all CustomFormat specifications
 - Maybe this?: https://github.com/recyclarr/recyclarr/issues/225
 
+### Alpha
+- Full media management configuration
+- Notification handler
+
 ## Work TODOs
 
 - [ ] Optimize types. Generated ones work for first step but not very optimal because they do not correctly represent request/response types.
@@ -65,6 +69,9 @@ Possible ideas:
 - [ ] Simple Config validation
 - [x] Local recyclarr templates to include
 - [ ] Clone existing templates: Lets say you want the same template but with a different name?
+- [ ] Media Management Tab configuration with configarr
+- [ ] Add notification with simple REST call
+  - [ ] https://github.com/caronc/apprise-api ?
 
 ## Custom formats
 
