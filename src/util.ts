@@ -113,6 +113,14 @@ export function compareCustomFormats(
   return compareObjectsCarr(serverObject, localObject);
 }
 
+export function compareNaming(serverObject: any, localObject: any): ReturnType<typeof compareObjectsCarr> {
+  return compareObjectsCarr(serverObject, localObject);
+}
+
+export function compareMediamanagement(serverObject: any, localObject: any): ReturnType<typeof compareObjectsCarr> {
+  return compareObjectsCarr(serverObject, localObject);
+}
+
 function compareObjectsCarr(serverObject: any, localObject: any, parent?: string): { equal: boolean; changes: string[] } {
   const changes: string[] = [];
 

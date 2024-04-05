@@ -111,6 +111,12 @@ export interface IArrClient<
   updateCustomFormat(id: string, format: CF): Promise<CF>;
   deleteCustomFormat(id: string): Promise<void>;
 
+  getNaming(): Promise<any>;
+  updateNaming(id: string, data: any): Promise<any>;
+
+  getMediamanagement(): Promise<any>;
+  updateMediamanagement(id: string, data: any): Promise<any>;
+
   getLanguages(): Promise<L[]>;
 
   // System/Health Check
@@ -185,6 +191,22 @@ export class UnifiedClient implements IArrClient {
 
   async deleteCustomFormat(id: string) {
     return await this.api.deleteCustomFormat(id);
+  }
+
+  async getNaming() {
+    return this.api.getNaming();
+  }
+
+  async updateNaming(id: string, data: any) {
+    return this.api.updateNaming(id, data);
+  }
+
+  async getMediamanagement() {
+    return this.api.getMediamanagement();
+  }
+
+  async updateMediamanagement(id: string, data: any) {
+    return this.api.updateMediamanagement(id, data);
   }
 
   async getSystemStatus() {

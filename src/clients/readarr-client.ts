@@ -89,6 +89,22 @@ export class ReadarrClient
     return this.api.v1MetadataprofileUpdate(id.toString(), profile);
   }
 
+  async getNaming() {
+    return this.api.v1ConfigNamingList();
+  }
+
+  async updateNaming(id: string, data: any) {
+    return this.api.v1ConfigNamingUpdate(id, data);
+  }
+
+  async getMediamanagement() {
+    return this.api.v1ConfigMediamanagementList();
+  }
+
+  async updateMediamanagement(id: string, data: any) {
+    return this.api.v1ConfigMediamanagementUpdate(id, data);
+  }
+
   // System/Health Check
   getSystemStatus() {
     return this.api.v1SystemStatusList();

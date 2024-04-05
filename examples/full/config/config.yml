@@ -63,6 +63,13 @@ radarr:
     quality_definition:
       type: movies
 
+    # experimental
+    media_management:
+      recycleBin: "/tmp"
+
+    # experimental
+    media_naming: {}
+
     include:
       # Comment out any of the following includes to disable them
       #- template: radarr-quality-definition-movie

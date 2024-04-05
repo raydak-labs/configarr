@@ -79,6 +79,22 @@ export class SonarrClient implements IArrClient<QualityProfileResource, QualityD
     return this.api.v3CustomformatDelete(+id);
   }
 
+  async getNaming() {
+    return this.api.v3ConfigNamingList();
+  }
+
+  async updateNaming(id: string, data: any) {
+    return this.api.v3ConfigNamingUpdate(id, data);
+  }
+
+  async getMediamanagement() {
+    return this.api.v3ConfigMediamanagementList();
+  }
+
+  async updateMediamanagement(id: string, data: any) {
+    return this.api.v3ConfigMediamanagementUpdate(id, data);
+  }
+
   // System/Health Check
   getSystemStatus() {
     return this.api.v3SystemStatusList();
