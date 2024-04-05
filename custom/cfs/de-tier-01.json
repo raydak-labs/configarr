@@ -1,0 +1,89 @@
+{
+    "trash_id": "de-tier-01-version1",
+    "trash_scores": {},
+    "name": "GER HD Rel. Group Tier 01",
+    "includeCustomFormatWhenRenaming": false,
+    "specifications": [
+        {
+            "name": "ZeroTwo",
+            "implementation": "ReleaseGroupSpecification",
+            "negate": false,
+            "required": false,
+            "fields": {
+                "value": "ZeroTwo"
+            }
+        },
+        {
+            "name": "WAYNE",
+            "implementation": "ReleaseGroupSpecification",
+            "negate": false,
+            "required": false,
+            "fields": {
+                "value": "WAYNE"
+            }
+        },
+        {
+            "name": "TSCC",
+            "implementation": "ReleaseGroupSpecification",
+            "negate": false,
+            "required": false,
+            "fields": {
+                "value": "TSCC"
+            }
+        },
+        {
+            "name": "DETAiLS",
+            "implementation": "ReleaseGroupSpecification",
+            "negate": false,
+            "required": false,
+            "fields": {
+                "value": "DETAiLS"
+            }
+        },
+        {
+            "name": "FoST",
+            "implementation": "ReleaseGroupSpecification",
+            "negate": false,
+            "required": false,
+            "fields": {
+                "value": "FoST"
+            }
+        },
+        {
+            "name": "SAUERKRAUT",
+            "implementation": "ReleaseGroupSpecification",
+            "negate": false,
+            "required": false,
+            "fields": {
+                "value": "SAUERKRAUT"
+            }
+        },
+        {
+            "name": "Baka (Anime)",
+            "implementation": "ReleaseGroupSpecification",
+            "negate": false,
+            "required": false,
+            "fields": {
+                "value": "Baka"
+            }
+        },
+        {
+            "name": "D02KU",
+            "implementation": "ReleaseGroupSpecification",
+            "negate": false,
+            "required": false,
+            "fields": {
+                "value": "D02KU"
+            }
+        },
+        {
+            "name": "WvF",
+            "implementation": "ReleaseGroupSpecification",
+            "negate": false,
+            "required": false,
+            "fields": {
+                "value": "WvF"
+            }
+        }
+    ]
+}

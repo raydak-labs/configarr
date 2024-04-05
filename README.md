@@ -49,22 +49,31 @@ Possible ideas:
 - [ ] Optimize types. Generated ones work for first step but not very optimal because they do not correctly represent request/response types.
 - [x] Default scores from trash guide
 - [x] Radarr support
-- [ ] Debug logging switchable
-- [ ] Improved Diff output
+- [x] Debug logging switchable
+- [x] Improved Diff output
 - [ ] Feature completion with recyclarr
-- [ ] Cross references to:
-  - [ ] https://github.com/PCJones/radarr-sonarr-german-dual-language
-  - [ ] https://github.com/PCJones/usenet-guide
-- [ ] Build docker container
-- [ ] Build multi arch containers
-- [ ] Add Github Actions stuff
-- [ ] Improve code & tidy up lint errors
-- [ ] write docs for running with container
-  - [ ] Plain docker
-  - [ ] Kubernetes
+- [x] Cross references to:
+  - [x] https://github.com/PCJones/radarr-sonarr-german-dual-language
+  - [x] https://github.com/PCJones/usenet-guide
+- [x] Build docker container
+- [x] Build multi arch containers
+- [x] Add Github Actions stuff
+- [x] Improve code & tidy up lint errors
+- [x] write docs for running with container
+  - [x] Plain docker
+  - [x] Kubernetes
 - [ ] Simple Config validation
 - [x] Local recyclarr templates to include
 - [ ] Clone existing templates: Lets say you want the same template but with a different name?
+
+## Custom formats
+
+This repository also provide additional custom formats what TrashGuide does not offer.
+At the moment this is mostly focused on German related stuff.
+
+- Most CustomFormats used from @PCJones
+  - See here: https://github.com/PCJones/radarr-sonarr-german-dual-language
+  - Or good german guide: https://github.com/PCJones/usenet-guide
 
 ## Development
 

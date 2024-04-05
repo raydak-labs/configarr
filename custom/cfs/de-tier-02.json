@@ -1,0 +1,197 @@
+{
+    "trash_id": "de-tier-02-version1",
+    "trash_scores": {},
+    "name": "GER HD Rel. Group Tier 02",
+    "includeCustomFormatWhenRenaming": false,
+    "specifications": [
+        {
+            "name": "iNTENTiON",
+            "implementation": "ReleaseGroupSpecification",
+            "negate": false,
+            "required": false,
+            "fields": {
+                "value": "iNTENTiON"
+            }
+        },
+        {
+            "name": "TVS (keine ENG subs?)",
+            "implementation": "ReleaseGroupSpecification",
+            "negate": false,
+            "required": false,
+            "fields": {
+                "value": "TVS"
+            }
+        },
+        {
+            "name": "TV4A (check ob Tier 01)",
+            "implementation": "ReleaseGroupSpecification",
+            "negate": false,
+            "required": false,
+            "fields": {
+                "value": "TV4A"
+            }
+        },
+        {
+            "name": "TvR",
+            "implementation": "ReleaseGroupSpecification",
+            "negate": false,
+            "required": false,
+            "fields": {
+                "value": "TvR"
+            }
+        },
+        {
+            "name": "TVARCHiV",
+            "implementation": "ReleaseGroupSpecification",
+            "negate": false,
+            "required": false,
+            "fields": {
+                "value": "TVARCHiV"
+            }
+        },
+        {
+            "name": "RUBBiSH",
+            "implementation": "ReleaseGroupSpecification",
+            "negate": false,
+            "required": false,
+            "fields": {
+                "value": "RUBBiSH"
+            }
+        },
+        {
+            "name": "MGE",
+            "implementation": "ReleaseGroupSpecification",
+            "negate": false,
+            "required": false,
+            "fields": {
+                "value": "MGE"
+            }
+        },
+        {
+            "name": "HAXE",
+            "implementation": "ReleaseGroupSpecification",
+            "negate": false,
+            "required": false,
+            "fields": {
+                "value": "HAXE"
+            }
+        },
+        {
+            "name": "RSG",
+            "implementation": "ReleaseGroupSpecification",
+            "negate": false,
+            "required": false,
+            "fields": {
+                "value": "RSG"
+            }
+        },
+        {
+            "name": "AWARDS (Inactive)",
+            "implementation": "ReleaseGroupSpecification",
+            "negate": false,
+            "required": false,
+            "fields": {
+                "value": "AWARDS"
+            }
+        },
+        {
+            "name": "TMSF",
+            "implementation": "ReleaseGroupSpecification",
+            "negate": false,
+            "required": false,
+            "fields": {
+                "value": "TMSF"
+            }
+        },
+        {
+            "name": "HQC (Inactive)",
+            "implementation": "ReleaseGroupSpecification",
+            "negate": false,
+            "required": false,
+            "fields": {
+                "value": "HQC"
+            }
+        },
+        {
+            "name": "DMPD",
+            "implementation": "ReleaseGroupSpecification",
+            "negate": false,
+            "required": false,
+            "fields": {
+                "value": "DMPD"
+            }
+        },
+        {
+            "name": "MiSFiTS (Inactive)",
+            "implementation": "ReleaseGroupSpecification",
+            "negate": false,
+            "required": false,
+            "fields": {
+                "value": "MiSFiTS"
+            }
+        },
+        {
+            "name": "4SJ (Inactive)",
+            "implementation": "ReleaseGroupSpecification",
+            "negate": false,
+            "required": false,
+            "fields": {
+                "value": "4SJ"
+            }
+        },
+        {
+            "name": "euHD (Inactive)",
+            "implementation": "ReleaseGroupSpecification",
+            "negate": false,
+            "required": false,
+            "fields": {
+                "value": "euHD"
+            }
+        },
+        {
+            "name": "FuN (Low Size 265)",
+            "implementation": "ReleaseGroupSpecification",
+            "negate": false,
+            "required": false,
+            "fields": {
+                "value": "FuN"
+            }
+        },
+        {
+            "name": "OCA (Inactive)",
+            "implementation": "ReleaseGroupSpecification",
+            "negate": false,
+            "required": false,
+            "fields": {
+                "value": "OCA"
+            }
+        },
+        {
+            "name": "JaJunge",
+            "implementation": "ReleaseGroupSpecification",
+            "negate": false,
+            "required": false,
+            "fields": {
+                "value": "JaJunge"
+            }
+        },
+        {
+            "name": "RWP",
+            "implementation": "ReleaseGroupSpecification",
+            "negate": false,
+            "required": false,
+            "fields": {
+                "value": "RWP"
+            }
+        },
+        {
+            "name": "WOTT",
+            "implementation": "ReleaseGroupSpecification",
+            "negate": false,
+            "required": false,
+            "fields": {
+                "value": "WOTT"
+            }
+        }
+    ]
+}

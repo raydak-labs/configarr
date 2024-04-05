@@ -1,0 +1,17 @@
+{
+    "trash_id": "lang-mic-dub-version1",
+    "trash_scores": {},
+    "name": "MIC DUB",
+    "includeCustomFormatWhenRenaming": true,
+    "specifications": [
+        {
+            "name": "MD",
+            "implementation": "ReleaseTitleSpecification",
+            "negate": false,
+            "required": true,
+            "fields": {
+                "value": "((19|20|21)[0-9]{2}).*?(?<=^|[ .-])MD(?=[ .-]|$).*?(?<=^|[ .-])GERMAN(?=[ .-]|$)|((19|20|21)[0-9]{2}).*?(?<=^|[ .-])GERMAN(?=[ .-]|$).*?(?<=^|[ .-])MD(?=[ .-]|$)"
+            }
+        }
+    ]
+}
