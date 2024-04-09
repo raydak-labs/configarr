@@ -75,6 +75,20 @@ At the moment this is mostly focused on German related stuff.
   - See here: https://github.com/PCJones/radarr-sonarr-german-dual-language
   - Or good german guide: https://github.com/PCJones/usenet-guide
 
+### How to add own CustomFormats
+
+- You can simply use the JSON export from Sonarr/Radarr
+- What you have to add at least is to the field `trash_id` or `configarr_id` to the JSON.
+  The ID can be anything you like but should not conflict with other CustomFormats.
+  Otherwise those will be overwritten during merge process.
+```json
+{
+  "configarr_id": "your_own_id",
+  ...
+}
+```
+- After adding the ID you can simply reference it in the `config.yml` to add it to the QualityProfiles.
+
 ## Development
 
 1. Optionally setup the local sonarr instance
