@@ -136,6 +136,38 @@ export const loadLocalCfs = async (): Promise<CFProcessing | null> => {
     cfNameToCarrConfig: cfNameToCarrObject,
   };
 };
+
+export const loadCFFromConfig = (): CFProcessing | null => {
+  // TODO typings
+  const defs = getConfig().customFormatDefinitions;
+
+  if (defs == null) {
+    logger.debug(`No CustomFormat definitions defined.`);
+    return null;
+  }
+
+  const carrIdToObject = new Map<string, { carrConfig: ConfigarrCF; requestConfig: CustomFormatResource }>();
+  const cfNameToCarrObject = new Map<string, ConfigarrCF>();
+
+  for (const def of defs) {
+    const cfD = toCarrCF(def);
+
+    carrIdToObject.set(cfD.configarr_id, {
+      carrConfig: cfD,
+      requestConfig: mapImportCfToRequestCf(cfD),
+    });
+
+    if (cfD.name) {
+      cfNameToCarrObject.set(cfD.name, cfD);
+    }
+  }
+
+  return {
+    carrIdMapping: carrIdToObject,
+    cfNameToCarrConfig: cfNameToCarrObject,
+  };
+};
+
 export const calculateCFsToManage = (yaml: YamlInput) => {
   const cfTrashToManage: Set<string> = new Set();
 

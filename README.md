@@ -42,7 +42,11 @@ Possible ideas:
 - Include own defined custom formats
 - Custom defined formats for different languages/countries like Germany
 - Support all CustomFormat specifications
-- Maybe this?: https://github.com/recyclarr/recyclarr/issues/225
+- Provide CFs in different ways
+  - Sync from TrashGuide
+  - Sync with local file CFs
+  - Provide CFs directly in config (Convert JSON with https://www.bairesdev.com/tools/json2yaml/)
+  - Merge order is `TrashGuide -> LocalFiles -> CFs in Config`
 
 ## Work TODOs
 
