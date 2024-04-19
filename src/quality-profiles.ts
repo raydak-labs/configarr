@@ -106,6 +106,12 @@ const mapQualities = (qd: QualityDefinitionResource[], value: YamlConfigQualityP
       };
     } else {
       const serverQD = qdMap.get(obj.name);
+
+      if (serverQD == null) {
+        logger.warn(`Unknown requested quality "${obj.name}" for quality profile ${value.name}`);
+        throw new Error(`Please correct your config.`);
+      }
+
       qdMap.delete(obj.name);
 
       return {
