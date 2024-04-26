@@ -9,12 +9,12 @@
     "start": "tsx index.ts",
     "test": "vitest",
     "tsg": "swagger-to-ts -f input.json -o test.ts",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "build": "tsx esbuild.ts"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@infinite-debugger/swagger-to-ts": "0.1.0-alpha.124",
     "axios": "^1.6.8",
     "dotenv": "^16.4.5",
     "node-ts": "^6.0.1",
@@ -26,10 +26,14 @@
     "yaml": "^2.4.1"
   },
   "devDependencies": {
+    "@infinite-debugger/swagger-to-ts": "0.1.0-alpha.124",
+    "@hyrious/esbuild-plugin-commonjs": "^0.2.4",
     "@playwright/test": "^1.42.1",
     "@types/node": "^20.11.30",
     "@vitest/coverage-v8": "^1.4.0",
+    "esbuild": "^0.20.2",
     "prettier": "3.2.5",
+    "read-package-json-fast": "^3.0.2",
     "typescript": "5.4.3",
     "vitest": "1.4.0"
   }

@@ -70,7 +70,11 @@ export const mapQualityProfiles = ({ carrIdMapping }: CFProcessing, customFormat
 
 export const loadQualityProfilesFromServer = async (): Promise<QualityProfileResource[]> => {
   if (IS_LOCAL_SAMPLE_MODE) {
-    return (await import(path.resolve(`./tests/samples/quality_profiles.json`))).default;
+    return (
+      await import(path.resolve(`./tests/samples/quality_profiles.json`), {
+        with: { type: "json" },
+      })
+    ).default;
   }
   const api = getArrApi();
 

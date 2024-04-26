@@ -10,17 +10,25 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /app
 COPY package.json pnpm-lock.yaml /app/
 
-FROM base AS prod-deps
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --prod --frozen-lockfile
+FROM base AS builder
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
+COPY . .
+RUN pnpm run build
 
-FROM base
-COPY index.ts /app/
-COPY src/ /app/src/
-COPY --from=prod-deps /app/node_modules /app/node_modules
+# https://github.com/evanw/esbuild/issues/1921
+FROM node:20-alpine
+WORKDIR /app
+
+#USER node
+
+RUN apk add --no-cache libstdc++ dumb-init git
+
+USER node
+
+COPY --from=builder /app/out2.cjs /app/index.js
 
 ENV CONFIG_LOCATION=/app/config/config.yml
 ENV SECRETS_LOCATION=/app/config/secrets.yml
 
-#USER node
-
-CMD [ "pnpm", "start" ]
+# Run with dumb-init to not start node with PID=1, since Node.js was not designed to run as PID 1
+CMD ["dumb-init", "node", "index.js"]
