@@ -6,7 +6,7 @@ ENV PATH="$PNPM_HOME:$PATH"
 RUN apt-get update && apt-get install -y \
     git \
     && rm -rf /var/lib/apt/lists/* \
-    && corepack enable && corepack prepare pnpm@8.15.5 --activate
+    && corepack enable && corepack prepare pnpm@9 --activate
 WORKDIR /app
 COPY package.json pnpm-lock.yaml /app/
 
