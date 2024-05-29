@@ -10,7 +10,7 @@ importers:
     dependencies:
       '@infinite-debugger/swagger-to-ts':
         specifier: 0.1.0-alpha.124
-        version: 0.1.0-alpha.124(@types/node@20.12.12)(crypto-js@4.2.0)(date-fns@3.6.0)(typescript@5.4.5)
+        version: 0.1.0-alpha.124(@types/node@20.12.13)(crypto-js@4.2.0)(date-fns@3.6.0)(typescript@5.4.5)
       axios:
         specifier: ^1.7.2
         version: 1.7.2
@@ -44,10 +44,10 @@ importers:
         version: 1.44.1
       '@types/node':
         specifier: ^20.12.12
-        version: 20.12.12
+        version: 20.12.13
       '@vitest/coverage-v8':
         specifier: ^1.6.0
-        version: 1.6.0(vitest@1.6.0(@types/node@20.12.12))
+        version: 1.6.0(vitest@1.6.0(@types/node@20.12.13))
       prettier:
         specifier: 3.2.5
         version: 3.2.5
@@ -56,7 +56,7 @@ importers:
         version: 5.4.5
       vitest:
         specifier: 1.6.0
-        version: 1.6.0(@types/node@20.12.12)
+        version: 1.6.0(@types/node@20.12.13)
 
 packages:
 
@@ -440,8 +440,8 @@ packages:
   '@types/node@10.17.60':
     resolution: {integrity: sha512-F0KIgDJfy2nA3zMLmWGKxcH2ZVEtCZXHHdOQs2gSaQ27+lNeEfGxzkIw90aXswATX7AZ33tahPbzy6KAfUreVw==}
 
-  '@types/node@20.12.12':
-    resolution: {integrity: sha512-eWLDGF/FOSPtAvEqeRAQ4C8LSA7M1I7i0ky1I8U7kD1J5ITyW3AsRhQrKVoWf5pFKZ2kILsEGJhsI9r93PYnOw==}
+  '@types/node@20.12.13':
+    resolution: {integrity: sha512-gBGeanV41c1L171rR7wjbMiEpEI/l5XFQdLLfhr/REwpgDy/4U8y89+i8kRiLzDyZdOkXh+cRaTetUnCYutoXA==}
 
   '@types/semver@7.5.8':
     resolution: {integrity: sha512-I8EUhyrgfLrcTkzV3TSsGyl1tSuPrEDzr0yd5m90UgNxQkyDXULk3b6MlQqTCpZpNtWe1K0hzclnZkTcLBe2UQ==}
@@ -932,6 +932,7 @@ packages:
 
   glob@7.2.3:
     resolution: {integrity: sha512-nFR0zLpU2YCaRxwoCJvL6UvCH2JFyFVIvwTLsIf21AuHlMskA1hhTdk+LlYJtOlYt9v6dvszD2BGRqBL+iQK9Q==}
+    deprecated: Glob versions prior to v9 are no longer supported
 
   globals@13.24.0:
     resolution: {integrity: sha512-AhO5QUcj8llrbG09iWhPU2B204J1xnPeL8kQmVorSsy+Sjj1sk8gIyh6cUocGmH4L0UuhAJy+hJMRA4mgA4mFQ==}
@@ -1399,6 +1400,7 @@ packages:
 
   rimraf@3.0.2:
     resolution: {integrity: sha512-JZkJMZkAGFFPP2YqXZXPbMlMBgsxzE8ILs4lMIX/2o0L9UBw9O/Y3o6wFw/i9YLapcUJWwqbi3kdxIPdC62TIA==}
+    deprecated: Rimraf versions prior to v4 are no longer supported
     hasBin: true
 
   rollup@4.13.1:
@@ -1911,7 +1913,7 @@ snapshots:
       date-fns: 3.6.0
       lodash: 4.17.21
 
-  '@infinite-debugger/swagger-to-ts@0.1.0-alpha.124(@types/node@20.12.12)(crypto-js@4.2.0)(date-fns@3.6.0)(typescript@5.4.5)':
+  '@infinite-debugger/swagger-to-ts@0.1.0-alpha.124(@types/node@20.12.13)(crypto-js@4.2.0)(date-fns@3.6.0)(typescript@5.4.5)':
     dependencies:
       '@infinite-debugger/rmk-js-extensions': 0.1.0-alpha.28
       '@infinite-debugger/rmk-utils': 0.1.0-alpha.29(crypto-js@4.2.0)(date-fns@3.6.0)(lodash@4.17.21)
@@ -1922,7 +1924,7 @@ snapshots:
       lodash: 4.17.21
       pluralize: 8.0.0
       prettier: 2.8.8
-      ts-node: 10.9.2(@types/node@20.12.12)(typescript@5.4.5)
+      ts-node: 10.9.2(@types/node@20.12.13)(typescript@5.4.5)
       walk-sync: 3.0.0
       zod: 3.22.4
     transitivePeerDependencies:
@@ -2052,7 +2054,7 @@ snapshots:
 
   '@types/node@10.17.60': {}
 
-  '@types/node@20.12.12':
+  '@types/node@20.12.13':
     dependencies:
       undici-types: 5.26.5
 
@@ -2146,7 +2148,7 @@ snapshots:
 
   '@ungap/structured-clone@1.2.0': {}
 
-  '@vitest/coverage-v8@1.6.0(vitest@1.6.0(@types/node@20.12.12))':
+  '@vitest/coverage-v8@1.6.0(vitest@1.6.0(@types/node@20.12.13))':
     dependencies:
       '@ampproject/remapping': 2.3.0
       '@bcoe/v8-coverage': 0.2.3
@@ -2161,7 +2163,7 @@ snapshots:
       std-env: 3.7.0
       strip-literal: 2.0.0
       test-exclude: 6.0.0
-      vitest: 1.6.0(@types/node@20.12.12)
+      vitest: 1.6.0(@types/node@20.12.13)
     transitivePeerDependencies:
       - supports-color
 
@@ -2856,7 +2858,7 @@ snapshots:
   node-ts@6.0.1:
     dependencies:
       '@rauschma/stringio': 1.4.0
-      '@types/node': 20.12.12
+      '@types/node': 20.12.13
 
   npm-run-path@5.3.0:
     dependencies:
@@ -3259,14 +3261,14 @@ snapshots:
 
   tr46@0.0.3: {}
 
-  ts-node@10.9.2(@types/node@20.12.12)(typescript@5.4.5):
+  ts-node@10.9.2(@types/node@20.12.13)(typescript@5.4.5):
     dependencies:
       '@cspotcode/source-map-support': 0.8.1
       '@tsconfig/node10': 1.0.9
       '@tsconfig/node12': 1.0.11
       '@tsconfig/node14': 1.0.3
       '@tsconfig/node16': 1.0.4
-      '@types/node': 20.12.12
+      '@types/node': 20.12.13
       acorn: 8.11.3
       acorn-walk: 8.3.2
       arg: 4.1.3
@@ -3317,13 +3319,13 @@ snapshots:
 
   v8-compile-cache-lib@3.0.1: {}
 
-  vite-node@1.6.0(@types/node@20.12.12):
+  vite-node@1.6.0(@types/node@20.12.13):
     dependencies:
       cac: 6.7.14
       debug: 4.3.4
       pathe: 1.1.2
       picocolors: 1.0.0
-      vite: 5.2.6(@types/node@20.12.12)
+      vite: 5.2.6(@types/node@20.12.13)
     transitivePeerDependencies:
       - '@types/node'
       - less
@@ -3334,16 +3336,16 @@ snapshots:
       - supports-color
       - terser
 
-  vite@5.2.6(@types/node@20.12.12):
+  vite@5.2.6(@types/node@20.12.13):
     dependencies:
       esbuild: 0.20.2
       postcss: 8.4.38
       rollup: 4.13.1
     optionalDependencies:
-      '@types/node': 20.12.12
+      '@types/node': 20.12.13
       fsevents: 2.3.3
 
-  vitest@1.6.0(@types/node@20.12.12):
+  vitest@1.6.0(@types/node@20.12.13):
     dependencies:
       '@vitest/expect': 1.6.0
       '@vitest/runner': 1.6.0
@@ -3362,11 +3364,11 @@ snapshots:
       strip-literal: 2.0.0
       tinybench: 2.6.0
       tinypool: 0.8.3
-      vite: 5.2.6(@types/node@20.12.12)
-      vite-node: 1.6.0(@types/node@20.12.12)
+      vite: 5.2.6(@types/node@20.12.13)
+      vite-node: 1.6.0(@types/node@20.12.13)
       why-is-node-running: 2.2.2
     optionalDependencies:
-      '@types/node': 20.12.12
+      '@types/node': 20.12.13
     transitivePeerDependencies:
       - less
       - lightningcss
