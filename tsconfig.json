@@ -5,6 +5,6 @@
     "moduleResolution": "Bundler",
     "skipLibCheck": true,
     "strict": true,
-    "target": "ES2022"
+    "target": "ESNext"
   }
 }

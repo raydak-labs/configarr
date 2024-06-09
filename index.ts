@@ -259,6 +259,8 @@ const pipeline = async (value: YamlConfigInstance, arrType: ArrType) => {
         throw new Error(message);
       }
     }
+  } else if (create.length > 0 || changedQPs.length > 0) {
+    logger.info("DryRun: Would create/update QualityProfiles.");
   }
   /*
   - load trash
@@ -272,6 +274,9 @@ const pipeline = async (value: YamlConfigInstance, arrType: ArrType) => {
 };
 
 const run = async () => {
+  if (IS_DRY_RUN) {
+    logger.info("DryRun: Running in dry-run mode!");
+  }
   const applicationConfig = getConfig();
 
   await cloneRecyclarrTemplateRepo();

@@ -11,7 +11,7 @@ import { loadServerCustomFormats } from "./custom-formats";
 import { logger } from "./logger";
 import { loadQualityDefinitionFromServer } from "./quality-definitions";
 import { CFProcessing, RecyclarrMergedTemplates, YamlConfigQualityProfile, YamlConfigQualityProfileItems, YamlList } from "./types";
-import { IS_LOCAL_SAMPLE_MODE, notEmpty } from "./util";
+import { IS_LOCAL_SAMPLE_MODE, cloneWithJSON, notEmpty } from "./util";
 
 export const mapQualityProfiles = ({ carrIdMapping }: CFProcessing, customFormats: YamlList[], config: RecyclarrMergedTemplates) => {
   // QualityProfile -> (CF Name -> Scoring)
@@ -78,7 +78,11 @@ export const loadQualityProfilesFromServer = async (): Promise<QualityProfileRes
   return qualityProfiles.data as QualityProfileResource[];
 };
 
-const mapQualities = (qd: QualityDefinitionResource[], value: YamlConfigQualityProfile) => {
+// TODO should we use clones or not?
+const mapQualities = (qd_source: QualityDefinitionResource[], value_source: YamlConfigQualityProfile) => {
+  const qd = cloneWithJSON(qd_source);
+  const value = cloneWithJSON(value_source);
+
   const qdMap = new Map(qd.map((obj) => [obj.title, obj]));
 
   const allowedQualities: QualityProfileQualityItemResource[] = value.qualities.map((obj, i) => {
@@ -144,7 +148,10 @@ const mapQualities = (qd: QualityDefinitionResource[], value: YamlConfigQualityP
   return [...missingQualities, ...allowedQualities.reverse()];
 };
 
-export const compareQualities = (obj1: YamlConfigQualityProfileItems[], obj2: YamlConfigQualityProfileItems[]) => {
+export const doAllQualitiesExist = (obj1_source: YamlConfigQualityProfileItems[], obj2_source: YamlConfigQualityProfileItems[]) => {
+  const obj1 = cloneWithJSON(obj1_source);
+  const obj2 = cloneWithJSON(obj2_source);
+
   function arraysEqual(arr1: string[], arr2: string[]): boolean {
     if (arr1.length !== arr2.length) {
       return false;
@@ -183,6 +190,16 @@ export const compareQualities = (obj1: YamlConfigQualityProfileItems[], obj2: Ya
   }
 
   return true;
+};
+
+export const isOrderOfQualitiesEqual = (obj1: YamlConfigQualityProfileItems[], obj2: YamlConfigQualityProfileItems[]) => {
+  if (obj1.length !== obj2.length) {
+    return false;
+  }
+
+  return obj1.every((value, index) => {
+    return value.name === obj2[index].name;
+  });
 };
 
 export const calculateQualityProfilesDiff = async (
@@ -310,20 +327,28 @@ export const calculateQualityProfilesDiff = async (
       .filter(notEmpty);
 
     // TODO do we want to enforce the whole structure or only match those which are enabled by us?
-    if (!compareQualities(value.qualities, serverQualitiesMapped)) {
+    if (!doAllQualitiesExist(value.qualities, serverQualitiesMapped)) {
       logger.info(`QualityProfile items mismatch will update whole array`);
       diffExist = true;
 
       changeList.push(`QualityProfile items do not match`);
       updatedServerObject.items = mapQualities(qd, value);
     } else {
-      // TODO no sure if a useful feature
-      if (value.quality_sort === "top") {
-        const length = updatedServerObject.items!.length;
+      if (!isOrderOfQualitiesEqual(value.qualities, serverQualitiesMapped.toReversed())) {
+        logger.info(`QualityProfile quality order mismatch.`);
+        diffExist = true;
 
-        // TODO sorting
-      } else {
+        changeList.push(`QualityProfile quality order does not match`);
+        updatedServerObject.items = mapQualities(qd, value);
       }
+
+      // TODO no sure if a useful feature
+      // if (value.quality_sort === "top") {
+      //   const length = updatedServerObject.items!.length;
+
+      // TODO sorting
+      // } else {
+      // }
     }
 
     const qualityToId = updatedServerObject.items!.reduce<Map<string, number>>((p, c) => {

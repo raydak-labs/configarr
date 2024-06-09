@@ -197,4 +197,8 @@ export function notEmpty<TValue>(value: TValue | null | undefined): value is TVa
   return true;
 }
 
+export const cloneWithJSON = <T>(input: T): T => {
+  return JSON.parse(JSON.stringify(input));
+};
+
 export const ROOT_PATH = path.resolve(process.cwd());
