@@ -145,7 +145,14 @@ const mapQualities = (qd_source: QualityDefinitionResource[], value_source: Yaml
 
   // Ordering of items in the array matters of how they will be displayed. First is last.
   // Need to double check if always works as expected also regarding of templates etc.
-  return [...missingQualities, ...allowedQualities.reverse()];
+
+  // TODO no sure if a useful feature
+  if (value.quality_sort === "bottom") {
+    return [...allowedQualities.reverse(), ...missingQualities];
+  } else {
+    // default = top
+    return [...missingQualities, ...allowedQualities.reverse()];
+  }
 };
 
 export const doAllQualitiesExist = (obj1_source: YamlConfigQualityProfileItems[], obj2_source: YamlConfigQualityProfileItems[]) => {
@@ -341,14 +348,6 @@ export const calculateQualityProfilesDiff = async (
         changeList.push(`QualityProfile quality order does not match`);
         updatedServerObject.items = mapQualities(qd, value);
       }
-
-      // TODO no sure if a useful feature
-      // if (value.quality_sort === "top") {
-      //   const length = updatedServerObject.items!.length;
-
-      // TODO sorting
-      // } else {
-      // }
     }
 
     const qualityToId = updatedServerObject.items!.reduce<Map<string, number>>((p, c) => {
