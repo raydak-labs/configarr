@@ -161,23 +161,23 @@ export function compareObjectsCarr(object1: any, object2: any): { equal: boolean
             }
 
             if (!isEqual && changes.length <= 0) {
-              changes.push(`Mismatch found in array element at index ${i} for key ${key}`);
+              changes.push(`Mismatch found in array element at index ${i} for key '${key}'`);
             }
           }
         } else if (typeof value2 === "object" && value2 !== null) {
           if (typeof value1 !== "object" || value1 === null) {
-            changes.push(`Expected object for key ${key} in object1`);
+            changes.push(`Expected object for key '${key}' in object1`);
             continue;
           }
 
           const { equal: isEqual, changes: subChanges } = compareObjectsCarr(value1, value2);
           changes.push(...subChanges.map((subChange) => `${key}.${subChange}`));
           if (!isEqual) {
-            changes.push(`Mismatch found for key ${key}`);
+            changes.push(`Mismatch found for key '${key}'`);
           }
         } else {
           if (value1 !== value2) {
-            changes.push(`Mismatch found for key ${key}: server value ${value1}, value to set ${value2}`);
+            changes.push(`Mismatch found for key '${key}': server value '${value1}', value to set '${value2}'`);
           }
         }
       } else {
