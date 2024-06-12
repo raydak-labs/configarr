@@ -25,7 +25,7 @@ export const cloneRecyclarrTemplateRepo = async () => {
     await simpleGit().clone(applicationConfig.recyclarrConfigUrl ?? DEFAULT_RECYCLARR_GIT_URL, rootPath);
   }
 
-  await gitClient.checkout(applicationConfig.trashRevision ?? "master");
+  await gitClient.checkout(applicationConfig.recyclarrRevision ?? "master");
 
   logger.info(`Updating Recyclarr repo`);
 };
