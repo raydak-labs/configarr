@@ -51,13 +51,14 @@ export const manageCf = async (cfProcessing: CFProcessing, serverCfs: Map<string
       const comparison = compareObjectsCarr(existingCf, tr.requestConfig);
 
       if (!comparison.equal) {
-        logger.info(`Found mismatch for ${tr.requestConfig.name}. ${comparison.changes}`);
+        logger.info(`Found mismatch for ${tr.requestConfig.name}: ${comparison.changes}`);
 
         try {
           if (IS_DRY_RUN) {
             logger.info(`DryRun: Would update CF: ${existingCf.id} - ${existingCf.name}`);
+            updatedCFs++;
           } else {
-            const updateResult = await api.v3CustomformatUpdate(existingCf.id + "", {
+            await api.v3CustomformatUpdate(existingCf.id + "", {
               id: existingCf.id,
               ...tr.requestConfig,
             });

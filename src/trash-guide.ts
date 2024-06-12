@@ -20,6 +20,7 @@ const DEFAULT_TRASH_GIT_URL = "https://github.com/TRaSH-Guides/Guides";
 
 export const cloneTrashRepo = async () => {
   const rootPath = trashRepoPaths.root;
+  logger.info(`Checking TrashGuide repo (${rootPath})`);
 
   if (!fs.existsSync(rootPath)) {
     fs.mkdirSync(rootPath, { recursive: true });
@@ -34,9 +35,17 @@ export const cloneTrashRepo = async () => {
     await simpleGit().clone(applicationConfig.trashGuideUrl ?? DEFAULT_TRASH_GIT_URL, rootPath);
   }
 
-  await gitClient.checkout(applicationConfig.trashRevision ?? "master");
+  await gitClient.checkout(applicationConfig.trashRevision ?? "master", ["-f"]);
+  const result = await gitClient.status();
 
-  logger.info(`Updating TrashGuide repo`);
+  if (!result.detached) {
+    const res = await gitClient.pull();
+    if (res.files.length > 0) {
+      logger.info(`Updated TrashGuide repo.`);
+    }
+  }
+
+  logger.info(`TrashGuide repo on '${result.current}'`);
 };
 
 export const loadSonarrTrashCFs = async (arrType: ArrType): Promise<CFProcessing> => {
