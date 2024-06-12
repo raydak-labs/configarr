@@ -11,6 +11,7 @@ const DEFAULT_RECYCLARR_GIT_URL = "https://github.com/recyclarr/config-templates
 
 export const cloneRecyclarrTemplateRepo = async () => {
   const rootPath = recyclarrRepoPaths.root;
+  logger.info(`Checking Recyclarr repo (${rootPath})`);
 
   if (!fs.existsSync(rootPath)) {
     fs.mkdirSync(rootPath, { recursive: true });
@@ -25,9 +26,17 @@ export const cloneRecyclarrTemplateRepo = async () => {
     await simpleGit().clone(applicationConfig.recyclarrConfigUrl ?? DEFAULT_RECYCLARR_GIT_URL, rootPath);
   }
 
-  await gitClient.checkout(applicationConfig.recyclarrRevision ?? "master");
+  await gitClient.checkout(applicationConfig.recyclarrRevision ?? "master", ["-f"]);
+  const result = await gitClient.status();
 
-  logger.info(`Updating Recyclarr repo`);
+  if (!result.detached) {
+    const res = await gitClient.pull();
+    if (res.files.length > 0) {
+      logger.info(`Updated Recyclarr repo.`);
+    }
+  }
+
+  logger.info(`Recyclarr repo on '${result.current}'`);
 };
 
 export const getLocalTemplatePath = () => {

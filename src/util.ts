@@ -23,7 +23,6 @@ const recyclarrRadarrQPs = `${recyclarrRadarrRoot}/includes/quality-profiles`;
 const trashRepoPath = "docs/json";
 const trashRepoRoot = `${repoPath}/trash-guides`;
 const trashRepoSonarrRoot = `${trashRepoRoot}/${trashRepoPath}/sonarr`;
-
 const trashRepoRadarrRoot = `${trashRepoRoot}/${trashRepoPath}/radarr`;
 
 export const trashRepoPaths = {
