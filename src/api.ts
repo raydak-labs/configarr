@@ -1,9 +1,10 @@
 import { Api as RadarrApi } from "./__generated__/generated-radarr-api";
 import { Api as SonarrApi } from "./__generated__/generated-sonarr-api";
 import { logger } from "./logger";
+import { RadarrApiType, SonarrApiType } from "./types";
 
-let sonarrClient: SonarrApi<unknown>["api"] | undefined;
-let radarrClient: RadarrApi<unknown>["api"] | undefined;
+let sonarrClient: SonarrApiType | undefined;
+let radarrClient: RadarrApiType | undefined;
 
 export const unsetApi = () => {
   sonarrClient = undefined;
