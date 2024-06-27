@@ -28,10 +28,12 @@ const trashRepoRadarrRoot = `${trashRepoRoot}/${trashRepoPath}/radarr`;
 export const trashRepoPaths = {
   root: trashRepoRoot,
   sonarrCF: `${trashRepoSonarrRoot}/cf`,
-  sonarrQuality: `${trashRepoSonarrRoot}/quality-size`,
+  sonarrQualitySize: `${trashRepoSonarrRoot}/quality-size`,
+  sonarrQP: `${trashRepoSonarrRoot}/quality-profiles`,
   sonarrNaming: `${trashRepoSonarrRoot}/naming`,
   radarrCF: `${trashRepoRadarrRoot}/cf`,
-  radarrQuality: `${trashRepoRadarrRoot}/quality-size`,
+  radarrQualitySize: `${trashRepoRadarrRoot}/quality-size`,
+  radarrQP: `${trashRepoRadarrRoot}/quality-profiles`,
   radarrNaming: `${trashRepoRadarrRoot}/naming`,
 };
 
@@ -201,3 +203,5 @@ export const cloneWithJSON = <T>(input: T): T => {
 };
 
 export const ROOT_PATH = path.resolve(process.cwd());
+
+export const importJson = async <T>(filePath: string) => (await import(path.resolve(`${filePath}`))).default as T;

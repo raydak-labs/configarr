@@ -58,6 +58,26 @@ export type TrashCF = {
   trash_description?: string;
 } & ImportCF;
 
+type TrashQPItem = {
+  name: string;
+  allowed: boolean;
+  items?: string[];
+};
+
+export type TrashQP = {
+  trash_id: string;
+  name: string;
+  trash_score_set: keyof TrashCF["trash_scores"];
+  upgradeAllowed: boolean;
+  cutoff: string;
+  minFormatScore: number;
+  cutoffFormatScore: number;
+  items: TrashQPItem[];
+  formatItems: {
+    [key: string]: string;
+  };
+};
+
 export type ConfigarrCF = {
   configarr_id: string;
   configarr_scores?: TrashCF["trash_scores"];
@@ -96,13 +116,24 @@ export type TrashQualityDefintion = {
   qualities: TrashQualityDefintionQuality[];
 };
 
+export type YamlConfigIncludeRecyclarr = {
+  template: string;
+  type: "RECYCLARR";
+};
+
+export type YamlConfigIncludeTrash = {
+  id: string;
+  type: "TRASH";
+};
+export type YamlConfigIncludeItem = YamlConfigIncludeRecyclarr | YamlConfigIncludeTrash;
+
 export type YamlConfigInstance = {
   base_url: string;
   api_key: string;
   quality_definition?: {
     type: string;
   };
-  include?: { template: string }[];
+  include?: YamlConfigIncludeItem[];
   custom_formats: YamlList[];
   quality_profiles: YamlConfigQualityProfile[];
 };
@@ -120,7 +151,7 @@ export type YamlConfigQualityProfile = {
   };
   min_format_score: number;
   score_set: keyof TrashCF["trash_scores"];
-  quality_sort: string;
+  quality_sort: "top" | "bottom";
   qualities: YamlConfigQualityProfileItems[];
 };
 
