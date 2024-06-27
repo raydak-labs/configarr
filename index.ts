@@ -21,13 +21,29 @@ import {
   mapQualityProfiles,
 } from "./src/quality-profiles";
 import { cloneRecyclarrTemplateRepo, loadRecyclarrTemplates } from "./src/recyclarr-importer";
-import { cloneTrashRepo, loadQualityDefinitionSonarrFromTrash, loadSonarrTrashCFs } from "./src/trash-guide";
-import { ArrType, ConfigArrInstance, ConfigQualityProfile, MappedMergedTemplates, TrashQualityDefintion } from "./src/types";
+import {
+  cloneTrashRepo,
+  loadQPFromTrash,
+  loadQualityDefinitionSonarrFromTrash,
+  loadSonarrTrashCFs,
+  transformTrashQPCFs,
+  transformTrashQPToTemplate,
+} from "./src/trash-guide";
+import {
+  ArrType,
+  ConfigArrInstance,
+  ConfigQualityProfile,
+  MappedMergedTemplates,
+  TrashQualityDefintion,
+  YamlConfigIncludeRecyclarr,
+  YamlConfigIncludeTrash,
+} from "./src/types";
 import { DEBUG_CREATE_FILES, IS_DRY_RUN } from "./src/util";
 
 const pipeline = async (value: ConfigArrInstance, arrType: ArrType) => {
   const api = getArrApi();
   const recyclarrTemplateMap = loadRecyclarrTemplates(arrType);
+  const trashTemplates = await loadQPFromTrash(arrType);
 
   const recylarrMergedTemplates: MappedMergedTemplates = {
     custom_formats: [],
@@ -35,13 +51,34 @@ const pipeline = async (value: ConfigArrInstance, arrType: ArrType) => {
   };
 
   if (value.include) {
-    logger.info(`Recyclarr includes ${value.include.length} templates`);
-    logger.debug(
-      value.include.map((e) => e.template),
-      "Included templates",
+    logger.info(`Found ${value.include.length} templates to include ...`);
+
+    const mappedIncludes = value.include.reduce<{ recyclarr: YamlConfigIncludeRecyclarr[]; trash: YamlConfigIncludeTrash[] }>(
+      (previous, current) => {
+        if (current.type == null) {
+          previous.recyclarr.push(current as YamlConfigIncludeRecyclarr);
+        } else {
+          switch (current.type) {
+            case "TRASH":
+              previous.trash.push(current);
+              break;
+            case "RECYCLARR":
+              previous.recyclarr.push(current as YamlConfigIncludeRecyclarr);
+              break;
+            default:
+              logger.warn(`Unknown type for template requested: ${(current as any).type}. Ignoring.`);
+          }
+        }
+
+        return previous;
+      },
+      { recyclarr: [], trash: [] },
     );
 
-    value.include.forEach((e) => {
+    logger.debug(mappedIncludes.recyclarr, `Included ${mappedIncludes.recyclarr.length} templates [recyclarr]`);
+    logger.debug(mappedIncludes.trash, `Included ${mappedIncludes.trash.length} templates [trash]`);
+
+    mappedIncludes.recyclarr.forEach((e) => {
       const template = recyclarrTemplateMap.get(e.template);
 
       if (!template) {
@@ -64,6 +101,18 @@ const pipeline = async (value: ConfigArrInstance, arrType: ArrType) => {
       }
 
       // TODO Ignore recursive include for now
+    });
+
+    mappedIncludes.trash.forEach((e) => {
+      const template = trashTemplates.get(e.id);
+
+      if (!template) {
+        logger.info(`Unknown trash template requested: ${e.id}`);
+        return;
+      }
+
+      recylarrMergedTemplates.quality_profiles.push(transformTrashQPToTemplate(template));
+      recylarrMergedTemplates.custom_formats.push(transformTrashQPCFs(template));
     });
   }
 
@@ -103,6 +152,7 @@ const pipeline = async (value: ConfigArrInstance, arrType: ArrType) => {
   recylarrMergedTemplates.quality_profiles = filterInvalidQualityProfiles(recylarrMergedTemplates.quality_profiles);
 
   const trashCFs = await loadSonarrTrashCFs(arrType);
+
   const localFileCFs = await loadLocalCfs();
   const configCFDefinition = loadCFFromConfig();
   const mergedCFs = mergeCfSources([trashCFs, localFileCFs, configCFDefinition]);
