@@ -15,20 +15,20 @@
   "license": "ISC",
   "dependencies": {
     "@infinite-debugger/swagger-to-ts": "0.1.0-alpha.124",
-    "axios": "^1.7.2",
-    "dotenv": "^16.4.5",
-    "node-ts": "^6.1.0",
-    "pino": "^9.3.2",
-    "pino-pretty": "^11.2.2",
-    "simple-git": "^3.25.0",
-    "swagger-typescript-api": "^13.0.13",
-    "tsx": "^4.16.2",
-    "yaml": "^2.5.0"
+    "axios": "1.7.2",
+    "dotenv": "16.4.5",
+    "node-ts": "6.1.0",
+    "pino": "9.3.2",
+    "pino-pretty": "11.2.2",
+    "simple-git": "3.25.0",
+    "swagger-typescript-api": "13.0.13",
+    "tsx": "4.16.2",
+    "yaml": "2.5.0"
   },
   "devDependencies": {
-    "@playwright/test": "^1.45.3",
-    "@types/node": "^20.14.12",
-    "@vitest/coverage-v8": "^2.0.0",
+    "@playwright/test": "1.45.3",
+    "@types/node": "20.14.12",
+    "@vitest/coverage-v8": "2.0.4",
     "prettier": "3.3.3",
     "typescript": "5.5.4",
     "vitest": "2.0.4"
