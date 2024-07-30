@@ -1,0 +1,17 @@
+{
+  $schema: "https://docs.renovatebot.com/renovate-schema.json",
+  extends: [
+    "config:recommended",
+    "regexManagers:githubActionsVersions",
+    "schedule:monthly",
+    ":prConcurrentLimitNone",
+    ":prHourlyLimitNone",
+  ],
+  labels: ["dependencies"],
+  packageRules: [
+    {
+      matchUpdateTypes: ["minor", "patch", "pin"],
+      automerge: true,
+    },
+  ],
+}
