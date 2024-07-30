@@ -1,0 +1,29 @@
+{
+  $schema: "https://docs.renovatebot.com/renovate-schema.json",
+  extends: [
+    "config:recommended",
+    "regexManagers:githubActionsVersions",
+    "schedule:monthly",
+    ":prConcurrentLimitNone",
+    ":prHourlyLimitNone",
+    ":pinVersions",
+  ],
+  labels: ["dependencies"],
+  packageRules: [
+    {
+      matchUpdateTypes: ["minor", "patch", "pin"],
+      automerge: true,
+      addLabels: ["automerge"],
+    },
+    {
+      groupName: "devDependencies (non-major)",
+      matchDepTypes: ["devDependencies"],
+      matchUpdateTypes: ["patch", "minor"],
+    },
+    {
+      groupName: "dependencies (non-major)",
+      matchDepTypes: ["dependencies"],
+      matchUpdateTypes: ["patch", "minor"],
+    },
+  ],
+}
