@@ -1,5 +1,6 @@
-import { readFileSync } from "fs";
+import { existsSync, readFileSync } from "fs";
 import yaml from "yaml";
+import { logger } from "./logger";
 import { YamlConfig } from "./types";
 import { ROOT_PATH } from "./util";
 
@@ -24,6 +25,11 @@ export const getConfig = (): YamlConfig => {
     return config;
   }
 
+  if (!existsSync(CONFIG_LOCATION)) {
+    logger.error(`Config file in location "${CONFIG_LOCATION}" does not exists.`);
+    throw new Error("Config file not found.");
+  }
+
   const file = readFileSync(CONFIG_LOCATION, "utf8");
   config = yaml.parse(file, { customTags: [secretsTag] }) as YamlConfig;
   return config;
@@ -32,6 +38,11 @@ export const getConfig = (): YamlConfig => {
 export const getSecrets = () => {
   if (secrets) {
     return secrets;
+  }
+
+  if (!existsSync(SECRETS_LOCATION)) {
+    logger.error(`Secret file in location "${SECRETS_LOCATION}" does not exists.`);
+    throw new Error("Secret file not found.");
   }
 
   const file = readFileSync(SECRETS_LOCATION, "utf8");
