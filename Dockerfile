@@ -17,6 +17,7 @@ FROM base
 COPY index.ts /app/
 COPY src/ /app/src/
 COPY --from=prod-deps /app/node_modules /app/node_modules
+RUN corepack use pnpm@9
 
 ENV CONFIG_LOCATION=/app/config/config.yml
 ENV SECRETS_LOCATION=/app/config/secrets.yml
