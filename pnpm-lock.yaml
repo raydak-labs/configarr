@@ -30,11 +30,11 @@ importers:
         specifier: 3.25.0
         version: 3.25.0
       swagger-typescript-api:
-        specifier: 13.0.13
-        version: 13.0.13
+        specifier: 13.0.14
+        version: 13.0.14
       tsx:
-        specifier: 4.16.2
-        version: 4.16.2
+        specifier: 4.16.3
+        version: 4.16.3
       yaml:
         specifier: 2.5.0
         version: 2.5.0
@@ -1667,8 +1667,8 @@ packages:
   swagger-schema-official@2.0.0-bab6bed:
     resolution: {integrity: sha512-rCC0NWGKr/IJhtRuPq/t37qvZHI/mH4I4sxflVM+qgVe5Z2uOCivzWaVbuioJaB61kvm5UvB7b49E+oBY0M8jA==}
 
-  swagger-typescript-api@13.0.13:
-    resolution: {integrity: sha512-6TF2q6I70RGBElTT37IhoOLcQjCbNfRnefx9HbbU+kNl5Mvw5xk3gcOFlhTtkk/YDu9MXfT/yxfdJgZO7R5BSQ==}
+  swagger-typescript-api@13.0.14:
+    resolution: {integrity: sha512-4jiwEkYA8qemu0o0TU0gYir9GkhEXUmhp6JPGfj720mS6W+xB5WbbkVcgCdcfoYXpjUz02o677CEFa0OyhM3hQ==}
     engines: {node: '>=18.0.0'}
     hasBin: true
 
@@ -1735,8 +1735,8 @@ packages:
     peerDependencies:
       typescript: '>=2.8.0 || >= 3.2.0-dev || >= 3.3.0-dev || >= 3.4.0-dev || >= 3.5.0-dev || >= 3.6.0-dev || >= 3.6.0-beta || >= 3.7.0-dev || >= 3.7.0-beta'
 
-  tsx@4.16.2:
-    resolution: {integrity: sha512-C1uWweJDgdtX2x600HjaFaucXTilT7tgUZHbOE4+ypskZ1OP8CRCSDkCxG6Vya9EwaFIVagWwpaVAn5wzypaqQ==}
+  tsx@4.16.3:
+    resolution: {integrity: sha512-MP8AEUxVnboD2rCC6kDLxnpDBNWN9k3BSVU/0/nNxgm70bPBnfn+yCKcnOsIVPQwdkbKYoFOlKjjWZWJ2XCXUg==}
     engines: {node: '>=18.0.0'}
     hasBin: true
 
@@ -3430,7 +3430,7 @@ snapshots:
 
   swagger-schema-official@2.0.0-bab6bed: {}
 
-  swagger-typescript-api@13.0.13:
+  swagger-typescript-api@13.0.14:
     dependencies:
       '@types/swagger-schema-official': 2.0.25
       cosmiconfig: 9.0.0(typescript@5.5.4)
@@ -3516,7 +3516,7 @@ snapshots:
       tslib: 1.14.1
       typescript: 5.5.4
 
-  tsx@4.16.2:
+  tsx@4.16.3:
     dependencies:
       esbuild: 0.21.5
       get-tsconfig: 4.7.5
