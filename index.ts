@@ -277,6 +277,7 @@ const run = async () => {
   if (IS_DRY_RUN) {
     logger.info("DryRun: Running in dry-run mode!");
   }
+
   const applicationConfig = getConfig();
 
   await cloneRecyclarrTemplateRepo();
