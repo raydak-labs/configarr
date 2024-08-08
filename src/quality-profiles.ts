@@ -24,6 +24,8 @@ export const mapQualityProfiles = ({ carrIdMapping }: CFProcessing, customFormat
       continue;
     }
 
+    //logger.info(customFormats);
+    //logger.info(quality_profiles);
     for (const profile of quality_profiles) {
       for (const trashId of trash_ids) {
         const carr = carrIdMapping.get(trashId);

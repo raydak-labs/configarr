@@ -22,14 +22,14 @@ import {
 } from "./src/quality-profiles";
 import { cloneRecyclarrTemplateRepo, loadRecyclarrTemplates } from "./src/recyclarr-importer";
 import { cloneTrashRepo, loadQualityDefinitionSonarrFromTrash, loadSonarrTrashCFs } from "./src/trash-guide";
-import { ArrType, RecyclarrMergedTemplates, TrashQualityDefintion, YamlConfigInstance, YamlConfigQualityProfile } from "./src/types";
+import { ArrType, MappedMergedTemplates, TrashQualityDefintion, YamlConfigInstance, YamlConfigQualityProfile } from "./src/types";
 import { DEBUG_CREATE_FILES, IS_DRY_RUN } from "./src/util";
 
 const pipeline = async (value: YamlConfigInstance, arrType: ArrType) => {
   const api = getArrApi();
   const recyclarrTemplateMap = loadRecyclarrTemplates(arrType);
 
-  const recylarrMergedTemplates: RecyclarrMergedTemplates = {
+  const recylarrMergedTemplates: MappedMergedTemplates = {
     custom_formats: [],
     quality_profiles: [],
   };

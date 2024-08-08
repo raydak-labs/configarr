@@ -4,7 +4,7 @@ import simpleGit, { CheckRepoActions } from "simple-git";
 import yaml from "yaml";
 import { getConfig } from "./config";
 import { logger } from "./logger";
-import { ArrType, RecyclarrTemplates } from "./types";
+import { ArrType, MappedTemplates, RecyclarrTemplates } from "./types";
 import { recyclarrRepoPaths } from "./util";
 
 const DEFAULT_RECYCLARR_GIT_URL = "https://github.com/recyclarr/config-templates";
@@ -57,7 +57,7 @@ export const getLocalTemplatePath = () => {
   return customPath;
 };
 
-export const loadRecyclarrTemplates = (arrType: ArrType) => {
+export const loadRecyclarrTemplates = (arrType: ArrType): Map<string, MappedTemplates> => {
   const map = new Map<string, RecyclarrTemplates>();
 
   const fillMap = (path: string) => {
@@ -82,5 +82,23 @@ export const loadRecyclarrTemplates = (arrType: ArrType) => {
     fillMap(localPath);
   }
 
-  return map;
+  return new Map(
+    Array.from(map, ([k, v]) => {
+      const customFormats = v.custom_formats?.map((cf) => {
+        // Changes from Recyclarr 7.2.0: https://github.com/recyclarr/recyclarr/releases/tag/v7.2.0
+        if (cf.assign_scores_to == null && cf.quality_profiles == null) {
+          logger.warn(`Recyclarr Template "${k}" does not provide correct profile for custom format. Ignoring.`);
+        }
+        return { ...cf, quality_profiles: cf.assign_scores_to ?? cf.quality_profiles ?? [] };
+      });
+
+      return [
+        k,
+        {
+          ...v,
+          custom_formats: customFormats,
+        },
+      ];
+    }),
+  );
 };
