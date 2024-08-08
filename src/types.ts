@@ -96,6 +96,14 @@ export type TrashQualityDefintion = {
   qualities: TrashQualityDefintionQuality[];
 };
 
+export type RecyclarrCustomFormats = Partial<Pick<YamlList, "trash_ids" | "quality_profiles">> & {
+  assign_scores_to?: { name: string; score?: number }[];
+};
+
+export type RecyclarrConfigInstance = Omit<YamlConfigInstance, "custom_formats"> & {
+  custom_formats: RecyclarrCustomFormats[];
+};
+
 export type YamlConfigInstance = {
   base_url: string;
   api_key: string;
@@ -130,10 +138,14 @@ export type YamlConfigQualityProfileItems = {
 };
 
 export type RecyclarrTemplates = Partial<
-  Pick<YamlConfigInstance, "quality_definition" | "custom_formats" | "include" | "quality_profiles">
+  Pick<RecyclarrConfigInstance, "quality_definition" | "custom_formats" | "include" | "quality_profiles">
 >;
 
 export type RecyclarrMergedTemplates = RecyclarrTemplates & Required<Pick<RecyclarrTemplates, "custom_formats" | "quality_profiles">>;
+
+export type MappedTemplates = Partial<Pick<YamlConfigInstance, "quality_definition" | "custom_formats" | "include" | "quality_profiles">>;
+
+export type MappedMergedTemplates = MappedTemplates & Required<Pick<MappedTemplates, "custom_formats" | "quality_profiles">>;
 
 export type YamlConfig = {
   trashGuideUrl: string;
