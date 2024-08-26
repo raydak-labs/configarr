@@ -19,6 +19,22 @@ const secretsTag = {
   },
 };
 
+const envTag = {
+  identify: (value: any) => value instanceof String,
+  tag: "!env",
+  resolve(str: string) {
+    const envValue = process.env[str];
+
+    if (!envValue) {
+      const message = `Environment variables '${str}' is not set.`;
+      logger.error(message);
+      throw new Error(message);
+    }
+
+    return envValue;
+  },
+};
+
 // TODO some schema validation. For now only check if something can be imported
 export const getConfig = (): YamlConfig => {
   if (config) {
@@ -31,7 +47,7 @@ export const getConfig = (): YamlConfig => {
   }
 
   const file = readFileSync(CONFIG_LOCATION, "utf8");
-  config = yaml.parse(file, { customTags: [secretsTag] }) as YamlConfig;
+  config = yaml.parse(file, { customTags: [secretsTag, envTag] }) as YamlConfig;
   return config;
 };
 

@@ -70,6 +70,14 @@ Possible ideas:
 - [x] Local recyclarr templates to include
 - [ ] Clone existing templates: Lets say you want the same template but with a different name?
 
+## Configuration
+
+- `config.yml`
+  - Check the template file [template](./config.yml.template) or check the examples.
+  - You can provide values with the custom tags:
+    - `value: !secret secretKey`: Loads the value from the secrets file with the key `secretKey`
+    - `value: !env ENV_NAME`: Loads the value from the environment variable `ENV_NAME`
+
 ## Custom formats
 
 This repository also provide additional custom formats what TrashGuide does not offer.
