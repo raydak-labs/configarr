@@ -11,35 +11,6 @@ Other projects:
 - https://notifiarr.wiki/
 - https://github.com/Dictionarry-Hub/profilarr
 
-This is in very early development and trial stage to see if this is something we want to offer or not.
-
-> :warning: **This is in very early development and trial stage to see if this is something we want to offer or not.**
-
-Possible ideas:
-
-- keep support for syncing trash guides
-  - I like the possible configuration in recyclarr but I miss some features
-- add support for local configuration to include
-  - I don't want to fork a project to add custom things to it
-- Maybe an free GUI to sync your stuff
-- Add additional best configuration for different languages/countries like Germany
-- Define CustomFormats directly in configuration maybe something like (directly translated JSON -> YAML?)
-  Not sure if useful if we already have to capability to provide own formats via JSON folder (additional those JSON are directly compatible with UI Import)
-  ```yaml
-  customFormats:
-  - name: NewCF
-    score: 125
-    includeCustomFormatWhenRenaming: false
-    specifications:
-    - name: Size
-      implementation: SizeSpecification
-      negate: false
-      required: true
-      fields:
-        min: 1
-        max: 9
-  ```
-
 ## Features
 
 - Use TrashGuide defined custom formats
@@ -53,28 +24,6 @@ Possible ideas:
   - Provide CFs directly in config (Convert JSON with https://www.bairesdev.com/tools/json2yaml/)
   - Merge order is `TrashGuide -> LocalFiles -> CFs in Config`
 
-## Work TODOs
-
-- [ ] Optimize types. Generated ones work for first step but not very optimal because they do not correctly represent request/response types.
-- [x] Default scores from trash guide
-- [x] Radarr support
-- [x] Debug logging switchable
-- [x] Improved Diff output
-- [ ] Feature completion with recyclarr
-- [x] Cross references to:
-  - [x] https://github.com/PCJones/radarr-sonarr-german-dual-language
-  - [x] https://github.com/PCJones/usenet-guide
-- [x] Build docker container
-- [x] Build multi arch containers
-- [x] Add Github Actions stuff
-- [x] Improve code & tidy up lint errors
-- [x] write docs for running with container
-  - [x] Plain docker
-  - [x] Kubernetes
-- [ ] Simple Config validation
-- [x] Local recyclarr templates to include
-- [ ] Clone existing templates: Lets say you want the same template but with a different name?
-
 ## Configuration
 
 - `config.yml`
@@ -86,7 +35,8 @@ Possible ideas:
 ## Custom formats
 
 This repository also provide additional custom formats what TrashGuide does not offer.
-At the moment this is mostly focused on German related stuff.
+
+See [here](./custom/cfs/)
 
 - Most CustomFormats used from @PCJones
   - See here: https://github.com/PCJones/radarr-sonarr-german-dual-language
@@ -94,17 +44,44 @@ At the moment this is mostly focused on German related stuff.
 
 ### How to add own CustomFormats
 
-- You can simply use the JSON export from Sonarr/Radarr
-- What you have to add at least is to the field `trash_id` or `configarr_id` to the JSON.
+- You have two ways to provide own custom formats:
+  - `As file`
+    - Export from Sonarr/Radarr instance UI (in the CustomFormats list you have two icons for each custom format: clone and export)
+    - Or use existing custom formats from recyclarr or trash guide
+  - `As yaml`: You can also directly implement the custom format in the config.
+    It follows the same keys as the JSON format.
+
+    ```yaml
+    # config.yml
+    customFormatDefinitions:
+      - trash_id: custom-de-only
+        trash_scores:
+          default: -10000
+        trash_description: "Language: German Only"
+        name: "Language: Not German"
+        includeCustomFormatWhenRenaming: false
+        specifications:
+          - name: Not German Language
+            implementation: LanguageSpecification
+            negate: true
+            required: false
+            fields:
+              value: 4
+    ```
+- What you have to add at least is to the field `trash_id` or `configarr_id` to the JSON/YAML.
   The ID can be anything you like but should not conflict with other CustomFormats.
   Otherwise those will be overwritten during merge process.
+
 ```json
 {
   "configarr_id": "your_own_id",
-  ...
+  ...other content from export
 }
 ```
-- After adding the ID you can simply reference it in the `config.yml` to add it to the QualityProfiles.
+- Add it as custom format location in your `config.yml`
+- After adding the ID you can simply reference it in the `config.yml` to add it to the QualityProfiles. `localCustomFormatsPath: /your/path/cfs`
+
+> :scroll: You can see an example here [Examples / Full](./examples/full/cfs/custom-size-bigger-40gb.json). Or copy the existing custom formats [custom](./custom/cfs/) in your location.
 
 ## Development
 
