@@ -6,6 +6,11 @@ Supporting only Sonarr v4 and radarr v4.
 
 This will be a project similar to [Recyclarr](https://github.com/recyclarr/recyclarr) or [Notifiarr](https://notifiarr.wiki/) but support for additional specification and not only what [TrashGuides](https://trash-guides.info/) offer.
 
+Other projects:
+- https://github.com/recyclarr/recyclarr
+- https://notifiarr.wiki/
+- https://github.com/Dictionarry-Hub/profilarr
+
 This is in very early development and trial stage to see if this is something we want to offer or not.
 
 > :warning: **This is in very early development and trial stage to see if this is something we want to offer or not.**
