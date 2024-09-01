@@ -15,14 +15,14 @@
   "license": "ISC",
   "dependencies": {
     "@infinite-debugger/swagger-to-ts": "0.1.0-alpha.124",
-    "axios": "1.7.2",
+    "axios": "1.7.7",
     "dotenv": "16.4.5",
-    "node-ts": "6.1.0",
+    "node-ts": "6.1.2",
     "pino": "9.3.2",
     "pino-pretty": "11.2.2",
     "simple-git": "3.25.0",
-    "swagger-typescript-api": "13.0.14",
-    "tsx": "4.16.3",
+    "swagger-typescript-api": "13.0.22",
+    "tsx": "4.19.0",
     "yaml": "2.5.0"
   },
   "devDependencies": {
