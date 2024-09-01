@@ -26,8 +26,8 @@
     "yaml": "2.5.0"
   },
   "devDependencies": {
-    "@playwright/test": "1.45.3",
-    "@types/node": "22.0.2",
+    "@playwright/test": "1.46.1",
+    "@types/node": "22.5.1",
     "@vitest/coverage-v8": "2.0.5",
     "prettier": "3.3.3",
     "typescript": "5.5.4",
