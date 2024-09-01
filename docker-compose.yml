@@ -13,7 +13,7 @@ services:
       - ./custom/templates:/app/templates
 
   sonarr:
-    image: lscr.io/linuxserver/sonarr:4.0.8
+    image: lscr.io/linuxserver/sonarr:4.0.9
     container_name: sonarr
     environment:
       - PUID=1000
