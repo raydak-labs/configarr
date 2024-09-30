@@ -88,25 +88,8 @@ export const mapImportCfToRequestCf = (cf: TrashCF | ConfigarrCF): CustomFormatR
       throw new Error(`Spec is not correctly defined: ${spec.name}`);
     }
 
-    switch (spec.implementation) {
-      case "SizeSpecification":
-        newFields.push({
-          name: "min",
-          value: spec.fields.min,
-        });
-        newFields.push({
-          name: "max",
-          value: spec.fields.max,
-        });
-        break;
-      case "ReleaseTitleSpecification":
-      case "LanguageSpecification":
-      default:
-        newFields.push({
-          value: spec.fields.value,
-        });
-        break;
-    }
+    // 2024-09-30: Test if this handles all cases
+    newFields.push(...Object.entries(spec.fields).map(([key, value]) => ({ name: key, value })));
 
     return {
       ...spec,
