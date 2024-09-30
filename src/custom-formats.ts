@@ -67,8 +67,8 @@ export const manageCf = async (cfProcessing: CFProcessing, serverCfs: Map<string
           }
         } catch (err: any) {
           logger.error(err.response.data, `Failed updating CF ${tr.requestConfig.name}`);
-          throw new Error(`Failed updating CF ${tr.requestConfig.name}`);
           errorCFs++;
+          throw new Error(`Failed updating CF ${tr.requestConfig.name}`);
         }
       } else {
         logger.debug(`CF ${tr.requestConfig.name} does not need update.`);

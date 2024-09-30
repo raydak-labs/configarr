@@ -2,13 +2,17 @@ import { CustomFormatResource, CustomFormatSpecificationSchema } from "./__gener
 
 export type DynamicImportType<T> = { default: T };
 
+type RequireAtLeastOne<T> = {
+  [K in keyof T]-?: Required<Pick<T, K>> & Partial<Pick<T, Exclude<keyof T, K>>>;
+}[keyof T];
+
 /** Used in the UI of Sonarr/Radarr to import. Trash JSON are based on that so users can copy&paste stuff */
 export type UserFriendlyField = {
-  name?: string | null;
+  name?: string | null; // TODO validate if this can really appear? As Input
   value?: any;
 } & Pick<CustomFormatSpecificationSchema, "negate" | "required">;
 
-export type TrashCFSpF = { min: number; max: number };
+export type TrashCFSpF = { min: number; max: number; exceptLanguage: boolean; value: any };
 
 /*
 Language values:
@@ -26,12 +30,12 @@ export type CustomFormatImportImplementation =
 
 export type TC1 = Omit<CustomFormatSpecificationSchema, "fields"> & {
   implementation: "ReleaseTitleSpecification" | "LanguageSpecification";
-  fields?: UserFriendlyField | null;
+  fields?: RequireAtLeastOne<TrashCFSpF> | null;
 };
 
 export type TC2 = Omit<CustomFormatSpecificationSchema, "fields"> & {
   implementation: "SizeSpecification";
-  fields?: TrashCFSpF;
+  fields?: RequireAtLeastOne<TrashCFSpF>;
 };
 
 export type TCM = TC1 | TC2;

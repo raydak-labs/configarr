@@ -163,7 +163,8 @@ export interface CommandResource {
   started?: string | null;
   /** @format date-time */
   ended?: string | null;
-  duration?: TimeSpan;
+  /** @format date-span */
+  duration?: string | null;
   exception?: string | null;
   trigger?: CommandTrigger;
   clientUserAgent?: string | null;
@@ -203,6 +204,12 @@ export interface CustomFilterResource {
   type?: string | null;
   label?: string | null;
   filters?: Record<string, any>[] | null;
+}
+
+export interface CustomFormatBulkResource {
+  /** @uniqueItems true */
+  ids?: number[] | null;
+  includeCustomFormatWhenRenaming?: boolean | null;
 }
 
 export interface CustomFormatResource {
@@ -339,8 +346,7 @@ export interface EpisodeFileResource {
   customFormatScore?: number;
   /** @format int32 */
   indexerFlags?: number | null;
-  /** @format int32 */
-  releaseType?: number | null;
+  releaseType?: ReleaseType;
   mediaInfo?: MediaInfoResource;
   qualityCutoffNotMet?: boolean;
 }
@@ -373,6 +379,8 @@ export interface EpisodeResource {
   airDate?: string | null;
   /** @format date-time */
   airDateUtc?: string | null;
+  /** @format date-time */
+  lastSearchTime?: string | null;
   /** @format int32 */
   runtime?: number;
   finaleType?: string | null;
@@ -393,10 +401,8 @@ export interface EpisodeResource {
   endTime?: string | null;
   /** @format date-time */
   grabDate?: string | null;
-  seriesTitle?: string | null;
   series?: SeriesResource;
   images?: MediaCover[] | null;
-  grabbed?: boolean;
 }
 
 export interface EpisodeResourcePagingResource {
@@ -517,6 +523,8 @@ export interface HostConfigResource {
   password?: string | null;
   passwordConfirmation?: string | null;
   logLevel?: string | null;
+  /** @format int32 */
+  logSizeLimit?: number;
   consoleLogLevel?: string | null;
   branch?: string | null;
   apiKey?: string | null;
@@ -574,6 +582,11 @@ export interface ImportListConfigResource {
   listSyncTag?: number;
 }
 
+export interface ImportListExclusionBulkResource {
+  /** @uniqueItems true */
+  ids?: number[] | null;
+}
+
 export interface ImportListExclusionResource {
   /** @format int32 */
   id?: number;
@@ -619,7 +632,8 @@ export interface ImportListResource {
   listType?: ImportListType;
   /** @format int32 */
   listOrder?: number;
-  minRefreshInterval?: TimeSpan;
+  /** @format date-span */
+  minRefreshInterval?: string;
 }
 
 export enum ImportListType {
@@ -938,6 +952,7 @@ export interface NamingConfigResource {
   replaceIllegalCharacters?: boolean;
   /** @format int32 */
   colonReplacementFormat?: number;
+  customColonReplacementFormat?: string | null;
   /** @format int32 */
   multiEpisodeStyle?: number;
   standardEpisodeFormat?: string | null;
@@ -970,18 +985,21 @@ export interface NotificationResource {
   onGrab?: boolean;
   onDownload?: boolean;
   onUpgrade?: boolean;
+  onImportComplete?: boolean;
   onRename?: boolean;
   onSeriesAdd?: boolean;
   onSeriesDelete?: boolean;
   onEpisodeFileDelete?: boolean;
   onEpisodeFileDeleteForUpgrade?: boolean;
   onHealthIssue?: boolean;
+  includeHealthWarnings?: boolean;
   onHealthRestored?: boolean;
   onApplicationUpdate?: boolean;
   onManualInteractionRequired?: boolean;
   supportsOnGrab?: boolean;
   supportsOnDownload?: boolean;
   supportsOnUpgrade?: boolean;
+  supportsOnImportComplete?: boolean;
   supportsOnRename?: boolean;
   supportsOnSeriesAdd?: boolean;
   supportsOnSeriesDelete?: boolean;
@@ -991,7 +1009,6 @@ export interface NotificationResource {
   supportsOnHealthRestored?: boolean;
   supportsOnApplicationUpdate?: boolean;
   supportsOnManualInteractionRequired?: boolean;
-  includeHealthWarnings?: boolean;
   testCommand?: string | null;
 }
 
@@ -1025,6 +1042,7 @@ export interface ParsedEpisodeInfo {
   isMultiSeason?: boolean;
   isSeasonExtra?: boolean;
   isSplitEpisode?: boolean;
+  isMiniSeries?: boolean;
   special?: boolean;
   releaseGroup?: string | null;
   releaseHash?: string | null;
@@ -1093,6 +1111,13 @@ export interface Quality {
   resolution?: number;
 }
 
+export interface QualityDefinitionLimitsResource {
+  /** @format int32 */
+  min?: number;
+  /** @format int32 */
+  max?: number;
+}
+
 export interface QualityDefinitionResource {
   /** @format int32 */
   id?: number;
@@ -1134,6 +1159,8 @@ export interface QualityProfileResource {
   minFormatScore?: number;
   /** @format int32 */
   cutoffFormatScore?: number;
+  /** @format int32 */
+  minUpgradeFormatScore?: number;
   formatItems?: ProfileFormatItemResource[] | null;
 }
 
@@ -1173,7 +1200,8 @@ export interface QueueResource {
   title?: string | null;
   /** @format double */
   sizeleft?: number;
-  timeleft?: TimeSpan;
+  /** @format date-span */
+  timeleft?: string | null;
   /** @format date-time */
   estimatedCompletionTime?: string | null;
   /** @format date-time */
@@ -1308,6 +1336,7 @@ export interface ReleaseResource {
   tvdbId?: number;
   /** @format int32 */
   tvRageId?: number;
+  imdbId?: string | null;
   rejections?: string[] | null;
   /** @format date-time */
   publishDate?: string;
@@ -1505,6 +1534,8 @@ export interface SeriesResource {
   tvRageId?: number;
   /** @format int32 */
   tvMazeId?: number;
+  /** @format int32 */
+  tmdbId?: number;
   /** @format date-time */
   firstAired?: string | null;
   /** @format date-time */
@@ -1597,11 +1628,11 @@ export interface SystemResource {
   mode?: RuntimeMode;
   branch?: string | null;
   authentication?: AuthenticationType;
-  sqliteVersion?: Version;
+  sqliteVersion?: string | null;
   /** @format int32 */
   migrationVersion?: number;
   urlBase?: string | null;
-  runtimeVersion?: Version;
+  runtimeVersion?: string | null;
   runtimeName?: string | null;
   /** @format date-time */
   startTime?: string;
@@ -1609,7 +1640,7 @@ export interface SystemResource {
   packageAuthor?: string | null;
   packageUpdateMechanism?: UpdateMechanism;
   packageUpdateMechanismMessage?: string | null;
-  databaseVersion?: Version;
+  databaseVersion?: string | null;
   databaseType?: DatabaseType;
 }
 
@@ -1646,36 +1677,13 @@ export interface TaskResource {
   lastStartTime?: string;
   /** @format date-time */
   nextExecution?: string;
-  lastDuration?: TimeSpan;
-}
-
-export interface TimeSpan {
-  /** @format int64 */
-  ticks?: number;
-  /** @format int32 */
-  days?: number;
-  /** @format int32 */
-  hours?: number;
-  /** @format int32 */
-  milliseconds?: number;
-  /** @format int32 */
-  minutes?: number;
-  /** @format int32 */
-  seconds?: number;
-  /** @format double */
-  totalDays?: number;
-  /** @format double */
-  totalHours?: number;
-  /** @format double */
-  totalMilliseconds?: number;
-  /** @format double */
-  totalMinutes?: number;
-  /** @format double */
-  totalSeconds?: number;
+  /** @format date-span */
+  lastDuration?: string;
 }
 
 export enum TrackedDownloadState {
   Downloading = "downloading",
+  ImportBlocked = "importBlocked",
   ImportPending = "importPending",
   Importing = "importing",
   Imported = "imported",
@@ -1733,7 +1741,7 @@ export enum UpdateMechanism {
 export interface UpdateResource {
   /** @format int32 */
   id?: number;
-  version?: Version;
+  version?: string | null;
   branch?: string | null;
   /** @format date-time */
   releaseDate?: string;
@@ -1746,21 +1754,6 @@ export interface UpdateResource {
   latest?: boolean;
   changes?: UpdateChanges;
   hash?: string | null;
-}
-
-export interface Version {
-  /** @format int32 */
-  major?: number;
-  /** @format int32 */
-  minor?: number;
-  /** @format int32 */
-  build?: number;
-  /** @format int32 */
-  revision?: number;
-  /** @format int32 */
-  majorRevision?: number;
-  /** @format int32 */
-  minorRevision?: number;
 }
 
 import type { AxiosInstance, AxiosRequestConfig, AxiosResponse, HeadersDefaults, ResponseType } from "axios";
@@ -1786,7 +1779,9 @@ export interface FullRequestParams extends Omit<AxiosRequestConfig, "data" | "pa
 export type RequestParams = Omit<FullRequestParams, "body" | "method" | "query" | "path">;
 
 export interface ApiConfig<SecurityDataType = unknown> extends Omit<AxiosRequestConfig, "data" | "cancelToken"> {
-  securityWorker?: (securityData: SecurityDataType | null) => Promise<AxiosRequestConfig | void> | AxiosRequestConfig | void;
+  securityWorker?: (
+    securityData: SecurityDataType | null,
+  ) => Promise<AxiosRequestConfig | void> | AxiosRequestConfig | void;
   secure?: boolean;
   format?: ResponseType;
 }
@@ -1840,6 +1835,9 @@ export class HttpClient<SecurityDataType = unknown> {
   }
 
   protected createFormData(input: Record<string, unknown>): FormData {
+    if (input instanceof FormData) {
+      return input;
+    }
     return Object.keys(input || {}).reduce((formData, key) => {
       const property = input[key];
       const propertyContent: any[] = property instanceof Array ? property : [property];
@@ -1863,7 +1861,10 @@ export class HttpClient<SecurityDataType = unknown> {
     ...params
   }: FullRequestParams): Promise<AxiosResponse<T>> => {
     const secureParams =
-      ((typeof secure === "boolean" ? secure : this.secure) && this.securityWorker && (await this.securityWorker(this.securityData))) || {};
+      ((typeof secure === "boolean" ? secure : this.secure) &&
+        this.securityWorker &&
+        (await this.securityWorker(this.securityData))) ||
+      {};
     const requestParams = this.mergeRequestParams(params, secureParams);
     const responseFormat = format || this.format || undefined;
 
@@ -1879,7 +1880,7 @@ export class HttpClient<SecurityDataType = unknown> {
       ...requestParams,
       headers: {
         ...(requestParams.headers || {}),
-        ...(type && type !== ContentType.FormData ? { "Content-Type": type } : {}),
+        ...(type ? { "Content-Type": type } : {}),
       },
       params: query,
       responseType: responseFormat,
@@ -2122,6 +2123,8 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         pageSize?: number;
         sortKey?: string;
         sortDirection?: SortDirection;
+        seriesIds?: number[];
+        protocols?: DownloadProtocol[];
       },
       params: RequestParams = {},
     ) =>
@@ -2382,6 +2385,23 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags CustomFormat
+     * @name V3CustomformatList
+     * @request GET:/api/v3/customformat
+     * @secure
+     */
+    v3CustomformatList: (params: RequestParams = {}) =>
+      this.request<CustomFormatResource[], any>({
+        path: `/api/v3/customformat`,
+        method: "GET",
+        secure: true,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags CustomFormat
      * @name V3CustomformatCreate
      * @request POST:/api/v3/customformat
      * @secure
@@ -2393,23 +2413,6 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         body: data,
         secure: true,
         type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags CustomFormat
-     * @name V3CustomformatList
-     * @request GET:/api/v3/customformat
-     * @secure
-     */
-    v3CustomformatList: (params: RequestParams = {}) =>
-      this.request<CustomFormatResource[], any>({
-        path: `/api/v3/customformat`,
-        method: "GET",
-        secure: true,
         format: "json",
         ...params,
       }),
@@ -2463,6 +2466,43 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         method: "GET",
         secure: true,
         format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags CustomFormat
+     * @name V3CustomformatBulkUpdate
+     * @request PUT:/api/v3/customformat/bulk
+     * @secure
+     */
+    v3CustomformatBulkUpdate: (data: CustomFormatBulkResource, params: RequestParams = {}) =>
+      this.request<CustomFormatResource, any>({
+        path: `/api/v3/customformat/bulk`,
+        method: "PUT",
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags CustomFormat
+     * @name V3CustomformatBulkDelete
+     * @request DELETE:/api/v3/customformat/bulk
+     * @secure
+     */
+    v3CustomformatBulkDelete: (data: CustomFormatBulkResource, params: RequestParams = {}) =>
+      this.request<void, any>({
+        path: `/api/v3/customformat/bulk`,
+        method: "DELETE",
+        body: data,
+        secure: true,
+        type: ContentType.Json,
         ...params,
       }),
 
@@ -2838,10 +2878,18 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request POST:/api/v3/downloadclient/test
      * @secure
      */
-    v3DownloadclientTestCreate: (data: DownloadClientResource, params: RequestParams = {}) =>
+    v3DownloadclientTestCreate: (
+      data: DownloadClientResource,
+      query?: {
+        /** @default false */
+        forceTest?: boolean;
+      },
+      params: RequestParams = {},
+    ) =>
       this.request<void, any>({
         path: `/api/v3/downloadclient/test`,
         method: "POST",
+        query: query,
         body: data,
         secure: true,
         type: ContentType.Json,
@@ -2952,6 +3000,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         episodeIds?: number[];
         /** @format int32 */
         episodeFileId?: number;
+        /** @default false */
+        includeSeries?: boolean;
+        /** @default false */
+        includeEpisodeFile?: boolean;
         /** @default false */
         includeImages?: boolean;
       },
@@ -3585,10 +3637,18 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request POST:/api/v3/importlist/test
      * @secure
      */
-    v3ImportlistTestCreate: (data: ImportListResource, params: RequestParams = {}) =>
+    v3ImportlistTestCreate: (
+      data: ImportListResource,
+      query?: {
+        /** @default false */
+        forceTest?: boolean;
+      },
+      params: RequestParams = {},
+    ) =>
       this.request<void, any>({
         path: `/api/v3/importlist/test`,
         method: "POST",
+        query: query,
         body: data,
         secure: true,
         type: ContentType.Json,
@@ -3808,6 +3868,24 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     /**
      * No description
      *
+     * @tags ImportListExclusion
+     * @name V3ImportlistexclusionBulkDelete
+     * @request DELETE:/api/v3/importlistexclusion/bulk
+     * @secure
+     */
+    v3ImportlistexclusionBulkDelete: (data: ImportListExclusionBulkResource, params: RequestParams = {}) =>
+      this.request<void, any>({
+        path: `/api/v3/importlistexclusion/bulk`,
+        method: "DELETE",
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
      * @tags Indexer
      * @name V3IndexerList
      * @request GET:/api/v3/indexer
@@ -3972,10 +4050,18 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request POST:/api/v3/indexer/test
      * @secure
      */
-    v3IndexerTestCreate: (data: IndexerResource, params: RequestParams = {}) =>
+    v3IndexerTestCreate: (
+      data: IndexerResource,
+      query?: {
+        /** @default false */
+        forceTest?: boolean;
+      },
+      params: RequestParams = {},
+    ) =>
       this.request<void, any>({
         path: `/api/v3/indexer/test`,
         method: "POST",
+        query: query,
         body: data,
         secure: true,
         type: ContentType.Json,
@@ -4596,10 +4682,18 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request POST:/api/v3/metadata/test
      * @secure
      */
-    v3MetadataTestCreate: (data: MetadataResource, params: RequestParams = {}) =>
+    v3MetadataTestCreate: (
+      data: MetadataResource,
+      query?: {
+        /** @default false */
+        forceTest?: boolean;
+      },
+      params: RequestParams = {},
+    ) =>
       this.request<void, any>({
         path: `/api/v3/metadata/test`,
         method: "POST",
+        query: query,
         body: data,
         secure: true,
         type: ContentType.Json,
@@ -4764,6 +4858,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         replaceIllegalCharacters?: boolean;
         /** @format int32 */
         colonReplacementFormat?: number;
+        customColonReplacementFormat?: string;
         /** @format int32 */
         multiEpisodeStyle?: number;
         standardEpisodeFormat?: string;
@@ -4916,10 +5011,18 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request POST:/api/v3/notification/test
      * @secure
      */
-    v3NotificationTestCreate: (data: NotificationResource, params: RequestParams = {}) =>
+    v3NotificationTestCreate: (
+      data: NotificationResource,
+      query?: {
+        /** @default false */
+        forceTest?: boolean;
+      },
+      params: RequestParams = {},
+    ) =>
       this.request<void, any>({
         path: `/api/v3/notification/test`,
         method: "POST",
+        query: query,
         body: data,
         secure: true,
         type: ContentType.Json,
@@ -5052,6 +5155,23 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         body: data,
         secure: true,
         type: ContentType.Json,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags QualityDefinition
+     * @name V3QualitydefinitionLimitsList
+     * @request GET:/api/v3/qualitydefinition/limits
+     * @secure
+     */
+    v3QualitydefinitionLimitsList: (params: RequestParams = {}) =>
+      this.request<QualityDefinitionLimitsResource, any>({
+        path: `/api/v3/qualitydefinition/limits`,
+        method: "GET",
+        secure: true,
+        format: "json",
         ...params,
       }),
 
@@ -6357,6 +6477,23 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       this.request<PingResource, any>({
         path: `/ping`,
         method: "GET",
+        secure: true,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Ping
+     * @name HeadPing
+     * @request HEAD:/ping
+     * @secure
+     */
+    headPing: (params: RequestParams = {}) =>
+      this.request<PingResource, any>({
+        path: `/ping`,
+        method: "HEAD",
         secure: true,
         format: "json",
         ...params,

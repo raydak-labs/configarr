@@ -1,8 +1,8 @@
 import { describe, expect, test } from "vitest";
-import { CustomFormatResource, PrivacyLevel, QualityDefinitionResource, QualitySource } from "./__generated__/generated-sonarr-api";
-import { calculateQualityDefinitionDiff } from "./quality-definitions";
-import { TrashCF, TrashCFSpF, TrashQualityDefintion } from "./types";
-import { compareObjectsCarr, mapImportCfToRequestCf, toCarrCF } from "./util";
+import { CustomFormatResource as CustomFormatResourceRadarr, PrivacyLevel } from "./__generated__/generated-radarr-api";
+import { CustomFormatResource } from "./__generated__/generated-sonarr-api";
+import { TrashCF, TrashCFSpF } from "./types";
+import { cloneWithJSON, compareObjectsCarr, mapImportCfToRequestCf, toCarrCF } from "./util";
 
 const exampleCFImplementations = {
   name: "TestSpec",
@@ -171,95 +171,54 @@ describe("SizeSpecification", async () => {
   });
 });
 
-describe("QualityDefinitions", async () => {
-  const server: QualityDefinitionResource[] = [
-    {
-      quality: {
-        id: 0,
-        name: "Unknown",
-        source: QualitySource.Unknown,
-        resolution: 0,
-      },
-      title: "Unknown",
-      weight: 1,
-      minSize: 1,
-      maxSize: 199.9,
-      preferredSize: 194.9,
-      id: 1,
-    },
-    {
-      quality: {
-        id: 1,
-        name: "SDTV",
-        source: QualitySource.Television,
-        resolution: 480,
-      },
-      title: "SDTV",
-      weight: 2,
-      minSize: 2,
-      maxSize: 100,
-      preferredSize: 95,
-      id: 2,
-    },
-  ];
+describe("compareObjectsCarr - general", async () => {
+  const serverResponse = (await import("../tests/samples/20240930_cf_exceptLanguage.json")) as CustomFormatResourceRadarr;
 
-  const client = {
-    trash_id: "aed34b9f60ee115dfa7918b742336277",
-    type: "movie",
-    qualities: [
+  const custom: TrashCF = {
+    trash_id: "test123",
+    name: "Language: Not German or English",
+    includeCustomFormatWhenRenaming: false,
+    specifications: [
       {
-        quality: "SDTV",
-        min: 2,
-        preferred: 95,
-        max: 100,
+        name: "Not German",
+        implementation: "LanguageSpecification",
+        negate: true,
+        required: true,
+        fields: {
+          value: 4,
+        },
       },
     ],
   };
 
-  test("calculateQualityDefinitionDiff - no diff", async ({}) => {
-    const result = calculateQualityDefinitionDiff(server, client);
+  test("should not diff for fields length bigger on remote", async () => {
+    const copied: typeof custom = JSON.parse(JSON.stringify(custom));
 
-    expect(result.changeMap.size).toBe(0);
-    expect(result.create).toHaveLength(0);
+    const result = compareObjectsCarr(serverResponse, mapImportCfToRequestCf(toCarrCF(copied)));
+    expect(result.equal).toBe(true);
   });
 
-  test("calculateQualityDefinitionDiff - diff min size", async ({}) => {
-    const clone: TrashQualityDefintion = JSON.parse(JSON.stringify(client));
-    clone.qualities[0].min = 3;
+  test("should not diff for fields length equal length", async () => {
+    const copied: typeof custom = JSON.parse(JSON.stringify(custom));
+    const clonedServer = cloneWithJSON(serverResponse);
+    clonedServer.specifications![0].fields = [clonedServer.specifications![0].fields![0]];
 
-    const result = calculateQualityDefinitionDiff(server, clone);
+    expect(clonedServer.specifications![0].fields.length).toBe(1);
 
-    expect(result.changeMap.size).toBe(1);
-    expect(result.create).toHaveLength(0);
+    const result = compareObjectsCarr(clonedServer, mapImportCfToRequestCf(toCarrCF(copied)));
+    expect(result.equal).toBe(true);
   });
 
-  test("calculateQualityDefinitionDiff - diff max size", async ({}) => {
-    const clone: TrashQualityDefintion = JSON.parse(JSON.stringify(client));
-    clone.qualities[0].max = 3;
+  test("should diff for fields length if local is higher (should not happen normally)", async () => {
+    const copied: typeof custom = JSON.parse(JSON.stringify(custom));
+    copied.specifications![0].fields!.exceptLanguage = false;
 
-    const result = calculateQualityDefinitionDiff(server, clone);
+    const clonedServer = cloneWithJSON(serverResponse);
+    clonedServer.specifications![0].fields = [clonedServer.specifications![0].fields![0]];
 
-    expect(result.changeMap.size).toBe(1);
-    expect(result.create).toHaveLength(0);
-  });
+    expect(clonedServer.specifications![0].fields.length).toBe(1);
 
-  test("calculateQualityDefinitionDiff - diff preferred size", async ({}) => {
-    const clone: TrashQualityDefintion = JSON.parse(JSON.stringify(client));
-    clone.qualities[0].preferred = 3;
-
-    const result = calculateQualityDefinitionDiff(server, clone);
-
-    expect(result.changeMap.size).toBe(1);
-    expect(result.create).toHaveLength(0);
-  });
-
-  test("calculateQualityDefinitionDiff - create new element", async ({}) => {
-    const clone: TrashQualityDefintion = JSON.parse(JSON.stringify(client));
-    clone.qualities[0].quality = "New";
-
-    const result = calculateQualityDefinitionDiff(server, clone);
-
-    expect(result.changeMap.size).toBe(0);
-    expect(result.create).toHaveLength(1);
+    const result = compareObjectsCarr(clonedServer, mapImportCfToRequestCf(toCarrCF(copied)));
+    expect(result.equal).toBe(false);
   });
 });

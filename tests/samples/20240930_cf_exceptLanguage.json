@@ -1,0 +1,46 @@
+{
+    "id": 98,
+    "name": "Language: Not German or English",
+    "includeCustomFormatWhenRenaming": false,
+    "specifications": [
+        {
+            "name": "Not German",
+            "implementation": "LanguageSpecification",
+            "implementationName": "Language",
+            "infoLink": "https://wiki.servarr.com/radarr/settings#custom-formats-2",
+            "negate": true,
+            "required": true,
+            "fields": [
+                {
+                    "order": 0,
+                    "name": "value",
+                    "label": "Language",
+                    "value": 4,
+                    "type": "select",
+                    "advanced": false,
+                    "selectOptions": [
+                        {
+                            "value": -1,
+                            "name": "Any",
+                            "order": 0,
+                            "dividerAfter": false
+                        }
+                    ],
+                    "privacy": "normal",
+                    "isFloat": false
+                },
+                {
+                    "order": 1,
+                    "name": "exceptLanguage",
+                    "label": "Except Language",
+                    "helpText": "Matches if any language other than the selected language is present",
+                    "value": false,
+                    "type": "checkbox",
+                    "advanced": false,
+                    "privacy": "normal",
+                    "isFloat": false
+                }
+            ]
+        }
+    ]
+}

@@ -88,25 +88,8 @@ export const mapImportCfToRequestCf = (cf: TrashCF | ConfigarrCF): CustomFormatR
       throw new Error(`Spec is not correctly defined: ${spec.name}`);
     }
 
-    switch (spec.implementation) {
-      case "SizeSpecification":
-        newFields.push({
-          name: "min",
-          value: spec.fields.min,
-        });
-        newFields.push({
-          name: "max",
-          value: spec.fields.max,
-        });
-        break;
-      case "ReleaseTitleSpecification":
-      case "LanguageSpecification":
-      default:
-        newFields.push({
-          value: spec.fields.value,
-        });
-        break;
-    }
+    // 2024-09-30: Test if this handles all cases
+    newFields.push(...Object.entries(spec.fields).map(([key, value]) => ({ name: key, value })));
 
     return {
       ...spec,
@@ -123,35 +106,39 @@ export const mapImportCfToRequestCf = (cf: TrashCF | ConfigarrCF): CustomFormatR
   return { ...rest, specifications: specs };
 };
 
-export function compareObjectsCarr(object1: any, object2: any): { equal: boolean; changes: string[] } {
+export function compareObjectsCarr(serverObject: any, localObject: any): { equal: boolean; changes: string[] } {
   const changes: string[] = [];
 
-  for (const key in object2) {
-    if (Object.prototype.hasOwnProperty.call(object2, key)) {
-      if (object1.hasOwnProperty(key)) {
-        const value1 = object1[key];
-        let value2 = object2[key];
+  for (const key in localObject) {
+    if (Object.prototype.hasOwnProperty.call(localObject, key)) {
+      if (Object.prototype.hasOwnProperty.call(serverObject, key)) {
+        const serverProperty = serverObject[key];
+        let localProperty = localObject[key];
 
         // Todo remove should be already handled
         if (key === "fields") {
-          if (!Array.isArray(value2)) {
-            value2 = [value2];
+          if (!Array.isArray(localProperty)) {
+            localProperty = [localProperty];
           }
         }
 
-        if (Array.isArray(value1)) {
-          if (!Array.isArray(value2)) {
-            changes.push(`Expected array for key ${key} in object2`);
+        if (Array.isArray(serverProperty)) {
+          if (!Array.isArray(localProperty)) {
+            changes.push(`Expected array for key ${key} in localProperty`);
             continue;
           }
 
-          if (value1.length !== value2.length) {
-            changes.push(`Array length mismatch for key ${key}: object1 length ${value1.length}, object2 length ${value2.length}`);
+          if (serverProperty.length < localProperty.length) {
+            // Only if server does provide less props as we have -> assume change required.
+            // For example if radarr introduces new fields for custom formats and we do not have them included this would result in always changed results.
+            changes.push(
+              `Array length mismatch for key ${key}: serverProperty length ${serverProperty.length}, localProperty length ${localProperty.length}`,
+            );
             continue;
           }
 
-          for (let i = 0; i < value1.length; i++) {
-            const { equal: isEqual, changes: subChanges } = compareObjectsCarr(value1[i], value2[i]);
+          for (let i = 0; i < serverProperty.length; i++) {
+            const { equal: isEqual, changes: subChanges } = compareObjectsCarr(serverProperty[i], localProperty[i]);
             // changes.push(
             //   ...subChanges.map((subChange) => `${key}[${i}].${subChange}`)
             // );
@@ -164,20 +151,20 @@ export function compareObjectsCarr(object1: any, object2: any): { equal: boolean
               changes.push(`Mismatch found in array element at index ${i} for key '${key}'`);
             }
           }
-        } else if (typeof value2 === "object" && value2 !== null) {
-          if (typeof value1 !== "object" || value1 === null) {
-            changes.push(`Expected object for key '${key}' in object1`);
+        } else if (typeof localProperty === "object" && localProperty !== null) {
+          if (typeof serverProperty !== "object" || serverProperty === null) {
+            changes.push(`Expected object for key '${key}' in serverProperty`);
             continue;
           }
 
-          const { equal: isEqual, changes: subChanges } = compareObjectsCarr(value1, value2);
+          const { equal: isEqual, changes: subChanges } = compareObjectsCarr(serverProperty, localProperty);
           changes.push(...subChanges.map((subChange) => `${key}.${subChange}`));
           if (!isEqual) {
             changes.push(`Mismatch found for key '${key}'`);
           }
         } else {
-          if (value1 !== value2) {
-            changes.push(`Mismatch found for key '${key}': server value '${value1}', value to set '${value2}'`);
+          if (serverProperty !== localProperty) {
+            changes.push(`Mismatch found for key '${key}': server value '${serverProperty}', value to set '${localProperty}'`);
           }
         }
       } else {
