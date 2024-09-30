@@ -44,20 +44,22 @@ export type ImportCF = Omit<CustomFormatResource, "specifications"> & {
   specifications?: TCM[] | null;
 };
 
+export type TrashScores = {
+  default?: number;
+  "anime-sonarr"?: number;
+  "anime-radarr"?: number;
+  "sqp-1-1080p"?: number;
+  "sqp-1-2160p"?: number;
+  "sqp-2"?: number;
+  "sqp-3"?: number;
+  "sqp-4"?: number;
+  "sqp-5"?: number;
+  "french-vostfr"?: number;
+};
+
 export type TrashCF = {
   trash_id: string;
-  trash_scores?: {
-    default?: number;
-    "anime-sonarr"?: number;
-    "anime-radarr"?: number;
-    "sqp-1-1080p"?: number;
-    "sqp-1-2160p"?: number;
-    "sqp-2"?: number;
-    "sqp-3"?: number;
-    "sqp-4"?: number;
-    "sqp-5"?: number;
-    "french-vostfr"?: number;
-  };
+  trash_scores?: TrashScores;
   trash_regex?: string;
   trash_description?: string;
 } & ImportCF;
@@ -133,7 +135,7 @@ export type ConfigQualityProfile = {
     until_score: number;
   };
   min_format_score: number;
-  score_set: keyof TrashCF["trash_scores"];
+  score_set: keyof TrashScores;
   quality_sort: string;
   qualities: ConfigQualityProfileItem[];
 };
@@ -141,6 +143,7 @@ export type ConfigQualityProfile = {
 export type ConfigQualityProfileItem = {
   name: string;
   qualities?: string[];
+  enabled?: boolean;
 };
 
 export type TrashQualityDefintionQuality = {
