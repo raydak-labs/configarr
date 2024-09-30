@@ -193,12 +193,7 @@ const pipeline = async (value: ConfigArrInstance, arrType: ArrType) => {
 
   const qpServer = await loadQualityProfilesFromServer();
 
-  const { changedQPs, create, noChanges } = await calculateQualityProfilesDiff(
-    mergedCFs,
-    qualityProfilesMerged,
-    cfToQualityProfiles,
-    qpServer,
-  );
+  const { changedQPs, create, noChanges } = await calculateQualityProfilesDiff(qualityProfilesMerged, cfToQualityProfiles, qpServer);
 
   if (DEBUG_CREATE_FILES) {
     create.concat(changedQPs).forEach((e, i) => {

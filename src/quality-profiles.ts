@@ -83,7 +83,7 @@ export const loadQualityProfilesFromServer = async (): Promise<QualityProfileRes
 };
 
 // TODO should we use clones or not?
-const mapQualities = (qd_source: QualityDefinitionResource[], value_source: ConfigQualityProfile) => {
+export const mapQualities = (qd_source: QualityDefinitionResource[], value_source: ConfigQualityProfile) => {
   const qd = cloneWithJSON(qd_source);
   const value = cloneWithJSON(value_source);
 
@@ -92,7 +92,7 @@ const mapQualities = (qd_source: QualityDefinitionResource[], value_source: Conf
   const allowedQualities: QualityProfileQualityItemResource[] = value.qualities.map((obj, i) => {
     if (obj.qualities?.length && obj.qualities.length > 0) {
       return {
-        allowed: true,
+        allowed: obj.enabled ?? true,
         id: 1000 + i,
         name: obj.name,
         items: obj.qualities?.map<QualityProfileQualityItemResource>((obj2) => {
@@ -123,7 +123,7 @@ const mapQualities = (qd_source: QualityDefinitionResource[], value_source: Conf
       qdMap.delete(obj.name);
 
       return {
-        allowed: true,
+        allowed: obj.enabled ?? true,
         items: [],
         quality: {
           ...serverQD?.quality,
@@ -159,20 +159,20 @@ const mapQualities = (qd_source: QualityDefinitionResource[], value_source: Conf
   }
 };
 
-export const doAllQualitiesExist = (obj1_source: ConfigQualityProfileItem[], obj2_source: ConfigQualityProfileItem[]) => {
-  const obj1 = cloneWithJSON(obj1_source);
-  const obj2 = cloneWithJSON(obj2_source);
+export const doAllQualitiesExist = (serverResource: ConfigQualityProfileItem[], localResource: ConfigQualityProfileItem[]) => {
+  const serverCloned = cloneWithJSON(serverResource);
+  const localCloned = cloneWithJSON(localResource);
 
-  function arraysEqual(arr1: string[], arr2: string[]): boolean {
-    if (arr1.length !== arr2.length) {
+  function arraysEqual(serverArray: string[], localArray: string[]): boolean {
+    if (serverArray.length !== localArray.length) {
       return false;
     }
 
-    const sortedArr1 = arr1.slice().sort();
-    const sortedArr2 = arr2.slice().sort();
+    const sortedServerArray = serverArray.slice().sort();
+    const sortedLocalArray = localArray.slice().sort();
 
-    for (let i = 0; i < sortedArr1.length; i++) {
-      if (sortedArr1[i] !== sortedArr2[i]) {
+    for (let i = 0; i < sortedServerArray.length; i++) {
+      if (sortedServerArray[i] !== sortedLocalArray[i]) {
         return false;
       }
     }
@@ -180,22 +180,27 @@ export const doAllQualitiesExist = (obj1_source: ConfigQualityProfileItem[], obj
     return true;
   }
 
-  if (obj1.length !== obj2.length) {
+  if (serverCloned.length !== localCloned.length) {
     return false;
   }
 
-  const sorted1 = obj1.sort((a, b) => (a.name < b.name ? -1 : 1));
-  const sorted2 = obj2.sort((a, b) => (a.name < b.name ? -1 : 1));
+  const sortedServerConfig = serverCloned.sort((a, b) => (a.name < b.name ? -1 : 1));
+  const sortedLocalConfig = localCloned.sort((a, b) => (a.name < b.name ? -1 : 1));
 
-  for (let index = 0; index < sorted1.length; index++) {
-    const element1 = sorted1[index];
-    const element2 = sorted2[index];
+  for (let index = 0; index < sortedServerConfig.length; index++) {
+    const serverElement = sortedServerConfig[index];
+    const localElement = sortedLocalConfig[index];
 
-    if (element1.name !== element2.name) {
+    if (serverElement.name !== localElement.name) {
       return false;
     }
 
-    if (!arraysEqual(element1.qualities ?? [], element2.qualities ?? [])) {
+    // If not set we assume true
+    if ((serverElement.enabled ?? true) !== (localElement.enabled ?? true)) {
+      return false;
+    }
+
+    if (!arraysEqual(serverElement.qualities ?? [], localElement.qualities ?? [])) {
       return false;
     }
   }
@@ -214,7 +219,6 @@ export const isOrderOfQualitiesEqual = (obj1: ConfigQualityProfileItem[], obj2: 
 };
 
 export const calculateQualityProfilesDiff = async (
-  cfManaged: CFProcessing,
   qpMerged: Map<string, ConfigQualityProfile>,
   scoring: Map<string, Map<string, ProfileFormatItemResource>>,
   serverQP: QualityProfileResource[],
@@ -327,18 +331,20 @@ export const calculateQualityProfilesDiff = async (
             qualities: (obj.items || []).map((qObj) => {
               return qObj.quality!.name!;
             }),
+            enabled: obj.allowed,
           };
         } else {
           return {
             name: qualityName,
             qualities: [],
+            enabled: obj.allowed,
           };
         }
       })
       .filter(notEmpty);
 
     // TODO do we want to enforce the whole structure or only match those which are enabled by us?
-    if (!doAllQualitiesExist(value.qualities, serverQualitiesMapped)) {
+    if (!doAllQualitiesExist(serverQualitiesMapped, value.qualities)) {
       logger.info(`QualityProfile items mismatch will update whole array`);
       diffExist = true;
 
