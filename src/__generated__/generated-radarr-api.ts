@@ -151,6 +151,8 @@ export interface CollectionMovieResource {
   ratings?: Ratings;
   genres?: string[] | null;
   folder?: string | null;
+  isExisting?: boolean;
+  isExcluded?: boolean;
 }
 
 export interface CollectionResource {
@@ -191,6 +193,7 @@ export enum ColonReplacementFormat {
   Dash = "dash",
   SpaceDash = "spaceDash",
   SpaceDashSpace = "spaceDashSpace",
+  Smart = "smart",
 }
 
 export interface Command {
@@ -233,7 +236,8 @@ export interface CommandResource {
   started?: string | null;
   /** @format date-time */
   ended?: string | null;
-  duration?: TimeSpan;
+  /** @format date-span */
+  duration?: string | null;
   exception?: string | null;
   trigger?: CommandTrigger;
   clientUserAgent?: string | null;
@@ -296,6 +300,12 @@ export interface CustomFilterResource {
   type?: string | null;
   label?: string | null;
   filters?: Record<string, any>[] | null;
+}
+
+export interface CustomFormatBulkResource {
+  /** @uniqueItems true */
+  ids?: number[] | null;
+  includeCustomFormatWhenRenaming?: boolean | null;
 }
 
 export interface CustomFormatResource {
@@ -413,6 +423,8 @@ export interface ExtraFileResource {
   movieFileId?: number | null;
   relativePath?: string | null;
   extension?: string | null;
+  languageTags?: string[] | null;
+  title?: string | null;
   type?: ExtraFileType;
 }
 
@@ -514,6 +526,8 @@ export interface HostConfigResource {
   password?: string | null;
   passwordConfirmation?: string | null;
   logLevel?: string | null;
+  /** @format int32 */
+  logSizeLimit?: number;
   consoleLogLevel?: string | null;
   branch?: string | null;
   apiKey?: string | null;
@@ -553,26 +567,6 @@ export interface HttpUri {
   fragment?: string | null;
 }
 
-export interface ImportExclusionsResource {
-  /** @format int32 */
-  id?: number;
-  name?: string | null;
-  fields?: Field[] | null;
-  implementationName?: string | null;
-  implementation?: string | null;
-  configContract?: string | null;
-  infoLink?: string | null;
-  message?: ProviderMessage;
-  /** @uniqueItems true */
-  tags?: number[] | null;
-  presets?: ImportExclusionsResource[] | null;
-  /** @format int32 */
-  tmdbId?: number;
-  movieTitle?: string | null;
-  /** @format int32 */
-  movieYear?: number;
-}
-
 export interface ImportListBulkResource {
   ids?: number[] | null;
   tags?: number[] | null;
@@ -589,7 +583,43 @@ export interface ImportListConfigResource {
   /** @format int32 */
   id?: number;
   listSyncLevel?: string | null;
-  importExclusions?: string | null;
+}
+
+export interface ImportListExclusionBulkResource {
+  /** @uniqueItems true */
+  ids?: number[] | null;
+}
+
+export interface ImportListExclusionResource {
+  /** @format int32 */
+  id?: number;
+  name?: string | null;
+  fields?: Field[] | null;
+  implementationName?: string | null;
+  implementation?: string | null;
+  configContract?: string | null;
+  infoLink?: string | null;
+  message?: ProviderMessage;
+  /** @uniqueItems true */
+  tags?: number[] | null;
+  presets?: ImportListExclusionResource[] | null;
+  /** @format int32 */
+  tmdbId?: number;
+  movieTitle?: string | null;
+  /** @format int32 */
+  movieYear?: number;
+}
+
+export interface ImportListExclusionResourcePagingResource {
+  /** @format int32 */
+  page?: number;
+  /** @format int32 */
+  pageSize?: number;
+  sortKey?: string | null;
+  sortDirection?: SortDirection;
+  /** @format int32 */
+  totalRecords?: number;
+  records?: ImportListExclusionResource[] | null;
 }
 
 export interface ImportListResource {
@@ -616,7 +646,8 @@ export interface ImportListResource {
   listType?: ImportListType;
   /** @format int32 */
   listOrder?: number;
-  minRefreshInterval?: TimeSpan;
+  /** @format date-span */
+  minRefreshInterval?: string;
 }
 
 export enum ImportListType {
@@ -982,6 +1013,8 @@ export interface MovieResource {
   physicalRelease?: string | null;
   /** @format date-time */
   digitalRelease?: string | null;
+  /** @format date-time */
+  releaseDate?: string | null;
   physicalReleaseNote?: string | null;
   images?: MediaCover[] | null;
   website?: string | null;
@@ -994,6 +1027,8 @@ export interface MovieResource {
   /** @format int32 */
   qualityProfileId?: number;
   hasFile?: boolean | null;
+  /** @format int32 */
+  movieFileId?: number;
   monitored?: boolean;
   minimumAvailability?: MovieStatusType;
   isAvailable?: boolean;
@@ -1019,7 +1054,21 @@ export interface MovieResource {
   collection?: MovieCollectionResource;
   /** @format float */
   popularity?: number;
+  /** @format date-time */
+  lastSearchTime?: string | null;
   statistics?: MovieStatisticsResource;
+}
+
+export interface MovieResourcePagingResource {
+  /** @format int32 */
+  page?: number;
+  /** @format int32 */
+  pageSize?: number;
+  sortKey?: string | null;
+  sortDirection?: SortDirection;
+  /** @format int32 */
+  totalRecords?: number;
+  records?: MovieResource[] | null;
 }
 
 export enum MovieRuntimeFormatType {
@@ -1076,6 +1125,7 @@ export interface NotificationResource {
   onMovieFileDelete?: boolean;
   onMovieFileDeleteForUpgrade?: boolean;
   onHealthIssue?: boolean;
+  includeHealthWarnings?: boolean;
   onHealthRestored?: boolean;
   onApplicationUpdate?: boolean;
   onManualInteractionRequired?: boolean;
@@ -1091,7 +1141,6 @@ export interface NotificationResource {
   supportsOnHealthRestored?: boolean;
   supportsOnApplicationUpdate?: boolean;
   supportsOnManualInteractionRequired?: boolean;
-  includeHealthWarnings?: boolean;
   testCommand?: string | null;
 }
 
@@ -1222,6 +1271,8 @@ export interface QualityProfileResource {
   minFormatScore?: number;
   /** @format int32 */
   cutoffFormatScore?: number;
+  /** @format int32 */
+  minUpgradeFormatScore?: number;
   formatItems?: ProfileFormatItemResource[] | null;
   language?: Language;
 }
@@ -1259,7 +1310,8 @@ export interface QueueResource {
   title?: string | null;
   /** @format double */
   sizeleft?: number;
-  timeleft?: TimeSpan;
+  /** @format date-span */
+  timeleft?: string | null;
   /** @format date-time */
   estimatedCompletionTime?: string | null;
   /** @format date-time */
@@ -1322,6 +1374,7 @@ export interface Ratings {
   tmdb?: RatingChild;
   metacritic?: RatingChild;
   rottenTomatoes?: RatingChild;
+  trakt?: RatingChild;
 }
 
 export interface Rejection {
@@ -1401,7 +1454,7 @@ export interface ReleaseResource {
   /** @format int32 */
   leechers?: number | null;
   protocol?: DownloadProtocol;
-  indexerFlags?: string[] | null;
+  indexerFlags?: any;
   /** @format int32 */
   movieId?: number | null;
   /** @format int32 */
@@ -1504,12 +1557,12 @@ export interface SystemResource {
   mode?: RuntimeMode;
   branch?: string | null;
   databaseType?: DatabaseType;
-  databaseVersion?: Version;
+  databaseVersion?: string | null;
   authentication?: AuthenticationType;
   /** @format int32 */
   migrationVersion?: number;
   urlBase?: string | null;
-  runtimeVersion?: Version;
+  runtimeVersion?: string | null;
   runtimeName?: string | null;
   /** @format date-time */
   startTime?: string;
@@ -1566,36 +1619,13 @@ export interface TaskResource {
   lastStartTime?: string;
   /** @format date-time */
   nextExecution?: string;
-  lastDuration?: TimeSpan;
-}
-
-export interface TimeSpan {
-  /** @format int64 */
-  ticks?: number;
-  /** @format int32 */
-  days?: number;
-  /** @format int32 */
-  hours?: number;
-  /** @format int32 */
-  milliseconds?: number;
-  /** @format int32 */
-  minutes?: number;
-  /** @format int32 */
-  seconds?: number;
-  /** @format double */
-  totalDays?: number;
-  /** @format double */
-  totalHours?: number;
-  /** @format double */
-  totalMilliseconds?: number;
-  /** @format double */
-  totalMinutes?: number;
-  /** @format double */
-  totalSeconds?: number;
+  /** @format date-span */
+  lastDuration?: string;
 }
 
 export enum TrackedDownloadState {
   Downloading = "downloading",
+  ImportBlocked = "importBlocked",
   ImportPending = "importPending",
   Importing = "importing",
   Imported = "imported",
@@ -1656,7 +1686,7 @@ export enum UpdateMechanism {
 export interface UpdateResource {
   /** @format int32 */
   id?: number;
-  version?: Version;
+  version?: string | null;
   branch?: string | null;
   /** @format date-time */
   releaseDate?: string;
@@ -1669,21 +1699,6 @@ export interface UpdateResource {
   latest?: boolean;
   changes?: UpdateChanges;
   hash?: string | null;
-}
-
-export interface Version {
-  /** @format int32 */
-  major?: number;
-  /** @format int32 */
-  minor?: number;
-  /** @format int32 */
-  build?: number;
-  /** @format int32 */
-  revision?: number;
-  /** @format int32 */
-  majorRevision?: number;
-  /** @format int32 */
-  minorRevision?: number;
 }
 
 import type { AxiosInstance, AxiosRequestConfig, AxiosResponse, HeadersDefaults, ResponseType } from "axios";
@@ -1709,7 +1724,9 @@ export interface FullRequestParams extends Omit<AxiosRequestConfig, "data" | "pa
 export type RequestParams = Omit<FullRequestParams, "body" | "method" | "query" | "path">;
 
 export interface ApiConfig<SecurityDataType = unknown> extends Omit<AxiosRequestConfig, "data" | "cancelToken"> {
-  securityWorker?: (securityData: SecurityDataType | null) => Promise<AxiosRequestConfig | void> | AxiosRequestConfig | void;
+  securityWorker?: (
+    securityData: SecurityDataType | null,
+  ) => Promise<AxiosRequestConfig | void> | AxiosRequestConfig | void;
   secure?: boolean;
   format?: ResponseType;
 }
@@ -1763,6 +1780,9 @@ export class HttpClient<SecurityDataType = unknown> {
   }
 
   protected createFormData(input: Record<string, unknown>): FormData {
+    if (input instanceof FormData) {
+      return input;
+    }
     return Object.keys(input || {}).reduce((formData, key) => {
       const property = input[key];
       const propertyContent: any[] = property instanceof Array ? property : [property];
@@ -1786,7 +1806,10 @@ export class HttpClient<SecurityDataType = unknown> {
     ...params
   }: FullRequestParams): Promise<AxiosResponse<T>> => {
     const secureParams =
-      ((typeof secure === "boolean" ? secure : this.secure) && this.securityWorker && (await this.securityWorker(this.securityData))) || {};
+      ((typeof secure === "boolean" ? secure : this.secure) &&
+        this.securityWorker &&
+        (await this.securityWorker(this.securityData))) ||
+      {};
     const requestParams = this.mergeRequestParams(params, secureParams);
     const responseFormat = format || this.format || undefined;
 
@@ -1802,7 +1825,7 @@ export class HttpClient<SecurityDataType = unknown> {
       ...requestParams,
       headers: {
         ...(requestParams.headers || {}),
-        ...(type && type !== ContentType.FormData ? { "Content-Type": type } : {}),
+        ...(type ? { "Content-Type": type } : {}),
       },
       params: query,
       responseType: responseFormat,
@@ -2089,6 +2112,8 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         pageSize?: number;
         sortKey?: string;
         sortDirection?: SortDirection;
+        movieIds?: number[];
+        protocols?: DownloadProtocol[];
       },
       params: RequestParams = {},
     ) =>
@@ -2184,23 +2209,6 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         path: `/api/v3/calendar`,
         method: "GET",
         query: query,
-        secure: true,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Calendar
-     * @name V3CalendarDetail
-     * @request GET:/api/v3/calendar/{id}
-     * @secure
-     */
-    v3CalendarDetail: (id: number, params: RequestParams = {}) =>
-      this.request<MovieResource, any>({
-        path: `/api/v3/calendar/${id}`,
-        method: "GET",
         secure: true,
         format: "json",
         ...params,
@@ -2489,6 +2497,23 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags CustomFormat
+     * @name V3CustomformatList
+     * @request GET:/api/v3/customformat
+     * @secure
+     */
+    v3CustomformatList: (params: RequestParams = {}) =>
+      this.request<CustomFormatResource[], any>({
+        path: `/api/v3/customformat`,
+        method: "GET",
+        secure: true,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags CustomFormat
      * @name V3CustomformatCreate
      * @request POST:/api/v3/customformat
      * @secure
@@ -2500,23 +2525,6 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         body: data,
         secure: true,
         type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags CustomFormat
-     * @name V3CustomformatList
-     * @request GET:/api/v3/customformat
-     * @secure
-     */
-    v3CustomformatList: (params: RequestParams = {}) =>
-      this.request<CustomFormatResource[], any>({
-        path: `/api/v3/customformat`,
-        method: "GET",
-        secure: true,
         format: "json",
         ...params,
       }),
@@ -2577,6 +2585,43 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags CustomFormat
+     * @name V3CustomformatBulkUpdate
+     * @request PUT:/api/v3/customformat/bulk
+     * @secure
+     */
+    v3CustomformatBulkUpdate: (data: CustomFormatBulkResource, params: RequestParams = {}) =>
+      this.request<CustomFormatResource, any>({
+        path: `/api/v3/customformat/bulk`,
+        method: "PUT",
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags CustomFormat
+     * @name V3CustomformatBulkDelete
+     * @request DELETE:/api/v3/customformat/bulk
+     * @secure
+     */
+    v3CustomformatBulkDelete: (data: CustomFormatBulkResource, params: RequestParams = {}) =>
+      this.request<void, any>({
+        path: `/api/v3/customformat/bulk`,
+        method: "DELETE",
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags CustomFormat
      * @name V3CustomformatSchemaList
      * @request GET:/api/v3/customformat/schema
      * @secure
@@ -2586,6 +2631,42 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         path: `/api/v3/customformat/schema`,
         method: "GET",
         secure: true,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Cutoff
+     * @name V3WantedCutoffList
+     * @request GET:/api/v3/wanted/cutoff
+     * @secure
+     */
+    v3WantedCutoffList: (
+      query?: {
+        /**
+         * @format int32
+         * @default 1
+         */
+        page?: number;
+        /**
+         * @format int32
+         * @default 10
+         */
+        pageSize?: number;
+        sortKey?: string;
+        sortDirection?: SortDirection;
+        /** @default true */
+        monitored?: boolean;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<MovieResourcePagingResource, any>({
+        path: `/api/v3/wanted/cutoff`,
+        method: "GET",
+        query: query,
+        secure: true,
+        format: "json",
         ...params,
       }),
 
@@ -2672,6 +2753,31 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       this.request<DelayProfileResource, any>({
         path: `/api/v3/delayprofile/${id}`,
         method: "GET",
+        secure: true,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags DelayProfile
+     * @name V3DelayprofileReorderUpdate
+     * @request PUT:/api/v3/delayprofile/reorder/{id}
+     * @secure
+     */
+    v3DelayprofileReorderUpdate: (
+      id: number,
+      query?: {
+        /** @format int32 */
+        after?: number;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<DelayProfileResource[], any>({
+        path: `/api/v3/delayprofile/reorder/${id}`,
+        method: "PUT",
+        query: query,
         secure: true,
         format: "json",
         ...params,
@@ -2861,10 +2967,18 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request POST:/api/v3/downloadclient/test
      * @secure
      */
-    v3DownloadclientTestCreate: (data: DownloadClientResource, params: RequestParams = {}) =>
+    v3DownloadclientTestCreate: (
+      data: DownloadClientResource,
+      query?: {
+        /** @default false */
+        forceTest?: boolean;
+      },
+      params: RequestParams = {},
+    ) =>
       this.request<void, any>({
         path: `/api/v3/downloadclient/test`,
         method: "POST",
+        query: query,
         body: data,
         secure: true,
         type: ContentType.Json,
@@ -3072,23 +3186,6 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     /**
      * No description
      *
-     * @tags Health
-     * @name V3HealthDetail
-     * @request GET:/api/v3/health/{id}
-     * @secure
-     */
-    v3HealthDetail: (id: number, params: RequestParams = {}) =>
-      this.request<HealthResource, any>({
-        path: `/api/v3/health/${id}`,
-        method: "GET",
-        secure: true,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
      * @tags History
      * @name V3HistoryList
      * @request GET:/api/v3/history
@@ -3246,112 +3343,6 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         method: "GET",
         secure: true,
         format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags ImportExclusions
-     * @name V3ExclusionsList
-     * @request GET:/api/v3/exclusions
-     * @secure
-     */
-    v3ExclusionsList: (params: RequestParams = {}) =>
-      this.request<ImportExclusionsResource[], any>({
-        path: `/api/v3/exclusions`,
-        method: "GET",
-        secure: true,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags ImportExclusions
-     * @name V3ExclusionsCreate
-     * @request POST:/api/v3/exclusions
-     * @secure
-     */
-    v3ExclusionsCreate: (data: ImportExclusionsResource, params: RequestParams = {}) =>
-      this.request<ImportExclusionsResource, any>({
-        path: `/api/v3/exclusions`,
-        method: "POST",
-        body: data,
-        secure: true,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags ImportExclusions
-     * @name V3ExclusionsUpdate
-     * @request PUT:/api/v3/exclusions/{id}
-     * @secure
-     */
-    v3ExclusionsUpdate: (id: string, data: ImportExclusionsResource, params: RequestParams = {}) =>
-      this.request<ImportExclusionsResource, any>({
-        path: `/api/v3/exclusions/${id}`,
-        method: "PUT",
-        body: data,
-        secure: true,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags ImportExclusions
-     * @name V3ExclusionsDelete
-     * @request DELETE:/api/v3/exclusions/{id}
-     * @secure
-     */
-    v3ExclusionsDelete: (id: number, params: RequestParams = {}) =>
-      this.request<void, any>({
-        path: `/api/v3/exclusions/${id}`,
-        method: "DELETE",
-        secure: true,
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags ImportExclusions
-     * @name V3ExclusionsDetail
-     * @request GET:/api/v3/exclusions/{id}
-     * @secure
-     */
-    v3ExclusionsDetail: (id: number, params: RequestParams = {}) =>
-      this.request<ImportExclusionsResource, any>({
-        path: `/api/v3/exclusions/${id}`,
-        method: "GET",
-        secure: true,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags ImportExclusions
-     * @name V3ExclusionsBulkCreate
-     * @request POST:/api/v3/exclusions/bulk
-     * @secure
-     */
-    v3ExclusionsBulkCreate: (data: ImportExclusionsResource[], params: RequestParams = {}) =>
-      this.request<void, any>({
-        path: `/api/v3/exclusions/bulk`,
-        method: "POST",
-        body: data,
-        secure: true,
-        type: ContentType.Json,
         ...params,
       }),
 
@@ -3522,10 +3513,18 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request POST:/api/v3/importlist/test
      * @secure
      */
-    v3ImportlistTestCreate: (data: ImportListResource, params: RequestParams = {}) =>
+    v3ImportlistTestCreate: (
+      data: ImportListResource,
+      query?: {
+        /** @default false */
+        forceTest?: boolean;
+      },
+      params: RequestParams = {},
+    ) =>
       this.request<void, any>({
         path: `/api/v3/importlist/test`,
         method: "POST",
+        query: query,
         body: data,
         secure: true,
         type: ContentType.Json,
@@ -3616,6 +3615,165 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         method: "GET",
         secure: true,
         format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ImportListExclusion
+     * @name V3ExclusionsList
+     * @request GET:/api/v3/exclusions
+     * @deprecated
+     * @secure
+     */
+    v3ExclusionsList: (params: RequestParams = {}) =>
+      this.request<ImportListExclusionResource[], any>({
+        path: `/api/v3/exclusions`,
+        method: "GET",
+        secure: true,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ImportListExclusion
+     * @name V3ExclusionsCreate
+     * @request POST:/api/v3/exclusions
+     * @secure
+     */
+    v3ExclusionsCreate: (data: ImportListExclusionResource, params: RequestParams = {}) =>
+      this.request<ImportListExclusionResource, any>({
+        path: `/api/v3/exclusions`,
+        method: "POST",
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ImportListExclusion
+     * @name V3ExclusionsPagedList
+     * @request GET:/api/v3/exclusions/paged
+     * @secure
+     */
+    v3ExclusionsPagedList: (
+      query?: {
+        /**
+         * @format int32
+         * @default 1
+         */
+        page?: number;
+        /**
+         * @format int32
+         * @default 10
+         */
+        pageSize?: number;
+        sortKey?: string;
+        sortDirection?: SortDirection;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<ImportListExclusionResourcePagingResource, any>({
+        path: `/api/v3/exclusions/paged`,
+        method: "GET",
+        query: query,
+        secure: true,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ImportListExclusion
+     * @name V3ExclusionsUpdate
+     * @request PUT:/api/v3/exclusions/{id}
+     * @secure
+     */
+    v3ExclusionsUpdate: (id: string, data: ImportListExclusionResource, params: RequestParams = {}) =>
+      this.request<ImportListExclusionResource, any>({
+        path: `/api/v3/exclusions/${id}`,
+        method: "PUT",
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ImportListExclusion
+     * @name V3ExclusionsDelete
+     * @request DELETE:/api/v3/exclusions/{id}
+     * @secure
+     */
+    v3ExclusionsDelete: (id: number, params: RequestParams = {}) =>
+      this.request<void, any>({
+        path: `/api/v3/exclusions/${id}`,
+        method: "DELETE",
+        secure: true,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ImportListExclusion
+     * @name V3ExclusionsDetail
+     * @request GET:/api/v3/exclusions/{id}
+     * @secure
+     */
+    v3ExclusionsDetail: (id: number, params: RequestParams = {}) =>
+      this.request<ImportListExclusionResource, any>({
+        path: `/api/v3/exclusions/${id}`,
+        method: "GET",
+        secure: true,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ImportListExclusion
+     * @name V3ExclusionsBulkCreate
+     * @request POST:/api/v3/exclusions/bulk
+     * @secure
+     */
+    v3ExclusionsBulkCreate: (data: ImportListExclusionResource[], params: RequestParams = {}) =>
+      this.request<void, any>({
+        path: `/api/v3/exclusions/bulk`,
+        method: "POST",
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ImportListExclusion
+     * @name V3ExclusionsBulkDelete
+     * @request DELETE:/api/v3/exclusions/bulk
+     * @secure
+     */
+    v3ExclusionsBulkDelete: (data: ImportListExclusionBulkResource, params: RequestParams = {}) =>
+      this.request<void, any>({
+        path: `/api/v3/exclusions/bulk`,
+        method: "DELETE",
+        body: data,
+        secure: true,
+        type: ContentType.Json,
         ...params,
       }),
 
@@ -3831,10 +3989,18 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request POST:/api/v3/indexer/test
      * @secure
      */
-    v3IndexerTestCreate: (data: IndexerResource, params: RequestParams = {}) =>
+    v3IndexerTestCreate: (
+      data: IndexerResource,
+      query?: {
+        /** @default false */
+        forceTest?: boolean;
+      },
+      params: RequestParams = {},
+    ) =>
       this.request<void, any>({
         path: `/api/v3/indexer/test`,
         method: "POST",
+        query: query,
         body: data,
         secure: true,
         type: ContentType.Json,
@@ -4326,10 +4492,18 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request POST:/api/v3/metadata/test
      * @secure
      */
-    v3MetadataTestCreate: (data: MetadataResource, params: RequestParams = {}) =>
+    v3MetadataTestCreate: (
+      data: MetadataResource,
+      query?: {
+        /** @default false */
+        forceTest?: boolean;
+      },
+      params: RequestParams = {},
+    ) =>
       this.request<void, any>({
         path: `/api/v3/metadata/test`,
         method: "POST",
+        query: query,
         body: data,
         secure: true,
         type: ContentType.Json,
@@ -4426,6 +4600,42 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     /**
      * No description
      *
+     * @tags Missing
+     * @name V3WantedMissingList
+     * @request GET:/api/v3/wanted/missing
+     * @secure
+     */
+    v3WantedMissingList: (
+      query?: {
+        /**
+         * @format int32
+         * @default 1
+         */
+        page?: number;
+        /**
+         * @format int32
+         * @default 10
+         */
+        pageSize?: number;
+        sortKey?: string;
+        sortDirection?: SortDirection;
+        /** @default true */
+        monitored?: boolean;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<MovieResourcePagingResource, any>({
+        path: `/api/v3/wanted/missing`,
+        method: "GET",
+        query: query,
+        secure: true,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
      * @tags Movie
      * @name V3MovieList
      * @request GET:/api/v3/movie
@@ -4437,6 +4647,8 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         tmdbId?: number;
         /** @default false */
         excludeLocalCovers?: boolean;
+        /** @format int32 */
+        languageId?: number;
       },
       params: RequestParams = {},
     ) =>
@@ -4708,23 +4920,6 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     /**
      * No description
      *
-     * @tags MovieImport
-     * @name V3MovieImportDetail
-     * @request GET:/api/v3/movie/import/{id}
-     * @secure
-     */
-    v3MovieImportDetail: (id: number, params: RequestParams = {}) =>
-      this.request<MovieResource, any>({
-        path: `/api/v3/movie/import/${id}`,
-        method: "GET",
-        secure: true,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
      * @tags MovieLookup
      * @name V3MovieLookupTmdbList
      * @request GET:/api/v3/movie/lookup/tmdb
@@ -4786,23 +4981,6 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         method: "GET",
         query: query,
         secure: true,
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags MovieLookup
-     * @name V3MovieLookupDetail
-     * @request GET:/api/v3/movie/lookup/{id}
-     * @secure
-     */
-    v3MovieLookupDetail: (id: number, params: RequestParams = {}) =>
-      this.request<MovieResource, any>({
-        path: `/api/v3/movie/lookup/${id}`,
-        method: "GET",
-        secure: true,
-        format: "json",
         ...params,
       }),
 
@@ -5018,10 +5196,18 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request POST:/api/v3/notification/test
      * @secure
      */
-    v3NotificationTestCreate: (data: NotificationResource, params: RequestParams = {}) =>
+    v3NotificationTestCreate: (
+      data: NotificationResource,
+      query?: {
+        /** @default false */
+        forceTest?: boolean;
+      },
+      params: RequestParams = {},
+    ) =>
       this.request<void, any>({
         path: `/api/v3/notification/test`,
         method: "POST",
+        query: query,
         body: data,
         secure: true,
         type: ContentType.Json,
@@ -5295,23 +5481,6 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags Queue
-     * @name V3QueueDetail
-     * @request GET:/api/v3/queue/{id}
-     * @secure
-     */
-    v3QueueDetail: (id: number, params: RequestParams = {}) =>
-      this.request<QueueResource, any>({
-        path: `/api/v3/queue/${id}`,
-        method: "GET",
-        secure: true,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Queue
      * @name V3QueueBulkDelete
      * @request DELETE:/api/v3/queue/bulk
      * @secure
@@ -5446,23 +5615,6 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     /**
      * No description
      *
-     * @tags QueueDetails
-     * @name V3QueueDetailsDetail
-     * @request GET:/api/v3/queue/details/{id}
-     * @secure
-     */
-    v3QueueDetailsDetail: (id: number, params: RequestParams = {}) =>
-      this.request<QueueResource, any>({
-        path: `/api/v3/queue/details/${id}`,
-        method: "GET",
-        secure: true,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
      * @tags QueueStatus
      * @name V3QueueStatusList
      * @request GET:/api/v3/queue/status
@@ -5471,23 +5623,6 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     v3QueueStatusList: (params: RequestParams = {}) =>
       this.request<QueueStatusResource, any>({
         path: `/api/v3/queue/status`,
-        method: "GET",
-        secure: true,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags QueueStatus
-     * @name V3QueueStatusDetail
-     * @request GET:/api/v3/queue/status/{id}
-     * @secure
-     */
-    v3QueueStatusDetail: (id: number, params: RequestParams = {}) =>
-      this.request<QueueStatusResource, any>({
-        path: `/api/v3/queue/status/${id}`,
         method: "GET",
         secure: true,
         format: "json",
@@ -5531,23 +5666,6 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         path: `/api/v3/release`,
         method: "GET",
         query: query,
-        secure: true,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Release
-     * @name V3ReleaseDetail
-     * @request GET:/api/v3/release/{id}
-     * @secure
-     */
-    v3ReleaseDetail: (id: number, params: RequestParams = {}) =>
-      this.request<ReleaseResource, any>({
-        path: `/api/v3/release/${id}`,
-        method: "GET",
         secure: true,
         format: "json",
         ...params,
@@ -5656,23 +5774,6 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         body: data,
         secure: true,
         type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags ReleasePush
-     * @name V3ReleasePushDetail
-     * @request GET:/api/v3/release/push/{id}
-     * @secure
-     */
-    v3ReleasePushDetail: (id: number, params: RequestParams = {}) =>
-      this.request<ReleaseResource, any>({
-        path: `/api/v3/release/push/${id}`,
-        method: "GET",
-        secure: true,
         format: "json",
         ...params,
       }),
@@ -6310,6 +6411,23 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       this.request<PingResource, any>({
         path: `/ping`,
         method: "GET",
+        secure: true,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Ping
+     * @name HeadPing
+     * @request HEAD:/ping
+     * @secure
+     */
+    headPing: (params: RequestParams = {}) =>
+      this.request<PingResource, any>({
+        path: `/ping`,
+        method: "HEAD",
         secure: true,
         format: "json",
         ...params,
