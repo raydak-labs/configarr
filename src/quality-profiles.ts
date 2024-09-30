@@ -10,23 +10,25 @@ import { getArrApi } from "./api";
 import { loadServerCustomFormats } from "./custom-formats";
 import { logger } from "./logger";
 import { loadQualityDefinitionFromServer } from "./quality-definitions";
-import { CFProcessing, RecyclarrMergedTemplates, YamlConfigQualityProfile, YamlConfigQualityProfileItems, YamlList } from "./types";
+import { CFProcessing, ConfigCustomFormat, ConfigQualityProfile, ConfigQualityProfileItem, RecyclarrMergedTemplates } from "./types";
 import { IS_LOCAL_SAMPLE_MODE, cloneWithJSON, notEmpty } from "./util";
 
-export const mapQualityProfiles = ({ carrIdMapping }: CFProcessing, customFormats: YamlList[], config: RecyclarrMergedTemplates) => {
+export const mapQualityProfiles = (
+  { carrIdMapping }: CFProcessing,
+  customFormats: ConfigCustomFormat[],
+  config: RecyclarrMergedTemplates,
+) => {
   // QualityProfile -> (CF Name -> Scoring)
   const profileScores = new Map<string, Map<string, ProfileFormatItemResource>>();
 
   const defaultScoringMap = new Map(config.quality_profiles.map((obj) => [obj.name, obj]));
 
-  for (const { trash_ids, quality_profiles } of customFormats) {
+  for (const { trash_ids, assign_scores_to } of customFormats) {
     if (!trash_ids) {
       continue;
     }
 
-    //logger.info(customFormats);
-    //logger.info(quality_profiles);
-    for (const profile of quality_profiles) {
+    for (const profile of assign_scores_to) {
       for (const trashId of trash_ids) {
         const carr = carrIdMapping.get(trashId);
 
@@ -81,7 +83,7 @@ export const loadQualityProfilesFromServer = async (): Promise<QualityProfileRes
 };
 
 // TODO should we use clones or not?
-const mapQualities = (qd_source: QualityDefinitionResource[], value_source: YamlConfigQualityProfile) => {
+const mapQualities = (qd_source: QualityDefinitionResource[], value_source: ConfigQualityProfile) => {
   const qd = cloneWithJSON(qd_source);
   const value = cloneWithJSON(value_source);
 
@@ -157,7 +159,7 @@ const mapQualities = (qd_source: QualityDefinitionResource[], value_source: Yaml
   }
 };
 
-export const doAllQualitiesExist = (obj1_source: YamlConfigQualityProfileItems[], obj2_source: YamlConfigQualityProfileItems[]) => {
+export const doAllQualitiesExist = (obj1_source: ConfigQualityProfileItem[], obj2_source: ConfigQualityProfileItem[]) => {
   const obj1 = cloneWithJSON(obj1_source);
   const obj2 = cloneWithJSON(obj2_source);
 
@@ -201,7 +203,7 @@ export const doAllQualitiesExist = (obj1_source: YamlConfigQualityProfileItems[]
   return true;
 };
 
-export const isOrderOfQualitiesEqual = (obj1: YamlConfigQualityProfileItems[], obj2: YamlConfigQualityProfileItems[]) => {
+export const isOrderOfQualitiesEqual = (obj1: ConfigQualityProfileItem[], obj2: ConfigQualityProfileItem[]) => {
   if (obj1.length !== obj2.length) {
     return false;
   }
@@ -213,7 +215,7 @@ export const isOrderOfQualitiesEqual = (obj1: YamlConfigQualityProfileItems[], o
 
 export const calculateQualityProfilesDiff = async (
   cfManaged: CFProcessing,
-  qpMerged: Map<string, YamlConfigQualityProfile>,
+  qpMerged: Map<string, ConfigQualityProfile>,
   scoring: Map<string, Map<string, ProfileFormatItemResource>>,
   serverQP: QualityProfileResource[],
 ): Promise<{
@@ -303,8 +305,8 @@ export const calculateQualityProfilesDiff = async (
     const valueQualityMap = new Map(value.qualities.map((obj) => [obj.name, obj]));
 
     // TODO need to better validate if this quality transforming works as expected in different cases
-    const serverQualitiesMapped: YamlConfigQualityProfileItems[] = (serverMatch.items || [])
-      .map((obj): YamlConfigQualityProfileItems | null => {
+    const serverQualitiesMapped: ConfigQualityProfileItem[] = (serverMatch.items || [])
+      .map((obj): ConfigQualityProfileItem | null => {
         let qualityName: string;
 
         if (obj.id) {
@@ -474,7 +476,7 @@ export const calculateQualityProfilesDiff = async (
   return { create: createQPs, changedQPs: changedQPs, noChanges: noChangedQPs };
 };
 
-export const filterInvalidQualityProfiles = (profiles: YamlConfigQualityProfile[]): YamlConfigQualityProfile[] => {
+export const filterInvalidQualityProfiles = (profiles: ConfigQualityProfile[]): ConfigQualityProfile[] => {
   return profiles.filter((p) => {
     if (p.name == null) {
       logger.info(p, `QualityProfile filtered because no name provided`);

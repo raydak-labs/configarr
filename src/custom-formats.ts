@@ -4,7 +4,7 @@ import { CustomFormatResource } from "./__generated__/generated-sonarr-api";
 import { getArrApi } from "./api";
 import { getConfig } from "./config";
 import { logger } from "./logger";
-import { CFProcessing, ConfigarrCF, DynamicImportType, TrashCF, YamlInput } from "./types";
+import { CFProcessing, ConfigCustomFormatList, ConfigarrCF, DynamicImportType, TrashCF } from "./types";
 import { IS_DRY_RUN, IS_LOCAL_SAMPLE_MODE, compareObjectsCarr, mapImportCfToRequestCf, toCarrCF } from "./util";
 
 export const deleteAllCustomFormats = async () => {
@@ -169,7 +169,7 @@ export const loadCFFromConfig = (): CFProcessing | null => {
   };
 };
 
-export const calculateCFsToManage = (yaml: YamlInput) => {
+export const calculateCFsToManage = (yaml: ConfigCustomFormatList) => {
   const cfTrashToManage: Set<string> = new Set();
 
   yaml.custom_formats.map((cf) => {

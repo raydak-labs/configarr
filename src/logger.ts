@@ -1,5 +1,6 @@
 import pino from "pino";
-import { LOG_LEVEL } from "./config";
+
+export const LOG_LEVEL = process.env.LOG_LEVEL ?? `info`;
 
 export const logger = pino({
   level: LOG_LEVEL,

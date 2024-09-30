@@ -89,7 +89,13 @@ export const loadRecyclarrTemplates = (arrType: ArrType): Map<string, MappedTemp
         if (cf.assign_scores_to == null && cf.quality_profiles == null) {
           logger.warn(`Recyclarr Template "${k}" does not provide correct profile for custom format. Ignoring.`);
         }
-        return { ...cf, quality_profiles: cf.assign_scores_to ?? cf.quality_profiles ?? [] };
+
+        if (cf.quality_profiles) {
+          logger.warn(
+            `Deprecated: (Recyclarr Template '${k}') For custom_formats please rename 'quality_profiles' to 'assign_scores_to'. See recyclarr v7.2.0`,
+          );
+        }
+        return { ...cf, assign_scores_to: cf.assign_scores_to ?? cf.quality_profiles ?? [] };
       });
 
       return [
