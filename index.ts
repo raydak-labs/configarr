@@ -22,10 +22,10 @@ import {
 } from "./src/quality-profiles";
 import { cloneRecyclarrTemplateRepo, loadRecyclarrTemplates } from "./src/recyclarr-importer";
 import { cloneTrashRepo, loadQualityDefinitionSonarrFromTrash, loadSonarrTrashCFs } from "./src/trash-guide";
-import { ArrType, MappedMergedTemplates, TrashQualityDefintion, YamlConfigInstance, YamlConfigQualityProfile } from "./src/types";
+import { ArrType, ConfigArrInstance, ConfigQualityProfile, MappedMergedTemplates, TrashQualityDefintion } from "./src/types";
 import { DEBUG_CREATE_FILES, IS_DRY_RUN } from "./src/util";
 
-const pipeline = async (value: YamlConfigInstance, arrType: ArrType) => {
+const pipeline = async (value: ConfigArrInstance, arrType: ArrType) => {
   const api = getArrApi();
   const recyclarrTemplateMap = loadRecyclarrTemplates(arrType);
 
@@ -75,7 +75,7 @@ const pipeline = async (value: YamlConfigInstance, arrType: ArrType) => {
     recylarrMergedTemplates.quality_profiles.push(...value.quality_profiles);
   }
 
-  const recyclarrProfilesMerged = recylarrMergedTemplates.quality_profiles.reduce<Map<string, YamlConfigQualityProfile>>((p, c) => {
+  const recyclarrProfilesMerged = recylarrMergedTemplates.quality_profiles.reduce<Map<string, ConfigQualityProfile>>((p, c) => {
     const profile = p.get(c.name);
 
     if (profile == null) {
@@ -187,7 +187,7 @@ const pipeline = async (value: YamlConfigInstance, arrType: ArrType) => {
     }
 
     return p;
-  }, new Map<string, YamlConfigQualityProfile>());
+  }, new Map<string, ConfigQualityProfile>());
 
   // calculate diff from server <-> what we want to be there
 

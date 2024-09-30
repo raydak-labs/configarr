@@ -1,10 +1,10 @@
 import { describe, expect, test } from "vitest";
 import { doAllQualitiesExist, isOrderOfQualitiesEqual } from "./quality-profiles";
-import { YamlConfigQualityProfileItems } from "./types";
+import { ConfigQualityProfileItem } from "./types";
 
 describe("QualityProfiles", async () => {
   test("doAllQualitiesExist - all exist", async ({}) => {
-    const fromConfig: YamlConfigQualityProfileItems[] = [
+    const fromConfig: ConfigQualityProfileItem[] = [
       { name: "WEB 1080p", qualities: ["WEBDL-1080p", "WEBRip-1080p"] },
       { name: "HDTV-1080p" },
       { name: "Bluray-1080p" },
@@ -12,7 +12,7 @@ describe("QualityProfiles", async () => {
       { name: "WEB 720p", qualities: ["WEBDL-720p", "WEBRip-720p"] },
       { name: "HDTV-720p" },
     ];
-    const fromServer: YamlConfigQualityProfileItems[] = [
+    const fromServer: ConfigQualityProfileItem[] = [
       { name: "Bluray-1080p", qualities: [] },
       { name: "HDTV-720p", qualities: [] },
       { name: "WEB 720p", qualities: ["WEBDL-720p", "WEBRip-720p"] },
@@ -26,7 +26,7 @@ describe("QualityProfiles", async () => {
   });
 
   test("doAllQualitiesExist - missing", async ({}) => {
-    const fromConfig: YamlConfigQualityProfileItems[] = [
+    const fromConfig: ConfigQualityProfileItem[] = [
       { name: "WEB 1080p", qualities: ["WEBDL-1080p", "WEBRip-1080p"] },
       { name: "HDTV-1080p" },
       { name: "Bluray-1080p" },
@@ -34,7 +34,7 @@ describe("QualityProfiles", async () => {
       { name: "WEB 720p", qualities: ["WEBDL-720p", "WEBRip-720p"] },
       { name: "HDTV-720p" },
     ];
-    const fromServer: YamlConfigQualityProfileItems[] = [
+    const fromServer: ConfigQualityProfileItem[] = [
       { name: "Bluray-1080p", qualities: [] },
       { name: "WEB 720p", qualities: ["WEBDL-720p", "WEBRip-720p"] },
       { name: "HDTV-1080p", qualities: [] },
@@ -47,7 +47,7 @@ describe("QualityProfiles", async () => {
   });
 
   test("isOrderOfQualitiesEqual - should match", async ({}) => {
-    const fromConfig: YamlConfigQualityProfileItems[] = [
+    const fromConfig: ConfigQualityProfileItem[] = [
       { name: "WEB 1080p", qualities: ["WEBDL-1080p", "WEBRip-1080p"] },
       { name: "HDTV-1080p" },
       { name: "Bluray-1080p" },
@@ -55,7 +55,7 @@ describe("QualityProfiles", async () => {
       { name: "WEB 720p", qualities: ["WEBDL-720p", "WEBRip-720p"] },
       { name: "HDTV-720p" },
     ];
-    const fromServer: YamlConfigQualityProfileItems[] = [
+    const fromServer: ConfigQualityProfileItem[] = [
       { name: "WEB 1080p", qualities: ["WEBDL-1080p", "WEBRip-1080p"] },
       { name: "HDTV-1080p" },
       { name: "Bluray-1080p" },
@@ -69,7 +69,7 @@ describe("QualityProfiles", async () => {
   });
 
   test("isOrderOfQualitiesEqual - different order", async ({}) => {
-    const fromConfig: YamlConfigQualityProfileItems[] = [
+    const fromConfig: ConfigQualityProfileItem[] = [
       { name: "WEB 1080p", qualities: ["WEBDL-1080p", "WEBRip-1080p"] },
       { name: "HDTV-1080p" },
       { name: "Bluray-1080p" },
@@ -77,7 +77,7 @@ describe("QualityProfiles", async () => {
       { name: "WEB 720p", qualities: ["WEBDL-720p", "WEBRip-720p"] },
       { name: "HDTV-720p" },
     ];
-    const fromServer: YamlConfigQualityProfileItems[] = [
+    const fromServer: ConfigQualityProfileItem[] = [
       { name: "Bluray-1080p", qualities: [] },
       { name: "HDTV-720p", qualities: [] },
       { name: "WEB 720p", qualities: ["WEBDL-720p", "WEBRip-720p"] },

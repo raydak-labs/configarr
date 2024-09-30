@@ -1,14 +1,13 @@
 import { existsSync, readFileSync } from "fs";
 import yaml from "yaml";
 import { logger } from "./logger";
-import { YamlConfig } from "./types";
+import { ConfigArrInstance, ConfigCustomFormat, ConfigSchema, InputConfigArrInstance, InputConfigSchema } from "./types";
 import { ROOT_PATH } from "./util";
 
 const CONFIG_LOCATION = process.env.CONFIG_LOCATION ?? `${ROOT_PATH}/config.yml`;
 const SECRETS_LOCATION = process.env.SECRETS_LOCATION ?? `${ROOT_PATH}/secrets.yml`;
-export const LOG_LEVEL = process.env.LOG_LEVEL ?? `info`;
 
-let config: YamlConfig;
+let config: ConfigSchema;
 let secrets: any;
 
 const secretsTag = {
@@ -36,7 +35,7 @@ const envTag = {
 };
 
 // TODO some schema validation. For now only check if something can be imported
-export const getConfig = (): YamlConfig => {
+export const getConfig = (): ConfigSchema => {
   if (config) {
     return config;
   }
@@ -47,7 +46,11 @@ export const getConfig = (): YamlConfig => {
   }
 
   const file = readFileSync(CONFIG_LOCATION, "utf8");
-  config = yaml.parse(file, { customTags: [secretsTag, envTag] }) as YamlConfig;
+
+  const inputConfig = yaml.parse(file, { customTags: [secretsTag, envTag] }) as InputConfigSchema;
+
+  config = transformConfig(inputConfig);
+
   return config;
 };
 
@@ -64,4 +67,43 @@ export const getSecrets = () => {
   const file = readFileSync(SECRETS_LOCATION, "utf8");
   config = yaml.parse(file);
   return config;
+};
+
+// 2024-09-30: Recyclarr assign_scores_to adjustments
+export const transformConfig = (input: InputConfigSchema): ConfigSchema => {
+  const mappedCustomFormats = (arrInput: Record<string, InputConfigArrInstance>): Record<string, ConfigArrInstance> => {
+    return Object.entries(arrInput).reduce(
+      (p, [key, value]) => {
+        const mappedCustomFormats = value.custom_formats.map<ConfigCustomFormat>((cf) => {
+          const { assign_scores_to, quality_profiles, ...rest } = cf;
+
+          if (quality_profiles) {
+            logger.warn(
+              `Deprecated: (Instance '${key}') For custom_formats please rename 'quality_profiles' to 'assign_scores_to'. See recyclarr v7.2.0`,
+            );
+          }
+
+          const mapped_assign_scores = quality_profiles ?? assign_scores_to;
+
+          if (!mapped_assign_scores) {
+            throw new Error(
+              `Mapping failed for profile ${key} -> custom format mapping (assign_scores_to or quality_profiles is missing. Use assign_scores_to)`,
+            );
+          }
+
+          return { ...rest, assign_scores_to: mapped_assign_scores };
+        });
+
+        p[key] = { ...value, custom_formats: mappedCustomFormats };
+        return p;
+      },
+      {} as Record<string, ConfigArrInstance>,
+    );
+  };
+
+  return {
+    ...input,
+    radarr: mappedCustomFormats(input.radarr),
+    sonarr: mappedCustomFormats(input.sonarr),
+  };
 };
