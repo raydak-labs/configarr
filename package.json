@@ -26,11 +26,11 @@
     "yaml": "2.5.0"
   },
   "devDependencies": {
-    "@playwright/test": "1.46.1",
-    "@types/node": "22.5.1",
-    "@vitest/coverage-v8": "2.0.5",
+    "@playwright/test": "1.47.2",
+    "@types/node": "22.7.4",
+    "@vitest/coverage-v8": "2.1.1",
     "prettier": "3.3.3",
-    "typescript": "5.5.4",
-    "vitest": "2.0.5"
+    "typescript": "5.6.2",
+    "vitest": "2.1.1"
   }
 }
