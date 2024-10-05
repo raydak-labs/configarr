@@ -1,6 +1,7 @@
 import { Api as RadarrApi } from "./__generated__/generated-radarr-api";
 import { Api as SonarrApi } from "./__generated__/generated-sonarr-api";
 import { logger } from "./logger";
+import { ArrType } from "./types";
 
 let sonarrClient: SonarrApi<unknown>["api"] | undefined;
 let radarrClient: RadarrApi<unknown>["api"] | undefined;
@@ -28,9 +29,42 @@ export const getSonarrApi = () => {
   throw new Error("Please configure API first.");
 };
 
+const validateParams = (url: string, apiKey: string, arrType: ArrType) => {
+  const arrLabel = arrType === "RADARR" ? "Radarr" : "Sonarr";
+
+  if (!url) {
+    const message = `URL not correctly configured for ${arrLabel} API!`;
+    logger.error(message);
+    throw new Error(message);
+  }
+  if (!apiKey) {
+    const message = `API Key not correctly configured for ${arrLabel} API!`;
+    logger.error(message);
+    throw new Error(message);
+  }
+};
+
+const handleErrorApi = (error: any, arrType: ArrType) => {
+  let message;
+  const arrLabel = arrType === "RADARR" ? "Radarr" : "Sonarr";
+
+  error.message && logger.error(`Error configuring ${arrLabel} API: ${error.message}`);
+
+  if (error.response) {
+    // The request was made and the server responded with a status code
+    // that falls out of the range of 2xx
+    message = `Unable to retrieve data from ${arrLabel} API. Server responded with status code ${error.response.status}: ${error.response.statusText}. Please check the API server status or your request parameters.`;
+  } else {
+    // Something happened in setting up the request that triggered an Error
+    message = `An unexpected error occurred while setting up the ${arrLabel} request: ${error.message}. Please try again.`;
+  }
+
+  throw new Error(message);
+};
+
 export const configureSonarrApi = async (url: string, apiKey: string) => {
-  sonarrClient = undefined;
-  radarrClient = undefined;
+  unsetApi();
+  validateParams(url, apiKey, "SONARR");
 
   const api = new SonarrApi({
     headers: {
@@ -51,23 +85,7 @@ export const configureSonarrApi = async (url: string, apiKey: string) => {
   try {
     await sonarrClient.v3MetadataList();
   } catch (error: any) {
-    let message;
-
-    if (error.response) {
-      // The request was made and the server responded with a status code
-      // that falls out of the range of 2xx
-      message = `Could not load from Sonarr API: Status ${error.response.status} - ${error.response.statusText}`;
-    } else if (error.request) {
-      // The request was made but no response was received
-      // `error.request` is an instance of XMLHttpRequest in the browser and an instance of
-      // http.ClientRequest in node.js
-      logger.error(error.request);
-    } else {
-      // Something happened in setting up the request that triggered an Error
-      logger.error("Error", error.message);
-    }
-
-    throw new Error(message);
+    handleErrorApi(error, "SONARR");
   }
 
   return sonarrClient;
@@ -82,8 +100,8 @@ export const getRadarrpi = () => {
 };
 
 export const configureRadarrApi = async (url: string, apiKey: string) => {
-  sonarrClient = undefined;
-  radarrClient = undefined;
+  unsetApi();
+  validateParams(url, apiKey, "RADARR");
 
   const api = new RadarrApi({
     headers: {
@@ -104,23 +122,7 @@ export const configureRadarrApi = async (url: string, apiKey: string) => {
   try {
     await radarrClient.v3MetadataList();
   } catch (error: any) {
-    let message;
-
-    if (error.response) {
-      // The request was made and the server responded with a status code
-      // that falls out of the range of 2xx
-      message = `Could not load from Radarr API: Status ${error.response.status} - ${error.response.statusText}`;
-    } else if (error.request) {
-      // The request was made but no response was received
-      // `error.request` is an instance of XMLHttpRequest in the browser and an instance of
-      // http.ClientRequest in node.js
-      logger.error(error.request);
-    } else {
-      // Something happened in setting up the request that triggered an Error
-      logger.error("Error", error.message);
-    }
-
-    throw new Error(message);
+    handleErrorApi(error, "RADARR");
   }
 
   return radarrClient;
