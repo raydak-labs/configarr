@@ -1,6 +1,6 @@
-import { default as fs } from "fs";
-import path from "path";
-import simpleGit, { CheckRepoActions } from "simple-git";
+import { default as fs } from "node:fs";
+import path from "node:path";
+import { CheckRepoActions, simpleGit } from "simple-git";
 import yaml from "yaml";
 import { getConfig } from "./config";
 import { logger } from "./logger";

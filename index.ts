@@ -1,6 +1,6 @@
 import "dotenv/config";
 
-import fs from "fs";
+import fs from "node:fs";
 import { CustomFormatResource } from "./src/__generated__/generated-sonarr-api";
 import { configureRadarrApi, configureSonarrApi, getArrApi, unsetApi } from "./src/api";
 import { getConfig } from "./src/config";

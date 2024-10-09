@@ -1,5 +1,5 @@
-import fs, { readdirSync } from "fs";
-import path from "path";
+import fs, { readdirSync } from "node:fs";
+import path from "node:path";
 import { CustomFormatResource } from "./__generated__/generated-sonarr-api";
 import { getArrApi } from "./api";
 import { getConfig } from "./config";

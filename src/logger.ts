@@ -1,4 +1,4 @@
-import pino from "pino";
+import { pino } from "pino";
 
 export const LOG_LEVEL = process.env.LOG_LEVEL ?? `info`;
 
