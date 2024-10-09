@@ -1,10 +1,10 @@
 {
-    "quality": {
-        "id": 5,
-        "name": "WEBDL-720p",
-        "source": "web",
-        "resolution": 720
-    },
-    "items": [],
-    "allowed": true
+  "quality": {
+    "id": 5,
+    "name": "WEBDL-720p",
+    "source": "web",
+    "resolution": 720
+  },
+  "items": [],
+  "allowed": true
 }

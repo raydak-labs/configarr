@@ -1,27 +1,27 @@
 {
-    "name": "WEB 1080p",
-    "items": [
-        {
-            "quality": {
-                "id": 15,
-                "name": "WEBRip-1080p",
-                "source": "webRip",
-                "resolution": 1080
-            },
-            "items": [],
-            "allowed": true
-        },
-        {
-            "quality": {
-                "id": 3,
-                "name": "WEBDL-1080p",
-                "source": "web",
-                "resolution": 1080
-            },
-            "items": [],
-            "allowed": true
-        }
-    ],
-    "allowed": true,
-    "id": 1002
+  "name": "WEB 1080p",
+  "items": [
+    {
+      "quality": {
+        "id": 15,
+        "name": "WEBRip-1080p",
+        "source": "webRip",
+        "resolution": 1080
+      },
+      "items": [],
+      "allowed": true
+    },
+    {
+      "quality": {
+        "id": 3,
+        "name": "WEBDL-1080p",
+        "source": "web",
+        "resolution": 1080
+      },
+      "items": [],
+      "allowed": true
+    }
+  ],
+  "allowed": true,
+  "id": 1002
 }

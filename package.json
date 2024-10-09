@@ -4,12 +4,13 @@
   "description": "",
   "type": "module",
   "scripts": {
+    "build": "tsx esbuild.ts",
     "coverage": "vitest run --coverage",
     "generateApi": "tsx generate-api.js && prettier src/__generated__ --write",
+    "lint": "prettier . --check",
     "start": "tsx index.ts",
     "test": "vitest",
-    "type-check": "tsc --noEmit",
-    "build": "tsx esbuild.ts"
+    "typecheck": "tsc --noEmit"
   },
   "author": "",
   "license": "ISC",
