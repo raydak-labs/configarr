@@ -11,7 +11,7 @@ import { loadServerCustomFormats } from "./custom-formats";
 import { logger } from "./logger";
 import { loadQualityDefinitionFromServer } from "./quality-definitions";
 import { CFProcessing, ConfigCustomFormat, ConfigQualityProfile, ConfigQualityProfileItem, RecyclarrMergedTemplates } from "./types";
-import { IS_LOCAL_SAMPLE_MODE, cloneWithJSON, notEmpty } from "./util";
+import { IS_LOCAL_SAMPLE_MODE, cloneWithJSON, loadJsonFile, notEmpty } from "./util";
 
 export const mapQualityProfiles = (
   { carrIdMapping }: CFProcessing,
@@ -74,11 +74,7 @@ export const mapQualityProfiles = (
 
 export const loadQualityProfilesFromServer = async (): Promise<QualityProfileResource[]> => {
   if (IS_LOCAL_SAMPLE_MODE) {
-    return (
-      await import(path.resolve(`./tests/samples/quality_profiles.json`), {
-        with: { type: "json" },
-      })
-    ).default;
+    return loadJsonFile(path.resolve(__dirname, `../tests/samples/quality_profiles.json`));
   }
   const api = getArrApi();
 

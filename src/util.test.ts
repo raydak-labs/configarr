@@ -1,8 +1,9 @@
+import path from "path";
 import { describe, expect, test } from "vitest";
 import { CustomFormatResource as CustomFormatResourceRadarr, PrivacyLevel } from "./__generated__/generated-radarr-api";
 import { CustomFormatResource } from "./__generated__/generated-sonarr-api";
 import { TrashCF, TrashCFSpF } from "./types";
-import { cloneWithJSON, compareObjectsCarr, mapImportCfToRequestCf, toCarrCF } from "./util";
+import { cloneWithJSON, compareObjectsCarr, loadJsonFile, mapImportCfToRequestCf, toCarrCF } from "./util";
 
 const exampleCFImplementations = {
   name: "TestSpec",
@@ -172,7 +173,8 @@ describe("SizeSpecification", async () => {
 });
 
 describe("compareObjectsCarr - general", async () => {
-  const serverResponse = (await import("../tests/samples/20240930_cf_exceptLanguage.json")) as CustomFormatResourceRadarr;
+  const filePath = path.resolve(__dirname, "../tests/samples/20240930_cf_exceptLanguage.json");
+  const serverResponse = loadJsonFile<CustomFormatResourceRadarr>(filePath);
 
   const custom: TrashCF = {
     trash_id: "test123",

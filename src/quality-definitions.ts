@@ -3,15 +3,11 @@ import { QualityDefinitionResource } from "./__generated__/generated-sonarr-api"
 import { getArrApi } from "./api";
 import { logger } from "./logger";
 import { TrashQualityDefintion, TrashQualityDefintionQuality } from "./types";
-import { IS_LOCAL_SAMPLE_MODE } from "./util";
+import { IS_LOCAL_SAMPLE_MODE, loadJsonFile } from "./util";
 
 export const loadQualityDefinitionFromServer = async (): Promise<QualityDefinitionResource[]> => {
   if (IS_LOCAL_SAMPLE_MODE) {
-    return (
-      await import(path.resolve("./tests/samples/qualityDefinition.json"), {
-        with: { type: "json" },
-      })
-    ).default;
+    return loadJsonFile(path.resolve(__dirname, "../tests/samples/qualityDefinition.json"));
   }
   return (await getArrApi().v3QualitydefinitionList()).data as QualityDefinitionResource[];
 };

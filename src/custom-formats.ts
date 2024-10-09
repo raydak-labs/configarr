@@ -4,8 +4,8 @@ import { CustomFormatResource } from "./__generated__/generated-sonarr-api";
 import { getArrApi } from "./api";
 import { getConfig } from "./config";
 import { logger } from "./logger";
-import { CFProcessing, ConfigCustomFormatList, ConfigarrCF, DynamicImportType, TrashCF } from "./types";
-import { IS_DRY_RUN, IS_LOCAL_SAMPLE_MODE, compareObjectsCarr, mapImportCfToRequestCf, toCarrCF } from "./util";
+import { CFProcessing, ConfigCustomFormatList, ConfigarrCF, TrashCF } from "./types";
+import { IS_DRY_RUN, IS_LOCAL_SAMPLE_MODE, compareObjectsCarr, loadJsonFile, mapImportCfToRequestCf, toCarrCF } from "./util";
 
 export const deleteAllCustomFormats = async () => {
   const api = getArrApi();
@@ -19,11 +19,7 @@ export const deleteAllCustomFormats = async () => {
 
 export const loadServerCustomFormats = async (): Promise<CustomFormatResource[]> => {
   if (IS_LOCAL_SAMPLE_MODE) {
-    return (
-      await import(path.resolve("./tests/samples/cfs.json"), {
-        with: { type: "json" },
-      })
-    ).default as unknown as Promise<CustomFormatResource[]>;
+    return loadJsonFile<CustomFormatResource[]>(path.resolve(__dirname, "../tests/samples/cfs.json"));
   }
   const api = getArrApi();
   const cfOnServer = await api.v3CustomformatList();
@@ -122,11 +118,9 @@ export const loadLocalCfs = async (): Promise<CFProcessing | null> => {
 
   for (const file of files) {
     const name = `${cfPath}/${file}`;
-    const cf: DynamicImportType<TrashCF | ConfigarrCF> = await import(`${name}`, {
-      with: { type: "json" },
-    });
+    const cf = loadJsonFile<TrashCF | ConfigarrCF>(path.resolve(name));
 
-    const cfD = toCarrCF(cf.default);
+    const cfD = toCarrCF(cf);
 
     carrIdToObject.set(cfD.configarr_id, {
       carrConfig: cfD,
