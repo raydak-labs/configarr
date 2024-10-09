@@ -1,4 +1,4 @@
-import path from "path";
+import path from "node:path";
 import { CustomFormatResource } from "./__generated__/generated-sonarr-api";
 import { logger } from "./logger";
 import { ConfigarrCF, ImportCF, TrashCF, UserFriendlyField } from "./types";

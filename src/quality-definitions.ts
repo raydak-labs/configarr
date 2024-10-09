@@ -1,4 +1,4 @@
-import path from "path";
+import path from "node:path";
 import { QualityDefinitionResource } from "./__generated__/generated-sonarr-api";
 import { getArrApi } from "./api";
 import { logger } from "./logger";

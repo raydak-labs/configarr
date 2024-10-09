@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from "fs";
+import { existsSync, readFileSync } from "node:fs";
 import yaml from "yaml";
 import { logger } from "./logger";
 import { ConfigArrInstance, ConfigCustomFormat, ConfigSchema, InputConfigArrInstance, InputConfigSchema } from "./types";
