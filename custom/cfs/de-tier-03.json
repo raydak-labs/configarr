@@ -1,71 +1,71 @@
 {
-    "trash_id": "de-tier-03-version1",
-    "trash_scores": {},
-    "name": "GER HD Rel. Group Tier 03",
-    "includeCustomFormatWhenRenaming": false,
-    "specifications": [
-        {
-            "name": "AIDA",
-            "implementation": "ReleaseGroupSpecification",
-            "negate": false,
-            "required": false,
-            "fields": {
-                "value": "AIDA"
-            }
-        },
-        {
-            "name": "SunDry",
-            "implementation": "ReleaseGroupSpecification",
-            "negate": false,
-            "required": false,
-            "fields": {
-                "value": "SunDry"
-            }
-        },
-        {
-            "name": "TVP (Inactive)",
-            "implementation": "ReleaseGroupSpecification",
-            "negate": false,
-            "required": false,
-            "fields": {
-                "value": "TVP"
-            }
-        },
-        {
-            "name": "UTOPiA",
-            "implementation": "ReleaseGroupSpecification",
-            "negate": false,
-            "required": false,
-            "fields": {
-                "value": "UTOPiA"
-            }
-        },
-        {
-            "name": "VECTOR (Evaluate 07.2024)",
-            "implementation": "ReleaseGroupSpecification",
-            "negate": false,
-            "required": false,
-            "fields": {
-                "value": "VECTOR"
-            }
-        },
-        {
-            "name": "EXCiTED (Inactive)",
-            "implementation": "ReleaseGroupSpecification",
-            "negate": false,
-            "required": false,
-            "fields": {
-                "value": "EXCiTED"
-            }
-        },
-        {
-            "name": "FRAGGERS (Inactive)",
-            "implementation": "ReleaseGroupSpecification",
-            "negate": false,
-            "required": false,
-            "fields": {
-                "value": "FRAGGERS"
-            }
-        }
-    ]
+  "trash_id": "de-tier-03-version1",
+  "trash_scores": {},
+  "name": "GER HD Rel. Group Tier 03",
+  "includeCustomFormatWhenRenaming": false,
+  "specifications": [
+    {
+      "name": "AIDA",
+      "implementation": "ReleaseGroupSpecification",
+      "negate": false,
+      "required": false,
+      "fields": {
+        "value": "AIDA"
+      }
+    },
+    {
+      "name": "SunDry",
+      "implementation": "ReleaseGroupSpecification",
+      "negate": false,
+      "required": false,
+      "fields": {
+        "value": "SunDry"
+      }
+    },
+    {
+      "name": "TVP (Inactive)",
+      "implementation": "ReleaseGroupSpecification",
+      "negate": false,
+      "required": false,
+      "fields": {
+        "value": "TVP"
+      }
+    },
+    {
+      "name": "UTOPiA",
+      "implementation": "ReleaseGroupSpecification",
+      "negate": false,
+      "required": false,
+      "fields": {
+        "value": "UTOPiA"
+      }
+    },
+    {
+      "name": "VECTOR (Evaluate 07.2024)",
+      "implementation": "ReleaseGroupSpecification",
+      "negate": false,
+      "required": false,
+      "fields": {
+        "value": "VECTOR"
+      }
+    },
+    {
+      "name": "EXCiTED (Inactive)",
+      "implementation": "ReleaseGroupSpecification",
+      "negate": false,
+      "required": false,
+      "fields": {
+        "value": "EXCiTED"
+      }
+    },
+    {
+      "name": "FRAGGERS (Inactive)",
+      "implementation": "ReleaseGroupSpecification",
+      "negate": false,
+      "required": false,
+      "fields": {
+        "value": "FRAGGERS"
+      }
+    }
+  ]
 }

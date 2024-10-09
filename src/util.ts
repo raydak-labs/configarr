@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import path from "node:path";
 import { CustomFormatResource } from "./__generated__/generated-sonarr-api";
 import { logger } from "./logger";
@@ -188,3 +189,8 @@ export const cloneWithJSON = <T>(input: T): T => {
 };
 
 export const ROOT_PATH = path.resolve(process.cwd());
+
+export const loadJsonFile = <T = object>(filePath: string) => {
+  const file = readFileSync(filePath, { encoding: "utf-8" });
+  return JSON.parse(file) as T;
+};

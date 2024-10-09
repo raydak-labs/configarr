@@ -1724,9 +1724,7 @@ export interface FullRequestParams extends Omit<AxiosRequestConfig, "data" | "pa
 export type RequestParams = Omit<FullRequestParams, "body" | "method" | "query" | "path">;
 
 export interface ApiConfig<SecurityDataType = unknown> extends Omit<AxiosRequestConfig, "data" | "cancelToken"> {
-  securityWorker?: (
-    securityData: SecurityDataType | null,
-  ) => Promise<AxiosRequestConfig | void> | AxiosRequestConfig | void;
+  securityWorker?: (securityData: SecurityDataType | null) => Promise<AxiosRequestConfig | void> | AxiosRequestConfig | void;
   secure?: boolean;
   format?: ResponseType;
 }
@@ -1806,10 +1804,7 @@ export class HttpClient<SecurityDataType = unknown> {
     ...params
   }: FullRequestParams): Promise<AxiosResponse<T>> => {
     const secureParams =
-      ((typeof secure === "boolean" ? secure : this.secure) &&
-        this.securityWorker &&
-        (await this.securityWorker(this.securityData))) ||
-      {};
+      ((typeof secure === "boolean" ? secure : this.secure) && this.securityWorker && (await this.securityWorker(this.securityData))) || {};
     const requestParams = this.mergeRequestParams(params, secureParams);
     const responseFormat = format || this.format || undefined;
 
@@ -2853,7 +2848,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @secure
      */
     v3DownloadclientUpdate: (
-      id: string,
+      id: number,
       data: DownloadClientResource,
       query?: {
         /** @default false */
@@ -3399,7 +3394,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @secure
      */
     v3ImportlistUpdate: (
-      id: string,
+      id: number,
       data: ImportListResource,
       query?: {
         /** @default false */
@@ -3875,7 +3870,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @secure
      */
     v3IndexerUpdate: (
-      id: string,
+      id: number,
       data: IndexerResource,
       query?: {
         /** @default false */
@@ -4415,7 +4410,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @secure
      */
     v3MetadataUpdate: (
-      id: string,
+      id: number,
       data: MetadataResource,
       query?: {
         /** @default false */
@@ -5119,7 +5114,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @secure
      */
     v3NotificationUpdate: (
-      id: string,
+      id: number,
       data: NotificationResource,
       query?: {
         /** @default false */

@@ -3,3 +3,7 @@ node_modules
 .gitignore
 *.md
 dist
+repos
+dockerrepos
+playwright-report
+test-results

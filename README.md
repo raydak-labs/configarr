@@ -7,6 +7,7 @@ Supporting only Sonarr v4 and radarr v4.
 This will be a project similar to [Recyclarr](https://github.com/recyclarr/recyclarr) or [Notifiarr](https://notifiarr.wiki/) but support for additional specification and not only what [TrashGuides](https://trash-guides.info/) offer.
 
 Other projects:
+
 - https://github.com/recyclarr/recyclarr
 - https://notifiarr.wiki/
 - https://github.com/Dictionarry-Hub/profilarr
@@ -45,6 +46,7 @@ See [here](./custom/cfs/)
 ### How to add own CustomFormats
 
 - You have two ways to provide own custom formats:
+
   - `As file`
     - Export from Sonarr/Radarr instance UI (in the CustomFormats list you have two icons for each custom format: clone and export)
     - Or use existing custom formats from recyclarr or trash guide
@@ -68,6 +70,7 @@ See [here](./custom/cfs/)
             fields:
               value: 4
     ```
+
 - What you have to add at least is to the field `trash_id` or `configarr_id` to the JSON/YAML.
   The ID can be anything you like but should not conflict with other CustomFormats.
   Otherwise those will be overwritten during merge process.
@@ -78,6 +81,7 @@ See [here](./custom/cfs/)
   ...other content from export
 }
 ```
+
 - Add it as custom format location in your `config.yml`
 - After adding the ID you can simply reference it in the `config.yml` to add it to the QualityProfiles. `localCustomFormatsPath: /your/path/cfs`
 
@@ -105,10 +109,12 @@ Some examples for configuration are provided [Examples](./examples/)
 ## How to run
 
 Required files:
+
 - `config.yml`
 - `secrets.yml`
 
 Optional:
+
 - Custom Formats in folders
 
 ### Docker
@@ -118,7 +124,6 @@ Optional:
 ### Docker-compose
 
 ```yml
-
 services:
   configarr:
     image: ghcr.io/raydak-labs/configarr:latest

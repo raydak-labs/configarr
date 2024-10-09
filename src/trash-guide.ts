@@ -8,13 +8,12 @@ import {
   ArrType,
   CFProcessing,
   ConfigarrCF,
-  DynamicImportType,
   QualityDefintionsRadarr,
   QualityDefintionsSonarr,
   TrashCF,
   TrashQualityDefintion,
 } from "./types";
-import { mapImportCfToRequestCf, toCarrCF, trashRepoPaths } from "./util";
+import { loadJsonFile, mapImportCfToRequestCf, toCarrCF, trashRepoPaths } from "./util";
 
 const DEFAULT_TRASH_GIT_URL = "https://github.com/TRaSH-Guides/Guides";
 
@@ -73,9 +72,9 @@ export const loadSonarrTrashCFs = async (arrType: ArrType): Promise<CFProcessing
   for (const file of files) {
     const name = `${pathForFiles}/${file}`;
 
-    const cf: DynamicImportType<TrashCF> = await import(path.resolve(name));
+    const cf = loadJsonFile<TrashCF>(path.resolve(name));
 
-    const carrConfig = toCarrCF(cf.default);
+    const carrConfig = toCarrCF(cf);
 
     carrIdToObject.set(carrConfig.configarr_id, {
       carrConfig: carrConfig,
@@ -103,11 +102,11 @@ export const loadQualityDefinitionSonarrFromTrash = async (
 
   switch (qdType) {
     case "anime":
-      return (await import(path.resolve(`${trashPath}/anime.json`))).default;
+      return loadJsonFile(path.resolve(`${trashPath}/anime.json`));
     case "series":
-      return (await import(path.resolve(`${trashPath}/series.json`))).default;
+      return loadJsonFile(path.resolve(`${trashPath}/series.json`));
     case "movie":
-      return (await import(path.resolve(`${trashPath}/movie.json`))).default;
+      return loadJsonFile(path.resolve(`${trashPath}/movie.json`));
     case "custom":
       throw new Error("Not implemented yet");
     default:
