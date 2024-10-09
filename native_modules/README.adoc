@@ -1,3 +1,0 @@
-# https://esbuild.github.io/plugins/[esbuild plugin] to handle https://nodejs.org/dist/latest-v16.x/docs/api/addons.html[NodeJS native modules]
-
-The source code here was shamelessly taken directly from the https://github.com/netlify/zip-it-and-ship-it/tree/v4.23.6/src/runtimes/node/native_modules[Netlify zip-it-and-ship-it repository].
