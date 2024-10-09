@@ -157,3 +157,4 @@ secrets.yml
 
 test*.json
 repos/
+dockerrepos
