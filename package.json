@@ -28,12 +28,12 @@
   "devDependencies": {
     "@hyrious/esbuild-plugin-commonjs": "^0.2.4",
     "@infinite-debugger/swagger-to-ts": "0.1.0-alpha.124",
-    "@playwright/test": "1.47.2",
-    "@types/node": "22.7.4",
-    "@vitest/coverage-v8": "2.1.1",
+    "@playwright/test": "1.48.0",
+    "@types/node": "22.7.5",
+    "@vitest/coverage-v8": "2.1.2",
     "esbuild": "^0.24.0",
     "prettier": "3.3.3",
-    "typescript": "5.6.2",
-    "vitest": "2.1.1"
+    "typescript": "5.6.3",
+    "vitest": "2.1.2"
   }
 }
