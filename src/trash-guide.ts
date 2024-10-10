@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { CheckRepoActions, simpleGit } from "simple-git";
-import { CustomFormatResource } from "./__generated__/generated-sonarr-api";
+import { MergedCustomFormatResource } from "./__generated__/mergedTypes";
 import { getConfig } from "./config";
 import { logger } from "./logger";
 import {
@@ -56,7 +56,7 @@ export const loadSonarrTrashCFs = async (arrType: ArrType): Promise<CFProcessing
   const trashSonarrPath = `${trashJsonDir}/sonarr`;
   const trashSonarrCfPath = `${trashSonarrPath}/cf`;
 
-  const carrIdToObject = new Map<string, { carrConfig: ConfigarrCF; requestConfig: CustomFormatResource }>();
+  const carrIdToObject = new Map<string, { carrConfig: ConfigarrCF; requestConfig: MergedCustomFormatResource }>();
   const cfNameToCarrObject = new Map<string, ConfigarrCF>();
 
   let pathForFiles: string;

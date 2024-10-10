@@ -1,7 +1,6 @@
 import path from "path";
 import { describe, expect, test } from "vitest";
-import { CustomFormatResource as CustomFormatResourceRadarr, PrivacyLevel } from "./__generated__/generated-radarr-api";
-import { CustomFormatResource } from "./__generated__/generated-sonarr-api";
+import { MergedCustomFormatResource } from "./__generated__/mergedTypes";
 import { TrashCF, TrashCFSpF } from "./types";
 import { cloneWithJSON, compareObjectsCarr, loadJsonFile, mapImportCfToRequestCf, toCarrCF } from "./util";
 
@@ -76,7 +75,7 @@ const exampleCFImplementations = {
 };
 
 describe("SizeSpecification", async () => {
-  const serverResponse: CustomFormatResource = {
+  const serverResponse: MergedCustomFormatResource = {
     id: 103,
     name: "Size: Block More 40GB",
     includeCustomFormatWhenRenaming: false,
@@ -98,7 +97,6 @@ describe("SizeSpecification", async () => {
             value: 1,
             type: "number",
             advanced: false,
-            privacy: PrivacyLevel.Normal,
             isFloat: true,
           },
           {
@@ -110,7 +108,6 @@ describe("SizeSpecification", async () => {
             value: 9,
             type: "number",
             advanced: false,
-            privacy: PrivacyLevel.Normal,
             isFloat: true,
           },
         ],
@@ -174,7 +171,7 @@ describe("SizeSpecification", async () => {
 
 describe("compareObjectsCarr - general", async () => {
   const filePath = path.resolve(__dirname, "../tests/samples/20240930_cf_exceptLanguage.json");
-  const serverResponse = loadJsonFile<CustomFormatResourceRadarr>(filePath);
+  const serverResponse = loadJsonFile<MergedCustomFormatResource>(filePath);
 
   const custom: TrashCF = {
     trash_id: "test123",

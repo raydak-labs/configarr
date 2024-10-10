@@ -1,27 +1,27 @@
 import path from "node:path";
-import { QualityDefinitionResource } from "./__generated__/generated-sonarr-api";
+import { MergedQualityDefinitionResource } from "./__generated__/mergedTypes";
 import { getArrApi } from "./api";
 import { logger } from "./logger";
 import { TrashQualityDefintion, TrashQualityDefintionQuality } from "./types";
 import { IS_LOCAL_SAMPLE_MODE, loadJsonFile } from "./util";
 
-export const loadQualityDefinitionFromServer = async (): Promise<QualityDefinitionResource[]> => {
+export const loadQualityDefinitionFromServer = async (): Promise<MergedQualityDefinitionResource[]> => {
   if (IS_LOCAL_SAMPLE_MODE) {
     return loadJsonFile(path.resolve(__dirname, "../tests/samples/qualityDefinition.json"));
   }
-  return (await getArrApi().v3QualitydefinitionList()).data as QualityDefinitionResource[];
+  return await getArrApi().v3QualitydefinitionList().json();
 };
 
-export const calculateQualityDefinitionDiff = (serverQDs: QualityDefinitionResource[], trashQD: TrashQualityDefintion) => {
+export const calculateQualityDefinitionDiff = (serverQDs: MergedQualityDefinitionResource[], trashQD: TrashQualityDefintion) => {
   const serverMap = serverQDs.reduce((p, c) => {
     p.set(c.title!, c);
     return p;
-  }, new Map<string, QualityDefinitionResource>());
+  }, new Map<string, MergedQualityDefinitionResource>());
 
   const changeMap = new Map<string, string[]>();
   const create: TrashQualityDefintionQuality[] = [];
 
-  const restData: QualityDefinitionResource[] = [];
+  const restData: MergedQualityDefinitionResource[] = [];
 
   for (const tq of trashQD.qualities) {
     const element = serverMap.get(tq.quality);

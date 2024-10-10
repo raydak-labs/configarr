@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { QualityDefinitionResource, QualitySource } from "./__generated__/generated-sonarr-api";
+import { MergedQualityDefinitionResource } from "./__generated__/mergedTypes";
 import { calculateQualityDefinitionDiff } from "./quality-definitions";
 import { TrashQualityDefintion } from "./types";
 
@@ -74,12 +74,12 @@ const exampleCFImplementations = {
 };
 
 describe("QualityDefinitions", async () => {
-  const server: QualityDefinitionResource[] = [
+  const server: MergedQualityDefinitionResource[] = [
     {
       quality: {
         id: 0,
         name: "Unknown",
-        source: QualitySource.Unknown,
+        source: "unknown",
         resolution: 0,
       },
       title: "Unknown",
@@ -93,7 +93,7 @@ describe("QualityDefinitions", async () => {
       quality: {
         id: 1,
         name: "SDTV",
-        source: QualitySource.Television,
+        source: "television",
         resolution: 480,
       },
       title: "SDTV",

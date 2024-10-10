@@ -1,7 +1,7 @@
 import "dotenv/config";
 
 import fs from "node:fs";
-import { CustomFormatResource } from "./src/__generated__/generated-sonarr-api";
+import { MergedCustomFormatResource } from "./src/__generated__/mergedTypes";
 import { configureRadarrApi, configureSonarrApi, getArrApi, unsetApi } from "./src/api";
 import { getConfig } from "./src/config";
 import {
@@ -117,7 +117,7 @@ const pipeline = async (value: ConfigArrInstance, arrType: ArrType) => {
   const serverCFMapping = serverCFs.reduce((p, c) => {
     p.set(c.name!, c);
     return p;
-  }, new Map<string, CustomFormatResource>());
+  }, new Map<string, MergedCustomFormatResource>());
 
   await manageCf(mergedCFs, serverCFMapping, idsToManage);
   logger.info(`CustomFormats synchronized`);
@@ -206,8 +206,8 @@ const pipeline = async (value: ConfigArrInstance, arrType: ArrType) => {
   if (!IS_DRY_RUN) {
     for (const element of create) {
       try {
-        const newProfile = await api.v3QualityprofileCreate(element as any); // Ignore types
-        logger.info(`Created QualityProfile: ${newProfile.data.name}`);
+        const newProfile = await api.v3QualityprofileCreate(element as any).json(); // Ignore types
+        logger.info(`Created QualityProfile: ${newProfile.name}`);
       } catch (error: any) {
         let message;
 
@@ -232,8 +232,8 @@ const pipeline = async (value: ConfigArrInstance, arrType: ArrType) => {
 
     for (const element of changedQPs) {
       try {
-        const newProfile = await api.v3QualityprofileUpdate("" + element.id, element as any); // Ignore types
-        logger.info(`Updated QualityProfile: ${newProfile.data.name}`);
+        const newProfile = await api.v3QualityprofileUpdate("" + element.id, element as any).json(); // Ignore types
+        logger.info(`Updated QualityProfile: ${newProfile.name}`);
       } catch (error: any) {
         let message;
 

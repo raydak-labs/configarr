@@ -1,4 +1,4 @@
-import { CustomFormatResource, CustomFormatSpecificationSchema } from "./__generated__/generated-sonarr-api";
+import { MergedCustomFormatResource, MergedCustomFormatSpecificationSchema } from "./__generated__/mergedTypes";
 
 export type DynamicImportType<T> = { default: T };
 
@@ -10,7 +10,7 @@ type RequireAtLeastOne<T> = {
 export type UserFriendlyField = {
   name?: string | null; // TODO validate if this can really appear? As Input
   value?: any;
-} & Pick<CustomFormatSpecificationSchema, "negate" | "required">;
+} & Pick<MergedCustomFormatSpecificationSchema, "negate" | "required">;
 
 export type TrashCFSpF = { min: number; max: number; exceptLanguage: boolean; value: any };
 
@@ -28,19 +28,19 @@ export type CustomFormatImportImplementation =
   | "ResolutionSpecification" // value number
   | "ReleaseGroupSpecification"; // value string
 
-export type TC1 = Omit<CustomFormatSpecificationSchema, "fields"> & {
+export type TC1 = Omit<MergedCustomFormatSpecificationSchema, "fields"> & {
   implementation: "ReleaseTitleSpecification" | "LanguageSpecification";
   fields?: RequireAtLeastOne<TrashCFSpF> | null;
 };
 
-export type TC2 = Omit<CustomFormatSpecificationSchema, "fields"> & {
+export type TC2 = Omit<MergedCustomFormatSpecificationSchema, "fields"> & {
   implementation: "SizeSpecification";
   fields?: RequireAtLeastOne<TrashCFSpF>;
 };
 
 export type TCM = TC1 | TC2;
 
-export type ImportCF = Omit<CustomFormatResource, "specifications"> & {
+export type ImportCF = Omit<MergedCustomFormatResource, "specifications"> & {
   specifications?: TCM[] | null;
 };
 
@@ -74,7 +74,7 @@ export type CFProcessing = {
     string,
     {
       carrConfig: ConfigarrCF;
-      requestConfig: CustomFormatResource;
+      requestConfig: MergedCustomFormatResource;
     }
   >;
   cfNameToCarrConfig: Map<string, ConfigarrCF>;
