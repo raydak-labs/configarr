@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { CustomFormatResource } from "./__generated__/generated-sonarr-api";
+import { MergedCustomFormatResource } from "./__generated__/mergedTypes";
 import { logger } from "./logger";
 import { ConfigarrCF, ImportCF, TrashCF, UserFriendlyField } from "./types";
 
@@ -62,7 +62,7 @@ export const toCarrCF = (input: TrashCF | ConfigarrCF): ConfigarrCF => {
   return trashToCarrCF(input);
 };
 
-export const mapImportCfToRequestCf = (cf: TrashCF | ConfigarrCF): CustomFormatResource => {
+export const mapImportCfToRequestCf = (cf: TrashCF | ConfigarrCF): MergedCustomFormatResource => {
   let customId;
   let rest: ImportCF;
 

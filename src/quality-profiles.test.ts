@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { QualityDefinitionResource } from "./__generated__/generated-sonarr-api";
+import { MergedQualityDefinitionResource } from "./__generated__/mergedTypes";
 import { doAllQualitiesExist, isOrderOfQualitiesEqual, mapQualities } from "./quality-profiles";
 import { ConfigQualityProfile, ConfigQualityProfileItem } from "./types";
 
@@ -121,7 +121,7 @@ describe("QualityProfiles", async () => {
       { name: "HDTV-1080p" },
     ];
 
-    const resources: QualityDefinitionResource[] = [
+    const resources: MergedQualityDefinitionResource[] = [
       { id: 1, title: "HDTV-1080p", weight: 2, quality: { id: 1, name: "HDTV-1080p" } },
       { id: 2, title: "WEBDL-1080p", weight: 2, quality: { id: 2, name: "WEBDL-1080p" } },
       { id: 3, title: "WEBRip-1080p", weight: 2, quality: { id: 3, name: "WEBRip-1080p" } },
@@ -156,7 +156,7 @@ describe("QualityProfiles", async () => {
       { name: "HDTV-1080p", enabled: false },
     ];
 
-    const resources: QualityDefinitionResource[] = [
+    const resources: MergedQualityDefinitionResource[] = [
       { id: 1, title: "HDTV-1080p", weight: 2, quality: { id: 1, name: "HDTV-1080p" } },
       { id: 2, title: "WEBDL-1080p", weight: 2, quality: { id: 2, name: "WEBDL-1080p" } },
       { id: 3, title: "WEBRip-1080p", weight: 2, quality: { id: 3, name: "WEBRip-1080p" } },

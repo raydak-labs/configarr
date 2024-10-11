@@ -158,3 +158,4 @@ secrets.yml
 test*.json
 repos/
 dockerrepos
+.DS_Store

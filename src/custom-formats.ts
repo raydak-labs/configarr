@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { CustomFormatResource } from "./__generated__/generated-sonarr-api";
+import { MergedCustomFormatResource } from "./__generated__/mergedTypes";
 import { getArrApi } from "./api";
 import { getConfig } from "./config";
 import { logger } from "./logger";
@@ -9,24 +9,28 @@ import { IS_DRY_RUN, IS_LOCAL_SAMPLE_MODE, compareObjectsCarr, loadJsonFile, map
 
 export const deleteAllCustomFormats = async () => {
   const api = getArrApi();
-  const cfOnServer = await api.v3CustomformatList();
+  const cfOnServer = await api.v3CustomformatList().json();
 
-  for (const cf of cfOnServer.data) {
+  for (const cf of cfOnServer) {
     await api.v3CustomformatDelete(cf.id!);
     logger.info(`Deleted CF: '${cf.name}'`);
   }
 };
 
-export const loadServerCustomFormats = async (): Promise<CustomFormatResource[]> => {
+export const loadServerCustomFormats = async (): Promise<MergedCustomFormatResource[]> => {
   if (IS_LOCAL_SAMPLE_MODE) {
-    return loadJsonFile<CustomFormatResource[]>(path.resolve(__dirname, "../tests/samples/cfs.json"));
+    return loadJsonFile<MergedCustomFormatResource[]>(path.resolve(__dirname, "../tests/samples/cfs.json"));
   }
   const api = getArrApi();
-  const cfOnServer = await api.v3CustomformatList();
-  return cfOnServer.data;
+  const cfOnServer = await api.v3CustomformatList().json();
+  return cfOnServer;
 };
 
-export const manageCf = async (cfProcessing: CFProcessing, serverCfs: Map<string, CustomFormatResource>, cfsToManage: Set<string>) => {
+export const manageCf = async (
+  cfProcessing: CFProcessing,
+  serverCfs: Map<string, MergedCustomFormatResource>,
+  cfsToManage: Set<string>,
+) => {
   const { carrIdMapping: trashIdToObject } = cfProcessing;
   const api = getArrApi();
 
@@ -113,7 +117,7 @@ export const loadLocalCfs = async (): Promise<CFProcessing | null> => {
   }
 
   const files = fs.readdirSync(`${cfPath}`).filter((fn) => fn.endsWith("json"));
-  const carrIdToObject = new Map<string, { carrConfig: ConfigarrCF; requestConfig: CustomFormatResource }>();
+  const carrIdToObject = new Map<string, { carrConfig: ConfigarrCF; requestConfig: MergedCustomFormatResource }>();
   const cfNameToCarrObject = new Map<string, ConfigarrCF>();
 
   for (const file of files) {
@@ -147,7 +151,7 @@ export const loadCFFromConfig = (): CFProcessing | null => {
     return null;
   }
 
-  const carrIdToObject = new Map<string, { carrConfig: ConfigarrCF; requestConfig: CustomFormatResource }>();
+  const carrIdToObject = new Map<string, { carrConfig: ConfigarrCF; requestConfig: MergedCustomFormatResource }>();
   const cfNameToCarrObject = new Map<string, ConfigarrCF>();
 
   for (const def of defs) {

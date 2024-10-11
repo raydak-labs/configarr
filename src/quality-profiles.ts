@@ -1,11 +1,11 @@
 import path from "node:path";
 import {
-  CustomFormatResource,
-  ProfileFormatItemResource,
-  QualityDefinitionResource,
-  QualityProfileQualityItemResource,
-  QualityProfileResource,
-} from "./__generated__/generated-sonarr-api";
+  MergedCustomFormatResource,
+  MergedProfileFormatItemResource,
+  MergedQualityDefinitionResource,
+  MergedQualityProfileQualityItemResource,
+  MergedQualityProfileResource,
+} from "./__generated__/mergedTypes";
 import { getArrApi } from "./api";
 import { loadServerCustomFormats } from "./custom-formats";
 import { logger } from "./logger";
@@ -19,7 +19,7 @@ export const mapQualityProfiles = (
   config: RecyclarrMergedTemplates,
 ) => {
   // QualityProfile -> (CF Name -> Scoring)
-  const profileScores = new Map<string, Map<string, ProfileFormatItemResource>>();
+  const profileScores = new Map<string, Map<string, MergedProfileFormatItemResource>>();
 
   const defaultScoringMap = new Map(config.quality_profiles.map((obj) => [obj.name, obj]));
 
@@ -72,33 +72,34 @@ export const mapQualityProfiles = (
   return profileScores;
 };
 
-export const loadQualityProfilesFromServer = async (): Promise<QualityProfileResource[]> => {
+export const loadQualityProfilesFromServer = async (): Promise<MergedQualityProfileResource[]> => {
   if (IS_LOCAL_SAMPLE_MODE) {
     return loadJsonFile(path.resolve(__dirname, `../tests/samples/quality_profiles.json`));
   }
   const api = getArrApi();
 
-  const qualityProfiles = await api.v3QualityprofileList();
-  return qualityProfiles.data as QualityProfileResource[];
+  const qualityProfiles = await api.v3QualityprofileList().json();
+  // TODO type hack
+  return qualityProfiles as MergedQualityDefinitionResource[];
 };
 
 // TODO should we use clones or not?
-export const mapQualities = (qd_source: QualityDefinitionResource[], value_source: ConfigQualityProfile) => {
+export const mapQualities = (qd_source: MergedQualityDefinitionResource[], value_source: ConfigQualityProfile) => {
   const qd = cloneWithJSON(qd_source);
   const value = cloneWithJSON(value_source);
 
   const qdMap = new Map(qd.map((obj) => [obj.title, obj]));
 
-  const allowedQualities: QualityProfileQualityItemResource[] = value.qualities.map((obj, i) => {
+  const allowedQualities = value.qualities.map<MergedQualityProfileQualityItemResource>((obj, i) => {
     if (obj.qualities?.length && obj.qualities.length > 0) {
       return {
         allowed: obj.enabled ?? true,
         id: 1000 + i,
         name: obj.name,
-        items: obj.qualities?.map<QualityProfileQualityItemResource>((obj2) => {
+        items: obj.qualities?.map<MergedQualityProfileQualityItemResource>((obj2) => {
           const qd = qdMap.get(obj2);
 
-          const returnObject: QualityProfileQualityItemResource = {
+          const returnObject: MergedQualityProfileQualityItemResource = {
             quality: {
               id: qd?.quality?.id,
               name: obj2,
@@ -122,17 +123,18 @@ export const mapQualities = (qd_source: QualityDefinitionResource[], value_sourc
 
       qdMap.delete(obj.name);
 
-      return {
+      const item: MergedQualityProfileQualityItemResource = {
         allowed: obj.enabled ?? true,
         items: [],
         quality: {
           ...serverQD?.quality,
         },
       };
+      return item;
     }
   });
 
-  const missingQualities: QualityProfileQualityItemResource[] = [];
+  const missingQualities: MergedQualityProfileQualityItemResource[] = [];
 
   for (const [key, value] of qdMap.entries()) {
     missingQualities.push({
@@ -220,25 +222,25 @@ export const isOrderOfQualitiesEqual = (obj1: ConfigQualityProfileItem[], obj2: 
 
 export const calculateQualityProfilesDiff = async (
   qpMerged: Map<string, ConfigQualityProfile>,
-  scoring: Map<string, Map<string, ProfileFormatItemResource>>,
-  serverQP: QualityProfileResource[],
+  scoring: Map<string, Map<string, MergedProfileFormatItemResource>>,
+  serverQP: MergedQualityProfileResource[],
 ): Promise<{
-  changedQPs: QualityProfileResource[];
-  create: QualityProfileResource[];
+  changedQPs: MergedQualityProfileResource[];
+  create: MergedQualityProfileResource[];
   noChanges: string[];
 }> => {
   const mappedServerQP = serverQP.reduce((p, c) => {
     p.set(c.name!, c);
     return p;
-  }, new Map<string, QualityProfileResource>());
+  }, new Map<string, MergedQualityProfileResource>());
 
   // TODO can be optimized
   const qd = await loadQualityDefinitionFromServer();
   const cfsFromServer = await loadServerCustomFormats();
   const cfsServerMap = new Map(cfsFromServer.map((obj) => [obj.name!, obj]));
 
-  const createQPs: QualityProfileResource[] = [];
-  const changedQPs: QualityProfileResource[] = [];
+  const createQPs: MergedQualityProfileResource[] = [];
+  const changedQPs: MergedQualityProfileResource[] = [];
   const noChangedQPs: string[] = [];
 
   const changes = new Map<string, string[]>();
@@ -270,9 +272,9 @@ export const calculateQualityProfilesDiff = async (
         return p;
       }, new Map());
 
-      const cfs: Map<string, CustomFormatResource> = new Map(JSON.parse(JSON.stringify(Array.from(cfsServerMap))));
+      const cfs: Map<string, MergedCustomFormatResource> = new Map(JSON.parse(JSON.stringify(Array.from(cfsServerMap))));
 
-      const customFormatsMapped = Array.from(cfs.values()).map<ProfileFormatItemResource>((e) => {
+      const customFormatsMapped = Array.from(cfs.values()).map<MergedProfileFormatItemResource>((e) => {
         let score = 0;
 
         if (scoringForQP) {
@@ -302,7 +304,7 @@ export const calculateQualityProfilesDiff = async (
     const changeList: string[] = [];
     changes.set(serverMatch.name!, changeList);
 
-    const updatedServerObject: QualityProfileResource = JSON.parse(JSON.stringify(serverMatch));
+    const updatedServerObject: MergedQualityProfileResource = JSON.parse(JSON.stringify(serverMatch));
 
     let diffExist = false;
 
@@ -415,7 +417,7 @@ export const calculateQualityProfilesDiff = async (
     let scoringDiff = false;
 
     if (scoringForQP) {
-      const newCFFormats: ProfileFormatItemResource[] = [];
+      const newCFFormats: MergedProfileFormatItemResource[] = [];
 
       for (const [scoreKey, scoreValue] of scoringForQP.entries()) {
         const serverCF = serverCFMap.get(scoreKey);
@@ -441,7 +443,7 @@ export const calculateQualityProfilesDiff = async (
         }
       }
 
-      const missingCfs = Array.from(serverCFMap.values()).reduce<ProfileFormatItemResource[]>((p, c) => {
+      const missingCfs = Array.from(serverCFMap.values()).reduce<MergedProfileFormatItemResource[]>((p, c) => {
         const cfName = c.name!;
         const cfScore = c.score;
 
