@@ -6,7 +6,7 @@
   "scripts": {
     "build": "tsx esbuild.ts",
     "coverage": "vitest run --coverage",
-    "generateApi": "tsx generate-api.js && prettier src/__generated__ --write",
+    "generateApi": "tsx generate-api.ts && prettier src/__generated__ --write",
     "lint": "prettier . --check",
     "start": "tsx index.ts",
     "test": "vitest",

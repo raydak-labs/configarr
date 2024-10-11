@@ -157,6 +157,7 @@ spec:
             - name: configarr
               image: ghcr.io/raydak-labs/configarr:latest
               imagePullPolicy: Always
+              tty: true # for color support
               envFrom:
                 - configMapRef:
                     name: common-deployment-environment

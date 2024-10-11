@@ -12,7 +12,7 @@ const main = async () => {
     url: "https://raw.githubusercontent.com/Sonarr/Sonarr/develop/src/Sonarr.Api.V3/openapi.json",
     modular: true,
     singleHttpClient: true,
-    // little hack to have one single client (we are deleting the weird created file for the http-client)
+    // @ts-ignore little hack to have one single client (we are deleting the weird created file for the http-client)
     fileNames: {
       httpClient: "../ky-client",
     },
@@ -23,7 +23,7 @@ const main = async () => {
     url: "https://raw.githubusercontent.com/Radarr/Radarr/develop/src/Radarr.Api.V3/openapi.json",
     modular: true,
     singleHttpClient: true,
-    // little hack to have one single client (we are deleting the weird created file for the http-client)
+    // @ts-ignore little hack to have one single client (we are deleting the weird created file for the http-client)
     fileNames: {
       httpClient: "../ky-client",
     },
