@@ -1,5 +1,5 @@
-import { unlinkSync } from "fs";
-import path from "path";
+import { unlinkSync } from "node:fs";
+import path from "node:path";
 import { generateApi } from "swagger-typescript-api";
 
 const PATH_TO_OUTPUT_DIR = path.resolve(process.cwd(), "./src/__generated__");
