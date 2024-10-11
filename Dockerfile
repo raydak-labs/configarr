@@ -1,4 +1,5 @@
 # https://github.com/nodejs/docker-node/blob/main/docs/BestPractices.md
+# TODO because multiarch build has problems with QEMU and Node we cannot use alpine here: https://github.com/nodejs/docker-node/issues/1798
 FROM node:22.9.0-slim AS base
 WORKDIR /app
 
@@ -35,16 +36,10 @@ ENV SECRETS_LOCATION=/app/config/secrets.yml
 CMD [ "pnpm", "start" ]
 
 # https://github.com/evanw/esbuild/issues/1921
-# TODO not using alpine for now because different error messages for example for requests.
-FROM node:22.9.0-slim AS prod
+FROM node:22.9.0-alpine AS prod
 WORKDIR /app
 
-#RUN apk add --no-cache libstdc++ dumb-init git
-
-RUN apt-get update && apt-get install -y \
-    git \
-    dumb-init \
-    && rm -rf /var/lib/apt/lists/*
+RUN apk add --no-cache libstdc++ dumb-init git
 
 # TODO maybe in future. Results in breaking change
 #USER node
