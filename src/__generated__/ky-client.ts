@@ -17,7 +17,7 @@ export type ResponsePromise<Data> = {
 export type ResponseFormat = keyof Omit<Body, "body" | "bodyUsed">;
 
 // Same as axios. Using provided SearchParamsOption by ky break some typings
-export type QueryParamsType = Record<string | number, any>;
+export type QueryParamsType = Record<string | number, unknown>;
 
 export interface FullRequestParams extends Omit<KyOptions, "json" | "body" | "searchParams"> {
   /** set parameter to `true` for call `securityWorker` for this request */
@@ -39,7 +39,7 @@ export type RequestParams = Omit<FullRequestParams, "body" | "method" | "query" 
 export interface ApiConfig<SecurityDataType = unknown> extends Omit<KyOptions, "data" | "cancelToken"> {
   securityWorker?: (securityData: SecurityDataType | null) => Promise<NormalizedOptions | void> | NormalizedOptions | void;
   secure?: boolean;
-  format?: ResponseType;
+  format?: ResponseFormat;
 }
 
 export enum ContentType {
@@ -54,7 +54,7 @@ export class HttpClient<SecurityDataType = unknown> {
   private securityData: SecurityDataType | null = null;
   private securityWorker?: ApiConfig<SecurityDataType>["securityWorker"];
   private secure?: boolean;
-  private format?: ResponseType;
+  private format?: ResponseFormat;
 
   constructor({ securityWorker, secure, format, ...options }: ApiConfig<SecurityDataType> = {}) {
     this.ky = ky.create({ ...options, prefixUrl: options.prefixUrl || "" });
@@ -89,7 +89,7 @@ export class HttpClient<SecurityDataType = unknown> {
   protected createFormData(input: Record<string, unknown>): FormData {
     return Object.keys(input || {}).reduce((formData, key) => {
       const property = input[key];
-      const propertyContent: any[] = property instanceof Array ? property : [property];
+      const propertyContent: unknown[] = property instanceof Array ? property : [property]; // Changed `any[]` to `unknown[]`
 
       for (const formItem of propertyContent) {
         const isFileType = formItem instanceof Blob || formItem instanceof File;
@@ -158,18 +158,32 @@ export class HttpClient<SecurityDataType = unknown> {
       };
     }
 
-    // workaround for query types
-    const searchParams = new URLSearchParams(query);
+    let searchParams: URLSearchParams | undefined;
 
-    const request = this.ky(path.replace(/^\//, ""), {
+    if (query != null) {
+      searchParams = new URLSearchParams(query as Record<string, string>);
+    }
+
+    // // Workaround for not working POSTs. Use JSON when json type else body
+    // const data: any = {};
+
+    // if (type == ContentType.Json) {
+    //   data.json = body;
+    // } else {
+    //   data.body = body as BodyInit;
+    // }
+
+    const requestPromise: ResponsePromise<T> = this.ky(path.replace(/^\//, ""), {
       ...options,
       headers,
-      searchParams: searchParams,
-      body: body as any,
+      searchParams,
+      //...data,
+      // Use always JSON
+      json: body as BodyInit,
       hooks,
     });
 
-    return request;
+    return requestPromise; // Explicitly returning a typed promise
   };
 }
 
