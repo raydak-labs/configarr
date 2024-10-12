@@ -5,7 +5,7 @@ import { getArrApi } from "./api";
 import { getConfig } from "./config";
 import { logger } from "./logger";
 import { CFProcessing, ConfigCustomFormatList, ConfigarrCF, TrashCF } from "./types";
-import { IS_DRY_RUN, IS_LOCAL_SAMPLE_MODE, compareObjectsCarr, loadJsonFile, mapImportCfToRequestCf, toCarrCF } from "./util";
+import { IS_DRY_RUN, IS_LOCAL_SAMPLE_MODE, compareCustomFormats, loadJsonFile, mapImportCfToRequestCf, toCarrCF } from "./util";
 
 export const deleteAllCustomFormats = async () => {
   const api = getArrApi();
@@ -52,7 +52,7 @@ export const manageCf = async (
 
     if (existingCf) {
       // Update if necessary
-      const comparison = compareObjectsCarr(existingCf, tr.requestConfig);
+      const comparison = compareCustomFormats(existingCf, tr.requestConfig);
 
       if (!comparison.equal) {
         logger.info(`Found mismatch for ${tr.requestConfig.name}: ${comparison.changes}`);

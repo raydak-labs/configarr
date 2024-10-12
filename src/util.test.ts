@@ -2,7 +2,7 @@ import path from "path";
 import { describe, expect, test } from "vitest";
 import { MergedCustomFormatResource } from "./__generated__/mergedTypes";
 import { TrashCF, TrashCFSpF } from "./types";
-import { cloneWithJSON, compareObjectsCarr, loadJsonFile, mapImportCfToRequestCf, toCarrCF } from "./util";
+import { cloneWithJSON, compareCustomFormats, loadJsonFile, mapImportCfToRequestCf, toCarrCF } from "./util";
 
 const exampleCFImplementations = {
   name: "TestSpec",
@@ -140,7 +140,7 @@ describe("SizeSpecification", async () => {
   test("equal", async () => {
     const copied: typeof custom = JSON.parse(JSON.stringify(custom));
 
-    const result = compareObjectsCarr(serverResponse, mapImportCfToRequestCf(toCarrCF(copied)));
+    const result = compareCustomFormats(serverResponse, mapImportCfToRequestCf(toCarrCF(copied)));
     expect(result.equal).toBe(true);
   });
 
@@ -148,7 +148,7 @@ describe("SizeSpecification", async () => {
     const copied = JSON.parse(JSON.stringify(custom));
     copied.specifications![0].negate = true;
 
-    const result = compareObjectsCarr(serverResponse, mapImportCfToRequestCf(toCarrCF(copied)));
+    const result = compareCustomFormats(serverResponse, mapImportCfToRequestCf(toCarrCF(copied)));
     expect(result.equal).toBe(false);
   });
 
@@ -156,7 +156,7 @@ describe("SizeSpecification", async () => {
     const copied: typeof custom = JSON.parse(JSON.stringify(custom));
     copied.specifications![0].required = true;
 
-    const result = compareObjectsCarr(serverResponse, mapImportCfToRequestCf(toCarrCF(copied)));
+    const result = compareCustomFormats(serverResponse, mapImportCfToRequestCf(toCarrCF(copied)));
     expect(result.equal).toBe(false);
   });
 
@@ -164,12 +164,12 @@ describe("SizeSpecification", async () => {
     const copied: typeof custom = JSON.parse(JSON.stringify(custom));
     (copied.specifications![0].fields as TrashCFSpF).max = 100;
 
-    const result = compareObjectsCarr(serverResponse, mapImportCfToRequestCf(toCarrCF(copied)));
+    const result = compareCustomFormats(serverResponse, mapImportCfToRequestCf(toCarrCF(copied)));
     expect(result.equal).toBe(false);
   });
 });
 
-describe("compareObjectsCarr - general", async () => {
+describe("compareImportCFs - general", async () => {
   const filePath = path.resolve(__dirname, "../tests/samples/20240930_cf_exceptLanguage.json");
   const serverResponse = loadJsonFile<MergedCustomFormatResource>(filePath);
 
@@ -193,7 +193,7 @@ describe("compareObjectsCarr - general", async () => {
   test("should not diff for fields length bigger on remote", async () => {
     const copied: typeof custom = JSON.parse(JSON.stringify(custom));
 
-    const result = compareObjectsCarr(serverResponse, mapImportCfToRequestCf(toCarrCF(copied)));
+    const result = compareCustomFormats(serverResponse, mapImportCfToRequestCf(toCarrCF(copied)));
     expect(result.equal).toBe(true);
   });
 
@@ -204,7 +204,7 @@ describe("compareObjectsCarr - general", async () => {
 
     expect(clonedServer.specifications![0].fields.length).toBe(1);
 
-    const result = compareObjectsCarr(clonedServer, mapImportCfToRequestCf(toCarrCF(copied)));
+    const result = compareCustomFormats(clonedServer, mapImportCfToRequestCf(toCarrCF(copied)));
     expect(result.equal).toBe(true);
   });
 
@@ -217,7 +217,42 @@ describe("compareObjectsCarr - general", async () => {
 
     expect(clonedServer.specifications![0].fields.length).toBe(1);
 
-    const result = compareObjectsCarr(clonedServer, mapImportCfToRequestCf(toCarrCF(copied)));
+    const result = compareCustomFormats(clonedServer, mapImportCfToRequestCf(toCarrCF(copied)));
     expect(result.equal).toBe(false);
+  });
+
+  test("should diff for specifications length bigger on remote", async () => {
+    const copied: typeof custom = JSON.parse(JSON.stringify(custom));
+    const clonedServer = cloneWithJSON(serverResponse);
+    clonedServer.specifications![0].fields = [clonedServer.specifications![0].fields![0]];
+    clonedServer.specifications?.push(clonedServer.specifications![0]);
+
+    expect(clonedServer.specifications![0].fields.length).toBe(1);
+
+    const result = compareCustomFormats(clonedServer, mapImportCfToRequestCf(toCarrCF(copied)));
+    expect(result.equal).toBe(false);
+  });
+
+  test("should diff for specifications length smaller on remote", async () => {
+    const copied: typeof custom = JSON.parse(JSON.stringify(custom));
+    const clonedServer = cloneWithJSON(serverResponse);
+    clonedServer.specifications![0].fields = [clonedServer.specifications![0].fields![0]];
+    copied.specifications?.push(copied.specifications[0]);
+
+    expect(clonedServer.specifications![0].fields.length).toBe(1);
+
+    const result = compareCustomFormats(clonedServer, mapImportCfToRequestCf(toCarrCF(copied)));
+    expect(result.equal).toBe(false);
+  });
+
+  test("should not diff for specifications length equal", async () => {
+    const copied: typeof custom = JSON.parse(JSON.stringify(custom));
+    const clonedServer = cloneWithJSON(serverResponse);
+    clonedServer.specifications![0].fields = [clonedServer.specifications![0].fields![0]];
+
+    expect(clonedServer.specifications![0].fields.length).toBe(1);
+
+    const result = compareCustomFormats(clonedServer, mapImportCfToRequestCf(toCarrCF(copied)));
+    expect(result.equal).toBe(true);
   });
 });

@@ -107,7 +107,14 @@ export const mapImportCfToRequestCf = (cf: TrashCF | ConfigarrCF): MergedCustomF
   return { ...rest, specifications: specs };
 };
 
-export function compareObjectsCarr(serverObject: any, localObject: any): { equal: boolean; changes: string[] } {
+export function compareCustomFormats(
+  serverObject: MergedCustomFormatResource,
+  localObject: MergedCustomFormatResource,
+): ReturnType<typeof compareObjectsCarr> {
+  return compareObjectsCarr(serverObject, localObject);
+}
+
+function compareObjectsCarr(serverObject: any, localObject: any, parent?: string): { equal: boolean; changes: string[] } {
   const changes: string[] = [];
 
   for (const key in localObject) {
@@ -116,30 +123,31 @@ export function compareObjectsCarr(serverObject: any, localObject: any): { equal
         const serverProperty = serverObject[key];
         let localProperty = localObject[key];
 
-        // Todo remove should be already handled
-        if (key === "fields") {
-          if (!Array.isArray(localProperty)) {
-            localProperty = [localProperty];
-          }
-        }
-
         if (Array.isArray(serverProperty)) {
           if (!Array.isArray(localProperty)) {
             changes.push(`Expected array for key ${key} in localProperty`);
             continue;
           }
 
-          if (serverProperty.length < localProperty.length) {
+          let arrayLengthMismatch = false;
+
+          if (key === "fields") {
             // Only if server does provide less props as we have -> assume change required.
             // For example if radarr introduces new fields for custom formats and we do not have them included this would result in always changed results.
+            arrayLengthMismatch = serverProperty.length < localProperty.length;
+          } else if (serverProperty.length != localProperty.length) {
+            arrayLengthMismatch = true;
+          }
+
+          if (arrayLengthMismatch) {
             changes.push(
-              `Array length mismatch for key ${key}: serverProperty length ${serverProperty.length}, localProperty length ${localProperty.length}`,
+              `Array length mismatch for key ${key} (parent: ${parent}): serverProperty length ${serverProperty.length}, localProperty length ${localProperty.length}`,
             );
             continue;
           }
 
           for (let i = 0; i < serverProperty.length; i++) {
-            const { equal: isEqual, changes: subChanges } = compareObjectsCarr(serverProperty[i], localProperty[i]);
+            const { equal: isEqual, changes: subChanges } = compareObjectsCarr(serverProperty[i], localProperty[i], key);
             // changes.push(
             //   ...subChanges.map((subChange) => `${key}[${i}].${subChange}`)
             // );
@@ -158,7 +166,7 @@ export function compareObjectsCarr(serverObject: any, localObject: any): { equal
             continue;
           }
 
-          const { equal: isEqual, changes: subChanges } = compareObjectsCarr(serverProperty, localProperty);
+          const { equal: isEqual, changes: subChanges } = compareObjectsCarr(serverProperty, localProperty, key);
           changes.push(...subChanges.map((subChange) => `${key}.${subChange}`));
           if (!isEqual) {
             changes.push(`Mismatch found for key '${key}'`);
