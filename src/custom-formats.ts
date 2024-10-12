@@ -89,7 +89,7 @@ export const manageCf = async (
           createCFs++;
         }
       } catch (err: any) {
-        logger.error(err.response.data?.message, `Failed updating CF ${tr.requestConfig.name}`);
+        logger.error(err.response.data, `Failed updating CF ${tr.requestConfig.name}`);
         throw new Error(`Failed creating CF '${tr.requestConfig.name}'. Message: ${err.response.data?.message}`);
       }
     }
