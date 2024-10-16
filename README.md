@@ -2,7 +2,7 @@
 
 Configuration and synchronization tool for Sonarr and Radarr.
 
-Supporting only Sonarr v4 and radarr v4.
+Official support only for Sonarr v4 and radarr v5.
 
 This will be a project similar to [Recyclarr](https://github.com/recyclarr/recyclarr) or [Notifiarr](https://notifiarr.wiki/) but support for additional specification and not only what [TrashGuides](https://trash-guides.info/) offer.
 
