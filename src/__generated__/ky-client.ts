@@ -1,6 +1,7 @@
 // Copied and modified from here: https://github.com/acacode/swagger-typescript-api/pull/690
 import type { BeforeRequestHook, Hooks, KyInstance, Options as KyOptions, NormalizedOptions } from "ky";
-import ky from "ky";
+import ky, { HTTPError } from "ky";
+import { logger } from "../logger";
 
 type KyResponse<Data> = Response & {
   json<T extends Data = Data>(): Promise<T>;
@@ -100,7 +101,7 @@ export class HttpClient<SecurityDataType = unknown> {
     }, new FormData());
   }
 
-  public request = <T = any, _E = any>({
+  public request = async <T = any, _E = any>({
     secure = this.secure,
     path,
     type,
@@ -108,7 +109,7 @@ export class HttpClient<SecurityDataType = unknown> {
     format,
     body,
     ...options
-  }: FullRequestParams): ResponsePromise<T> => {
+  }: FullRequestParams): Promise<T> => {
     if (body) {
       if (type === ContentType.FormData) {
         body = typeof body === "object" ? this.createFormData(body as Record<string, unknown>) : body;
@@ -173,19 +174,45 @@ export class HttpClient<SecurityDataType = unknown> {
     //   data.body = body as BodyInit;
     // }
 
-    const requestPromise: ResponsePromise<T> = this.ky(path.replace(/^\//, ""), {
-      ...options,
-      headers,
-      searchParams,
-      //...data,
-      // Use always JSON
-      json: body as BodyInit,
-      hooks,
-    });
+    try {
+      const requestPromise = await this.ky<T>(path.replace(/^\//, ""), {
+        ...options,
+        headers,
+        searchParams,
+        //...data,
+        // Use always JSON
+        json: body as BodyInit,
+        hooks,
+      });
 
-    // TODO maybe handle request errors here?
+      return requestPromise.json();
+    } catch (error: any) {
+      logger.debug(`Error creating QualityProfile: ${error?.name}`);
 
-    return requestPromise; // Explicitly returning a typed promise
+      if (error instanceof HTTPError) {
+        if (error.response) {
+          // The request was made and the server responded with a status code
+          // that falls out of the range of 2xx
+          const errorJson = await error.response.json();
+          logger.error(errorJson, `Failed executing request: ${error.message}`);
+          throw new Error(errorJson);
+        } else if (error.request) {
+          // The request was made but no response was received
+          // `error.request` is an instance of XMLHttpRequest in the browser and an instance of
+          // http.ClientRequest in node.js
+          const errorJson = await error.request.json();
+          logger.error(errorJson, `Failed during request (probably some connection issues?)`);
+          throw error;
+        } else {
+          // Something happened in setting up the request that triggered an Error
+          logger.error(error, `No request/response information. Unknown error`);
+        }
+      } else {
+        logger.error(`An not expected error happened. Feel free to open an issue with details to improve handling.`);
+      }
+
+      throw error;
+    }
   };
 }
 

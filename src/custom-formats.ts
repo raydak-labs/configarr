@@ -9,7 +9,7 @@ import { IS_DRY_RUN, IS_LOCAL_SAMPLE_MODE, compareCustomFormats, loadJsonFile, m
 
 export const deleteAllCustomFormats = async () => {
   const api = getArrApi();
-  const cfOnServer = await api.v3CustomformatList().json();
+  const cfOnServer = await api.v3CustomformatList();
 
   for (const cf of cfOnServer) {
     await api.v3CustomformatDelete(cf.id!);
@@ -22,7 +22,7 @@ export const loadServerCustomFormats = async (): Promise<MergedCustomFormatResou
     return loadJsonFile<MergedCustomFormatResource[]>(path.resolve(__dirname, "../tests/samples/cfs.json"));
   }
   const api = getArrApi();
-  const cfOnServer = await api.v3CustomformatList().json();
+  const cfOnServer = await api.v3CustomformatList();
   return cfOnServer;
 };
 
