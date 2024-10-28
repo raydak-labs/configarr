@@ -78,7 +78,7 @@ export const loadQualityProfilesFromServer = async (): Promise<MergedQualityProf
   }
   const api = getArrApi();
 
-  const qualityProfiles = await api.v3QualityprofileList().json();
+  const qualityProfiles = await api.v3QualityprofileList();
   // TODO type hack
   return qualityProfiles as MergedQualityDefinitionResource[];
 };
