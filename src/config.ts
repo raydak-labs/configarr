@@ -74,7 +74,7 @@ export const transformConfig = (input: InputConfigSchema): ConfigSchema => {
   const mappedCustomFormats = (arrInput: Record<string, InputConfigArrInstance>): Record<string, ConfigArrInstance> => {
     return Object.entries(arrInput).reduce(
       (p, [key, value]) => {
-        const mappedCustomFormats = value.custom_formats.map<ConfigCustomFormat>((cf) => {
+        const mappedCustomFormats = (value.custom_formats || []).map<ConfigCustomFormat>((cf) => {
           const { assign_scores_to, quality_profiles, ...rest } = cf;
 
           if (quality_profiles) {
