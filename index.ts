@@ -197,7 +197,7 @@ const pipeline = async (value: ConfigArrInstance, arrType: ArrType) => {
 
   if (DEBUG_CREATE_FILES) {
     create.concat(changedQPs).forEach((e, i) => {
-      fs.writeFileSync(`test${i}.json`, JSON.stringify(e, null, 2), "utf-8");
+      fs.writeFileSync(`debug/test${i}.json`, JSON.stringify(e, null, 2), "utf-8");
     });
   }
 
