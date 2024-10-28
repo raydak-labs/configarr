@@ -2,11 +2,21 @@
   $schema: "https://docs.renovatebot.com/renovate-schema.json",
   extends: [
     "config:recommended",
-    "regexManagers:githubActionsVersions",
+    "customManagers:githubActionsVersions",
     "schedule:monthly",
     ":prConcurrentLimitNone",
     ":prHourlyLimitNone",
     ":pinVersions",
+  ],
+  // remove examples from ignore path
+  ignorePaths: [
+    "**/node_modules/**",
+    "**/bower_components/**",
+    "**/vendor/**",
+    "**/__tests__/**",
+    "**/test/**",
+    "**/tests/**",
+    "**/__fixtures__/**",
   ],
   labels: ["dependencies"],
   packageRules: [
@@ -27,9 +37,9 @@
     },
     {
       matchDatasources: ["docker"],
-      matchPackageNames: ["/(^|\\/)linuxserver\\/.*$/"],
-      // rename revision to build as it seems to fix missing updates for linuxserver rebuilds, maybe related to https://github.com/renovatebot/renovate/issues/27510
-      versioning: "regex:^(?<prerelease>develop-)?v?(?<major>\\d+)\\.(?<minor>\\d+)?\\.?(?<patch>\\d+)?(?:ubu\\d+)?(?:\\.|-)?(?<build_old>\\w?\\d+)?-ls(?<build>\\d+)$",
+      matchUpdateTypes: ["minor", "patch"],
+      groupName: "all docker updates (without major)",
+      groupSlug: "all-docker",
     },
   ],
 }
