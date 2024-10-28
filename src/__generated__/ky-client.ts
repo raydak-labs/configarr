@@ -183,6 +183,8 @@ export class HttpClient<SecurityDataType = unknown> {
       hooks,
     });
 
+    // TODO maybe handle request errors here?
+
     return requestPromise; // Explicitly returning a typed promise
   };
 }

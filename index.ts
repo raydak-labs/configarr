@@ -1,5 +1,6 @@
 import "dotenv/config";
 
+import { HTTPError } from "ky";
 import fs from "node:fs";
 import { MergedCustomFormatResource } from "./src/__generated__/mergedTypes";
 import { configureRadarrApi, configureSonarrApi, getArrApi, unsetApi } from "./src/api";
@@ -211,19 +212,30 @@ const pipeline = async (value: ConfigArrInstance, arrType: ArrType) => {
       } catch (error: any) {
         let message;
 
-        if (error.response) {
-          logger.info(error.response);
-          // The request was made and the server responded with a status code
-          // that falls out of the range of 2xx
-          message = `Failed creating QualityProfile (${element.name}): Data ${JSON.stringify(error.response.data)}`;
-        } else if (error.request) {
-          // The request was made but no response was received
-          // `error.request` is an instance of XMLHttpRequest in the browser and an instance of
-          // http.ClientRequest in node.js
-          logger.info(error.request);
+        logger.debug(`Error creating QualityProfile: ${error?.name}`);
+
+        if (error instanceof HTTPError) {
+          if (error.response) {
+            // The request was made and the server responded with a status code
+            // that falls out of the range of 2xx
+            const errorJson = await error.response.json();
+            logger.error(errorJson, `Failed creating QualityProfile (${element.name})`);
+            message = `Failed creating QualityProfile (${element.name}): Data ${JSON.stringify(errorJson)}`;
+          } else if (error.request) {
+            // The request was made but no response was received
+            // `error.request` is an instance of XMLHttpRequest in the browser and an instance of
+            // http.ClientRequest in node.js
+            const errorJson = await error.request.json();
+            logger.error(errorJson, `Failed creating QualityProfile (${element.name}) during request (probably some connection errors)`);
+            message = `Failed creating QualityProfile (${element.name}): Data ${JSON.stringify(errorJson)}`;
+          } else {
+            // Something happened in setting up the request that triggered an Error
+            logger.error("Error", error.message);
+          }
         } else {
-          // Something happened in setting up the request that triggered an Error
-          logger.info("Error", error.message);
+          message = `An not expected error happened. Feel free to open an issue with details to improve handling.`;
+          logger.error(message);
+          throw error;
         }
 
         throw new Error(message);

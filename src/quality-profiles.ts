@@ -297,6 +297,8 @@ export const calculateQualityProfilesDiff = async (
         minFormatScore: value.min_format_score,
         upgradeAllowed: value.upgrade.allowed,
         formatItems: customFormatsMapped,
+        // required since sonarr 4.0.10 (radarr also)
+        minUpgradeFormatScore: value.upgrade.min_format_score ?? 1,
       });
       continue;
     }
@@ -408,6 +410,18 @@ export const calculateQualityProfilesDiff = async (
         diffExist = true;
 
         changeList.push(`Upgrade until score diff: server: ${serverMatch.cutoffFormatScore} - expected: ${value.upgrade.until_score}`);
+      }
+
+      const configMinUpgradeFormatScore = value.upgrade.min_format_score ?? 1;
+
+      // if not configured ignore
+      if (value.upgrade.min_format_score != null && serverMatch.minUpgradeFormatScore !== configMinUpgradeFormatScore) {
+        updatedServerObject.minUpgradeFormatScore = configMinUpgradeFormatScore;
+        diffExist = true;
+
+        changeList.push(
+          `Min upgrade format score diff: server: ${serverMatch.cutoffFormatScore} - expected: ${configMinUpgradeFormatScore}`,
+        );
       }
     }
 

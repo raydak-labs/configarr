@@ -1579,11 +1579,13 @@ export enum TMDbCountryCode {
   Fr = "fr",
   De = "de",
   Gb = "gb",
+  In = "in",
   Ie = "ie",
   It = "it",
+  Nz = "nz",
+  Ro = "ro",
   Es = "es",
   Us = "us",
-  Nz = "nz",
 }
 
 export interface TagDetailsResource {

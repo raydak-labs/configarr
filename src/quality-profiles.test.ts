@@ -183,4 +183,16 @@ describe("QualityProfiles", async () => {
     expect(result[2].name).toBe("WEB 1080p");
     expect(result[2].allowed).toBe(true);
   });
+
+  test("calculateQualityProfilesDiff - should diff if minUpgradeFormatScore is different", async ({}) => {
+    // TODO
+  });
+
+  test("calculateQualityProfilesDiff - should not diff if minUpgradeFormatScore is equal", async ({}) => {
+    // TODO
+  });
+
+  test("calculateQualityProfilesDiff - should not diff if minUpgradeFormatScore is not configured", async ({}) => {
+    // TODO
+  });
 });

@@ -133,6 +133,7 @@ export type ConfigQualityProfile = {
     allowed: boolean;
     until_quality: string;
     until_score: number;
+    min_format_score?: number; // default 1
   };
   min_format_score: number;
   score_set: keyof TrashScores;
