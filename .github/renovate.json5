@@ -25,5 +25,11 @@
       matchDepTypes: ["dependencies"],
       matchUpdateTypes: ["patch", "minor"],
     },
+    {
+      matchDatasources: ["docker"],
+      matchPackageNames: ["/(^|\\/)linuxserver\\/.*$/"],
+      // rename revision to build as it seems to fix missing updates for linuxserver rebuilds, maybe related to https://github.com/renovatebot/renovate/issues/27510
+      versioning: "regex:^(?<prerelease>develop-)?v?(?<major>\\d+)\\.(?<minor>\\d+)?\\.?(?<patch>\\d+)?(?:ubu\\d+)?(?:\\.|-)?(?<build_old>\\w?\\d+)?-ls(?<build>\\d+)$",
+    },
   ],
 }
