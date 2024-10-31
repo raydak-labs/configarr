@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 import { MergedQualityDefinitionResource } from "./__generated__/mergedTypes";
 import { doAllQualitiesExist, isOrderOfQualitiesEqual, mapQualities } from "./quality-profiles";
-import { ConfigQualityProfile, ConfigQualityProfileItem } from "./types";
+import { ConfigQualityProfile, ConfigQualityProfileItem } from "./types/config.types";
 
 describe("QualityProfiles", async () => {
   test("doAllQualitiesExist - all exist", async ({}) => {

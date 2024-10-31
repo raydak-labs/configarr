@@ -10,7 +10,9 @@ import { getArrApi } from "./api";
 import { loadServerCustomFormats } from "./custom-formats";
 import { logger } from "./logger";
 import { loadQualityDefinitionFromServer } from "./quality-definitions";
-import { CFProcessing, ConfigCustomFormat, ConfigQualityProfile, ConfigQualityProfileItem, RecyclarrMergedTemplates } from "./types";
+import { CFProcessing } from "./types/common.types";
+import { ConfigCustomFormat, ConfigQualityProfile, ConfigQualityProfileItem } from "./types/config.types";
+import { RecyclarrMergedTemplates } from "./types/recyclarr.types";
 import { IS_LOCAL_SAMPLE_MODE, cloneWithJSON, loadJsonFile, notEmpty } from "./util";
 
 export const mapQualityProfiles = (

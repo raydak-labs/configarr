@@ -2,7 +2,7 @@ import path from "node:path";
 import { MergedQualityDefinitionResource } from "./__generated__/mergedTypes";
 import { getArrApi } from "./api";
 import { logger } from "./logger";
-import { TrashQualityDefintion, TrashQualityDefintionQuality } from "./types";
+import { TrashQualityDefintion, TrashQualityDefintionQuality } from "./types/trashguide.types";
 import { IS_LOCAL_SAMPLE_MODE, loadJsonFile } from "./util";
 
 export const loadQualityDefinitionFromServer = async (): Promise<MergedQualityDefinitionResource[]> => {

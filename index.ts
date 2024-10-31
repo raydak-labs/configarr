@@ -29,15 +29,9 @@ import {
   transformTrashQPCFs,
   transformTrashQPToTemplate,
 } from "./src/trash-guide";
-import {
-  ArrType,
-  ConfigArrInstance,
-  ConfigQualityProfile,
-  MappedMergedTemplates,
-  TrashQualityDefintion,
-  YamlConfigIncludeRecyclarr,
-  YamlConfigIncludeTrash,
-} from "./src/types";
+import { ArrType, MappedMergedTemplates } from "./src/types/common.types";
+import { ConfigArrInstance, ConfigQualityProfile, YamlConfigIncludeItem } from "./src/types/config.types";
+import { TrashQualityDefintion } from "./src/types/trashguide.types";
 import { DEBUG_CREATE_FILES, IS_DRY_RUN } from "./src/util";
 
 const pipeline = async (value: ConfigArrInstance, arrType: ArrType) => {
@@ -53,21 +47,17 @@ const pipeline = async (value: ConfigArrInstance, arrType: ArrType) => {
   if (value.include) {
     logger.info(`Found ${value.include.length} templates to include ...`);
 
-    const mappedIncludes = value.include.reduce<{ recyclarr: YamlConfigIncludeRecyclarr[]; trash: YamlConfigIncludeTrash[] }>(
+    const mappedIncludes = value.include.reduce<{ recyclarr: YamlConfigIncludeItem[]; trash: YamlConfigIncludeItem[] }>(
       (previous, current) => {
-        if (current.type == null) {
-          previous.recyclarr.push(current as YamlConfigIncludeRecyclarr);
-        } else {
-          switch (current.type) {
-            case "TRASH":
-              previous.trash.push(current);
-              break;
-            case "RECYCLARR":
-              previous.recyclarr.push(current as YamlConfigIncludeRecyclarr);
-              break;
-            default:
-              logger.warn(`Unknown type for template requested: ${(current as any).type}. Ignoring.`);
-          }
+        switch (current.source) {
+          case "TRASH":
+            previous.trash.push(current);
+            break;
+          case "RECYCLARR":
+            previous.recyclarr.push(current);
+            break;
+          default:
+            logger.warn(`Unknown type for template requested: ${(current as any).type}. Ignoring.`);
         }
 
         return previous;
@@ -104,10 +94,10 @@ const pipeline = async (value: ConfigArrInstance, arrType: ArrType) => {
     });
 
     mappedIncludes.trash.forEach((e) => {
-      const template = trashTemplates.get(e.id);
+      const template = trashTemplates.get(e.template);
 
       if (!template) {
-        logger.info(`Unknown trash template requested: ${e.id}`);
+        logger.info(`Unknown trash template requested: ${e.template}`);
         return;
       }
 

@@ -1,7 +1,15 @@
 import { existsSync, readFileSync } from "node:fs";
 import yaml from "yaml";
 import { logger } from "./logger";
-import { ConfigArrInstance, ConfigCustomFormat, ConfigSchema, InputConfigArrInstance, InputConfigSchema } from "./types";
+import {
+  ConfigArrInstance,
+  ConfigCustomFormat,
+  ConfigSchema,
+  InputConfigArrInstance,
+  InputConfigIncludeItem,
+  InputConfigSchema,
+  YamlConfigIncludeItem,
+} from "./types/config.types";
 import { ROOT_PATH } from "./util";
 
 const CONFIG_LOCATION = process.env.CONFIG_LOCATION ?? `${ROOT_PATH}/config.yml`;
@@ -54,6 +62,19 @@ export const getConfig = (): ConfigSchema => {
   return config;
 };
 
+export const readConfigRaw = (): object => {
+  if (!existsSync(CONFIG_LOCATION)) {
+    logger.error(`Config file in location "${CONFIG_LOCATION}" does not exists.`);
+    throw new Error("Config file not found.");
+  }
+
+  const file = readFileSync(CONFIG_LOCATION, "utf8");
+
+  const inputConfig = yaml.parse(file, { customTags: [secretsTag, envTag] });
+
+  return inputConfig;
+};
+
 export const getSecrets = () => {
   if (secrets) {
     return secrets;
@@ -71,6 +92,10 @@ export const getSecrets = () => {
 
 // 2024-09-30: Recyclarr assign_scores_to adjustments
 export const transformConfig = (input: InputConfigSchema): ConfigSchema => {
+  const parseIncludes = (items: InputConfigIncludeItem[] = []): YamlConfigIncludeItem[] => {
+    return items.map((e) => ({ template: e.template, source: e.source ?? "RECYCLARR" }));
+  };
+
   const mappedCustomFormats = (arrInput: Record<string, InputConfigArrInstance>): Record<string, ConfigArrInstance> => {
     return Object.entries(arrInput).reduce(
       (p, [key, value]) => {
@@ -94,7 +119,7 @@ export const transformConfig = (input: InputConfigSchema): ConfigSchema => {
           return { ...rest, assign_scores_to: mapped_assign_scores };
         });
 
-        p[key] = { ...value, custom_formats: mappedCustomFormats };
+        p[key] = { ...value, include: parseIncludes(value.include), custom_formats: mappedCustomFormats };
         return p;
       },
       {} as Record<string, ConfigArrInstance>,

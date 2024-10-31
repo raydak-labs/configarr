@@ -2,7 +2,7 @@ import { KyHttpClient } from "./__generated__/ky-client";
 import { Api as RadarrApi } from "./__generated__/radarr/Api";
 import { Api as SonarrApi } from "./__generated__/sonarr/Api";
 import { logger } from "./logger";
-import { ArrType } from "./types";
+import { ArrType } from "./types/common.types";
 
 let sonarrClient: SonarrApi<unknown> | undefined;
 let radarrClient: RadarrApi<unknown> | undefined;

@@ -4,7 +4,9 @@ import { MergedCustomFormatResource } from "./__generated__/mergedTypes";
 import { getArrApi } from "./api";
 import { getConfig } from "./config";
 import { logger } from "./logger";
-import { CFProcessing, ConfigCustomFormatList, ConfigarrCF, TrashCF } from "./types";
+import { CFProcessing, ConfigarrCF } from "./types/common.types";
+import { ConfigCustomFormatList } from "./types/config.types";
+import { TrashCF } from "./types/trashguide.types";
 import { IS_DRY_RUN, IS_LOCAL_SAMPLE_MODE, compareCustomFormats, loadJsonFile, mapImportCfToRequestCf, toCarrCF } from "./util";
 
 export const deleteAllCustomFormats = async () => {

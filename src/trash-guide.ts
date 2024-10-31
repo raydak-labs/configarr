@@ -4,19 +4,9 @@ import { CheckRepoActions, simpleGit } from "simple-git";
 import { MergedCustomFormatResource } from "./__generated__/mergedTypes";
 import { getConfig } from "./config";
 import { logger } from "./logger";
-import {
-  ArrType,
-  CFProcessing,
-  ConfigarrCF,
-  ConfigCustomFormat,
-  QualityDefintionsRadarr,
-  QualityDefintionsSonarr,
-  TrashCF,
-  TrashQP,
-  TrashQualityDefintion,
-  YamlConfigQualityProfile,
-  YamlConfigQualityProfileItems,
-} from "./types";
+import { ArrType, CFProcessing, ConfigarrCF, QualityDefintionsRadarr, QualityDefintionsSonarr } from "./types/common.types";
+import { ConfigCustomFormat, YamlConfigQualityProfile, YamlConfigQualityProfileItems } from "./types/config.types";
+import { TrashCF, TrashQP, TrashQualityDefintion } from "./types/trashguide.types";
 import { loadJsonFile, mapImportCfToRequestCf, notEmpty, toCarrCF, trashRepoPaths } from "./util";
 
 const DEFAULT_TRASH_GIT_URL = "https://github.com/TRaSH-Guides/Guides";

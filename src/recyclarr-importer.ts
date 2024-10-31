@@ -4,7 +4,8 @@ import { CheckRepoActions, simpleGit } from "simple-git";
 import yaml from "yaml";
 import { getConfig } from "./config";
 import { logger } from "./logger";
-import { ArrType, MappedTemplates, RecyclarrTemplates } from "./types";
+import { ArrType, MappedTemplates } from "./types/common.types";
+import { RecyclarrTemplates } from "./types/recyclarr.types";
 import { recyclarrRepoPaths } from "./util";
 
 const DEFAULT_RECYCLARR_GIT_URL = "https://github.com/recyclarr/config-templates";

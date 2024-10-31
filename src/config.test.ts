@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 import yaml from "yaml";
 import { transformConfig } from "./config";
-import { InputConfigSchema } from "./types";
+import { InputConfigSchema } from "./types/config.types";
 import { cloneWithJSON } from "./util";
 
 describe("transformConfig", async () => {

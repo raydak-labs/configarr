@@ -2,7 +2,8 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { MergedCustomFormatResource } from "./__generated__/mergedTypes";
 import { logger } from "./logger";
-import { ConfigarrCF, ImportCF, TrashCF, UserFriendlyField } from "./types";
+import { ConfigarrCF, ImportCF, UserFriendlyField } from "./types/common.types";
+import { TrashCF } from "./types/trashguide.types";
 
 export const IS_DRY_RUN = process.env.DRY_RUN === "true";
 export const IS_LOCAL_SAMPLE_MODE = process.env.LOAD_LOCAL_SAMPLES === "true";

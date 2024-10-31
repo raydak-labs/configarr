@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 import { MergedQualityDefinitionResource } from "./__generated__/mergedTypes";
 import { calculateQualityDefinitionDiff } from "./quality-definitions";
-import { TrashQualityDefintion } from "./types";
+import { TrashQualityDefintion } from "./types/trashguide.types";
 
 const exampleCFImplementations = {
   name: "TestSpec",
