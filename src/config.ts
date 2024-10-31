@@ -4,11 +4,13 @@ import { logger } from "./logger";
 import {
   ConfigArrInstance,
   ConfigCustomFormat,
+  ConfigIncludeItem,
   ConfigSchema,
   InputConfigArrInstance,
   InputConfigIncludeItem,
+  InputConfigInstance,
   InputConfigSchema,
-  YamlConfigIncludeItem,
+  MergedConfigInstance,
 } from "./types/config.types";
 import { ROOT_PATH } from "./util";
 
@@ -92,11 +94,7 @@ export const getSecrets = () => {
 
 // 2024-09-30: Recyclarr assign_scores_to adjustments
 export const transformConfig = (input: InputConfigSchema): ConfigSchema => {
-  const parseIncludes = (items: InputConfigIncludeItem[] = []): YamlConfigIncludeItem[] => {
-    return items.map((e) => ({ template: e.template, source: e.source ?? "RECYCLARR" }));
-  };
-
-  const mappedCustomFormats = (arrInput: Record<string, InputConfigArrInstance>): Record<string, ConfigArrInstance> => {
+  const mappedCustomFormats = (arrInput: Record<string, InputConfigArrInstance> = {}): Record<string, ConfigArrInstance> => {
     return Object.entries(arrInput).reduce(
       (p, [key, value]) => {
         const mappedCustomFormats = (value.custom_formats || []).map<ConfigCustomFormat>((cf) => {
@@ -119,7 +117,7 @@ export const transformConfig = (input: InputConfigSchema): ConfigSchema => {
           return { ...rest, assign_scores_to: mapped_assign_scores };
         });
 
-        p[key] = { ...value, include: parseIncludes(value.include), custom_formats: mappedCustomFormats };
+        p[key] = { ...value, include: value.include?.map(parseIncludes), custom_formats: mappedCustomFormats };
         return p;
       },
       {} as Record<string, ConfigArrInstance>,
@@ -130,5 +128,21 @@ export const transformConfig = (input: InputConfigSchema): ConfigSchema => {
     ...input,
     radarr: mappedCustomFormats(input.radarr),
     sonarr: mappedCustomFormats(input.sonarr),
+  };
+};
+
+export const parseIncludes = (input: InputConfigIncludeItem): ConfigIncludeItem => ({
+  template: input.template,
+  source: input.source ?? "RECYCLARR",
+});
+
+export const validateConfig = (input: InputConfigInstance): MergedConfigInstance => {
+  // TODO add validation and warnings like assign_scores. Setting default values not always the best
+  return {
+    ...input,
+    custom_formats: (input.custom_formats || []).map((e) => ({
+      trash_ids: e.trash_ids,
+      assign_scores_to: e.assign_scores_to ?? e.quality_profiles ?? [],
+    })),
   };
 };

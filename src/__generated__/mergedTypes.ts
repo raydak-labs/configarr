@@ -20,25 +20,25 @@ import {
 // If someday we need specific fields per *arr instance then we have to split the API usage and modify every module.
 
 type QDRMerged = QDRSonarr & QDRRadarr;
-type QDRPickedSource = Omit<NonNullable<QDRMerged["quality"]>, "source">;
+type QDRPickedSource = OmitTyped<NonNullable<QDRMerged["quality"]>, "source">;
 type CustomQualitySource<T> = {
   quality?: T & {
     source?: string;
   };
 };
 
-type OmittedQuality = Omit<QDRMerged, "quality">;
+type OmittedQuality = OmitTyped<QDRMerged, "quality">;
 
 export type MergedQualityDefinitionResource = OmittedQuality & Partial<CustomQualitySource<QDRPickedSource>>;
 export type MergedCustomFormatResource = SonarrCustomFormatResource & RadarrCustomFormatResource;
 export type MergedProfileFormatItemResource = SonarrProfileFormatItemResource & RadarrProfileFormatItemResource;
 
 type QPQIRMerged = SonarrQualityProfileQualityItemResource & RadarrQualityProfileQualityItemResource;
-type QPQIRPickedSource = Omit<NonNullable<QPQIRMerged["quality"]>, "source">;
+type QPQIRPickedSource = OmitTyped<NonNullable<QPQIRMerged["quality"]>, "source">;
 
-export type MergedQualityProfileQualityItemResource = Omit<QPQIRMerged, "items" | "quality"> &
+export type MergedQualityProfileQualityItemResource = OmitTyped<QPQIRMerged, "items" | "quality"> &
   Partial<
-    Omit<QPQIRMerged, "items" | "quality"> & {
+    OmitTyped<QPQIRMerged, "items" | "quality"> & {
       items?: MergedQualityProfileQualityItemResource[] | null;
       quality?: QPQIRPickedSource & { source?: string };
     }
@@ -46,9 +46,9 @@ export type MergedQualityProfileQualityItemResource = Omit<QPQIRMerged, "items" 
 
 type QPRMerged = SonarrQualityProfileResource & RadarrQualityProfileResource;
 
-export type MergedQualityProfileResource = Omit<QPRMerged, "items"> &
+export type MergedQualityProfileResource = OmitTyped<QPRMerged, "items"> &
   Partial<
-    Omit<QPRMerged, "items"> & {
+    OmitTyped<QPRMerged, "items"> & {
       items?: MergedQualityProfileQualityItemResource[] | null;
     }
   >;

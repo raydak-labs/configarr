@@ -1,4 +1,4 @@
-import { TrashCF, TrashScores } from "./trashguide.types";
+import { TrashScores } from "./trashguide.types";
 
 export type InputConfigSchema = {
   trashGuideUrl?: string;
@@ -9,13 +9,8 @@ export type InputConfigSchema = {
   localConfigTemplatesPath?: string;
   customFormatDefinitions?: [];
 
-  sonarr: Record<string, InputConfigArrInstance>;
-  radarr: Record<string, InputConfigArrInstance>;
-};
-
-export type ConfigSchema = InputConfigSchema & {
-  sonarr: Record<string, ConfigArrInstance>;
-  radarr: Record<string, ConfigArrInstance>;
+  sonarr?: Record<string, InputConfigArrInstance>;
+  radarr?: Record<string, InputConfigArrInstance>;
 };
 
 export type InputConfigCustomFormat = {
@@ -27,111 +22,71 @@ export type InputConfigCustomFormat = {
   assign_scores_to?: { name: string; score?: number }[];
 };
 
-export type ConfigCustomFormat = Pick<InputConfigCustomFormat, "trash_ids"> & Required<Pick<InputConfigCustomFormat, "assign_scores_to">>;
-
-export type ConfigCustomFormatList = Pick<ConfigArrInstance, "custom_formats">;
-
-export type ConfigArrInstance = {
+export type InputConfigArrInstance = {
   base_url: string;
   api_key: string;
   quality_definition?: {
     type: string;
   };
-  include?: YamlConfigIncludeItem[];
-  custom_formats: ConfigCustomFormat[];
-  quality_profiles: ConfigQualityProfile[];
-};
-
-export type InputConfigArrInstance = Omit<ConfigArrInstance, "custom_formats" | "include" | "quality_profiles"> & {
-  custom_formats?: InputConfigCustomFormat[];
   include?: InputConfigIncludeItem[];
+  custom_formats?: InputConfigCustomFormat[];
   // TODO this is not correct. The profile can be added partly -> InputConfigQualityProfile
   quality_profiles: ConfigQualityProfile[];
 };
 
-export type InputConfigQualityProfile = Omit<Partial<ConfigQualityProfile>, "name"> & Pick<ConfigQualityProfile, "name">;
-
-export type ConfigQualityProfile = {
+export type InputConfigQualityProfile = {
   name: string;
   reset_unmatched_scores?: {
     enabled: boolean;
     except?: string[];
   };
-  upgrade: {
+  upgrade?: {
     allowed: boolean;
     until_quality: string;
     until_score: number;
     min_format_score?: number; // default 1
   };
-  min_format_score: number;
-  score_set: keyof TrashScores;
-  quality_sort: string;
-  qualities: ConfigQualityProfileItem[];
+  min_format_score?: number;
+  score_set?: keyof TrashScores;
+  quality_sort?: string;
+  qualities?: InputConfigQualityProfileItem[];
 };
 
-export type ConfigQualityProfileItem = {
+export type InputConfigQualityProfileItem = {
   name: string;
   qualities?: string[];
   enabled?: boolean;
-}; // TODO
-
-export type YamlConfigIncludeRecyclarr = {
-  template: string;
-  type: "RECYCLARR";
 };
 
-export type YamlConfigIncludeTrash = {
-  // TODO or use template?
-  id: string;
-  type: "TRASH";
-};
-
-export type YamlConfigIncludeGeneric = {
+export type InputConfigIncludeItem = {
   // depends on source what this actually is. Can be the filename -> recyclarr or id in the files -> trash
   template: string;
-  source: "TRASH";
-};
-// export type YamlConfigIncludeItem = YamlConfigIncludeRecyclarr | YamlConfigIncludeTrash;
-
-export type InputConfigIncludeItem = Omit<YamlConfigIncludeItem, "source"> & {
-  source?: YamlConfigIncludeItem["source"];
+  source?: "TRASH" | "RECYCLARR";
 };
 
-export type YamlConfigIncludeItem = {
-  // depends on source what this actually is. Can be the filename -> recyclarr or id in the files -> trash
-  template: string;
-  source: "TRASH" | "RECYCLARR";
+export type ConfigSchema = InputConfigSchema;
+
+export type ConfigCustomFormat = Pick<InputConfigCustomFormat, "trash_ids"> & Required<Pick<InputConfigCustomFormat, "assign_scores_to">>;
+
+export type ConfigCustomFormatList = Pick<ConfigArrInstance, "custom_formats">;
+
+export type ConfigArrInstance = OmitTyped<InputConfigArrInstance, "custom_formats" | "include" | "quality_profiles"> & {
+  include?: ConfigIncludeItem[];
+  custom_formats: ConfigCustomFormat[];
+  quality_profiles: ConfigQualityProfile[];
 };
 
-export type YamlConfigInstance = {
-  base_url: string;
-  api_key: string;
-  quality_definition?: {
-    type: string;
-  };
-  include?: YamlConfigIncludeItem[];
-  custom_formats: InputConfigCustomFormat[];
-  quality_profiles: YamlConfigQualityProfile[];
+export type ConfigQualityProfile = OmitTyped<Required<InputConfigQualityProfile>, "qualities" | "reset_unmatched_scores"> & {
+  qualities: ConfigQualityProfileItem[];
+  reset_unmatched_scores?: InputConfigQualityProfile["reset_unmatched_scores"];
 };
 
-export type YamlConfigQualityProfile = {
-  name: string;
-  reset_unmatched_scores?: {
-    enabled: boolean;
-    except?: string[];
-  };
-  upgrade: {
-    allowed: boolean;
-    until_quality: string;
-    until_score: number;
-  };
-  min_format_score: number;
-  score_set: keyof TrashCF["trash_scores"];
-  quality_sort: "top" | "bottom";
-  qualities: YamlConfigQualityProfileItems[];
+export type ConfigQualityProfileItem = InputConfigQualityProfileItem;
+
+export type ConfigIncludeItem = OmitTyped<InputConfigIncludeItem, "source"> & {
+  source: InputConfigIncludeItem["source"];
 };
 
-export type YamlConfigQualityProfileItems = {
-  name: string;
-  qualities?: string[];
-};
+// TODO maybe reduce
+export type InputConfigInstance = OmitTyped<InputConfigArrInstance, "api_key" | "base_url">;
+export type MergedConfigInstance = OmitTyped<ConfigArrInstance, "api_key" | "base_url" | "include">;

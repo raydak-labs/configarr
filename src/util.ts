@@ -205,3 +205,39 @@ export const loadJsonFile = <T = object>(filePath: string) => {
   const file = readFileSync(filePath, { encoding: "utf-8" });
   return JSON.parse(file) as T;
 };
+
+export function zip<T extends unknown[][]>(...arrays: T): Array<{ [K in keyof T]: T[K] extends (infer U)[] ? U : never }> {
+  let length = -1;
+  let mismatch = false;
+
+  for (const arrayElement in arrays) {
+    if (length <= 0) {
+      length = arrayElement.length;
+    } else {
+      mismatch = length !== arrayElement.length;
+    }
+  }
+
+  if (mismatch) {
+    throw new Error("Zip error with not equal lengths");
+  }
+
+  const result = [];
+
+  for (let i = 0; i < length; i++) {
+    result.push(arrays.map((arr) => arr[i]));
+  }
+
+  return result as Array<{ [K in keyof T]: T[K] extends (infer U)[] ? U : never }>;
+}
+
+export function zipNLength<T extends unknown[][]>(...arrays: T): Array<{ [K in keyof T]: T[K] extends (infer U)[] ? U : never }> {
+  const minLength = Math.min(...arrays.map((arr) => arr.length));
+  const result = [];
+
+  for (let i = 0; i < minLength; i++) {
+    result.push(arrays.map((arr) => arr[i]));
+  }
+
+  return result as Array<{ [K in keyof T]: T[K] extends (infer U)[] ? U : never }>;
+}

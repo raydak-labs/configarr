@@ -1,5 +1,5 @@
 import { MergedCustomFormatResource, MergedCustomFormatSpecificationSchema } from "../__generated__/mergedTypes";
-import { ConfigArrInstance } from "./config.types";
+import { InputConfigArrInstance } from "./config.types";
 import { TrashCF, TrashCFSpF } from "./trashguide.types";
 
 export type DynamicImportType<T> = { default: T };
@@ -28,19 +28,19 @@ export type CustomFormatImportImplementation =
   | "ResolutionSpecification" // value number
   | "ReleaseGroupSpecification"; // value string
 
-export type TC1 = Omit<MergedCustomFormatSpecificationSchema, "fields"> & {
+export type TC1 = OmitTyped<MergedCustomFormatSpecificationSchema, "fields"> & {
   implementation: "ReleaseTitleSpecification" | "LanguageSpecification";
   fields?: RequireAtLeastOne<TrashCFSpF> | null;
 };
 
-export type TC2 = Omit<MergedCustomFormatSpecificationSchema, "fields"> & {
+export type TC2 = OmitTyped<MergedCustomFormatSpecificationSchema, "fields"> & {
   implementation: "SizeSpecification";
   fields?: RequireAtLeastOne<TrashCFSpF>;
 };
 
 export type TCM = TC1 | TC2;
 
-export type ImportCF = Omit<MergedCustomFormatResource, "specifications"> & {
+export type ImportCF = OmitTyped<MergedCustomFormatResource, "specifications"> & {
   specifications?: TCM[] | null;
 };
 
@@ -60,7 +60,9 @@ export type CFProcessing = {
   cfNameToCarrConfig: Map<string, ConfigarrCF>;
 };
 
-export type MappedTemplates = Partial<Pick<ConfigArrInstance, "quality_definition" | "custom_formats" | "include" | "quality_profiles">>;
+export type MappedTemplates = Partial<
+  Pick<InputConfigArrInstance, "quality_definition" | "custom_formats" | "include" | "quality_profiles">
+>;
 
 export type MappedMergedTemplates = MappedTemplates & Required<Pick<MappedTemplates, "custom_formats" | "quality_profiles">>;
 

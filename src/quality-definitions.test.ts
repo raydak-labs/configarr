@@ -127,7 +127,7 @@ describe("QualityDefinitions", async () => {
 
   test("calculateQualityDefinitionDiff - diff min size", async ({}) => {
     const clone: TrashQualityDefintion = JSON.parse(JSON.stringify(client));
-    clone.qualities[0].min = 3;
+    clone.qualities[0]!.min = 3;
 
     const result = calculateQualityDefinitionDiff(server, clone);
 
@@ -137,7 +137,7 @@ describe("QualityDefinitions", async () => {
 
   test("calculateQualityDefinitionDiff - diff max size", async ({}) => {
     const clone: TrashQualityDefintion = JSON.parse(JSON.stringify(client));
-    clone.qualities[0].max = 3;
+    clone.qualities[0]!.max = 3;
 
     const result = calculateQualityDefinitionDiff(server, clone);
 
@@ -147,7 +147,7 @@ describe("QualityDefinitions", async () => {
 
   test("calculateQualityDefinitionDiff - diff preferred size", async ({}) => {
     const clone: TrashQualityDefintion = JSON.parse(JSON.stringify(client));
-    clone.qualities[0].preferred = 3;
+    clone.qualities[0]!.preferred = 3;
 
     const result = calculateQualityDefinitionDiff(server, clone);
 
@@ -157,7 +157,7 @@ describe("QualityDefinitions", async () => {
 
   test("calculateQualityDefinitionDiff - create new element", async ({}) => {
     const clone: TrashQualityDefintion = JSON.parse(JSON.stringify(client));
-    clone.qualities[0].quality = "New";
+    clone.qualities[0]!.quality = "New";
 
     const result = calculateQualityDefinitionDiff(server, clone);
 

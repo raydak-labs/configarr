@@ -1,11 +1,11 @@
 import fs from "node:fs";
 import path from "node:path";
 import { CheckRepoActions, simpleGit } from "simple-git";
+import { ConfigCustomFormat, ConfigQualityProfile, ConfigQualityProfileItem } from "src/types/config.types";
 import { MergedCustomFormatResource } from "./__generated__/mergedTypes";
 import { getConfig } from "./config";
 import { logger } from "./logger";
 import { ArrType, CFProcessing, ConfigarrCF, QualityDefintionsRadarr, QualityDefintionsSonarr } from "./types/common.types";
-import { ConfigCustomFormat, YamlConfigQualityProfile, YamlConfigQualityProfileItems } from "./types/config.types";
 import { TrashCF, TrashQP, TrashQualityDefintion } from "./types/trashguide.types";
 import { loadJsonFile, mapImportCfToRequestCf, notEmpty, toCarrCF, trashRepoPaths } from "./util";
 
@@ -137,14 +137,14 @@ export const loadQPFromTrash = async (arrType: ArrType) => {
   return map;
 };
 
-export const transformTrashQPToTemplate = (data: TrashQP): YamlConfigQualityProfile => {
+export const transformTrashQPToTemplate = (data: TrashQP): ConfigQualityProfile => {
   return {
     min_format_score: data.minFormatScore,
     score_set: data.trash_score_set,
     upgrade: { allowed: data.upgradeAllowed, until_quality: data.cutoff, until_score: data.cutoffFormatScore },
     name: data.name,
     qualities: data.items
-      .map((e): YamlConfigQualityProfileItems | null => {
+      .map((e): ConfigQualityProfileItem | null => {
         if (!e.allowed) {
           return null;
         }

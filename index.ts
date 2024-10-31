@@ -3,7 +3,7 @@ import "dotenv/config";
 import fs from "node:fs";
 import { MergedCustomFormatResource } from "./src/__generated__/mergedTypes";
 import { configureRadarrApi, configureSonarrApi, getArrApi, unsetApi } from "./src/api";
-import { getConfig } from "./src/config";
+import { getConfig, validateConfig } from "./src/config";
 import {
   calculateCFsToManage,
   loadCFFromConfig,
@@ -29,13 +29,21 @@ import {
   transformTrashQPCFs,
   transformTrashQPToTemplate,
 } from "./src/trash-guide";
-import { ArrType, MappedMergedTemplates } from "./src/types/common.types";
-import { ConfigArrInstance, ConfigQualityProfile, YamlConfigIncludeItem } from "./src/types/config.types";
+import { ArrType, CFProcessing, MappedMergedTemplates } from "./src/types/common.types";
+import { ConfigQualityProfile, InputConfigArrInstance, InputConfigIncludeItem, MergedConfigInstance } from "./src/types/config.types";
 import { TrashQualityDefintion } from "./src/types/trashguide.types";
 import { DEBUG_CREATE_FILES, IS_DRY_RUN } from "./src/util";
 
-const pipeline = async (value: ConfigArrInstance, arrType: ArrType) => {
-  const api = getArrApi();
+/**
+ * Load data from trash, recyclarr, custom configs and merge.
+ * Afterwards do sanitize and check against required configuration.
+ * @param value
+ * @param arrType
+ */
+const mergeConfigsAndTemplates = async (
+  value: InputConfigArrInstance,
+  arrType: ArrType,
+): Promise<{ mergedCFs: CFProcessing; config: MergedConfigInstance }> => {
   const recyclarrTemplateMap = loadRecyclarrTemplates(arrType);
   const trashTemplates = await loadQPFromTrash(arrType);
 
@@ -45,9 +53,7 @@ const pipeline = async (value: ConfigArrInstance, arrType: ArrType) => {
   };
 
   if (value.include) {
-    logger.info(`Found ${value.include.length} templates to include ...`);
-
-    const mappedIncludes = value.include.reduce<{ recyclarr: YamlConfigIncludeItem[]; trash: YamlConfigIncludeItem[] }>(
+    const mappedIncludes = value.include.reduce<{ recyclarr: InputConfigIncludeItem[]; trash: InputConfigIncludeItem[] }>(
       (previous, current) => {
         switch (current.source) {
           case "TRASH":
@@ -65,14 +71,15 @@ const pipeline = async (value: ConfigArrInstance, arrType: ArrType) => {
       { recyclarr: [], trash: [] },
     );
 
-    logger.debug(mappedIncludes.recyclarr, `Included ${mappedIncludes.recyclarr.length} templates [recyclarr]`);
-    logger.debug(mappedIncludes.trash, `Included ${mappedIncludes.trash.length} templates [trash]`);
+    logger.info(
+      `Found ${value.include.length} templates to include: [recyclarr]=${mappedIncludes.recyclarr.length}, [trash]=${mappedIncludes.trash.length} ...`,
+    );
 
     mappedIncludes.recyclarr.forEach((e) => {
       const template = recyclarrTemplateMap.get(e.template);
 
       if (!template) {
-        logger.info(`Unknown recyclarr template requested: ${e.template}`);
+        logger.warn(`Unknown recyclarr template requested: ${e.template}`);
         return;
       }
 
@@ -97,7 +104,7 @@ const pipeline = async (value: ConfigArrInstance, arrType: ArrType) => {
       const template = trashTemplates.get(e.template);
 
       if (!template) {
-        logger.info(`Unknown trash template requested: ${e.template}`);
+        logger.warn(`Unknown trash template requested: ${e.template}`);
         return;
       }
 
@@ -147,9 +154,20 @@ const pipeline = async (value: ConfigArrInstance, arrType: ArrType) => {
   const configCFDefinition = loadCFFromConfig();
   const mergedCFs = mergeCfSources([trashCFs, localFileCFs, configCFDefinition]);
 
-  const idsToManage = calculateCFsToManage(recylarrMergedTemplates);
+  const validatedConfig = validateConfig(recylarrMergedTemplates);
+  return { mergedCFs: mergedCFs, config: validatedConfig };
+};
+
+const pipeline = async (value: InputConfigArrInstance, arrType: ArrType) => {
+  const api = getArrApi();
+
+  const { config, mergedCFs } = await mergeConfigsAndTemplates(value, arrType);
+
+  const idsToManage = calculateCFsToManage(config);
 
   logger.debug(Array.from(idsToManage), `CustomFormats to manage`);
+
+  // TODO here the configs should be merged -> sanitize + check
 
   const serverCFs = await loadServerCustomFormats();
   logger.info(`CustomFormats on server: ${serverCFs.length}`);
@@ -162,7 +180,7 @@ const pipeline = async (value: ConfigArrInstance, arrType: ArrType) => {
   await manageCf(mergedCFs, serverCFMapping, idsToManage);
   logger.info(`CustomFormats synchronized`);
 
-  const qualityDefinition = recylarrMergedTemplates.quality_definition?.type;
+  const qualityDefinition = config.quality_definition?.type;
 
   if (qualityDefinition) {
     const qdSonarr = await loadQualityDefinitionFromServer();
@@ -203,10 +221,11 @@ const pipeline = async (value: ConfigArrInstance, arrType: ArrType) => {
 
   // merge CFs of templates and custom CFs into one mapping of QualityProfile -> CFs + Score
   // TODO traversing the merged templates probably to often once should be enough. Loop once and extract a couple of different maps, arrays as needed. Future optimization.
-  const cfToQualityProfiles = mapQualityProfiles(mergedCFs, recylarrMergedTemplates.custom_formats, recylarrMergedTemplates);
+  // TODO double config
+  const cfToQualityProfiles = mapQualityProfiles(mergedCFs, config.custom_formats, config);
 
   // merge profiles from recyclarr templates into one
-  const qualityProfilesMerged = recylarrMergedTemplates.quality_profiles.reduce((p, c) => {
+  const qualityProfilesMerged = config.quality_profiles.reduce((p, c) => {
     let existingQp = p.get(c.name);
 
     if (!existingQp) {
@@ -289,42 +308,34 @@ const run = async () => {
 
   // TODO currently this has to be run sequentially because of the centrally configured api
 
-  logHeading(`Processing Sonarr ...`);
+  const sonarrConfig = applicationConfig.sonarr;
 
-  for (const instanceName in applicationConfig.sonarr) {
-    const instance = applicationConfig.sonarr[instanceName];
-    logger.info(`Processing Sonarr Instance: ${instanceName}`);
-    await configureSonarrApi(instance.base_url, instance.api_key);
-    await pipeline(instance, "SONARR");
-    unsetApi();
+  if (sonarrConfig == null || Array.isArray(sonarrConfig) || typeof sonarrConfig !== "object" || Object.keys(sonarrConfig).length <= 0) {
+    logHeading(`No Sonarr instances defined.`);
+  } else {
+    logHeading(`Processing Sonarr ...`);
+
+    for (const [instanceName, instance] of Object.entries(sonarrConfig)) {
+      logger.info(`Processing Sonarr Instance: ${instanceName}`);
+      await configureSonarrApi(instance.base_url, instance.api_key);
+      await pipeline(instance, "SONARR");
+      unsetApi();
+    }
   }
 
-  if (
-    typeof applicationConfig.sonarr === "object" &&
-    !Array.isArray(applicationConfig.sonarr) &&
-    applicationConfig.sonarr !== null &&
-    Object.keys(applicationConfig.sonarr).length <= 0
-  ) {
-    logger.info(`No sonarr instances defined.`);
-  }
+  const radarrConfig = applicationConfig.radarr;
 
-  logHeading(`Processing Radarr ...`);
+  if (radarrConfig == null || Array.isArray(radarrConfig) || typeof radarrConfig !== "object" || Object.keys(radarrConfig).length <= 0) {
+    logHeading(`No Radarr instances defined.`);
+  } else {
+    logHeading(`Processing Radarr ...`);
 
-  for (const instanceName in applicationConfig.radarr) {
-    logger.info(`Processing Radarr instance: ${instanceName}`);
-    const instance = applicationConfig.radarr[instanceName];
-    await configureRadarrApi(instance.base_url, instance.api_key);
-    await pipeline(instance, "RADARR");
-    unsetApi();
-  }
-
-  if (
-    typeof applicationConfig.radarr === "object" &&
-    !Array.isArray(applicationConfig.radarr) &&
-    applicationConfig.radarr !== null &&
-    Object.keys(applicationConfig.radarr).length <= 0
-  ) {
-    logger.info(`No radarr instances defined.`);
+    for (const [instanceName, instance] of Object.entries(radarrConfig)) {
+      logger.info(`Processing Radarr Instance: ${instanceName}`);
+      await configureRadarrApi(instance.base_url, instance.api_key);
+      await pipeline(instance, "RADARR");
+      unsetApi();
+    }
   }
 };
 

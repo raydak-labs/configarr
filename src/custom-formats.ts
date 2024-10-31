@@ -38,7 +38,7 @@ export const manageCf = async (
 
   let updatedCFs = 0;
   let errorCFs = 0;
-  let validCFs = 0;
+  const validCFss: ConfigarrCF[] = [];
   let createCFs = 0;
 
   const manageSingle = async (carrId: string) => {
@@ -77,8 +77,7 @@ export const manageCf = async (
           throw new Error(`Failed updating CF ${tr.requestConfig.name}`);
         }
       } else {
-        logger.debug(`CF ${tr.requestConfig.name} does not need update.`);
-        validCFs++;
+        validCFss.push(tr.carrConfig);
       }
     } else {
       // Create
@@ -101,7 +100,11 @@ export const manageCf = async (
     await manageSingle(cf);
   }
 
-  logger.info(`Created CFs: ${createCFs}, Updated CFs: ${updatedCFs}, Untouched CFs: ${validCFs}, Error CFs: ${errorCFs}`);
+  logger.debug(
+    validCFss.map((e) => `${e.name}`),
+    `CFs with no update:`,
+  );
+  logger.info(`Created CFs: ${createCFs}, Updated CFs: ${updatedCFs}, Untouched CFs: ${validCFss.length}, Error CFs: ${errorCFs}`);
 };
 export const loadLocalCfs = async (): Promise<CFProcessing | null> => {
   const config = getConfig();
@@ -186,6 +189,7 @@ export const calculateCFsToManage = (yaml: ConfigCustomFormatList) => {
 
   return cfTrashToManage;
 };
+
 export const mergeCfSources = (listOfCfs: (CFProcessing | null)[]): CFProcessing => {
   return listOfCfs.reduce<CFProcessing>(
     (p, c) => {

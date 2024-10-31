@@ -13,7 +13,7 @@ import { loadQualityDefinitionFromServer } from "./quality-definitions";
 import { CFProcessing } from "./types/common.types";
 import { ConfigCustomFormat, ConfigQualityProfile, ConfigQualityProfileItem } from "./types/config.types";
 import { RecyclarrMergedTemplates } from "./types/recyclarr.types";
-import { IS_LOCAL_SAMPLE_MODE, cloneWithJSON, loadJsonFile, notEmpty } from "./util";
+import { IS_LOCAL_SAMPLE_MODE, cloneWithJSON, loadJsonFile, notEmpty, zip } from "./util";
 
 export const mapQualityProfiles = (
   { carrIdMapping }: CFProcessing,
@@ -191,10 +191,11 @@ export const doAllQualitiesExist = (serverResource: ConfigQualityProfileItem[], 
   const sortedServerConfig = serverCloned.sort((a, b) => (a.name < b.name ? -1 : 1));
   const sortedLocalConfig = localCloned.sort((a, b) => (a.name < b.name ? -1 : 1));
 
-  for (let index = 0; index < sortedServerConfig.length; index++) {
-    const serverElement = sortedServerConfig[index];
-    const localElement = sortedLocalConfig[index];
+  if (sortedLocalConfig.length !== sortedServerConfig.length) {
+    return false;
+  }
 
+  for (const [serverElement, localElement] of zip(sortedServerConfig, sortedLocalConfig)) {
     if (serverElement.name !== localElement.name) {
       return false;
     }
@@ -217,9 +218,13 @@ export const isOrderOfQualitiesEqual = (obj1: ConfigQualityProfileItem[], obj2: 
     return false;
   }
 
-  return obj1.every((value, index) => {
-    return value.name === obj2[index].name;
-  });
+  for (const [element1, element2] of zip(obj1, obj2)) {
+    if (element1.name !== element2.name) {
+      return false;
+    }
+  }
+
+  return true;
 };
 
 export const calculateQualityProfilesDiff = async (
