@@ -64,6 +64,26 @@ export type TrashCF = {
   trash_description?: string;
 } & ImportCF;
 
+type TrashQPItem = {
+  name: string;
+  allowed: boolean;
+  items?: string[];
+};
+
+export type TrashQP = {
+  trash_id: string;
+  name: string;
+  trash_score_set: keyof TrashCF["trash_scores"];
+  upgradeAllowed: boolean;
+  cutoff: string;
+  minFormatScore: number;
+  cutoffFormatScore: number;
+  items: TrashQPItem[];
+  formatItems: {
+    [key: string]: string;
+  };
+};
+
 export type ConfigarrCF = {
   configarr_id: string;
   configarr_scores?: TrashCF["trash_scores"];
@@ -100,6 +120,9 @@ export type ConfigSchema = InputConfigSchema & {
 
 export type InputConfigCustomFormat = {
   trash_ids?: string[];
+  /**
+   * @deprecated replaced with assign_scores_to
+   */
   quality_profiles?: { name: string; score?: number }[];
   assign_scores_to?: { name: string; score?: number }[];
 };
@@ -114,7 +137,7 @@ export type ConfigArrInstance = {
   quality_definition?: {
     type: string;
   };
-  include?: { template: string }[];
+  include?: YamlConfigIncludeItem[];
   custom_formats: ConfigCustomFormat[];
   quality_profiles: ConfigQualityProfile[];
 };
@@ -165,6 +188,53 @@ export type RecyclarrCustomFormats = Partial<Pick<InputConfigCustomFormat, "tras
 export type RecyclarrConfigInstance = Omit<ConfigArrInstance, "custom_formats"> & {
   custom_formats: RecyclarrCustomFormats[];
 };
+
+// TODO
+export type YamlConfigIncludeRecyclarr = {
+  template: string;
+  type: "RECYCLARR";
+};
+
+export type YamlConfigIncludeTrash = {
+  // TODO or use template?
+  id: string;
+  type: "TRASH";
+};
+export type YamlConfigIncludeItem = YamlConfigIncludeRecyclarr | YamlConfigIncludeTrash;
+
+export type YamlConfigInstance = {
+  base_url: string;
+  api_key: string;
+  quality_definition?: {
+    type: string;
+  };
+  include?: YamlConfigIncludeItem[];
+  custom_formats: InputConfigCustomFormat[];
+  quality_profiles: YamlConfigQualityProfile[];
+};
+
+export type YamlConfigQualityProfile = {
+  name: string;
+  reset_unmatched_scores?: {
+    enabled: boolean;
+    except?: string[];
+  };
+  upgrade: {
+    allowed: boolean;
+    until_quality: string;
+    until_score: number;
+  };
+  min_format_score: number;
+  score_set: keyof TrashCF["trash_scores"];
+  quality_sort: "top" | "bottom";
+  qualities: YamlConfigQualityProfileItems[];
+};
+
+export type YamlConfigQualityProfileItems = {
+  name: string;
+  qualities?: string[];
+};
+// END TODO
 
 export type RecyclarrTemplates = Partial<
   Pick<RecyclarrConfigInstance, "quality_definition" | "custom_formats" | "include" | "quality_profiles">
