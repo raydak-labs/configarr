@@ -26,13 +26,13 @@
   },
   "devDependencies": {
     "@hyrious/esbuild-plugin-commonjs": "0.2.4",
-    "@playwright/test": "1.48.0",
-    "@types/node": "22.7.5",
-    "@vitest/coverage-v8": "2.1.2",
+    "@playwright/test": "1.48.2",
+    "@types/node": "22.8.6",
+    "@vitest/coverage-v8": "2.1.4",
     "esbuild": "0.24.0",
     "prettier": "3.3.3",
     "swagger-typescript-api": "13.0.22",
     "typescript": "5.6.3",
-    "vitest": "2.1.2"
+    "vitest": "2.1.4"
   }
 }
