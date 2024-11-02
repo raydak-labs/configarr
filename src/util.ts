@@ -1,5 +1,6 @@
-import { readFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import path from "node:path";
+import simpleGit, { CheckRepoActions } from "simple-git";
 import { MergedCustomFormatResource } from "./__generated__/mergedTypes";
 import { logger } from "./logger";
 import { ConfigarrCF, ImportCF, UserFriendlyField } from "./types/common.types";
@@ -241,3 +242,46 @@ export function zipNLength<T extends unknown[][]>(...arrays: T): Array<{ [K in k
 
   return result as Array<{ [K in keyof T]: T[K] extends (infer U)[] ? U : never }>;
 }
+
+export const cloneGitRepo = async (localPath: string, gitUrl: string, revision: string) => {
+  const rootPath = localPath;
+
+  if (!existsSync(rootPath)) {
+    mkdirSync(rootPath, { recursive: true });
+  }
+
+  const gitClient = simpleGit({ baseDir: rootPath });
+  const r = await gitClient.checkIsRepo(CheckRepoActions.IS_REPO_ROOT);
+
+  if (!r) {
+    await simpleGit().clone(gitUrl, rootPath);
+  }
+
+  await gitClient.checkout(revision, ["-f"]);
+  const result = await gitClient.status();
+
+  let updated = false;
+
+  if (!result.detached) {
+    const res = await gitClient.pull();
+    if (res.files.length > 0) {
+      updated = true;
+    }
+  }
+
+  let hash: string = "unknown";
+
+  try {
+    hash = await gitClient.revparse(["--verify", "HEAD"]);
+  } catch (err: unknown) {
+    // Ignore
+    logger.debug(`Unable to extract hash from commit`);
+  }
+
+  return {
+    ref: result.current,
+    hash: hash,
+    localPath: localPath,
+    updated,
+  };
+};

@@ -1,44 +1,25 @@
 import fs from "node:fs";
 import path from "node:path";
-import { CheckRepoActions, simpleGit } from "simple-git";
-import { ConfigCustomFormat, ConfigQualityProfile, ConfigQualityProfileItem } from "src/types/config.types";
 import { MergedCustomFormatResource } from "./__generated__/mergedTypes";
 import { getConfig } from "./config";
 import { logger } from "./logger";
 import { ArrType, CFProcessing, ConfigarrCF, QualityDefintionsRadarr, QualityDefintionsSonarr } from "./types/common.types";
+import { ConfigCustomFormat, ConfigQualityProfile, ConfigQualityProfileItem } from "./types/config.types";
 import { TrashCF, TrashQP, TrashQualityDefintion } from "./types/trashguide.types";
-import { loadJsonFile, mapImportCfToRequestCf, notEmpty, toCarrCF, trashRepoPaths } from "./util";
+import { cloneGitRepo, loadJsonFile, mapImportCfToRequestCf, notEmpty, toCarrCF, trashRepoPaths } from "./util";
 
 const DEFAULT_TRASH_GIT_URL = "https://github.com/TRaSH-Guides/Guides";
 
 export const cloneTrashRepo = async () => {
+  logger.info(`Checking TrashGuide repo ...`);
+
   const rootPath = trashRepoPaths.root;
-  logger.info(`Checking TrashGuide repo (${rootPath})`);
-
-  if (!fs.existsSync(rootPath)) {
-    fs.mkdirSync(rootPath, { recursive: true });
-  }
-
-  const gitClient = simpleGit({ baseDir: rootPath });
-  const r = await gitClient.checkIsRepo(CheckRepoActions.IS_REPO_ROOT);
-
   const applicationConfig = getConfig();
+  const gitUrl = getConfig().trashGuideUrl ?? DEFAULT_TRASH_GIT_URL;
+  const revision = applicationConfig.trashRevision ?? "master";
 
-  if (!r) {
-    await simpleGit().clone(applicationConfig.trashGuideUrl ?? DEFAULT_TRASH_GIT_URL, rootPath);
-  }
-
-  await gitClient.checkout(applicationConfig.trashRevision ?? "master", ["-f"]);
-  const result = await gitClient.status();
-
-  if (!result.detached) {
-    const res = await gitClient.pull();
-    if (res.files.length > 0) {
-      logger.info(`Updated TrashGuide repo.`);
-    }
-  }
-
-  logger.info(`TrashGuide repo on '${result.current}'`);
+  const cloneResult = await cloneGitRepo(rootPath, gitUrl, revision);
+  logger.info(`TrashGuide repo: ref[${cloneResult.ref}], hash[${cloneResult.hash}], path[${cloneResult.localPath}]`);
 };
 
 export const loadSonarrTrashCFs = async (arrType: ArrType): Promise<CFProcessing> => {
@@ -134,9 +115,11 @@ export const loadQPFromTrash = async (arrType: ArrType) => {
   //   fillMap(localPath);
   // }
 
+  logger.debug(`Found ${map.size} TrashGuide QualityProfiles.`);
   return map;
 };
 
+// TODO merge two methods?
 export const transformTrashQPToTemplate = (data: TrashQP): ConfigQualityProfile => {
   return {
     min_format_score: data.minFormatScore,
