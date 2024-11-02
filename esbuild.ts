@@ -4,7 +4,7 @@ const externalizedModules = {};
 
 await esbuild.build({
   //inject: ["cjs-shim.ts"],
-  entryPoints: ["index.ts"],
+  entryPoints: ["./src/index.ts"],
   bundle: true,
   sourcemap: "inline",
   platform: "node",

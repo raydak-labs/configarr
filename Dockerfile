@@ -24,7 +24,7 @@ RUN --mount=type=cache,id=pnpm,target=~/.pnpm-store pnpm install --frozen-lockfi
 
 FROM base AS builder
 COPY src src/
-COPY index.ts esbuild.ts ./
+COPY esbuild.ts ./
 
 RUN pnpm run build
 

@@ -2,11 +2,23 @@
   "$schema": "https://json.schemastore.org/tsconfig",
   "compilerOptions": {
     "allowJs": true,
+    "baseUrl": ".",
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "isolatedModules": true,
+    "lib": ["DOM", "DOM.Iterable", "ESNext"],
     "module": "ESNext",
     "moduleResolution": "Bundler",
+    "noUncheckedIndexedAccess": true,
+    "paths": {
+      "~/*": ["./src/*"]
+    },
+    "resolveJsonModule": true,
     "skipLibCheck": true,
     "strict": true,
+    "strictNullChecks": true,
     "target": "ESNext"
   },
-  "exclude": ["./dist"]
+  "exclude": ["./dist"],
+  "include": ["**/*.ts", "**/*.tsx"]
 }

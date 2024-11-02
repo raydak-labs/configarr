@@ -1,26 +1,19 @@
 import "dotenv/config";
 
 import fs from "node:fs";
-import { MergedCustomFormatResource } from "./src/__generated__/mergedTypes";
-import { configureRadarrApi, configureSonarrApi, getArrApi, unsetApi } from "./src/api";
-import { getConfig, validateConfig } from "./src/config";
-import {
-  calculateCFsToManage,
-  loadCFFromConfig,
-  loadLocalCfs,
-  loadServerCustomFormats,
-  manageCf,
-  mergeCfSources,
-} from "./src/custom-formats";
-import { logHeading, logger } from "./src/logger";
-import { calculateQualityDefinitionDiff, loadQualityDefinitionFromServer } from "./src/quality-definitions";
+import { MergedCustomFormatResource } from "./__generated__/mergedTypes";
+import { configureRadarrApi, configureSonarrApi, getArrApi, unsetApi } from "./api";
+import { getConfig, validateConfig } from "./config";
+import { calculateCFsToManage, loadCFFromConfig, loadLocalCfs, loadServerCustomFormats, manageCf, mergeCfSources } from "./custom-formats";
+import { logHeading, logger } from "./logger";
+import { calculateQualityDefinitionDiff, loadQualityDefinitionFromServer } from "./quality-definitions";
 import {
   calculateQualityProfilesDiff,
   filterInvalidQualityProfiles,
   loadQualityProfilesFromServer,
   mapQualityProfiles,
-} from "./src/quality-profiles";
-import { cloneRecyclarrTemplateRepo, loadRecyclarrTemplates } from "./src/recyclarr-importer";
+} from "./quality-profiles";
+import { cloneRecyclarrTemplateRepo, loadRecyclarrTemplates } from "./recyclarr-importer";
 import {
   cloneTrashRepo,
   loadQPFromTrash,
@@ -28,11 +21,11 @@ import {
   loadSonarrTrashCFs,
   transformTrashQPCFs,
   transformTrashQPToTemplate,
-} from "./src/trash-guide";
-import { ArrType, CFProcessing, MappedMergedTemplates } from "./src/types/common.types";
-import { ConfigQualityProfile, InputConfigArrInstance, InputConfigIncludeItem, MergedConfigInstance } from "./src/types/config.types";
-import { TrashQualityDefintion } from "./src/types/trashguide.types";
-import { DEBUG_CREATE_FILES, IS_DRY_RUN } from "./src/util";
+} from "./trash-guide";
+import { ArrType, CFProcessing, MappedMergedTemplates } from "./types/common.types";
+import { ConfigQualityProfile, InputConfigArrInstance, InputConfigIncludeItem, MergedConfigInstance } from "./types/config.types";
+import { TrashQualityDefintion } from "./types/trashguide.types";
+import { DEBUG_CREATE_FILES, IS_DRY_RUN } from "./util";
 
 /**
  * Load data from trash, recyclarr, custom configs and merge.
