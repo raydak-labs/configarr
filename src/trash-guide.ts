@@ -69,7 +69,7 @@ export const loadSonarrTrashCFs = async (arrType: ArrType): Promise<CFProcessing
   };
 };
 
-export const loadQualityDefinitionSonarrFromTrash = async (
+export const loadQualityDefinitionFromTrash = async (
   qdType: QualityDefintionsSonarr | QualityDefintionsRadarr,
   arrType: ArrType,
 ): Promise<TrashQualityDefintion> => {

@@ -36,17 +36,17 @@ export const manageCf = async (
   const { carrIdMapping: trashIdToObject } = cfProcessing;
   const api = getArrApi();
 
-  let updatedCFs = 0;
-  let errorCFs = 0;
-  const validCFss: ConfigarrCF[] = [];
-  let createCFs = 0;
+  let updatedCFs: MergedCustomFormatResource[] = [];
+  let errorCFs: string[] = [];
+  const validCFs: ConfigarrCF[] = [];
+  let createCFs: MergedCustomFormatResource[] = [];
 
   const manageSingle = async (carrId: string) => {
     const tr = trashIdToObject.get(carrId);
 
     if (!tr) {
       logger.info(`TrashID to manage ${carrId} does not exists`);
-      errorCFs++;
+      errorCFs.push(carrId);
       return;
     }
 
@@ -62,22 +62,22 @@ export const manageCf = async (
         try {
           if (IS_DRY_RUN) {
             logger.info(`DryRun: Would update CF: ${existingCf.id} - ${existingCf.name}`);
-            updatedCFs++;
+            updatedCFs.push(existingCf);
           } else {
-            await api.v3CustomformatUpdate(existingCf.id + "", {
+            const updatedCf = await api.v3CustomformatUpdate(existingCf.id + "", {
               id: existingCf.id,
               ...tr.requestConfig,
             });
             logger.debug(`Updated CF ${tr.requestConfig.name}`);
-            updatedCFs++;
+            updatedCFs.push(updatedCf);
           }
         } catch (err: any) {
           logger.error(err.response.data, `Failed updating CF ${tr.requestConfig.name}`);
-          errorCFs++;
+          errorCFs.push(tr.carrConfig.configarr_id ?? tr.requestConfig.name ?? "unknown");
           throw new Error(`Failed updating CF ${tr.requestConfig.name}`);
         }
       } else {
-        validCFss.push(tr.carrConfig);
+        validCFs.push(tr.carrConfig);
       }
     } else {
       // Create
@@ -87,10 +87,11 @@ export const manageCf = async (
         } else {
           const createResult = await api.v3CustomformatCreate(tr.requestConfig);
           logger.info(`Created CF ${tr.requestConfig.name}`);
-          createCFs++;
+          createCFs.push(createResult);
         }
       } catch (err: any) {
         logger.error(err.response.data, `Failed updating CF ${tr.requestConfig.name}`);
+        errorCFs.push(tr.carrConfig.configarr_id ?? tr.requestConfig.name ?? "unknown");
         throw new Error(`Failed creating CF '${tr.requestConfig.name}'. Message: ${err.response.data?.message}`);
       }
     }
@@ -100,11 +101,17 @@ export const manageCf = async (
     await manageSingle(cf);
   }
 
-  logger.debug(
-    validCFss.map((e) => `${e.name}`),
-    `CFs with no update:`,
+  if (validCFs.length > 0) {
+    logger.debug(
+      validCFs.map((e) => `${e.name}`),
+      `CFs with no update:`,
+    );
+  }
+  logger.info(
+    `Created CFs: ${createCFs.length}, Updated CFs: ${updatedCFs.length}, Untouched CFs: ${validCFs.length}, Error CFs: ${errorCFs.length}`,
   );
-  logger.info(`Created CFs: ${createCFs}, Updated CFs: ${updatedCFs}, Untouched CFs: ${validCFss.length}, Error CFs: ${errorCFs}`);
+
+  return { createCFs, updatedCFs, validCFs, errorCFs };
 };
 export const loadLocalCfs = async (): Promise<CFProcessing | null> => {
   const config = getConfig();

@@ -7,17 +7,12 @@ import { getConfig, validateConfig } from "./config";
 import { calculateCFsToManage, loadCFFromConfig, loadLocalCfs, loadServerCustomFormats, manageCf, mergeCfSources } from "./custom-formats";
 import { logHeading, logger } from "./logger";
 import { calculateQualityDefinitionDiff, loadQualityDefinitionFromServer } from "./quality-definitions";
-import {
-  calculateQualityProfilesDiff,
-  filterInvalidQualityProfiles,
-  loadQualityProfilesFromServer,
-  mapQualityProfiles,
-} from "./quality-profiles";
+import { calculateQualityProfilesDiff, filterInvalidQualityProfiles, loadQualityProfilesFromServer } from "./quality-profiles";
 import { cloneRecyclarrTemplateRepo, loadRecyclarrTemplates } from "./recyclarr-importer";
 import {
   cloneTrashRepo,
   loadQPFromTrash,
-  loadQualityDefinitionSonarrFromTrash,
+  loadQualityDefinitionFromTrash,
   loadSonarrTrashCFs,
   transformTrashQPCFs,
   transformTrashQPToTemplate,
@@ -91,6 +86,9 @@ const mergeConfigsAndTemplates = async (
       }
 
       // TODO Ignore recursive include for now
+      if (template.include) {
+        logger.warn(`Recursive includes not supported at the moment. Ignoring.`);
+      }
     });
 
     mappedIncludes.trash.forEach((e) => {
@@ -147,78 +145,8 @@ const mergeConfigsAndTemplates = async (
   const configCFDefinition = loadCFFromConfig();
   const mergedCFs = mergeCfSources([trashCFs, localFileCFs, configCFDefinition]);
 
-  const validatedConfig = validateConfig(recylarrMergedTemplates);
-  return { mergedCFs: mergedCFs, config: validatedConfig };
-};
-
-const pipeline = async (value: InputConfigArrInstance, arrType: ArrType) => {
-  const api = getArrApi();
-
-  const { config, mergedCFs } = await mergeConfigsAndTemplates(value, arrType);
-
-  const idsToManage = calculateCFsToManage(config);
-
-  logger.debug(Array.from(idsToManage), `CustomFormats to manage`);
-
-  // TODO here the configs should be merged -> sanitize + check
-
-  const serverCFs = await loadServerCustomFormats();
-  logger.info(`CustomFormats on server: ${serverCFs.length}`);
-
-  const serverCFMapping = serverCFs.reduce((p, c) => {
-    p.set(c.name!, c);
-    return p;
-  }, new Map<string, MergedCustomFormatResource>());
-
-  await manageCf(mergedCFs, serverCFMapping, idsToManage);
-  logger.info(`CustomFormats synchronized`);
-
-  const qualityDefinition = config.quality_definition?.type;
-
-  if (qualityDefinition) {
-    const qdSonarr = await loadQualityDefinitionFromServer();
-    let qdTrash: TrashQualityDefintion;
-
-    switch (qualityDefinition) {
-      case "anime":
-        qdTrash = await loadQualityDefinitionSonarrFromTrash("anime", "SONARR");
-        break;
-      case "series":
-        qdTrash = await loadQualityDefinitionSonarrFromTrash("series", "SONARR");
-        break;
-      case "movie":
-        qdTrash = await loadQualityDefinitionSonarrFromTrash("movie", "RADARR");
-        break;
-      default:
-        throw new Error(`Unsupported quality defintion ${qualityDefinition}`);
-    }
-
-    const { changeMap, create, restData } = calculateQualityDefinitionDiff(qdSonarr, qdTrash);
-
-    if (changeMap.size > 0) {
-      if (IS_DRY_RUN) {
-        logger.info("DryRun: Would update QualityDefinitions.");
-      } else {
-        logger.info(`Diffs in quality definitions found`, changeMap.values());
-        await api.v3QualitydefinitionUpdateUpdate(restData as any); // Ignore types
-        logger.info(`Updated QualityDefinitions`);
-      }
-    } else {
-      logger.info(`QualityDefinitions do not need update!`);
-    }
-
-    if (create.length > 0) {
-      logger.info(`Currently not implemented this case for quality definitions.`);
-    }
-  }
-
-  // merge CFs of templates and custom CFs into one mapping of QualityProfile -> CFs + Score
-  // TODO traversing the merged templates probably to often once should be enough. Loop once and extract a couple of different maps, arrays as needed. Future optimization.
-  // TODO double config
-  const cfToQualityProfiles = mapQualityProfiles(mergedCFs, config.custom_formats, config);
-
   // merge profiles from recyclarr templates into one
-  const qualityProfilesMerged = config.quality_profiles.reduce((p, c) => {
+  const qualityProfilesMerged = recylarrMergedTemplates.quality_profiles.reduce((p, c) => {
     let existingQp = p.get(c.name);
 
     if (!existingQp) {
@@ -241,11 +169,86 @@ const pipeline = async (value: InputConfigArrInstance, arrType: ArrType) => {
     return p;
   }, new Map<string, ConfigQualityProfile>());
 
+  recylarrMergedTemplates.quality_profiles = Array.from(qualityProfilesMerged.values());
+
+  const validatedConfig = validateConfig(recylarrMergedTemplates);
+  logger.debug(`Merged config: '${JSON.stringify(validatedConfig)}'`);
+  return { mergedCFs: mergedCFs, config: validatedConfig };
+};
+
+const pipeline = async (value: InputConfigArrInstance, arrType: ArrType) => {
+  const api = getArrApi();
+
+  const { config, mergedCFs } = await mergeConfigsAndTemplates(value, arrType);
+
+  const idsToManage = calculateCFsToManage(config);
+
+  logger.debug(Array.from(idsToManage), `CustomFormats to manage`);
+
+  let serverCFs = await loadServerCustomFormats();
+  logger.info(`CustomFormats on server: ${serverCFs.length}`);
+
+  const serverCFMapping = serverCFs.reduce((p, c) => {
+    p.set(c.name!, c);
+    return p;
+  }, new Map<string, MergedCustomFormatResource>());
+
+  const cfUpdateResult = await manageCf(mergedCFs, serverCFMapping, idsToManage);
+
+  // add missing CFs to list because we need it for further steps
+  // serverCFs.push(...cfUpdateResult.createCFs);
+  if (cfUpdateResult.createCFs.length > 0 || cfUpdateResult.updatedCFs.length > 0) {
+    // refresh cfs
+    serverCFs = await loadServerCustomFormats();
+  }
+
+  logger.info(`CustomFormats synchronized`);
+
+  const qualityDefinition = config.quality_definition?.type;
+
+  let serverQD = await loadQualityDefinitionFromServer();
+
+  if (qualityDefinition) {
+    let qdTrash: TrashQualityDefintion;
+
+    switch (qualityDefinition) {
+      case "anime":
+        qdTrash = await loadQualityDefinitionFromTrash("anime", "SONARR");
+        break;
+      case "series":
+        qdTrash = await loadQualityDefinitionFromTrash("series", "SONARR");
+        break;
+      case "movie":
+        qdTrash = await loadQualityDefinitionFromTrash("movie", "RADARR");
+        break;
+      default:
+        throw new Error(`Unsupported quality defintion ${qualityDefinition}`);
+    }
+
+    const { changeMap, create, restData } = calculateQualityDefinitionDiff(serverQD, qdTrash);
+
+    if (changeMap.size > 0) {
+      if (IS_DRY_RUN) {
+        logger.info("DryRun: Would update QualityDefinitions.");
+      } else {
+        logger.info(`Diffs in quality definitions found`, changeMap.values());
+        await api.v3QualitydefinitionUpdateUpdate(restData as any); // TODO hack Ignore types
+        // refresh QDs
+        serverQD = await loadQualityDefinitionFromServer();
+        logger.info(`Updated QualityDefinitions`);
+      }
+    } else {
+      logger.info(`QualityDefinitions do not need update!`);
+    }
+
+    if (create.length > 0) {
+      logger.info(`Currently not implemented this case for quality definitions.`);
+    }
+  }
+
   // calculate diff from server <-> what we want to be there
-
-  const qpServer = await loadQualityProfilesFromServer();
-
-  const { changedQPs, create, noChanges } = await calculateQualityProfilesDiff(qualityProfilesMerged, cfToQualityProfiles, qpServer);
+  const serverQP = await loadQualityProfilesFromServer();
+  const { changedQPs, create, noChanges } = await calculateQualityProfilesDiff(mergedCFs, config, serverQP, serverQD, serverCFs);
 
   if (DEBUG_CREATE_FILES) {
     create.concat(changedQPs).forEach((e, i) => {
@@ -278,15 +281,6 @@ const pipeline = async (value: InputConfigArrInstance, arrType: ArrType) => {
   } else if (create.length > 0 || changedQPs.length > 0) {
     logger.info("DryRun: Would create/update QualityProfiles.");
   }
-  /*
-  - load trash
-  - load custom resources
-  - merge stuff together to see what actually needs to be done
-  - create/update CFs
-  - future: somehow track managed CFs?
-  - create/update quality profiles
-  - future: quality definitions
-  */
 };
 
 const run = async () => {

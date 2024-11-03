@@ -9,5 +9,3 @@ export type RecyclarrConfigInstance = OmitTyped<ConfigArrInstance, "custom_forma
 export type RecyclarrTemplates = Partial<
   Pick<RecyclarrConfigInstance, "quality_definition" | "custom_formats" | "include" | "quality_profiles">
 >;
-
-export type RecyclarrMergedTemplates = RecyclarrTemplates & Required<Pick<RecyclarrTemplates, "custom_formats" | "quality_profiles">>;
