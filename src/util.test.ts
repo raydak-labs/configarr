@@ -1,7 +1,7 @@
 import path from "path";
 import { describe, expect, test } from "vitest";
 import { MergedCustomFormatResource } from "./__generated__/mergedTypes";
-import { TrashCF, TrashCFSpF } from "./types";
+import { TrashCF, TrashCFSpF } from "./types/trashguide.types";
 import { cloneWithJSON, compareCustomFormats, loadJsonFile, mapImportCfToRequestCf, toCarrCF } from "./util";
 
 const exampleCFImplementations = {
@@ -154,7 +154,7 @@ describe("SizeSpecification", async () => {
 
   test("mismatch required", async () => {
     const copied: typeof custom = JSON.parse(JSON.stringify(custom));
-    copied.specifications![0].required = true;
+    copied.specifications![0]!.required = true;
 
     const result = compareCustomFormats(serverResponse, mapImportCfToRequestCf(toCarrCF(copied)));
     expect(result.equal).toBe(false);
@@ -162,7 +162,7 @@ describe("SizeSpecification", async () => {
 
   test("max differ", async () => {
     const copied: typeof custom = JSON.parse(JSON.stringify(custom));
-    (copied.specifications![0].fields as TrashCFSpF).max = 100;
+    (copied.specifications![0]!.fields as TrashCFSpF).max = 100;
 
     const result = compareCustomFormats(serverResponse, mapImportCfToRequestCf(toCarrCF(copied)));
     expect(result.equal).toBe(false);
@@ -200,9 +200,9 @@ describe("compareImportCFs - general", async () => {
   test("should not diff for fields length equal length", async () => {
     const copied: typeof custom = JSON.parse(JSON.stringify(custom));
     const clonedServer = cloneWithJSON(serverResponse);
-    clonedServer.specifications![0].fields = [clonedServer.specifications![0].fields![0]];
+    clonedServer.specifications![0]!.fields = [clonedServer.specifications![0]!.fields![0]!];
 
-    expect(clonedServer.specifications![0].fields.length).toBe(1);
+    expect(clonedServer.specifications![0]!.fields.length).toBe(1);
 
     const result = compareCustomFormats(clonedServer, mapImportCfToRequestCf(toCarrCF(copied)));
     expect(result.equal).toBe(true);
@@ -210,12 +210,12 @@ describe("compareImportCFs - general", async () => {
 
   test("should diff for fields length if local is higher (should not happen normally)", async () => {
     const copied: typeof custom = JSON.parse(JSON.stringify(custom));
-    copied.specifications![0].fields!.exceptLanguage = false;
+    copied.specifications![0]!.fields!.exceptLanguage = false;
 
     const clonedServer = cloneWithJSON(serverResponse);
-    clonedServer.specifications![0].fields = [clonedServer.specifications![0].fields![0]];
+    clonedServer.specifications![0]!.fields = [clonedServer.specifications![0]!.fields![0]!];
 
-    expect(clonedServer.specifications![0].fields.length).toBe(1);
+    expect(clonedServer.specifications![0]!.fields.length).toBe(1);
 
     const result = compareCustomFormats(clonedServer, mapImportCfToRequestCf(toCarrCF(copied)));
     expect(result.equal).toBe(false);
@@ -224,10 +224,10 @@ describe("compareImportCFs - general", async () => {
   test("should diff for specifications length bigger on remote", async () => {
     const copied: typeof custom = JSON.parse(JSON.stringify(custom));
     const clonedServer = cloneWithJSON(serverResponse);
-    clonedServer.specifications![0].fields = [clonedServer.specifications![0].fields![0]];
-    clonedServer.specifications?.push(clonedServer.specifications![0]);
+    clonedServer.specifications![0]!.fields = [clonedServer.specifications![0]!.fields![0]!];
+    clonedServer.specifications?.push(clonedServer.specifications![0]!);
 
-    expect(clonedServer.specifications![0].fields.length).toBe(1);
+    expect(clonedServer.specifications![0]!.fields.length).toBe(1);
 
     const result = compareCustomFormats(clonedServer, mapImportCfToRequestCf(toCarrCF(copied)));
     expect(result.equal).toBe(false);
@@ -236,10 +236,10 @@ describe("compareImportCFs - general", async () => {
   test("should diff for specifications length smaller on remote", async () => {
     const copied: typeof custom = JSON.parse(JSON.stringify(custom));
     const clonedServer = cloneWithJSON(serverResponse);
-    clonedServer.specifications![0].fields = [clonedServer.specifications![0].fields![0]];
-    copied.specifications?.push(copied.specifications[0]);
+    clonedServer.specifications![0]!.fields = [clonedServer.specifications![0]!.fields![0]!];
+    copied.specifications?.push(copied.specifications[0]!);
 
-    expect(clonedServer.specifications![0].fields.length).toBe(1);
+    expect(clonedServer.specifications![0]!.fields.length).toBe(1);
 
     const result = compareCustomFormats(clonedServer, mapImportCfToRequestCf(toCarrCF(copied)));
     expect(result.equal).toBe(false);
@@ -248,9 +248,9 @@ describe("compareImportCFs - general", async () => {
   test("should not diff for specifications length equal", async () => {
     const copied: typeof custom = JSON.parse(JSON.stringify(custom));
     const clonedServer = cloneWithJSON(serverResponse);
-    clonedServer.specifications![0].fields = [clonedServer.specifications![0].fields![0]];
+    clonedServer.specifications![0]!.fields = [clonedServer.specifications![0]!.fields![0]!];
 
-    expect(clonedServer.specifications![0].fields.length).toBe(1);
+    expect(clonedServer.specifications![0]!.fields.length).toBe(1);
 
     const result = compareCustomFormats(clonedServer, mapImportCfToRequestCf(toCarrCF(copied)));
     expect(result.equal).toBe(true);

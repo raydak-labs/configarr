@@ -1,42 +1,24 @@
 import { default as fs } from "node:fs";
 import path from "node:path";
-import { CheckRepoActions, simpleGit } from "simple-git";
 import yaml from "yaml";
 import { getConfig } from "./config";
 import { logger } from "./logger";
-import { ArrType, MappedTemplates, RecyclarrTemplates } from "./types";
-import { recyclarrRepoPaths } from "./util";
+import { ArrType, MappedTemplates } from "./types/common.types";
+import { RecyclarrTemplates } from "./types/recyclarr.types";
+import { cloneGitRepo, recyclarrRepoPaths } from "./util";
 
 const DEFAULT_RECYCLARR_GIT_URL = "https://github.com/recyclarr/config-templates";
 
 export const cloneRecyclarrTemplateRepo = async () => {
+  logger.info(`Checking Recyclarr repo ...`);
+
   const rootPath = recyclarrRepoPaths.root;
-  logger.info(`Checking Recyclarr repo (${rootPath})`);
-
-  if (!fs.existsSync(rootPath)) {
-    fs.mkdirSync(rootPath, { recursive: true });
-  }
-
-  const gitClient = simpleGit({ baseDir: rootPath });
-  const r = await gitClient.checkIsRepo(CheckRepoActions.IS_REPO_ROOT);
-
   const applicationConfig = getConfig();
+  const gitUrl = getConfig().recyclarrConfigUrl ?? DEFAULT_RECYCLARR_GIT_URL;
+  const revision = applicationConfig.recyclarrRevision ?? "master";
 
-  if (!r) {
-    await simpleGit().clone(applicationConfig.recyclarrConfigUrl ?? DEFAULT_RECYCLARR_GIT_URL, rootPath);
-  }
-
-  await gitClient.checkout(applicationConfig.recyclarrRevision ?? "master", ["-f"]);
-  const result = await gitClient.status();
-
-  if (!result.detached) {
-    const res = await gitClient.pull();
-    if (res.files.length > 0) {
-      logger.info(`Updated Recyclarr repo.`);
-    }
-  }
-
-  logger.info(`Recyclarr repo on '${result.current}'`);
+  const cloneResult = await cloneGitRepo(rootPath, gitUrl, revision);
+  logger.info(`Recyclarr repo: ref[${cloneResult.ref}], hash[${cloneResult.hash}], path[${cloneResult.localPath}]`);
 };
 
 export const getLocalTemplatePath = () => {
@@ -81,6 +63,8 @@ export const loadRecyclarrTemplates = (arrType: ArrType): Map<string, MappedTemp
   if (localPath) {
     fillMap(localPath);
   }
+
+  logger.debug(`Found ${map.size} Recyclarr templates.`);
 
   return new Map(
     Array.from(map, ([k, v]) => {

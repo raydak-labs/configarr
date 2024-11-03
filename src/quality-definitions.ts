@@ -1,8 +1,7 @@
 import path from "node:path";
 import { MergedQualityDefinitionResource } from "./__generated__/mergedTypes";
 import { getArrApi } from "./api";
-import { logger } from "./logger";
-import { TrashQualityDefintion, TrashQualityDefintionQuality } from "./types";
+import { TrashQualityDefintion, TrashQualityDefintionQuality } from "./types/trashguide.types";
 import { IS_LOCAL_SAMPLE_MODE, loadJsonFile } from "./util";
 
 export const loadQualityDefinitionFromServer = async (): Promise<MergedQualityDefinitionResource[]> => {
@@ -29,18 +28,14 @@ export const calculateQualityDefinitionDiff = (serverQDs: MergedQualityDefinitio
     if (element) {
       const changes: string[] = [];
 
-      if (!element.maxSize) {
-        logger.info(`No maxSize defined: ${element.title}`);
-      }
-
       if (element.minSize !== tq.min) {
-        changes.push(`MinSize diff: ${element.minSize} - ${tq.min}`);
+        changes.push(`MinSize diff: Server ${element.minSize} - Config ${tq.min}`);
       }
       if (element.maxSize !== tq.max) {
-        changes.push(`MaxSize diff: ${element.maxSize} - ${tq.max}`);
+        changes.push(`MaxSize diff: Server ${element.maxSize} - Config ${tq.max}`);
       }
       if (element.preferredSize !== tq.preferred) {
-        changes.push(`PreferredSize diff: ${element.preferredSize} - ${tq.preferred}`);
+        changes.push(`PreferredSize diff: Server ${element.preferredSize} - Config ${tq.preferred}`);
       }
 
       if (changes.length > 0) {

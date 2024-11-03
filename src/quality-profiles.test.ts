@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 import { MergedQualityDefinitionResource } from "./__generated__/mergedTypes";
 import { doAllQualitiesExist, isOrderOfQualitiesEqual, mapQualities } from "./quality-profiles";
-import { ConfigQualityProfile, ConfigQualityProfileItem } from "./types";
+import { ConfigQualityProfile, ConfigQualityProfileItem } from "./types/config.types";
 
 describe("QualityProfiles", async () => {
   test("doAllQualitiesExist - all exist", async ({}) => {
@@ -142,12 +142,12 @@ describe("QualityProfiles", async () => {
     expect(result).toHaveLength(3);
     // ordering matters
 
-    expect(result[0].quality?.name).toBe("Unknown");
-    expect(result[0].allowed).toBe(false);
-    expect(result[1].quality?.name).toBe("HDTV-1080p");
-    expect(result[1].allowed).toBe(true);
-    expect(result[2].name).toBe("WEB 1080p");
-    expect(result[2].allowed).toBe(true);
+    expect(result[0]!.quality?.name).toBe("Unknown");
+    expect(result[0]!.allowed).toBe(false);
+    expect(result[1]!.quality?.name).toBe("HDTV-1080p");
+    expect(result[1]!.allowed).toBe(true);
+    expect(result[2]!.name).toBe("WEB 1080p");
+    expect(result[2]!.allowed).toBe(true);
   });
 
   test("mapQualities - enabled mapped to false", async ({}) => {
@@ -176,12 +176,12 @@ describe("QualityProfiles", async () => {
 
     expect(result).toHaveLength(3);
 
-    expect(result[0].quality?.name).toBe("Unknown");
-    expect(result[0].allowed).toBe(false);
-    expect(result[1].quality?.name).toBe("HDTV-1080p");
-    expect(result[1].allowed).toBe(false);
-    expect(result[2].name).toBe("WEB 1080p");
-    expect(result[2].allowed).toBe(true);
+    expect(result[0]!.quality?.name).toBe("Unknown");
+    expect(result[0]!.allowed).toBe(false);
+    expect(result[1]!.quality?.name).toBe("HDTV-1080p");
+    expect(result[1]!.allowed).toBe(false);
+    expect(result[2]!.name).toBe("WEB 1080p");
+    expect(result[2]!.allowed).toBe(true);
   });
 
   test("calculateQualityProfilesDiff - should diff if minUpgradeFormatScore is different", async ({}) => {

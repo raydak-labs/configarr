@@ -1,8 +1,10 @@
-import { readFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import path from "node:path";
+import simpleGit, { CheckRepoActions } from "simple-git";
 import { MergedCustomFormatResource } from "./__generated__/mergedTypes";
 import { logger } from "./logger";
-import { ConfigarrCF, ImportCF, TrashCF, UserFriendlyField } from "./types";
+import { ConfigarrCF, ImportCF, UserFriendlyField } from "./types/common.types";
+import { TrashCF } from "./types/trashguide.types";
 
 export const IS_DRY_RUN = process.env.DRY_RUN === "true";
 export const IS_LOCAL_SAMPLE_MODE = process.env.LOAD_LOCAL_SAMPLES === "true";
@@ -203,4 +205,83 @@ export const ROOT_PATH = path.resolve(process.cwd());
 export const loadJsonFile = <T = object>(filePath: string) => {
   const file = readFileSync(filePath, { encoding: "utf-8" });
   return JSON.parse(file) as T;
+};
+
+export function zip<T extends unknown[][]>(...arrays: T): Array<{ [K in keyof T]: T[K] extends (infer U)[] ? U : never }> {
+  let length = -1;
+  let mismatch = false;
+
+  for (const arrayElement in arrays) {
+    if (length <= 0) {
+      length = arrayElement.length;
+    } else {
+      mismatch = length !== arrayElement.length;
+    }
+  }
+
+  if (mismatch) {
+    throw new Error("Zip error with not equal lengths");
+  }
+
+  const result = [];
+
+  for (let i = 0; i < length; i++) {
+    result.push(arrays.map((arr) => arr[i]));
+  }
+
+  return result as Array<{ [K in keyof T]: T[K] extends (infer U)[] ? U : never }>;
+}
+
+export function zipNLength<T extends unknown[][]>(...arrays: T): Array<{ [K in keyof T]: T[K] extends (infer U)[] ? U : never }> {
+  const minLength = Math.min(...arrays.map((arr) => arr.length));
+  const result = [];
+
+  for (let i = 0; i < minLength; i++) {
+    result.push(arrays.map((arr) => arr[i]));
+  }
+
+  return result as Array<{ [K in keyof T]: T[K] extends (infer U)[] ? U : never }>;
+}
+
+export const cloneGitRepo = async (localPath: string, gitUrl: string, revision: string) => {
+  const rootPath = localPath;
+
+  if (!existsSync(rootPath)) {
+    mkdirSync(rootPath, { recursive: true });
+  }
+
+  const gitClient = simpleGit({ baseDir: rootPath });
+  const r = await gitClient.checkIsRepo(CheckRepoActions.IS_REPO_ROOT);
+
+  if (!r) {
+    await simpleGit().clone(gitUrl, rootPath);
+  }
+
+  await gitClient.checkout(revision, ["-f"]);
+  const result = await gitClient.status();
+
+  let updated = false;
+
+  if (!result.detached) {
+    const res = await gitClient.pull();
+    if (res.files.length > 0) {
+      updated = true;
+    }
+  }
+
+  let hash: string = "unknown";
+
+  try {
+    hash = await gitClient.revparse(["--verify", "HEAD"]);
+  } catch (err: unknown) {
+    // Ignore
+    logger.debug(`Unable to extract hash from commit`);
+  }
+
+  return {
+    ref: result.current,
+    hash: hash,
+    localPath: localPath,
+    updated,
+  };
 };

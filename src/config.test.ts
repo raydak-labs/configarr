@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 import yaml from "yaml";
 import { transformConfig } from "./config";
-import { InputConfigSchema } from "./types";
+import { InputConfigSchema } from "./types/config.types";
 import { cloneWithJSON } from "./util";
 
 describe("transformConfig", async () => {
@@ -43,10 +43,10 @@ radarr: {}
 
   test("should transform without error - quality_profiles instead of assign_scores_to", async () => {
     const cloned = cloneWithJSON(config);
-    const instance = cloned.sonarr["instance1"];
-    const { assign_scores_to, quality_profiles, ...rest } = instance.custom_formats[0];
+    const instance = cloned.sonarr!["instance1"]!;
+    const cF = instance.custom_formats![0];
 
-    instance.custom_formats[0] = { ...rest, quality_profiles: assign_scores_to ?? quality_profiles };
+    instance.custom_formats![0] = { ...cF, quality_profiles: cF?.assign_scores_to, assign_scores_to: undefined };
 
     const transformed = transformConfig(config);
     expect(transformed).not.toBeNull();
