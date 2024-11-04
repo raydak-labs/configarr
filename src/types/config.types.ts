@@ -27,6 +27,7 @@ export type InputConfigArrInstance = {
   api_key: string;
   quality_definition?: {
     type: string;
+    preferred_ratio?: number; // 0.0 - 1.0
   };
   include?: InputConfigIncludeItem[];
   custom_formats?: InputConfigCustomFormat[];
