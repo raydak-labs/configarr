@@ -479,7 +479,9 @@ export const calculateQualityProfilesDiff = async (
       logger.info(`No scoring for QualityProfile ${serverMatch.name!} found`);
     }
 
-    logger.debug(`QualityProfile (${value.name}) - CF Changes: ${scoringDiff}, Some other diff: ${diffExist}`);
+    logger.debug(
+      `QualityProfile (${value.name}) - In Sync: ${changeList.length <= 0}, CF Changes: ${scoringDiff}, Some other diff: ${diffExist}`,
+    );
 
     if (scoringDiff || diffExist) {
       changedQPs.push(updatedServerObject);
@@ -488,10 +490,7 @@ export const calculateQualityProfilesDiff = async (
     }
 
     if (changeList.length > 0) {
-      logger.debug(`QualityProfile (${value.name}) is not in sync. Will be updated.`);
       logger.debug(changeList, `ChangeList for QualityProfile`);
-    } else {
-      logger.debug(`QualityProfile (${value.name}) is in sync.`);
     }
   }
 
