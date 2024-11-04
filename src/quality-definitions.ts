@@ -1,6 +1,7 @@
 import path from "node:path";
 import { MergedQualityDefinitionResource } from "./__generated__/mergedTypes";
 import { getArrApi } from "./api";
+import { logger } from "./logger";
 import { TrashQualityDefintion, TrashQualityDefintionQuality } from "./types/trashguide.types";
 import { IS_LOCAL_SAMPLE_MODE, loadJsonFile } from "./util";
 
@@ -11,7 +12,11 @@ export const loadQualityDefinitionFromServer = async (): Promise<MergedQualityDe
   return await getArrApi().v3QualitydefinitionList();
 };
 
-export const calculateQualityDefinitionDiff = (serverQDs: MergedQualityDefinitionResource[], trashQD: TrashQualityDefintion) => {
+export const calculateQualityDefinitionDiff = (
+  serverQDs: MergedQualityDefinitionResource[],
+  trashQD: TrashQualityDefintion,
+  preferedRatio?: number,
+) => {
   const serverMap = serverQDs.reduce((p, c) => {
     p.set(c.title!, c);
     return p;
@@ -34,8 +39,21 @@ export const calculateQualityDefinitionDiff = (serverQDs: MergedQualityDefinitio
       if (element.maxSize !== tq.max) {
         changes.push(`MaxSize diff: Server ${element.maxSize} - Config ${tq.max}`);
       }
-      if (element.preferredSize !== tq.preferred) {
-        changes.push(`PreferredSize diff: Server ${element.preferredSize} - Config ${tq.preferred}`);
+
+      let preferred = tq.preferred;
+
+      if (preferedRatio != null) {
+        if (preferedRatio < 0 || preferedRatio > 1) {
+          logger.warn(`QualityDefinition: PreferredRatio must be between 0 and 1. Ignoring`);
+        } else {
+          preferred = interpolateSize(tq.min, tq.max, tq.preferred, preferedRatio);
+          console.log(tq, preferred, preferedRatio);
+          logger.debug(`QualityDefinition adjusting preferred by ratio ${preferedRatio}`);
+        }
+      }
+
+      if (element.preferredSize !== preferred) {
+        changes.push(`PreferredSize diff: Server ${element.preferredSize} - Config ${preferred}`);
       }
 
       if (changes.length > 0) {
@@ -57,3 +75,16 @@ export const calculateQualityDefinitionDiff = (serverQDs: MergedQualityDefinitio
 
   return { changeMap, restData, create };
 };
+
+export function interpolateSize(min: number, max: number, pref: number, ratio: number): number {
+  if (ratio < 0 || ratio > 1) {
+    throw new Error(`Unexpected ratio range. Should be between 0 <= ratio <= 1`);
+  }
+  if (ratio <= 0.5) {
+    // Interpolate between min and pref
+    return min + (pref - min) * (ratio / 0.5);
+  } else {
+    // Interpolate between pref and max
+    return pref + (max - pref) * ((ratio - 0.5) / 0.5);
+  }
+}

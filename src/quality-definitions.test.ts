@@ -1,77 +1,7 @@
 import { describe, expect, test } from "vitest";
 import { MergedQualityDefinitionResource } from "./__generated__/mergedTypes";
-import { calculateQualityDefinitionDiff } from "./quality-definitions";
+import { calculateQualityDefinitionDiff, interpolateSize } from "./quality-definitions";
 import { TrashQualityDefintion } from "./types/trashguide.types";
-
-const exampleCFImplementations = {
-  name: "TestSpec",
-  includeCustomFormatWhenRenaming: false,
-  specifications: [
-    {
-      name: "ReleaseTitleSpec",
-      implementation: "ReleaseTitleSpecification",
-      negate: false,
-      required: false,
-      fields: {
-        value: "expres",
-      },
-    },
-    {
-      name: "LanguageUnknown",
-      implementation: "LanguageSpecification",
-      negate: false,
-      required: false,
-      fields: {
-        value: 0,
-      },
-    },
-    {
-      name: "LanguageOrgi",
-      implementation: "LanguageSpecification",
-      negate: false,
-      required: false,
-      fields: {
-        value: -2,
-      },
-    },
-    {
-      name: "IndexerFlag",
-      implementation: "IndexerFlagSpecification",
-      negate: false,
-      required: false,
-      fields: {
-        value: 1,
-      },
-    },
-    {
-      name: "SourceSpec",
-      implementation: "SourceSpecification",
-      negate: false,
-      required: false,
-      fields: {
-        value: 6,
-      },
-    },
-    {
-      name: "Resolution",
-      implementation: "ResolutionSpecification",
-      negate: false,
-      required: false,
-      fields: {
-        value: 540,
-      },
-    },
-    {
-      name: "ReleaseGroup",
-      implementation: "ReleaseGroupSpecification",
-      negate: false,
-      required: false,
-      fields: {
-        value: "regex",
-      },
-    },
-  ],
-};
 
 describe("QualityDefinitions", async () => {
   const server: MergedQualityDefinitionResource[] = [
@@ -163,5 +93,51 @@ describe("QualityDefinitions", async () => {
 
     expect(result.changeMap.size).toBe(0);
     expect(result.create).toHaveLength(1);
+  });
+
+  test("calculateQualityDefinitionDiff - diff preferred size with ratio", async ({}) => {
+    const clone: TrashQualityDefintion = JSON.parse(JSON.stringify(client));
+
+    const result = calculateQualityDefinitionDiff(server, clone, 0.5);
+    expect(result.changeMap.size).toBe(0);
+    expect(result.create).toHaveLength(0);
+
+    const resultLow = calculateQualityDefinitionDiff(server, clone, 0.0);
+    console.log(resultLow);
+    expect(resultLow.changeMap.size).toBe(1);
+    expect(resultLow.create).toHaveLength(0);
+
+    const resultHigh = calculateQualityDefinitionDiff(server, clone, 1.0);
+    console.log(resultHigh);
+    expect(resultHigh.changeMap.size).toBe(1);
+    expect(resultHigh.create).toHaveLength(0);
+  });
+
+  test("calculateQualityDefinitionDiff - diff preferred size with ratio, ignore if out of range", async ({}) => {
+    const clone: TrashQualityDefintion = JSON.parse(JSON.stringify(client));
+
+    const result = calculateQualityDefinitionDiff(server, clone, -0.5);
+    expect(result.changeMap.size).toBe(0);
+    expect(result.create).toHaveLength(0);
+
+    const resultLow = calculateQualityDefinitionDiff(server, clone, 1.5);
+    expect(resultLow.changeMap.size).toBe(0);
+    expect(resultLow.create).toHaveLength(0);
+  });
+
+  test("interpolateSize - expected values", async ({}) => {
+    expect(interpolateSize(0, 100, 50, 0.5)).toBe(50);
+    expect(interpolateSize(0, 100, 50, 0.0)).toBe(0);
+    expect(interpolateSize(0, 100, 50, 1.0)).toBe(100);
+    expect(interpolateSize(0, 100, 50, 0.25)).toBe(25);
+
+    expect(interpolateSize(2, 100, 95, 0.5)).toBe(95);
+    expect(interpolateSize(2, 100, 95, 0.0)).toBe(2);
+    expect(interpolateSize(2, 100, 95, 1.0)).toBe(100);
+  });
+
+  test("interpolateSize - should fail", async ({}) => {
+    expect(() => interpolateSize(0, 100, 50, -0.5)).toThrowError();
+    expect(() => interpolateSize(0, 100, 50, 1.1)).toThrowError();
   });
 });

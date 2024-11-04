@@ -225,7 +225,7 @@ const pipeline = async (value: InputConfigArrInstance, arrType: ArrType) => {
         throw new Error(`Unsupported quality defintion ${qualityDefinition}`);
     }
 
-    const { changeMap, create, restData } = calculateQualityDefinitionDiff(serverQD, qdTrash);
+    const { changeMap, create, restData } = calculateQualityDefinitionDiff(serverQD, qdTrash, config.quality_definition?.preferred_ratio);
 
     if (changeMap.size > 0) {
       if (IS_DRY_RUN) {
