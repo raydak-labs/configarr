@@ -1,5 +1,10 @@
 # Configarr
 
+[![GitHub License](https://img.shields.io/github/license/raydak-labs/configarr)](https://github.com/recyclarr/recyclarr/blob/master/LICENSE)
+[![GitHub Release](https://img.shields.io/github/v/release/raydak-labs/configarr?logo=github)](https://github.com/raydak-labs/configarr/releases/)
+[![Codacy Badge](https://app.codacy.com/project/badge/Grade/bf3242f8502145d5b4395b9b2aa7c7c6)](https://app.codacy.com/gh/raydak-labs/configarr/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade)
+[![Documentation](https://img.shields.io/badge/Documentation-blue)](https://configarr.raydak.de)
+
 Configuration and synchronization tool for Sonarr and Radarr.
 
 Official support only for Sonarr v4 and radarr v5.
@@ -27,6 +32,8 @@ Other projects:
 
 ## Configuration
 
+Full documentation can be found here: https://configarr.raydak.de
+
 - `config.yml`
   - Check the template file [template](./config.yml.template) or check the examples.
   - You can provide values with the custom tags:
@@ -42,50 +49,6 @@ See [here](./custom/cfs/)
 - Most CustomFormats used from @PCJones
   - See here: https://github.com/PCJones/radarr-sonarr-german-dual-language
   - Or good german guide: https://github.com/PCJones/usenet-guide
-
-### How to add own CustomFormats
-
-- You have two ways to provide own custom formats:
-
-  - `As file`
-    - Export from Sonarr/Radarr instance UI (in the CustomFormats list you have two icons for each custom format: clone and export)
-    - Or use existing custom formats from recyclarr or trash guide
-  - `As yaml`: You can also directly implement the custom format in the config.
-    It follows the same keys as the JSON format.
-
-    ```yaml
-    # config.yml
-    customFormatDefinitions:
-      - trash_id: custom-de-only
-        trash_scores:
-          default: -10000
-        trash_description: "Language: German Only"
-        name: "Language: Not German"
-        includeCustomFormatWhenRenaming: false
-        specifications:
-          - name: Not German Language
-            implementation: LanguageSpecification
-            negate: true
-            required: false
-            fields:
-              value: 4
-    ```
-
-- What you have to add at least is to the field `trash_id` or `configarr_id` to the JSON/YAML.
-  The ID can be anything you like but should not conflict with other CustomFormats.
-  Otherwise those will be overwritten during merge process.
-
-```json
-{
-  "configarr_id": "your_own_id",
-  ...other content from export
-}
-```
-
-- Add it as custom format location in your `config.yml`
-- After adding the ID you can simply reference it in the `config.yml` to add it to the QualityProfiles. `localCustomFormatsPath: /your/path/cfs`
-
-> :scroll: You can see an example here [Examples / Full](./examples/full/cfs/custom-size-bigger-40gb.json). Or copy the existing custom formats [custom](./custom/cfs/) in your location.
 
 ## Development
 
@@ -105,124 +68,3 @@ See [here](./custom/cfs/)
 ## Examples
 
 Some examples for configuration are provided [Examples](./examples/)
-
-## How to run
-
-Required files:
-
-- `config.yml`
-- `secrets.yml`
-
-Optional:
-
-- Custom Formats in folders
-
-### Docker
-
-`docker run --rm -v ./:/app/config ghcr.io/raydak-labs/configarr:latest`
-
-### Docker-compose
-
-```yml
-services:
-  configarr:
-    image: ghcr.io/raydak-labs/configarr:latest
-
-    volumes:
-      - ./config:/app/config # Contains the config.yml and secrets.yml
-      - ./dockerrepos:/app/repos # Cache repositories
-      - ./custom/cfs:/app/cfs # Optional if custom formats locally provided
-      - ./custom/templates:/app/templates # Optional if custom templates
-```
-
-### Kubernetes
-
-Example how to run `CronJob` which will regulary sync your configs.
-
-```yml
----
-apiVersion: batch/v1
-kind: CronJob
-metadata:
-  name: configarr
-spec:
-  schedule: "0 * * * *"
-  successfulJobsHistoryLimit: 1
-  failedJobsHistoryLimit: 1
-  jobTemplate:
-    spec:
-      template:
-        spec:
-          containers:
-            - name: configarr
-              image: ghcr.io/raydak-labs/configarr:latest
-              imagePullPolicy: Always
-              tty: true # for color support
-              envFrom:
-                - configMapRef:
-                    name: common-deployment-environment
-              volumeMounts:
-                - mountPath: /app/repos # Cache repositories
-                  name: app-data
-                  subPath: configarr-repos
-                - name: config-volume # Mount specifc config
-                  mountPath: /app/config/config.yml
-                  subPath: config.yml
-                - name: secret-volume
-                  mountPath: /app/config/secrets.yml # Mount secrets
-                  subPath: secrets.yml
-          volumes:
-            - name: app-data
-              persistentVolumeClaim:
-                claimName: media-app-data
-            - name: config-volume
-              configMap:
-                name: configarr
-            - name: secret-volume
-              secret:
-                secretName: configarr
-          restartPolicy: Never
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: configarr
-type: Opaque
-stringData:
-  secrets.yml: |
-    SONARR_API_KEY: "{{ configarr.sonarrApiKey }}"
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: configarr
-data:
-  config.yml: |
-    trashGuideUrl: https://github.com/TRaSH-Guides/Guides
-    recyclarrConfigUrl: https://github.com/recyclarr/config-templates
-
-    sonarr:
-      series:
-        # Set the URL/API Key to your actual instance
-        base_url: http://sonarr:8989
-        api_key: !secret SONARR_API_KEY
-
-        # Quality definitions from the guide to sync to Sonarr. Choices: series, anime
-        quality_definition:
-          type: series
-
-        include:
-          # Comment out any of the following includes to disable them
-          #### WEB-1080p
-          - template: sonarr-quality-definition-series
-          - template: sonarr-v4-quality-profile-web-1080p
-          - template: sonarr-v4-custom-formats-web-1080p
-
-          #### WEB-2160p
-          - template: sonarr-v4-quality-profile-web-2160p
-          - template: sonarr-v4-custom-formats-web-2160p
-
-        # Custom Formats: https://recyclarr.dev/wiki/yaml/config-reference/custom-formats/
-        custom_formats: []
-    radarr: {}
-```
