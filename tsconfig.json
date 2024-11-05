@@ -21,6 +21,6 @@
     "target": "ESNext",
     "noEmit": true
   },
-  "exclude": ["./dist"],
+  "exclude": ["./dist", "./docs"],
   "include": ["**/*.ts", "**/*.tsx"]
 }
