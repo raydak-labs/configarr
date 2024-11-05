@@ -1,6 +1,6 @@
 # Configarr
 
-[![GitHub License](https://img.shields.io/github/license/raydak-labs/configarr)](https://github.com/recyclarr/recyclarr/blob/master/LICENSE)
+[![GitHub License](https://img.shields.io/github/license/raydak-labs/configarr)](https://github.com/raydak-labs/configarr/blob/main/LICENSE)
 [![GitHub Release](https://img.shields.io/github/v/release/raydak-labs/configarr?logo=github)](https://github.com/raydak-labs/configarr/releases/)
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/bf3242f8502145d5b4395b9b2aa7c7c6)](https://app.codacy.com/gh/raydak-labs/configarr/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade)
 [![Documentation](https://img.shields.io/badge/Documentation-blue)](https://configarr.raydak.de)
