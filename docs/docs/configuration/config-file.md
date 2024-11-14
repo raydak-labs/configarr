@@ -77,8 +77,19 @@ localConfigTemplatesPath: /app/templates
 
 # Custom Format Definitions (optional)
 customFormatDefinitions:
-  []
-  # ... custom format definitions ...
+  - trash_id: example-in-config-cf
+    trash_scores:
+      default: -10000
+    trash_description: "Language: German Only"
+    name: "Language: Not German"
+    includeCustomFormatWhenRenaming: false
+    specifications:
+      - name: Not German Language
+        implementation: LanguageSpecification
+        negate: true
+        required: false
+        fields:
+          value: 4
 
 # Sonarr Configuration
 sonarr:
@@ -96,19 +107,59 @@ sonarr:
       - template: d1498e7d189fbe6c7110ceaabb7473e6
         source: TRASH # RECYCLARR (default) or TRASH
 
+      # WEB-1080p (recyclarr template)
+      - template: sonarr-quality-definition-series
+      - template: sonarr-v4-quality-profile-web-1080p
+      - template: sonarr-v4-custom-formats-web-1080p
+
     custom_formats: # Custom format assignments
       - trash_ids:
-          - 9f6cbff8cfe4ebbc1bde14c7b7bec0de # IMAX Enhanced
-        assign_scores_to: # quality_profiles is deprecated
-          - name: ExampleProfile
+          - 47435ece6b99a0b477caf360e79ba0bb # x265 (HD)
+        assign_scores_to:
+          - name: WEB-1080p
             score: 0
+      - trash_ids:
+          - a3d82cbef5039f8d295478d28a887159 # block HDR10+
+          - 2b239ed870daba8126a53bd5dc8dc1c8 # block DV HDR10+
+        assign_scores_to:
+          - name: WEB-1080p
+            score: -10000
+      - trash_ids:
+          - example-in-config-cf # custom format defined in config.yml
+        assign_scores_to:
+          - name: WEB-1080p
+            score: -5000
+
     quality_profiles:
-      - name: Remux + WEB 1080p
+      - name: WEB-1080p
         upgrade:
           min_format_score: 10000
 
-# Radarr Configuration empty
-radarr: {}
+# Radarr Configuration
+radarr:
+  instance1: # Instance name (can be any unique identifier)
+    base_url: http://radarr:7878 # Radarr instance URL
+    api_key: !secret RADARR_API_KEY # Reference to API key in secrets.yml
+
+    quality_definition:
+      type: movies # Quality definition type for Radarr
+
+    include:
+      # Comment out any of the following includes to disable them
+      - template: radarr-quality-definition-movie
+      - template: radarr-quality-profile-hd-bluray-web
+      - template: radarr-custom-formats-hd-bluray-web
+
+    custom_formats: # Custom format assignments
+      - trash_ids:
+          - 9f6cbff8cfe4ebbc1bde14c7b7bec0de # IMAX Enhanced
+        assign_scores_to:
+          - name: HD Bluray + WEB
+            score: 0
+    quality_profiles:
+      - name: HD Bluray + WEB
+        upgrade:
+          min_format_score: 200
 ```
 
 ### secrets.yml
