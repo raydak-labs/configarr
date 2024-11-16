@@ -2,7 +2,7 @@ import "dotenv/config";
 
 import fs from "node:fs";
 import { MergedCustomFormatResource } from "./__generated__/mergedTypes";
-import { configureApi, configureRadarrApi, configureSonarrApi, getArrApi, unsetApi } from "./api";
+import { configureApi, getArrApi, unsetApi } from "./api";
 import { getConfig, validateConfig } from "./config";
 import { calculateCFsToManage, loadCFFromConfig, loadLocalCfs, loadServerCustomFormats, manageCf, mergeCfSources } from "./custom-formats";
 import { loadLocalRecyclarrTemplate } from "./local-importer";
@@ -312,7 +312,7 @@ const run = async () => {
 
     for (const [instanceName, instance] of Object.entries(sonarrConfig)) {
       logger.info(`Processing Sonarr Instance: ${instanceName}`);
-      await configureSonarrApi(instance.base_url, instance.api_key);
+      await configureApi("SONARR", instance.base_url, instance.api_key);
       await pipeline(instance, "SONARR");
       unsetApi();
     }
@@ -327,7 +327,7 @@ const run = async () => {
 
     for (const [instanceName, instance] of Object.entries(radarrConfig)) {
       logger.info(`Processing Radarr Instance: ${instanceName}`);
-      await configureRadarrApi(instance.base_url, instance.api_key);
+      await configureApi("RADARR", instance.base_url, instance.api_key);
       await pipeline(instance, "RADARR");
       unsetApi();
     }
