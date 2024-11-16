@@ -2,9 +2,10 @@ import "dotenv/config";
 
 import fs from "node:fs";
 import { MergedCustomFormatResource } from "./__generated__/mergedTypes";
-import { configureRadarrApi, configureSonarrApi, getArrApi, unsetApi } from "./api";
+import { configureApi, getArrApi, unsetApi } from "./api";
 import { getConfig, validateConfig } from "./config";
 import { calculateCFsToManage, loadCFFromConfig, loadLocalCfs, loadServerCustomFormats, manageCf, mergeCfSources } from "./custom-formats";
+import { loadLocalRecyclarrTemplate } from "./local-importer";
 import { logHeading, logger } from "./logger";
 import { calculateQualityDefinitionDiff, loadQualityDefinitionFromServer } from "./quality-definitions";
 import { calculateQualityProfilesDiff, filterInvalidQualityProfiles, loadQualityProfilesFromServer } from "./quality-profiles";
@@ -33,13 +34,19 @@ const mergeConfigsAndTemplates = async (
   arrType: ArrType,
 ): Promise<{ mergedCFs: CFProcessing; config: MergedConfigInstance }> => {
   const recyclarrTemplateMap = loadRecyclarrTemplates(arrType);
+  const localTemplateMap = loadLocalRecyclarrTemplate(arrType);
   const trashTemplates = await loadQPFromTrash(arrType);
+
+  logger.debug(
+    `Loaded ${recyclarrTemplateMap.size} Recyclarr templates, ${localTemplateMap.size} local templates and ${trashTemplates.size} trash templates.`,
+  );
 
   const recylarrMergedTemplates: MappedMergedTemplates = {
     custom_formats: [],
     quality_profiles: [],
   };
 
+  // TODO: customFormatDefinitions not supported in templates yet
   if (value.include) {
     const mappedIncludes = value.include.reduce<{ recyclarr: InputConfigIncludeItem[]; trash: InputConfigIncludeItem[] }>(
       (previous, current) => {
@@ -60,11 +67,11 @@ const mergeConfigsAndTemplates = async (
     );
 
     logger.info(
-      `Found ${value.include.length} templates to include: [recyclarr]=${mappedIncludes.recyclarr.length}, [trash]=${mappedIncludes.trash.length} ...`,
+      `Found ${value.include.length} templates to include. Mapped to [recyclarr]=${mappedIncludes.recyclarr.length}, [trash]=${mappedIncludes.trash.length} ...`,
     );
 
     mappedIncludes.recyclarr.forEach((e) => {
-      const template = recyclarrTemplateMap.get(e.template);
+      const template = recyclarrTemplateMap.get(e.template) ?? localTemplateMap.get(e.template);
 
       if (!template) {
         logger.warn(`Unknown recyclarr template requested: ${e.template}`);
@@ -91,6 +98,7 @@ const mergeConfigsAndTemplates = async (
       }
     });
 
+    // TODO: local trash guide QP templates do not work yet
     mappedIncludes.trash.forEach((e) => {
       const template = trashTemplates.get(e.template);
 
@@ -304,7 +312,7 @@ const run = async () => {
 
     for (const [instanceName, instance] of Object.entries(sonarrConfig)) {
       logger.info(`Processing Sonarr Instance: ${instanceName}`);
-      await configureSonarrApi(instance.base_url, instance.api_key);
+      await configureApi("SONARR", instance.base_url, instance.api_key);
       await pipeline(instance, "SONARR");
       unsetApi();
     }
@@ -319,8 +327,28 @@ const run = async () => {
 
     for (const [instanceName, instance] of Object.entries(radarrConfig)) {
       logger.info(`Processing Radarr Instance: ${instanceName}`);
-      await configureRadarrApi(instance.base_url, instance.api_key);
+      await configureApi("RADARR", instance.base_url, instance.api_key);
       await pipeline(instance, "RADARR");
+      unsetApi();
+    }
+  }
+
+  const whisparrConfig = applicationConfig.whisparr;
+
+  if (
+    whisparrConfig == null ||
+    Array.isArray(whisparrConfig) ||
+    typeof whisparrConfig !== "object" ||
+    Object.keys(whisparrConfig).length <= 0
+  ) {
+    logHeading(`No Whisparr instances defined.`);
+  } else {
+    logHeading(`Processing Whisparr ...`);
+
+    for (const [instanceName, instance] of Object.entries(whisparrConfig)) {
+      logger.info(`Processing Whisparr Instance: ${instanceName}`);
+      await configureApi("WHISPARR", instance.base_url, instance.api_key);
+      await pipeline(instance, "WHISPARR");
       unsetApi();
     }
   }

@@ -187,7 +187,7 @@ export class HttpClient<SecurityDataType = unknown> {
 
       return requestPromise.json();
     } catch (error: any) {
-      logger.debug(`Error creating QualityProfile: ${error?.name}`);
+      logger.debug(`Error during request with error: ${error?.name}`);
 
       if (error instanceof HTTPError) {
         if (error.response) {
@@ -207,8 +207,10 @@ export class HttpClient<SecurityDataType = unknown> {
           // Something happened in setting up the request that triggered an Error
           logger.error(error, `No request/response information. Unknown error`);
         }
+      } else if (error instanceof TypeError) {
+        logger.error(error, `Probably some connection issues. If not, feel free to open an issue with details to improve handling.`);
       } else {
-        logger.error(`An not expected error happened. Feel free to open an issue with details to improve handling.`);
+        logger.error(error, `An not expected error happened. Feel free to open an issue with details to improve handling.`);
       }
 
       throw error;

@@ -1,5 +1,4 @@
 import { default as fs } from "node:fs";
-import path from "node:path";
 import yaml from "yaml";
 import { getConfig } from "./config";
 import { logger } from "./logger";
@@ -21,24 +20,6 @@ export const cloneRecyclarrTemplateRepo = async () => {
   logger.info(`Recyclarr repo: ref[${cloneResult.ref}], hash[${cloneResult.hash}], path[${cloneResult.localPath}]`);
 };
 
-export const getLocalTemplatePath = () => {
-  const config = getConfig();
-
-  if (config.localConfigTemplatesPath == null) {
-    logger.debug(`No local templates specified. Skipping.`);
-    return null;
-  }
-
-  const customPath = path.resolve(config.localConfigTemplatesPath);
-
-  if (!fs.existsSync(customPath)) {
-    logger.info(`Provided local templates path '${config.localCustomFormatsPath}' does not exist.`);
-    return null;
-  }
-
-  return customPath;
-};
-
 export const loadRecyclarrTemplates = (arrType: ArrType): Map<string, MappedTemplates> => {
   const map = new Map<string, RecyclarrTemplates>();
 
@@ -56,12 +37,6 @@ export const loadRecyclarrTemplates = (arrType: ArrType): Map<string, MappedTemp
     fillMap(recyclarrRepoPaths.sonarrCF);
     fillMap(recyclarrRepoPaths.sonarrQD);
     fillMap(recyclarrRepoPaths.sonarrQP);
-  }
-
-  const localPath = getLocalTemplatePath();
-
-  if (localPath) {
-    fillMap(localPath);
   }
 
   logger.debug(`Found ${map.size} Recyclarr templates.`);

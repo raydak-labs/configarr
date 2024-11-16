@@ -80,3 +80,30 @@ radarr:
         quality_profiles:
           - name: ExampleProfile
             # score: 0 # Uncomment this line to disable prioritised IMAX Enhanced releases
+
+whisparr:
+  instance1: # Instance name (can be any unique identifier)
+    base_url: http://whisparr:6969 # instance URL
+    api_key: !secret WHISPARR_API_KEY # Reference to API key in secrets.yml
+
+    quality_definition:
+      type: movies # Quality definition type
+
+    include:
+      # only custom defined templates available
+      - template: whisparr
+
+    custom_formats: # Custom format assignments
+      - trash_ids:
+          - example-in-config-cf
+        assign_scores_to:
+          - name: ExampleProfile
+            score: 1000
+
+    quality_profiles:
+      # TODO: language not correctly mapped
+      - name: ExampleProfile
+        upgrade:
+          until_score: 200
+          # Not supported in whisparr
+          #min_format_score: 200

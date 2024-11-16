@@ -29,6 +29,22 @@ services:
       - 6501:7878
     restart: unless-stopped
 
+  whisparr:
+    image: ghcr.io/hotio/whisparr:v3-3.0.0.695
+    networks:
+      - configarr-full
+    ports:
+      - "6502:6969"
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - UMASK=002
+      - TZ=Etc/UTC
+    volumes:
+      - whisparr:/config
+      - ${PWD}/whisparr.xml:/config/config.xml:rw
+    restart: unless-stopped
+
 networks:
   configarr-full:
     name: configarr-full
@@ -36,3 +52,4 @@ networks:
 volumes:
   sonarr:
   radarr:
+  whisparr:

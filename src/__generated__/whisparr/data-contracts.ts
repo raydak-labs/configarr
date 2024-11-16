@@ -9,33 +9,22 @@
  * ---------------------------------------------------------------
  */
 
-export enum AddMovieMethod {
-  Manual = "manual",
-  List = "list",
-  Collection = "collection",
+export interface Actor {
+  /** @format int32 */
+  tpdbId?: number;
+  name?: string | null;
+  character?: string | null;
+  gender?: Gender;
+  images?: MediaCover[] | null;
 }
 
-export interface AddMovieOptions {
+export interface AddSeriesOptions {
   ignoreEpisodesWithFiles?: boolean;
   ignoreEpisodesWithoutFiles?: boolean;
+  episodesToMonitor?: number[] | null;
   monitor?: MonitorTypes;
-  searchForMovie?: boolean;
-  addMethod?: AddMovieMethod;
-}
-
-export interface AlternativeTitleResource {
-  /** @format int32 */
-  id?: number;
-  sourceType?: SourceType;
-  /** @format int32 */
-  movieMetadataId?: number;
-  title?: string | null;
-  cleanTitle?: string | null;
-}
-
-export interface ApiInfoResource {
-  current?: string | null;
-  deprecated?: string[] | null;
+  searchForMissingEpisodes?: boolean;
+  searchForCutoffUnmetEpisodes?: boolean;
 }
 
 export enum ApplyTags {
@@ -103,7 +92,8 @@ export interface BlocklistResource {
   /** @format int32 */
   id?: number;
   /** @format int32 */
-  movieId?: number;
+  seriesId?: number;
+  episodeIds?: number[] | null;
   sourceTitle?: string | null;
   languages?: Language[] | null;
   quality?: QualityModel;
@@ -113,7 +103,7 @@ export interface BlocklistResource {
   protocol?: DownloadProtocol;
   indexer?: string | null;
   message?: string | null;
-  movie?: MovieResource;
+  series?: SeriesResource;
 }
 
 export interface BlocklistResourcePagingResource {
@@ -134,75 +124,12 @@ export enum CertificateValidationType {
   Disabled = "disabled",
 }
 
-export interface CollectionMovieResource {
-  /** @format int32 */
-  tmdbId?: number;
-  imdbId?: string | null;
-  title?: string | null;
-  cleanTitle?: string | null;
-  sortTitle?: string | null;
-  status?: MovieStatusType;
-  overview?: string | null;
-  /** @format int32 */
-  runtime?: number;
-  images?: MediaCover[] | null;
-  /** @format int32 */
-  year?: number;
-  ratings?: Ratings;
-  genres?: string[] | null;
-  folder?: string | null;
-  isExisting?: boolean;
-  isExcluded?: boolean;
-}
-
-export interface CollectionResource {
-  /** @format int32 */
-  id?: number;
-  title?: string | null;
-  sortTitle?: string | null;
-  /** @format int32 */
-  tmdbId?: number;
-  images?: MediaCover[] | null;
-  overview?: string | null;
-  monitored?: boolean;
-  rootFolderPath?: string | null;
-  /** @format int32 */
-  qualityProfileId?: number;
-  searchOnAdd?: boolean;
-  minimumAvailability?: MovieStatusType;
-  movies?: CollectionMovieResource[] | null;
-  /** @format int32 */
-  missingMovies?: number;
-  /** @uniqueItems true */
-  tags?: number[] | null;
-}
-
-export interface CollectionUpdateResource {
-  collectionIds?: number[] | null;
-  monitored?: boolean | null;
-  monitorMovies?: boolean | null;
-  searchOnAdd?: boolean | null;
-  /** @format int32 */
-  qualityProfileId?: number | null;
-  rootFolderPath?: string | null;
-  minimumAvailability?: MovieStatusType;
-}
-
-export enum ColonReplacementFormat {
-  Delete = "delete",
-  Dash = "dash",
-  SpaceDash = "spaceDash",
-  SpaceDashSpace = "spaceDashSpace",
-  Smart = "smart",
-}
-
 export interface Command {
   sendUpdatesToClient?: boolean;
   updateScheduledTask?: boolean;
   completionMessage?: string | null;
   requiresDiskAccess?: boolean;
   isExclusive?: boolean;
-  isTypeExclusive?: boolean;
   isLongRunning?: boolean;
   name?: string | null;
   /** @format date-time */
@@ -236,8 +163,7 @@ export interface CommandResource {
   started?: string | null;
   /** @format date-time */
   ended?: string | null;
-  /** @format date-span */
-  duration?: string | null;
+  duration?: TimeSpan;
   exception?: string | null;
   trigger?: CommandTrigger;
   clientUserAgent?: string | null;
@@ -271,41 +197,12 @@ export enum CommandTrigger {
   Scheduled = "scheduled",
 }
 
-export interface CreditResource {
-  /** @format int32 */
-  id?: number;
-  personName?: string | null;
-  creditTmdbId?: string | null;
-  /** @format int32 */
-  personTmdbId?: number;
-  /** @format int32 */
-  movieMetadataId?: number;
-  images?: MediaCover[] | null;
-  department?: string | null;
-  job?: string | null;
-  character?: string | null;
-  /** @format int32 */
-  order?: number;
-  type?: CreditType;
-}
-
-export enum CreditType {
-  Cast = "cast",
-  Crew = "crew",
-}
-
 export interface CustomFilterResource {
   /** @format int32 */
   id?: number;
   type?: string | null;
   label?: string | null;
   filters?: Record<string, any>[] | null;
-}
-
-export interface CustomFormatBulkResource {
-  /** @uniqueItems true */
-  ids?: number[] | null;
-  includeCustomFormatWhenRenaming?: boolean | null;
 }
 
 export interface CustomFormatResource {
@@ -332,6 +229,30 @@ export interface CustomFormatSpecificationSchema {
 export enum DatabaseType {
   SqLite = "sqLite",
   PostgreSQL = "postgreSQL",
+}
+
+export interface DateOnly {
+  /** @format int32 */
+  year?: number;
+  /** @format int32 */
+  month?: number;
+  /** @format int32 */
+  day?: number;
+  dayOfWeek?: DayOfWeek;
+  /** @format int32 */
+  dayOfYear?: number;
+  /** @format int32 */
+  dayNumber?: number;
+}
+
+export enum DayOfWeek {
+  Sunday = "sunday",
+  Monday = "monday",
+  Tuesday = "tuesday",
+  Wednesday = "wednesday",
+  Thursday = "thursday",
+  Friday = "friday",
+  Saturday = "saturday",
 }
 
 export interface DelayProfileResource {
@@ -381,10 +302,7 @@ export interface DownloadClientConfigResource {
   id?: number;
   downloadClientWorkingFolders?: string | null;
   enableCompletedDownloadHandling?: boolean;
-  /** @format int32 */
-  checkForFinishedDownloadInterval?: number;
   autoRedownloadFailed?: boolean;
-  autoRedownloadFailedFromInteractiveSearch?: boolean;
 }
 
 export interface DownloadClientResource {
@@ -414,24 +332,102 @@ export enum DownloadProtocol {
   Torrent = "torrent",
 }
 
-export interface ExtraFileResource {
+export interface EpisodeFileListResource {
+  episodeFileIds?: number[] | null;
+  languages?: Language[] | null;
+  quality?: QualityModel;
+  sceneName?: string | null;
+  releaseGroup?: string | null;
+}
+
+export interface EpisodeFileResource {
   /** @format int32 */
   id?: number;
   /** @format int32 */
-  movieId?: number;
+  seriesId?: number;
   /** @format int32 */
-  movieFileId?: number | null;
+  seasonNumber?: number;
   relativePath?: string | null;
-  extension?: string | null;
-  languageTags?: string[] | null;
-  title?: string | null;
-  type?: ExtraFileType;
+  path?: string | null;
+  /** @format int64 */
+  size?: number;
+  /** @format date-time */
+  dateAdded?: string;
+  sceneName?: string | null;
+  releaseGroup?: string | null;
+  languages?: Language[] | null;
+  quality?: QualityModel;
+  customFormats?: CustomFormatResource[] | null;
+  /** @format int32 */
+  customFormatScore?: number;
+  mediaInfo?: MediaInfoResource;
+  qualityCutoffNotMet?: boolean;
 }
 
-export enum ExtraFileType {
-  Subtitle = "subtitle",
-  Metadata = "metadata",
-  Other = "other",
+export enum EpisodeHistoryEventType {
+  Unknown = "unknown",
+  Grabbed = "grabbed",
+  SeriesFolderImported = "seriesFolderImported",
+  DownloadFolderImported = "downloadFolderImported",
+  DownloadFailed = "downloadFailed",
+  EpisodeFileDeleted = "episodeFileDeleted",
+  EpisodeFileRenamed = "episodeFileRenamed",
+  DownloadIgnored = "downloadIgnored",
+}
+
+export interface EpisodeResource {
+  /** @format int32 */
+  id?: number;
+  /** @format int32 */
+  seriesId?: number;
+  /** @format int32 */
+  tvdbId?: number;
+  /** @format int32 */
+  episodeFileId?: number;
+  /** @format int32 */
+  seasonNumber?: number;
+  title?: string | null;
+  releaseDate?: DateOnly;
+  /** @format int32 */
+  runtime?: number;
+  overview?: string | null;
+  episodeFile?: EpisodeFileResource;
+  hasFile?: boolean;
+  monitored?: boolean;
+  /** @format int32 */
+  absoluteEpisodeNumber?: number | null;
+  /** @format date-time */
+  endTime?: string | null;
+  /** @format date-time */
+  grabDate?: string | null;
+  seriesTitle?: string | null;
+  series?: SeriesResource;
+  actors?: Actor[] | null;
+  images?: MediaCover[] | null;
+  grabbed?: boolean;
+}
+
+export interface EpisodeResourcePagingResource {
+  /** @format int32 */
+  page?: number;
+  /** @format int32 */
+  pageSize?: number;
+  sortKey?: string | null;
+  sortDirection?: SortDirection;
+  /** @format int32 */
+  totalRecords?: number;
+  records?: EpisodeResource[] | null;
+}
+
+export enum EpisodeTitleRequiredType {
+  Always = "always",
+  BulkSeasonReleases = "bulkSeasonReleases",
+  Never = "never",
+}
+
+export interface EpisodesMonitoredResource {
+  episodeIds?: number[] | null;
+  monitored?: boolean;
 }
 
 export interface Field {
@@ -457,8 +453,14 @@ export interface Field {
 
 export enum FileDateType {
   None = "none",
-  Cinemas = "cinemas",
-  Release = "release",
+  LocalAirDate = "localAirDate",
+  UtcAirDate = "utcAirDate",
+}
+
+export enum Gender {
+  Female = "female",
+  Male = "male",
+  Other = "other",
 }
 
 export enum HealthCheckResult {
@@ -481,7 +483,9 @@ export interface HistoryResource {
   /** @format int32 */
   id?: number;
   /** @format int32 */
-  movieId?: number;
+  episodeId?: number;
+  /** @format int32 */
+  seriesId?: number;
   sourceTitle?: string | null;
   languages?: Language[] | null;
   quality?: QualityModel;
@@ -492,9 +496,10 @@ export interface HistoryResource {
   /** @format date-time */
   date?: string;
   downloadId?: string | null;
-  eventType?: MovieHistoryEventType;
+  eventType?: EpisodeHistoryEventType;
   data?: Record<string, string | null>;
-  movie?: MovieResource;
+  episode?: EpisodeResource;
+  series?: SeriesResource;
 }
 
 export interface HistoryResourcePagingResource {
@@ -524,10 +529,7 @@ export interface HostConfigResource {
   analyticsEnabled?: boolean;
   username?: string | null;
   password?: string | null;
-  passwordConfirmation?: string | null;
   logLevel?: string | null;
-  /** @format int32 */
-  logSizeLimit?: number;
   consoleLogLevel?: string | null;
   branch?: string | null;
   apiKey?: string | null;
@@ -571,55 +573,24 @@ export interface ImportListBulkResource {
   ids?: number[] | null;
   tags?: number[] | null;
   applyTags?: ApplyTags;
-  enabled?: boolean | null;
-  enableAuto?: boolean | null;
+  enableAutomaticAdd?: boolean | null;
   rootFolderPath?: string | null;
   /** @format int32 */
   qualityProfileId?: number | null;
-  minimumAvailability?: MovieStatusType;
-}
-
-export interface ImportListConfigResource {
-  /** @format int32 */
-  id?: number;
-  listSyncLevel?: string | null;
-}
-
-export interface ImportListExclusionBulkResource {
-  /** @uniqueItems true */
-  ids?: number[] | null;
 }
 
 export interface ImportListExclusionResource {
   /** @format int32 */
   id?: number;
-  name?: string | null;
-  fields?: Field[] | null;
-  implementationName?: string | null;
-  implementation?: string | null;
-  configContract?: string | null;
-  infoLink?: string | null;
-  message?: ProviderMessage;
-  /** @uniqueItems true */
-  tags?: number[] | null;
-  presets?: ImportListExclusionResource[] | null;
   /** @format int32 */
-  tmdbId?: number;
-  movieTitle?: string | null;
-  /** @format int32 */
-  movieYear?: number;
+  tvdbId?: number;
+  title?: string | null;
 }
 
-export interface ImportListExclusionResourcePagingResource {
-  /** @format int32 */
-  page?: number;
-  /** @format int32 */
-  pageSize?: number;
-  sortKey?: string | null;
-  sortDirection?: SortDirection;
-  /** @format int32 */
-  totalRecords?: number;
-  records?: ImportListExclusionResource[] | null;
+export enum ImportListMonitorTypes {
+  None = "none",
+  SpecificEpisode = "specificEpisode",
+  EntireSite = "entireSite",
 }
 
 export interface ImportListResource {
@@ -635,26 +606,22 @@ export interface ImportListResource {
   /** @uniqueItems true */
   tags?: number[] | null;
   presets?: ImportListResource[] | null;
-  enabled?: boolean;
-  enableAuto?: boolean;
-  monitor?: MonitorTypes;
+  enableAutomaticAdd?: boolean;
+  shouldMonitor?: ImportListMonitorTypes;
+  siteMonitorType?: MonitorTypes;
   rootFolderPath?: string | null;
   /** @format int32 */
   qualityProfileId?: number;
-  searchOnAdd?: boolean;
-  minimumAvailability?: MovieStatusType;
   listType?: ImportListType;
   /** @format int32 */
   listOrder?: number;
-  /** @format date-span */
-  minRefreshInterval?: string;
+  minRefreshInterval?: TimeSpan;
 }
 
 export enum ImportListType {
   Program = "program",
-  Tmdb = "tmdb",
-  Trakt = "trakt",
   Plex = "plex",
+  Trakt = "trakt",
   Simkl = "simkl",
   Other = "other",
   Advanced = "advanced",
@@ -677,23 +644,11 @@ export interface IndexerConfigResource {
   /** @format int32 */
   minimumAge?: number;
   /** @format int32 */
-  maximumSize?: number;
-  /** @format int32 */
   retention?: number;
   /** @format int32 */
+  maximumSize?: number;
+  /** @format int32 */
   rssSyncInterval?: number;
-  preferIndexerFlags?: boolean;
-  /** @format int32 */
-  availabilityDelay?: number;
-  allowHardcodedSubs?: boolean;
-  whitelistedHardcodedSubs?: string | null;
-}
-
-export interface IndexerFlagResource {
-  /** @format int32 */
-  id?: number;
-  name?: string | null;
-  nameLower?: string | null;
 }
 
 export interface IndexerResource {
@@ -718,6 +673,8 @@ export interface IndexerResource {
   /** @format int32 */
   priority?: number;
   /** @format int32 */
+  seasonSearchMaximumSingleEpisodeAge?: number;
+  /** @format int32 */
   downloadClientId?: number;
 }
 
@@ -725,6 +682,22 @@ export interface Language {
   /** @format int32 */
   id?: number;
   name?: string | null;
+}
+
+export interface LanguageProfileItemResource {
+  /** @format int32 */
+  id?: number;
+  language?: Language;
+  allowed?: boolean;
+}
+
+export interface LanguageProfileResource {
+  /** @format int32 */
+  id?: number;
+  name?: string | null;
+  upgradeAllowed?: boolean;
+  cutoff?: Language;
+  languages?: LanguageProfileItemResource[] | null;
 }
 
 export interface LanguageResource {
@@ -736,6 +709,12 @@ export interface LanguageResource {
 
 export interface LocalizationLanguageResource {
   identifier?: string | null;
+}
+
+export interface LocalizationResource {
+  /** @format int32 */
+  id?: number;
+  strings?: Record<string, string | null>;
 }
 
 export interface LogFileResource {
@@ -778,8 +757,11 @@ export interface ManualImportReprocessResource {
   id?: number;
   path?: string | null;
   /** @format int32 */
-  movieId?: number;
-  movie?: MovieResource;
+  seriesId?: number;
+  /** @format int32 */
+  seasonNumber?: number | null;
+  episodes?: EpisodeResource[] | null;
+  episodeIds?: number[] | null;
   quality?: QualityModel;
   languages?: Language[] | null;
   releaseGroup?: string | null;
@@ -787,8 +769,6 @@ export interface ManualImportReprocessResource {
   customFormats?: CustomFormatResource[] | null;
   /** @format int32 */
   customFormatScore?: number;
-  /** @format int32 */
-  indexerFlags?: number;
   rejections?: Rejection[] | null;
 }
 
@@ -801,18 +781,21 @@ export interface ManualImportResource {
   name?: string | null;
   /** @format int64 */
   size?: number;
-  movie?: MovieResource;
+  series?: SeriesResource;
+  /** @format int32 */
+  seasonNumber?: number | null;
+  episodes?: EpisodeResource[] | null;
+  /** @format int32 */
+  episodeFileId?: number | null;
+  releaseGroup?: string | null;
   quality?: QualityModel;
   languages?: Language[] | null;
-  releaseGroup?: string | null;
   /** @format int32 */
   qualityWeight?: number;
   downloadId?: string | null;
   customFormats?: CustomFormatResource[] | null;
   /** @format int32 */
   customFormatScore?: number;
-  /** @format int32 */
-  indexerFlags?: number;
   rejections?: Rejection[] | null;
 }
 
@@ -824,6 +807,7 @@ export interface MediaCover {
 
 export enum MediaCoverTypes {
   Unknown = "unknown",
+  Logo = "logo",
   Poster = "poster",
   Banner = "banner",
   Fanart = "fanart",
@@ -861,20 +845,19 @@ export interface MediaInfoResource {
 export interface MediaManagementConfigResource {
   /** @format int32 */
   id?: number;
-  autoUnmonitorPreviouslyDownloadedMovies?: boolean;
+  autoUnmonitorPreviouslyDownloadedEpisodes?: boolean;
   recycleBin?: string | null;
   /** @format int32 */
   recycleBinCleanupDays?: number;
   downloadPropersAndRepacks?: ProperDownloadTypes;
-  createEmptyMovieFolders?: boolean;
+  createEmptySeriesFolders?: boolean;
   deleteEmptyFolders?: boolean;
   fileDate?: FileDateType;
   rescanAfterRefresh?: RescanAfterRefreshType;
-  autoRenameFolders?: boolean;
-  pathsDefaultStatic?: boolean;
   setPermissionsLinux?: boolean;
   chmodFolder?: string | null;
   chownGroup?: string | null;
+  episodeTitleRequired?: EpisodeTitleRequiredType;
   skipFreeSpaceCheckWhenImporting?: boolean;
   /** @format int32 */
   minimumFreeSpaceWhenImporting?: number;
@@ -884,12 +867,6 @@ export interface MediaManagementConfigResource {
   importExtraFiles?: boolean;
   extraFileExtensions?: string | null;
   enableMediaInfo?: boolean;
-}
-
-export interface MetadataConfigResource {
-  /** @format int32 */
-  id?: number;
-  certificationCountry?: TMDbCountryCode;
 }
 
 export interface MetadataResource {
@@ -908,198 +885,41 @@ export interface MetadataResource {
   enable?: boolean;
 }
 
-export enum Modifier {
-  None = "none",
-  Regional = "regional",
-  Screener = "screener",
-  Rawhd = "rawhd",
-  Brdisk = "brdisk",
-  Remux = "remux",
-}
-
 export enum MonitorTypes {
-  MovieOnly = "movieOnly",
-  MovieAndCollection = "movieAndCollection",
+  Unknown = "unknown",
+  All = "all",
+  Future = "future",
+  Missing = "missing",
+  Existing = "existing",
+  FirstSeason = "firstSeason",
+  LatestSeason = "latestSeason",
   None = "none",
 }
 
-export interface MovieCollectionResource {
-  title?: string | null;
-  /** @format int32 */
-  tmdbId?: number;
-}
-
-export interface MovieEditorResource {
-  movieIds?: number[] | null;
-  monitored?: boolean | null;
-  /** @format int32 */
-  qualityProfileId?: number | null;
-  minimumAvailability?: MovieStatusType;
-  rootFolderPath?: string | null;
-  tags?: number[] | null;
-  applyTags?: ApplyTags;
-  moveFiles?: boolean;
-  deleteFiles?: boolean;
-  addImportExclusion?: boolean;
-}
-
-export interface MovieFileListResource {
-  movieFileIds?: number[] | null;
-  languages?: Language[] | null;
-  quality?: QualityModel;
-  edition?: string | null;
-  releaseGroup?: string | null;
-  sceneName?: string | null;
-  /** @format int32 */
-  indexerFlags?: number | null;
-}
-
-export interface MovieFileResource {
-  /** @format int32 */
-  id?: number;
-  /** @format int32 */
-  movieId?: number;
-  relativePath?: string | null;
-  path?: string | null;
-  /** @format int64 */
-  size?: number;
-  /** @format date-time */
-  dateAdded?: string;
-  sceneName?: string | null;
-  releaseGroup?: string | null;
-  edition?: string | null;
-  languages?: Language[] | null;
-  quality?: QualityModel;
-  customFormats?: CustomFormatResource[] | null;
-  /** @format int32 */
-  customFormatScore?: number;
-  /** @format int32 */
-  indexerFlags?: number | null;
-  mediaInfo?: MediaInfoResource;
-  originalFilePath?: string | null;
-  qualityCutoffNotMet?: boolean;
-}
-
-export enum MovieHistoryEventType {
-  Unknown = "unknown",
-  Grabbed = "grabbed",
-  DownloadFolderImported = "downloadFolderImported",
-  DownloadFailed = "downloadFailed",
-  MovieFileDeleted = "movieFileDeleted",
-  MovieFolderImported = "movieFolderImported",
-  MovieFileRenamed = "movieFileRenamed",
-  DownloadIgnored = "downloadIgnored",
-}
-
-export interface MovieResource {
-  /** @format int32 */
-  id?: number;
-  title?: string | null;
-  originalTitle?: string | null;
-  originalLanguage?: Language;
-  alternateTitles?: AlternativeTitleResource[] | null;
-  /** @format int32 */
-  secondaryYear?: number | null;
-  /** @format int32 */
-  secondaryYearSourceId?: number;
-  sortTitle?: string | null;
-  /** @format int64 */
-  sizeOnDisk?: number | null;
-  status?: MovieStatusType;
-  overview?: string | null;
-  /** @format date-time */
-  inCinemas?: string | null;
-  /** @format date-time */
-  physicalRelease?: string | null;
-  /** @format date-time */
-  digitalRelease?: string | null;
-  /** @format date-time */
-  releaseDate?: string | null;
-  physicalReleaseNote?: string | null;
-  images?: MediaCover[] | null;
-  website?: string | null;
-  remotePoster?: string | null;
-  /** @format int32 */
-  year?: number;
-  youTubeTrailerId?: string | null;
-  studio?: string | null;
-  path?: string | null;
-  /** @format int32 */
-  qualityProfileId?: number;
-  hasFile?: boolean | null;
-  /** @format int32 */
-  movieFileId?: number;
-  monitored?: boolean;
-  minimumAvailability?: MovieStatusType;
-  isAvailable?: boolean;
-  folderName?: string | null;
-  /** @format int32 */
-  runtime?: number;
-  cleanTitle?: string | null;
-  imdbId?: string | null;
-  /** @format int32 */
-  tmdbId?: number;
-  titleSlug?: string | null;
-  rootFolderPath?: string | null;
-  folder?: string | null;
-  certification?: string | null;
-  genres?: string[] | null;
-  /** @uniqueItems true */
-  tags?: number[] | null;
-  /** @format date-time */
-  added?: string;
-  addOptions?: AddMovieOptions;
-  ratings?: Ratings;
-  movieFile?: MovieFileResource;
-  collection?: MovieCollectionResource;
-  /** @format float */
-  popularity?: number;
-  /** @format date-time */
-  lastSearchTime?: string | null;
-  statistics?: MovieStatisticsResource;
-}
-
-export interface MovieResourcePagingResource {
-  /** @format int32 */
-  page?: number;
-  /** @format int32 */
-  pageSize?: number;
-  sortKey?: string | null;
-  sortDirection?: SortDirection;
-  /** @format int32 */
-  totalRecords?: number;
-  records?: MovieResource[] | null;
-}
-
-export enum MovieRuntimeFormatType {
-  HoursMinutes = "hoursMinutes",
-  Minutes = "minutes",
-}
-
-export interface MovieStatisticsResource {
-  /** @format int32 */
-  movieFileCount?: number;
-  /** @format int64 */
-  sizeOnDisk?: number;
-  releaseGroups?: string[] | null;
-}
-
-export enum MovieStatusType {
-  Tba = "tba",
-  Announced = "announced",
-  InCinemas = "inCinemas",
-  Released = "released",
-  Deleted = "deleted",
+export interface MonitoringOptions {
+  ignoreEpisodesWithFiles?: boolean;
+  ignoreEpisodesWithoutFiles?: boolean;
+  episodesToMonitor?: number[] | null;
+  monitor?: MonitorTypes;
 }
 
 export interface NamingConfigResource {
   /** @format int32 */
   id?: number;
-  renameMovies?: boolean;
+  renameEpisodes?: boolean;
   replaceIllegalCharacters?: boolean;
-  colonReplacementFormat?: ColonReplacementFormat;
-  standardMovieFormat?: string | null;
-  movieFolderFormat?: string | null;
+  /** @format int32 */
+  colonReplacementFormat?: number;
+  /** @format int32 */
+  multiEpisodeStyle?: number;
+  standardEpisodeFormat?: string | null;
+  seriesFolderFormat?: string | null;
+  includeSeriesTitle?: boolean;
+  includeEpisodeTitle?: boolean;
+  includeQuality?: boolean;
+  replaceSpaces?: boolean;
+  separator?: string | null;
+  numberStyle?: string | null;
 }
 
 export interface NotificationResource {
@@ -1120,12 +940,11 @@ export interface NotificationResource {
   onDownload?: boolean;
   onUpgrade?: boolean;
   onRename?: boolean;
-  onMovieAdded?: boolean;
-  onMovieDelete?: boolean;
-  onMovieFileDelete?: boolean;
-  onMovieFileDeleteForUpgrade?: boolean;
+  onSeriesAdd?: boolean;
+  onSeriesDelete?: boolean;
+  onEpisodeFileDelete?: boolean;
+  onEpisodeFileDeleteForUpgrade?: boolean;
   onHealthIssue?: boolean;
-  includeHealthWarnings?: boolean;
   onHealthRestored?: boolean;
   onApplicationUpdate?: boolean;
   onManualInteractionRequired?: boolean;
@@ -1133,14 +952,15 @@ export interface NotificationResource {
   supportsOnDownload?: boolean;
   supportsOnUpgrade?: boolean;
   supportsOnRename?: boolean;
-  supportsOnMovieAdded?: boolean;
-  supportsOnMovieDelete?: boolean;
-  supportsOnMovieFileDelete?: boolean;
-  supportsOnMovieFileDeleteForUpgrade?: boolean;
+  supportsOnSeriesAdd?: boolean;
+  supportsOnSeriesDelete?: boolean;
+  supportsOnEpisodeFileDelete?: boolean;
+  supportsOnEpisodeFileDeleteForUpgrade?: boolean;
   supportsOnHealthIssue?: boolean;
   supportsOnHealthRestored?: boolean;
   supportsOnApplicationUpdate?: boolean;
   supportsOnManualInteractionRequired?: boolean;
+  includeHealthWarnings?: boolean;
   testCommand?: string | null;
 }
 
@@ -1148,32 +968,28 @@ export interface ParseResource {
   /** @format int32 */
   id?: number;
   title?: string | null;
-  parsedMovieInfo?: ParsedMovieInfo;
-  movie?: MovieResource;
+  parsedEpisodeInfo?: ParsedEpisodeInfo;
+  series?: SeriesResource;
+  episodes?: EpisodeResource[] | null;
   languages?: Language[] | null;
   customFormats?: CustomFormatResource[] | null;
   /** @format int32 */
   customFormatScore?: number;
 }
 
-export interface ParsedMovieInfo {
-  movieTitles?: string[] | null;
-  originalTitle?: string | null;
+export interface ParsedEpisodeInfo {
   releaseTitle?: string | null;
-  simpleReleaseTitle?: string | null;
+  seriesTitle?: string | null;
+  seriesTitleInfo?: SeriesTitleInfo;
   quality?: QualityModel;
+  airDate?: string | null;
   languages?: Language[] | null;
   releaseGroup?: string | null;
   releaseHash?: string | null;
-  edition?: string | null;
   /** @format int32 */
-  year?: number;
-  imdbId?: string | null;
-  /** @format int32 */
-  tmdbId?: number;
-  hardcodedSubs?: string | null;
-  movieTitle?: string | null;
-  primaryMovieTitle?: string | null;
+  seasonPart?: number;
+  releaseTokens?: string | null;
+  isDaily?: boolean;
 }
 
 export interface PingResource {
@@ -1227,7 +1043,6 @@ export interface Quality {
   source?: QualitySource;
   /** @format int32 */
   resolution?: number;
-  modifier?: Modifier;
 }
 
 export interface QualityDefinitionResource {
@@ -1271,23 +1086,19 @@ export interface QualityProfileResource {
   minFormatScore?: number;
   /** @format int32 */
   cutoffFormatScore?: number;
-  /** @format int32 */
-  minUpgradeFormatScore?: number;
   formatItems?: ProfileFormatItemResource[] | null;
-  language?: Language;
 }
 
 export enum QualitySource {
   Unknown = "unknown",
-  Cam = "cam",
-  Telesync = "telesync",
-  Telecine = "telecine",
-  Workprint = "workprint",
+  Television = "television",
+  TelevisionRaw = "televisionRaw",
+  Web = "web",
+  WebRip = "webRip",
   Dvd = "dvd",
-  Tv = "tv",
-  Webdl = "webdl",
-  Webrip = "webrip",
   Bluray = "bluray",
+  Vr = "vr",
+  BlurayRaw = "blurayRaw",
 }
 
 export interface QueueBulkResource {
@@ -1298,8 +1109,13 @@ export interface QueueResource {
   /** @format int32 */
   id?: number;
   /** @format int32 */
-  movieId?: number | null;
-  movie?: MovieResource;
+  seriesId?: number | null;
+  /** @format int32 */
+  episodeId?: number | null;
+  /** @format int32 */
+  seasonNumber?: number | null;
+  series?: SeriesResource;
+  episode?: EpisodeResource;
   languages?: Language[] | null;
   quality?: QualityModel;
   customFormats?: CustomFormatResource[] | null;
@@ -1310,13 +1126,10 @@ export interface QueueResource {
   title?: string | null;
   /** @format double */
   sizeleft?: number;
-  /** @format date-span */
-  timeleft?: string | null;
+  timeleft?: TimeSpan;
   /** @format date-time */
   estimatedCompletionTime?: string | null;
-  /** @format date-time */
-  added?: string | null;
-  status?: QueueStatus;
+  status?: string | null;
   trackedDownloadStatus?: TrackedDownloadStatus;
   trackedDownloadState?: TrackedDownloadState;
   statusMessages?: TrackedDownloadStatusMessage[] | null;
@@ -1324,9 +1137,9 @@ export interface QueueResource {
   downloadId?: string | null;
   protocol?: DownloadProtocol;
   downloadClient?: string | null;
-  downloadClientHasPostImportCategory?: boolean;
   indexer?: string | null;
   outputPath?: string | null;
+  episodeHasFile?: boolean;
 }
 
 export interface QueueResourcePagingResource {
@@ -1339,19 +1152,6 @@ export interface QueueResourcePagingResource {
   /** @format int32 */
   totalRecords?: number;
   records?: QueueResource[] | null;
-}
-
-export enum QueueStatus {
-  Unknown = "unknown",
-  Queued = "queued",
-  Paused = "paused",
-  Downloading = "downloading",
-  Completed = "completed",
-  Failed = "failed",
-  Warning = "warning",
-  Delay = "delay",
-  DownloadClientUnavailable = "downloadClientUnavailable",
-  Fallback = "fallback",
 }
 
 export interface QueueStatusResource {
@@ -1369,25 +1169,11 @@ export interface QueueStatusResource {
   unknownWarnings?: boolean;
 }
 
-export interface RatingChild {
+export interface Ratings {
   /** @format int32 */
   votes?: number;
   /** @format double */
   value?: number;
-  type?: RatingType;
-}
-
-export enum RatingType {
-  User = "user",
-  Critic = "critic",
-}
-
-export interface Ratings {
-  imdb?: RatingChild;
-  tmdb?: RatingChild;
-  metacritic?: RatingChild;
-  rottenTomatoes?: RatingChild;
-  trakt?: RatingChild;
 }
 
 export interface Rejection {
@@ -1398,6 +1184,18 @@ export interface Rejection {
 export enum RejectionType {
   Permanent = "permanent",
   Temporary = "temporary",
+}
+
+export interface ReleaseEpisodeResource {
+  /** @format int32 */
+  id?: number;
+  /** @format int32 */
+  seasonNumber?: number;
+  /** @format int32 */
+  episodeNumber?: number;
+  /** @format int32 */
+  absoluteEpisodeNumber?: number | null;
+  title?: string | null;
 }
 
 export interface ReleaseProfileResource {
@@ -1418,9 +1216,6 @@ export interface ReleaseResource {
   id?: number;
   guid?: string | null;
   quality?: QualityModel;
-  customFormats?: CustomFormatResource[] | null;
-  /** @format int32 */
-  customFormatScore?: number;
   /** @format int32 */
   qualityWeight?: number;
   /** @format int32 */
@@ -1439,27 +1234,32 @@ export interface ReleaseResource {
   releaseHash?: string | null;
   title?: string | null;
   sceneSource?: boolean;
-  movieTitles?: string[] | null;
   languages?: Language[] | null;
   /** @format int32 */
-  mappedMovieId?: number | null;
+  languageWeight?: number;
+  airDate?: string | null;
+  seriesTitle?: string | null;
+  /** @format int32 */
+  mappedSeriesId?: number | null;
+  mappedEpisodeInfo?: ReleaseEpisodeResource[] | null;
   approved?: boolean;
   temporarilyRejected?: boolean;
   rejected?: boolean;
   /** @format int32 */
-  tmdbId?: number;
-  /** @format int32 */
-  imdbId?: number;
+  tvdbId?: number;
   rejections?: string[] | null;
   /** @format date-time */
   publishDate?: string;
   commentUrl?: string | null;
   downloadUrl?: string | null;
   infoUrl?: string | null;
+  episodeRequested?: boolean;
   downloadAllowed?: boolean;
   /** @format int32 */
   releaseWeight?: number;
-  edition?: string | null;
+  customFormats?: CustomFormatResource[] | null;
+  /** @format int32 */
+  customFormatScore?: number;
   magnetUrl?: string | null;
   infoHash?: string | null;
   /** @format int32 */
@@ -1467,12 +1267,14 @@ export interface ReleaseResource {
   /** @format int32 */
   leechers?: number | null;
   protocol?: DownloadProtocol;
-  indexerFlags?: any;
+  isDaily?: boolean;
   /** @format int32 */
-  movieId?: number | null;
+  seriesId?: number | null;
+  /** @format int32 */
+  episodeId?: number | null;
+  episodeIds?: number[] | null;
   /** @format int32 */
   downloadClientId?: number | null;
-  downloadClient?: string | null;
   shouldOverride?: boolean | null;
 }
 
@@ -1484,13 +1286,16 @@ export interface RemotePathMappingResource {
   localPath?: string | null;
 }
 
-export interface RenameMovieResource {
+export interface RenameEpisodeResource {
   /** @format int32 */
   id?: number;
   /** @format int32 */
-  movieId?: number;
+  seriesId?: number;
   /** @format int32 */
-  movieFileId?: number;
+  seasonNumber?: number;
+  releaseDates?: string[] | null;
+  /** @format int32 */
+  episodeFileId?: number;
   existingPath?: string | null;
   newPath?: string | null;
 }
@@ -1525,6 +1330,44 @@ export enum RuntimeMode {
   Tray = "tray",
 }
 
+export interface SeasonPassResource {
+  series?: SeasonPassSeriesResource[] | null;
+  monitoringOptions?: MonitoringOptions;
+}
+
+export interface SeasonPassSeriesResource {
+  /** @format int32 */
+  id?: number;
+  monitored?: boolean | null;
+  seasons?: SeasonResource[] | null;
+}
+
+export interface SeasonResource {
+  /** @format int32 */
+  seasonNumber?: number;
+  monitored?: boolean;
+  statistics?: SeasonStatisticsResource;
+  images?: MediaCover[] | null;
+}
+
+export interface SeasonStatisticsResource {
+  /** @format date-time */
+  nextAiring?: string | null;
+  /** @format date-time */
+  previousAiring?: string | null;
+  /** @format int32 */
+  episodeFileCount?: number;
+  /** @format int32 */
+  episodeCount?: number;
+  /** @format int32 */
+  totalEpisodeCount?: number;
+  /** @format int64 */
+  sizeOnDisk?: number;
+  releaseGroups?: string[] | null;
+  /** @format double */
+  percentOfEpisodes?: number;
+}
+
 export interface SelectOption {
   /** @format int32 */
   value?: number;
@@ -1532,20 +1375,103 @@ export interface SelectOption {
   /** @format int32 */
   order?: number;
   hint?: string | null;
-  dividerAfter?: boolean;
+}
+
+export interface SeriesEditorResource {
+  seriesIds?: number[] | null;
+  monitored?: boolean | null;
+  /** @format int32 */
+  qualityProfileId?: number | null;
+  rootFolderPath?: string | null;
+  tags?: number[] | null;
+  applyTags?: ApplyTags;
+  moveFiles?: boolean;
+  deleteFiles?: boolean;
+  addImportListExclusion?: boolean;
+}
+
+export interface SeriesResource {
+  /** @format int32 */
+  id?: number;
+  title?: string | null;
+  sortTitle?: string | null;
+  status?: SeriesStatusType;
+  ended?: boolean;
+  profileName?: string | null;
+  overview?: string | null;
+  /** @format date-time */
+  nextAiring?: string | null;
+  /** @format date-time */
+  previousAiring?: string | null;
+  network?: string | null;
+  images?: MediaCover[] | null;
+  originalLanguage?: Language;
+  remotePoster?: string | null;
+  seasons?: SeasonResource[] | null;
+  /** @format int32 */
+  year?: number;
+  path?: string | null;
+  /** @format int32 */
+  qualityProfileId?: number;
+  monitored?: boolean;
+  useSceneNumbering?: boolean;
+  /** @format int32 */
+  runtime?: number;
+  /** @format int32 */
+  tvdbId?: number;
+  /** @format date-time */
+  firstAired?: string | null;
+  cleanTitle?: string | null;
+  titleSlug?: string | null;
+  rootFolderPath?: string | null;
+  folder?: string | null;
+  certification?: string | null;
+  genres?: string[] | null;
+  /** @uniqueItems true */
+  tags?: number[] | null;
+  /** @format date-time */
+  added?: string;
+  addOptions?: AddSeriesOptions;
+  ratings?: Ratings;
+  statistics?: SeriesStatisticsResource;
+  episodesChanged?: boolean | null;
+}
+
+export interface SeriesStatisticsResource {
+  /** @format int32 */
+  seasonCount?: number;
+  /** @format int32 */
+  episodeFileCount?: number;
+  /** @format int32 */
+  episodeCount?: number;
+  /** @format int32 */
+  totalEpisodeCount?: number;
+  /** @format int64 */
+  sizeOnDisk?: number;
+  releaseGroups?: string[] | null;
+  /** @format double */
+  percentOfEpisodes?: number;
+}
+
+export enum SeriesStatusType {
+  Continuing = "continuing",
+  Ended = "ended",
+  Upcoming = "upcoming",
+  Deleted = "deleted",
+}
+
+export interface SeriesTitleInfo {
+  title?: string | null;
+  titleWithoutYear?: string | null;
+  /** @format int32 */
+  year?: number;
+  allTitles?: string[] | null;
 }
 
 export enum SortDirection {
   Default = "default",
   Ascending = "ascending",
   Descending = "descending",
-}
-
-export enum SourceType {
-  Tmdb = "tmdb",
-  Mappings = "mappings",
-  User = "user",
-  Indexer = "indexer",
 }
 
 export interface SystemResource {
@@ -1569,13 +1495,12 @@ export interface SystemResource {
   isDocker?: boolean;
   mode?: RuntimeMode;
   branch?: string | null;
-  databaseType?: DatabaseType;
-  databaseVersion?: string | null;
   authentication?: AuthenticationType;
+  sqliteVersion?: Version;
   /** @format int32 */
   migrationVersion?: number;
   urlBase?: string | null;
-  runtimeVersion?: string | null;
+  runtimeVersion?: Version;
   runtimeName?: string | null;
   /** @format date-time */
   startTime?: string;
@@ -1583,22 +1508,8 @@ export interface SystemResource {
   packageAuthor?: string | null;
   packageUpdateMechanism?: UpdateMechanism;
   packageUpdateMechanismMessage?: string | null;
-}
-
-export enum TMDbCountryCode {
-  Au = "au",
-  Br = "br",
-  Ca = "ca",
-  Fr = "fr",
-  De = "de",
-  Gb = "gb",
-  In = "in",
-  Ie = "ie",
-  It = "it",
-  Nz = "nz",
-  Ro = "ro",
-  Es = "es",
-  Us = "us",
+  databaseVersion?: Version;
+  databaseType?: DatabaseType;
 }
 
 export interface TagDetailsResource {
@@ -1608,11 +1519,11 @@ export interface TagDetailsResource {
   delayProfileIds?: number[] | null;
   importListIds?: number[] | null;
   notificationIds?: number[] | null;
-  releaseProfileIds?: number[] | null;
+  restrictionIds?: number[] | null;
   indexerIds?: number[] | null;
   downloadClientIds?: number[] | null;
   autoTagIds?: number[] | null;
-  movieIds?: number[] | null;
+  seriesIds?: number[] | null;
 }
 
 export interface TagResource {
@@ -1634,13 +1545,36 @@ export interface TaskResource {
   lastStartTime?: string;
   /** @format date-time */
   nextExecution?: string;
-  /** @format date-span */
-  lastDuration?: string;
+  lastDuration?: TimeSpan;
+}
+
+export interface TimeSpan {
+  /** @format int64 */
+  ticks?: number;
+  /** @format int32 */
+  days?: number;
+  /** @format int32 */
+  hours?: number;
+  /** @format int32 */
+  milliseconds?: number;
+  /** @format int32 */
+  minutes?: number;
+  /** @format int32 */
+  seconds?: number;
+  /** @format double */
+  totalDays?: number;
+  /** @format double */
+  totalHours?: number;
+  /** @format double */
+  totalMilliseconds?: number;
+  /** @format double */
+  totalMinutes?: number;
+  /** @format double */
+  totalSeconds?: number;
 }
 
 export enum TrackedDownloadState {
   Downloading = "downloading",
-  ImportBlocked = "importBlocked",
   ImportPending = "importPending",
   Importing = "importing",
   Imported = "imported",
@@ -1666,17 +1600,14 @@ export interface UiConfigResource {
   /** @format int32 */
   firstDayOfWeek?: number;
   calendarWeekColumnHeader?: string | null;
-  movieRuntimeFormat?: MovieRuntimeFormatType;
   shortDateFormat?: string | null;
   longDateFormat?: string | null;
   timeFormat?: string | null;
   showRelativeDates?: boolean;
   enableColorImpairedMode?: boolean;
-  /** @format int32 */
-  movieInfoLanguage?: number;
+  theme?: string | null;
   /** @format int32 */
   uiLanguage?: number;
-  theme?: string | null;
 }
 
 export interface UnmappedFolder {
@@ -1701,7 +1632,7 @@ export enum UpdateMechanism {
 export interface UpdateResource {
   /** @format int32 */
   id?: number;
-  version?: string | null;
+  version?: Version;
   branch?: string | null;
   /** @format date-time */
   releaseDate?: string;
@@ -1714,4 +1645,19 @@ export interface UpdateResource {
   latest?: boolean;
   changes?: UpdateChanges;
   hash?: string | null;
+}
+
+export interface Version {
+  /** @format int32 */
+  major?: number;
+  /** @format int32 */
+  minor?: number;
+  /** @format int32 */
+  build?: number;
+  /** @format int32 */
+  revision?: number;
+  /** @format int32 */
+  majorRevision?: number;
+  /** @format int32 */
+  minorRevision?: number;
 }

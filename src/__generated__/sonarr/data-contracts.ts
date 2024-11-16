@@ -1206,7 +1206,7 @@ export interface QueueResource {
   estimatedCompletionTime?: string | null;
   /** @format date-time */
   added?: string | null;
-  status?: string | null;
+  status?: QueueStatus;
   trackedDownloadStatus?: TrackedDownloadStatus;
   trackedDownloadState?: TrackedDownloadState;
   statusMessages?: TrackedDownloadStatusMessage[] | null;
@@ -1230,6 +1230,19 @@ export interface QueueResourcePagingResource {
   /** @format int32 */
   totalRecords?: number;
   records?: QueueResource[] | null;
+}
+
+export enum QueueStatus {
+  Unknown = "unknown",
+  Queued = "queued",
+  Paused = "paused",
+  Downloading = "downloading",
+  Completed = "completed",
+  Failed = "failed",
+  Warning = "warning",
+  Delay = "delay",
+  DownloadClientUnavailable = "downloadClientUnavailable",
+  Fallback = "fallback",
 }
 
 export interface QueueStatusResource {

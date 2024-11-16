@@ -1,19 +1,22 @@
 import { KyHttpClient } from "./__generated__/ky-client";
 import { Api as RadarrApi } from "./__generated__/radarr/Api";
 import { Api as SonarrApi } from "./__generated__/sonarr/Api";
+import { Api as WhisparrApi } from "./__generated__/whisparr/Api";
 import { logger } from "./logger";
 import { ArrType } from "./types/common.types";
 
 let sonarrClient: SonarrApi<unknown> | undefined;
 let radarrClient: RadarrApi<unknown> | undefined;
+let whisparrClient: WhisparrApi<unknown> | undefined;
 
 export const unsetApi = () => {
   sonarrClient = undefined;
   radarrClient = undefined;
+  whisparrClient = undefined;
 };
 
-export const getArrApi = (): SonarrApi<unknown> | RadarrApi<unknown> => {
-  const client = sonarrClient || radarrClient;
+export const getArrApi = (): SonarrApi<unknown> | RadarrApi<unknown> | WhisparrApi<unknown> => {
+  const client = sonarrClient || radarrClient || whisparrClient;
 
   if (client) {
     return client;
@@ -22,16 +25,8 @@ export const getArrApi = (): SonarrApi<unknown> | RadarrApi<unknown> => {
   throw new Error("Please configure API first.");
 };
 
-export const getSonarrApi = () => {
-  if (sonarrClient) {
-    return sonarrClient;
-  }
-
-  throw new Error("Please configure API first.");
-};
-
 const validateParams = (url: string, apiKey: string, arrType: ArrType) => {
-  const arrLabel = arrType === "RADARR" ? "Radarr" : "Sonarr";
+  const arrLabel = arrType.toLowerCase();
 
   if (!url) {
     const message = `URL not correctly configured for ${arrLabel} API!`;
@@ -47,7 +42,7 @@ const validateParams = (url: string, apiKey: string, arrType: ArrType) => {
 
 const handleErrorApi = (error: any, arrType: ArrType) => {
   let message;
-  const arrLabel = arrType === "RADARR" ? "Radarr" : "Sonarr";
+  const arrLabel = arrType.toLowerCase();
   const causeError = error?.cause?.message || error?.cause?.errors?.map((e: any) => e.message).join(";") || undefined;
 
   const errorMessage = (error.message && `Message: ${error.message}`) || "";
@@ -67,9 +62,9 @@ const handleErrorApi = (error: any, arrType: ArrType) => {
   throw new Error(message);
 };
 
-export const configureSonarrApi = async (url: string, apiKey: string) => {
+export const configureApi = async (type: ArrType, url: string, apiKey: string) => {
   unsetApi();
-  validateParams(url, apiKey, "SONARR");
+  validateParams(url, apiKey, type);
 
   const httpClient = new KyHttpClient({
     headers: {
@@ -77,46 +72,31 @@ export const configureSonarrApi = async (url: string, apiKey: string) => {
     },
     prefixUrl: url,
   });
-  const api = new SonarrApi(httpClient);
 
-  sonarrClient = api;
+  let api;
+
+  switch (type) {
+    case "SONARR":
+      api = new SonarrApi(httpClient);
+      sonarrClient = api;
+      break;
+    case "RADARR":
+      api = new RadarrApi(httpClient);
+      radarrClient = api;
+      break;
+    case "WHISPARR":
+      api = new WhisparrApi(httpClient);
+      whisparrClient = api;
+      break;
+    default:
+      throw new Error(`Invalid API type: ${type}`);
+  }
 
   try {
-    await sonarrClient.v3MetadataList();
+    await api.v3MetadataList();
   } catch (error: any) {
-    handleErrorApi(error, "SONARR");
+    handleErrorApi(error, type);
   }
 
-  return sonarrClient;
-};
-
-export const getRadarrpi = () => {
-  if (radarrClient) {
-    return radarrClient;
-  }
-
-  throw new Error("Please configure API first.");
-};
-
-export const configureRadarrApi = async (url: string, apiKey: string) => {
-  unsetApi();
-  validateParams(url, apiKey, "RADARR");
-
-  const httpClient = new KyHttpClient({
-    headers: {
-      "X-Api-Key": apiKey,
-    },
-    prefixUrl: url,
-  });
-  const api = new RadarrApi(httpClient);
-
-  radarrClient = api;
-
-  try {
-    await radarrClient.v3MetadataList();
-  } catch (error: any) {
-    handleErrorApi(error, "RADARR");
-  }
-
-  return radarrClient;
+  return api;
 };

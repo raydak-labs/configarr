@@ -17,14 +17,12 @@ import {
   BlocklistResourcePagingResource,
   CommandResource,
   CustomFilterResource,
-  CustomFormatBulkResource,
   CustomFormatResource,
   DelayProfileResource,
   DiskSpaceResource,
   DownloadClientBulkResource,
   DownloadClientConfigResource,
   DownloadClientResource,
-  DownloadProtocol,
   EpisodeFileListResource,
   EpisodeFileResource,
   EpisodeHistoryEventType,
@@ -36,14 +34,10 @@ import {
   HistoryResourcePagingResource,
   HostConfigResource,
   ImportListBulkResource,
-  ImportListConfigResource,
-  ImportListExclusionBulkResource,
   ImportListExclusionResource,
-  ImportListExclusionResourcePagingResource,
   ImportListResource,
   IndexerBulkResource,
   IndexerConfigResource,
-  IndexerFlagResource,
   IndexerResource,
   LanguageProfileResource,
   LanguageResource,
@@ -58,13 +52,11 @@ import {
   NamingConfigResource,
   NotificationResource,
   ParseResource,
-  QualityDefinitionLimitsResource,
   QualityDefinitionResource,
   QualityProfileResource,
   QueueBulkResource,
   QueueResource,
   QueueResourcePagingResource,
-  QueueStatus,
   QueueStatusResource,
   ReleaseProfileResource,
   ReleaseResource,
@@ -286,8 +278,6 @@ export class Api<SecurityDataType = unknown> {
       pageSize?: number;
       sortKey?: string;
       sortDirection?: SortDirection;
-      seriesIds?: number[];
-      protocols?: DownloadProtocol[];
     },
     params: RequestParams = {},
   ) =>
@@ -534,22 +524,6 @@ export class Api<SecurityDataType = unknown> {
    * No description
    *
    * @tags CustomFormat
-   * @name V3CustomformatList
-   * @request GET:/api/v3/customformat
-   * @secure
-   */
-  v3CustomformatList = (params: RequestParams = {}) =>
-    this.http.request<CustomFormatResource[], any>({
-      path: `/api/v3/customformat`,
-      method: "GET",
-      secure: true,
-      format: "json",
-      ...params,
-    });
-  /**
-   * No description
-   *
-   * @tags CustomFormat
    * @name V3CustomformatCreate
    * @request POST:/api/v3/customformat
    * @secure
@@ -561,6 +535,22 @@ export class Api<SecurityDataType = unknown> {
       body: data,
       secure: true,
       type: ContentType.Json,
+      format: "json",
+      ...params,
+    });
+  /**
+   * No description
+   *
+   * @tags CustomFormat
+   * @name V3CustomformatList
+   * @request GET:/api/v3/customformat
+   * @secure
+   */
+  v3CustomformatList = (params: RequestParams = {}) =>
+    this.http.request<CustomFormatResource[], any>({
+      path: `/api/v3/customformat`,
+      method: "GET",
+      secure: true,
       format: "json",
       ...params,
     });
@@ -611,41 +601,6 @@ export class Api<SecurityDataType = unknown> {
       method: "GET",
       secure: true,
       format: "json",
-      ...params,
-    });
-  /**
-   * No description
-   *
-   * @tags CustomFormat
-   * @name V3CustomformatBulkUpdate
-   * @request PUT:/api/v3/customformat/bulk
-   * @secure
-   */
-  v3CustomformatBulkUpdate = (data: CustomFormatBulkResource, params: RequestParams = {}) =>
-    this.http.request<CustomFormatResource, any>({
-      path: `/api/v3/customformat/bulk`,
-      method: "PUT",
-      body: data,
-      secure: true,
-      type: ContentType.Json,
-      format: "json",
-      ...params,
-    });
-  /**
-   * No description
-   *
-   * @tags CustomFormat
-   * @name V3CustomformatBulkDelete
-   * @request DELETE:/api/v3/customformat/bulk
-   * @secure
-   */
-  v3CustomformatBulkDelete = (data: CustomFormatBulkResource, params: RequestParams = {}) =>
-    this.http.request<void, any>({
-      path: `/api/v3/customformat/bulk`,
-      method: "DELETE",
-      body: data,
-      secure: true,
-      type: ContentType.Json,
       ...params,
     });
   /**
@@ -894,7 +849,7 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3DownloadclientUpdate = (
-    id: number,
+    id: string,
     data: DownloadClientResource,
     query?: {
       /** @default false */
@@ -1002,18 +957,10 @@ export class Api<SecurityDataType = unknown> {
    * @request POST:/api/v3/downloadclient/test
    * @secure
    */
-  v3DownloadclientTestCreate = (
-    data: DownloadClientResource,
-    query?: {
-      /** @default false */
-      forceTest?: boolean;
-    },
-    params: RequestParams = {},
-  ) =>
+  v3DownloadclientTestCreate = (data: DownloadClientResource, params: RequestParams = {}) =>
     this.http.request<void, any>({
       path: `/api/v3/downloadclient/test`,
       method: "POST",
-      query: query,
       body: data,
       secure: true,
       type: ContentType.Json,
@@ -1118,10 +1065,6 @@ export class Api<SecurityDataType = unknown> {
       episodeIds?: number[];
       /** @format int32 */
       episodeFileId?: number;
-      /** @default false */
-      includeSeries?: boolean;
-      /** @default false */
-      includeEpisodeFile?: boolean;
       /** @default false */
       includeImages?: boolean;
     },
@@ -1425,13 +1368,11 @@ export class Api<SecurityDataType = unknown> {
       sortDirection?: SortDirection;
       includeSeries?: boolean;
       includeEpisode?: boolean;
-      eventType?: number[];
+      /** @format int32 */
+      eventType?: number;
       /** @format int32 */
       episodeId?: number;
       downloadId?: string;
-      seriesIds?: number[];
-      languages?: number[];
-      quality?: number[];
     },
     params: RequestParams = {},
   ) =>
@@ -1617,7 +1558,7 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3ImportlistUpdate = (
-    id: number,
+    id: string,
     data: ImportListResource,
     query?: {
       /** @default false */
@@ -1725,18 +1666,10 @@ export class Api<SecurityDataType = unknown> {
    * @request POST:/api/v3/importlist/test
    * @secure
    */
-  v3ImportlistTestCreate = (
-    data: ImportListResource,
-    query?: {
-      /** @default false */
-      forceTest?: boolean;
-    },
-    params: RequestParams = {},
-  ) =>
+  v3ImportlistTestCreate = (data: ImportListResource, params: RequestParams = {}) =>
     this.http.request<void, any>({
       path: `/api/v3/importlist/test`,
       method: "POST",
-      query: query,
       body: data,
       secure: true,
       type: ContentType.Json,
@@ -1777,60 +1710,9 @@ export class Api<SecurityDataType = unknown> {
   /**
    * No description
    *
-   * @tags ImportListConfig
-   * @name V3ConfigImportlistList
-   * @request GET:/api/v3/config/importlist
-   * @secure
-   */
-  v3ConfigImportlistList = (params: RequestParams = {}) =>
-    this.http.request<ImportListConfigResource, any>({
-      path: `/api/v3/config/importlist`,
-      method: "GET",
-      secure: true,
-      format: "json",
-      ...params,
-    });
-  /**
-   * No description
-   *
-   * @tags ImportListConfig
-   * @name V3ConfigImportlistUpdate
-   * @request PUT:/api/v3/config/importlist/{id}
-   * @secure
-   */
-  v3ConfigImportlistUpdate = (id: string, data: ImportListConfigResource, params: RequestParams = {}) =>
-    this.http.request<ImportListConfigResource, any>({
-      path: `/api/v3/config/importlist/${id}`,
-      method: "PUT",
-      body: data,
-      secure: true,
-      type: ContentType.Json,
-      format: "json",
-      ...params,
-    });
-  /**
-   * No description
-   *
-   * @tags ImportListConfig
-   * @name V3ConfigImportlistDetail
-   * @request GET:/api/v3/config/importlist/{id}
-   * @secure
-   */
-  v3ConfigImportlistDetail = (id: number, params: RequestParams = {}) =>
-    this.http.request<ImportListConfigResource, any>({
-      path: `/api/v3/config/importlist/${id}`,
-      method: "GET",
-      secure: true,
-      format: "json",
-      ...params,
-    });
-  /**
-   * No description
-   *
    * @tags ImportListExclusion
    * @name V3ImportlistexclusionList
    * @request GET:/api/v3/importlistexclusion
-   * @deprecated
    * @secure
    */
   v3ImportlistexclusionList = (params: RequestParams = {}) =>
@@ -1856,39 +1738,6 @@ export class Api<SecurityDataType = unknown> {
       body: data,
       secure: true,
       type: ContentType.Json,
-      format: "json",
-      ...params,
-    });
-  /**
-   * No description
-   *
-   * @tags ImportListExclusion
-   * @name V3ImportlistexclusionPagedList
-   * @request GET:/api/v3/importlistexclusion/paged
-   * @secure
-   */
-  v3ImportlistexclusionPagedList = (
-    query?: {
-      /**
-       * @format int32
-       * @default 1
-       */
-      page?: number;
-      /**
-       * @format int32
-       * @default 10
-       */
-      pageSize?: number;
-      sortKey?: string;
-      sortDirection?: SortDirection;
-    },
-    params: RequestParams = {},
-  ) =>
-    this.http.request<ImportListExclusionResourcePagingResource, any>({
-      path: `/api/v3/importlistexclusion/paged`,
-      method: "GET",
-      query: query,
-      secure: true,
       format: "json",
       ...params,
     });
@@ -1944,23 +1793,6 @@ export class Api<SecurityDataType = unknown> {
   /**
    * No description
    *
-   * @tags ImportListExclusion
-   * @name V3ImportlistexclusionBulkDelete
-   * @request DELETE:/api/v3/importlistexclusion/bulk
-   * @secure
-   */
-  v3ImportlistexclusionBulkDelete = (data: ImportListExclusionBulkResource, params: RequestParams = {}) =>
-    this.http.request<void, any>({
-      path: `/api/v3/importlistexclusion/bulk`,
-      method: "DELETE",
-      body: data,
-      secure: true,
-      type: ContentType.Json,
-      ...params,
-    });
-  /**
-   * No description
-   *
    * @tags Indexer
    * @name V3IndexerList
    * @request GET:/api/v3/indexer
@@ -2009,7 +1841,7 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3IndexerUpdate = (
-    id: number,
+    id: string,
     data: IndexerResource,
     query?: {
       /** @default false */
@@ -2117,18 +1949,10 @@ export class Api<SecurityDataType = unknown> {
    * @request POST:/api/v3/indexer/test
    * @secure
    */
-  v3IndexerTestCreate = (
-    data: IndexerResource,
-    query?: {
-      /** @default false */
-      forceTest?: boolean;
-    },
-    params: RequestParams = {},
-  ) =>
+  v3IndexerTestCreate = (data: IndexerResource, params: RequestParams = {}) =>
     this.http.request<void, any>({
       path: `/api/v3/indexer/test`,
       method: "POST",
-      query: query,
       body: data,
       secure: true,
       type: ContentType.Json,
@@ -2211,22 +2035,6 @@ export class Api<SecurityDataType = unknown> {
   v3ConfigIndexerDetail = (id: number, params: RequestParams = {}) =>
     this.http.request<IndexerConfigResource, any>({
       path: `/api/v3/config/indexer/${id}`,
-      method: "GET",
-      secure: true,
-      format: "json",
-      ...params,
-    });
-  /**
-   * No description
-   *
-   * @tags IndexerFlag
-   * @name V3IndexerflagList
-   * @request GET:/api/v3/indexerflag
-   * @secure
-   */
-  v3IndexerflagList = (params: RequestParams = {}) =>
-    this.http.request<IndexerFlagResource[], any>({
-      path: `/api/v3/indexerflag`,
       method: "GET",
       secure: true,
       format: "json",
@@ -2643,7 +2451,7 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3MetadataUpdate = (
-    id: number,
+    id: string,
     data: MetadataResource,
     query?: {
       /** @default false */
@@ -2716,18 +2524,10 @@ export class Api<SecurityDataType = unknown> {
    * @request POST:/api/v3/metadata/test
    * @secure
    */
-  v3MetadataTestCreate = (
-    data: MetadataResource,
-    query?: {
-      /** @default false */
-      forceTest?: boolean;
-    },
-    params: RequestParams = {},
-  ) =>
+  v3MetadataTestCreate = (data: MetadataResource, params: RequestParams = {}) =>
     this.http.request<void, any>({
       path: `/api/v3/metadata/test`,
       method: "POST",
-      query: query,
       body: data,
       secure: true,
       type: ContentType.Json,
@@ -2884,15 +2684,16 @@ export class Api<SecurityDataType = unknown> {
       replaceIllegalCharacters?: boolean;
       /** @format int32 */
       colonReplacementFormat?: number;
-      customColonReplacementFormat?: string;
       /** @format int32 */
       multiEpisodeStyle?: number;
       standardEpisodeFormat?: string;
-      dailyEpisodeFormat?: string;
-      animeEpisodeFormat?: string;
       seriesFolderFormat?: string;
-      seasonFolderFormat?: string;
-      specialsFolderFormat?: string;
+      includeSeriesTitle?: boolean;
+      includeEpisodeTitle?: boolean;
+      includeQuality?: boolean;
+      replaceSpaces?: boolean;
+      separator?: string;
+      numberStyle?: string;
       /** @format int32 */
       id?: number;
       resourceName?: string;
@@ -2957,7 +2758,7 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3NotificationUpdate = (
-    id: number,
+    id: string,
     data: NotificationResource,
     query?: {
       /** @default false */
@@ -3030,18 +2831,10 @@ export class Api<SecurityDataType = unknown> {
    * @request POST:/api/v3/notification/test
    * @secure
    */
-  v3NotificationTestCreate = (
-    data: NotificationResource,
-    query?: {
-      /** @default false */
-      forceTest?: boolean;
-    },
-    params: RequestParams = {},
-  ) =>
+  v3NotificationTestCreate = (data: NotificationResource, params: RequestParams = {}) =>
     this.http.request<void, any>({
       path: `/api/v3/notification/test`,
       method: "POST",
-      query: query,
       body: data,
       secure: true,
       type: ContentType.Json,
@@ -3172,22 +2965,6 @@ export class Api<SecurityDataType = unknown> {
   /**
    * No description
    *
-   * @tags QualityDefinition
-   * @name V3QualitydefinitionLimitsList
-   * @request GET:/api/v3/qualitydefinition/limits
-   * @secure
-   */
-  v3QualitydefinitionLimitsList = (params: RequestParams = {}) =>
-    this.http.request<QualityDefinitionLimitsResource, any>({
-      path: `/api/v3/qualitydefinition/limits`,
-      method: "GET",
-      secure: true,
-      format: "json",
-      ...params,
-    });
-  /**
-   * No description
-   *
    * @tags QualityProfile
    * @name V3QualityprofileCreate
    * @request POST:/api/v3/qualityprofile
@@ -3301,8 +3078,6 @@ export class Api<SecurityDataType = unknown> {
       blocklist?: boolean;
       /** @default false */
       skipRedownload?: boolean;
-      /** @default false */
-      changeCategory?: boolean;
     },
     params: RequestParams = {},
   ) =>
@@ -3330,8 +3105,6 @@ export class Api<SecurityDataType = unknown> {
       blocklist?: boolean;
       /** @default false */
       skipRedownload?: boolean;
-      /** @default false */
-      changeCategory?: boolean;
     },
     params: RequestParams = {},
   ) =>
@@ -3372,11 +3145,6 @@ export class Api<SecurityDataType = unknown> {
       includeSeries?: boolean;
       /** @default false */
       includeEpisode?: boolean;
-      seriesIds?: number[];
-      protocol?: DownloadProtocol;
-      languages?: number[];
-      quality?: number[];
-      status?: QueueStatus[];
     },
     params: RequestParams = {},
   ) =>

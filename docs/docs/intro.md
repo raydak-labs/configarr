@@ -1,16 +1,22 @@
 ---
 sidebar_position: 1
-description: "Configarr - A powerful synchronization tool for Sonarr and Radarr that helps manage custom formats and quality profiles using TRaSH Guides and custom configurations"
-keywords: [configarr, sonarr, radarr, trash guides, custom formats, media management, automation, recyclarr, quality profiles]
+description: "Configarr - A powerful synchronization tool for Sonarr, Radarr and other *Arr tools that helps manage custom formats and quality profiles using TRaSH Guides and custom configurations"
+keywords: [configarr, sonarr, radarr, trash guides, custom formats, media management, automation, recyclarr, quality profiles, whisparr]
 ---
 
 # Introduction
 
-Welcome to Configarr - your all-in-one solution for managing Sonarr and Radarr configurations with seamless integration of TRaSH Guides and custom formats.
+Welcome to Configarr - your all-in-one solution for managing Sonarr and Radarr (and other \*Arr tools) configurations with seamless integration of TRaSH Guides and custom formats.
 
 ## What is Configarr?
 
 Configarr is a powerful configuration and synchronization tool designed specifically for Sonarr v4 and Radarr v5. It streamlines the process of managing custom formats and quality profiles by automatically synchronizing settings from TRaSH Guides while supporting additional customizations.
+
+### Experimental support
+
+Experimental support also available for:
+
+- Whisparr v3
 
 ### Key Features
 
@@ -26,7 +32,7 @@ Configarr is a powerful configuration and synchronization tool designed specific
 
 ### Why Choose Configarr?
 
-If you're managing a media server with Sonarr and Radarr, Configarr helps you:
+If you're managing a media server with Sonarr and Radarr (or other \*Arr tools), Configarr helps you:
 
 - Save time by automating configuration management
 - Maintain consistency across your media servers
@@ -38,6 +44,7 @@ If you're managing a media server with Sonarr and Radarr, Configarr helps you:
 
 - Sonarr v4
 - Radarr v5
+- check experimental support [here](./configuration/experimental-support)
 - Docker or Kubernetes
 
 ## Getting Started
@@ -45,6 +52,7 @@ If you're managing a media server with Sonarr and Radarr, Configarr helps you:
 Ready to streamline your media server configuration? Let's get started with the basic setup.
 
 [Continue to Installation →](./category/installation)
+[Check experimental support](./configuration/experimental-support)
 
 ### Related/Inspired Projects
 
