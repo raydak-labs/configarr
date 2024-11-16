@@ -1,0 +1,23 @@
+{
+  "npm": false,
+  "git": {
+    "commitMessage": "chore: release ${version}",
+    "requireCleanWorkingDir": false
+  },
+  "github": {
+    "release": true,
+    "comments": {
+      "submit": true
+    }
+  },
+  "plugins": {
+    "@release-it/conventional-changelog": {
+      "preset": "conventionalcommits",
+      "infile": "CHANGELOG.md",
+      "header": "# Changelog\n\nAll notable changes to this project will be documented in this file.\n"
+    }
+  },
+  "hooks": {
+    "after:release": "echo \"RELEASED_VERSION=${version}\" >> $GITHUB_ENV"
+  }
+}
