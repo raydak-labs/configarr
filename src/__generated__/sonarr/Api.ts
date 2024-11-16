@@ -64,6 +64,7 @@ import {
   QueueBulkResource,
   QueueResource,
   QueueResourcePagingResource,
+  QueueStatus,
   QueueStatusResource,
   ReleaseProfileResource,
   ReleaseResource,
@@ -3374,8 +3375,8 @@ export class Api<SecurityDataType = unknown> {
       seriesIds?: number[];
       protocol?: DownloadProtocol;
       languages?: number[];
-      /** @format int32 */
-      quality?: number;
+      quality?: number[];
+      status?: QueueStatus[];
     },
     params: RequestParams = {},
   ) =>
