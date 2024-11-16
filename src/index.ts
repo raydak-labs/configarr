@@ -2,7 +2,7 @@ import "dotenv/config";
 
 import fs from "node:fs";
 import { MergedCustomFormatResource } from "./__generated__/mergedTypes";
-import { configureRadarrApi, configureSonarrApi, getArrApi, unsetApi } from "./api";
+import { configureApi, configureRadarrApi, configureSonarrApi, getArrApi, unsetApi } from "./api";
 import { getConfig, validateConfig } from "./config";
 import { calculateCFsToManage, loadCFFromConfig, loadLocalCfs, loadServerCustomFormats, manageCf, mergeCfSources } from "./custom-formats";
 import { logHeading, logger } from "./logger";
@@ -321,6 +321,26 @@ const run = async () => {
       logger.info(`Processing Radarr Instance: ${instanceName}`);
       await configureRadarrApi(instance.base_url, instance.api_key);
       await pipeline(instance, "RADARR");
+      unsetApi();
+    }
+  }
+
+  const whisparrConfig = applicationConfig.whisparr;
+
+  if (
+    whisparrConfig == null ||
+    Array.isArray(whisparrConfig) ||
+    typeof whisparrConfig !== "object" ||
+    Object.keys(whisparrConfig).length <= 0
+  ) {
+    logHeading(`No Whisparr instances defined.`);
+  } else {
+    logHeading(`Processing Whisparr ...`);
+
+    for (const [instanceName, instance] of Object.entries(whisparrConfig)) {
+      logger.info(`Processing Whisparr Instance: ${instanceName}`);
+      await configureApi("WHISPARR", instance.base_url, instance.api_key);
+      await pipeline(instance, "WHISPARR");
       unsetApi();
     }
   }

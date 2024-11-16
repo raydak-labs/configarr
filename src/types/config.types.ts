@@ -11,6 +11,7 @@ export type InputConfigSchema = {
 
   sonarr?: Record<string, InputConfigArrInstance>;
   radarr?: Record<string, InputConfigArrInstance>;
+  whisparr?: Record<string, InputConfigArrInstance>;
 };
 
 export type InputConfigCustomFormat = {

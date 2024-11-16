@@ -29,8 +29,7 @@ You can find the full example at: [configarr/examples/full](https://github.com/r
    This will:
 
    - Create required networks
-   - Launch Sonarr instance
-   - Launch Radarr instance
+   - Launch \*Arr instances
    - Configure API keys using provided XML configs
 
 2. Run Configarr:
@@ -44,6 +43,7 @@ Once running, you can access the services at:
 
 - Sonarr: http://localhost:6500
 - Radarr: http://localhost:6501
+- other instances check `docker-compose.yml`
 
 ### Cleanup
 
