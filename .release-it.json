@@ -12,7 +12,23 @@
   },
   "plugins": {
     "@release-it/conventional-changelog": {
-      "preset": "conventionalcommits",
+      "preset": {
+        "name": "conventionalcommits",
+        "types": [
+          {
+            "type": "feat",
+            "section": "Features"
+          },
+          {
+            "type": "fix",
+            "section": "Bug Fixes"
+          },
+          {
+            "type": "refactor",
+            "section": "(internal) Refactorings"
+          }
+        ]
+      },
       "infile": "CHANGELOG.md",
       "header": "# Changelog\n\nAll notable changes to this project will be documented in this file.\n"
     }
