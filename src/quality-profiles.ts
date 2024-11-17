@@ -6,7 +6,7 @@ import {
   MergedQualityProfileQualityItemResource,
   MergedQualityProfileResource,
 } from "./__generated__/mergedTypes";
-import { getArrApi } from "./api";
+import { getUnifiedClient } from "./clients/unified-client";
 import { logger } from "./logger";
 import { CFProcessing } from "./types/common.types";
 import { ConfigQualityProfile, ConfigQualityProfileItem, MergedConfigInstance } from "./types/config.types";
@@ -72,9 +72,9 @@ export const loadQualityProfilesFromServer = async (): Promise<MergedQualityProf
   if (IS_LOCAL_SAMPLE_MODE) {
     return loadJsonFile(path.resolve(__dirname, `../tests/samples/quality_profiles.json`));
   }
-  const api = getArrApi();
+  const api = getUnifiedClient();
 
-  const qualityProfiles = await api.v3QualityprofileList();
+  const qualityProfiles = await api.getQualityProfiles();
   // TODO type hack
   return qualityProfiles as MergedQualityDefinitionResource[];
 };

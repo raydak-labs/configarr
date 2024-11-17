@@ -1,6 +1,6 @@
 import path from "node:path";
 import { MergedQualityDefinitionResource } from "./__generated__/mergedTypes";
-import { getArrApi } from "./api";
+import { getUnifiedClient } from "./clients/unified-client";
 import { logger } from "./logger";
 import { TrashQualityDefintion, TrashQualityDefintionQuality } from "./types/trashguide.types";
 import { IS_LOCAL_SAMPLE_MODE, loadJsonFile } from "./util";
@@ -9,7 +9,7 @@ export const loadQualityDefinitionFromServer = async (): Promise<MergedQualityDe
   if (IS_LOCAL_SAMPLE_MODE) {
     return loadJsonFile(path.resolve(__dirname, "../tests/samples/qualityDefinition.json"));
   }
-  return await getArrApi().v3QualitydefinitionList();
+  return await getUnifiedClient().getQualityDefinitions();
 };
 
 export const calculateQualityDefinitionDiff = (

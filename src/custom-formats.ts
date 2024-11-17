@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { MergedCustomFormatResource } from "./__generated__/mergedTypes";
-import { getArrApi } from "./api";
+import { getUnifiedClient } from "./clients/unified-client";
 import { getConfig } from "./config";
 import { logger } from "./logger";
 import { CFProcessing, ConfigarrCF } from "./types/common.types";
@@ -10,11 +10,11 @@ import { TrashCF } from "./types/trashguide.types";
 import { IS_DRY_RUN, IS_LOCAL_SAMPLE_MODE, compareCustomFormats, loadJsonFile, mapImportCfToRequestCf, toCarrCF } from "./util";
 
 export const deleteAllCustomFormats = async () => {
-  const api = getArrApi();
-  const cfOnServer = await api.v3CustomformatList();
+  const api = getUnifiedClient();
+  const cfOnServer = await api.getCustomFormats();
 
   for (const cf of cfOnServer) {
-    await api.v3CustomformatDelete(cf.id!);
+    await api.deleteCustomFormat(cf.id + "");
     logger.info(`Deleted CF: '${cf.name}'`);
   }
 };
@@ -23,8 +23,8 @@ export const loadServerCustomFormats = async (): Promise<MergedCustomFormatResou
   if (IS_LOCAL_SAMPLE_MODE) {
     return loadJsonFile<MergedCustomFormatResource[]>(path.resolve(__dirname, "../tests/samples/cfs.json"));
   }
-  const api = getArrApi();
-  const cfOnServer = await api.v3CustomformatList();
+  const api = getUnifiedClient();
+  const cfOnServer = await api.getCustomFormats();
   return cfOnServer;
 };
 
@@ -34,7 +34,7 @@ export const manageCf = async (
   cfsToManage: Set<string>,
 ) => {
   const { carrIdMapping: trashIdToObject } = cfProcessing;
-  const api = getArrApi();
+  const api = getUnifiedClient();
 
   let updatedCFs: MergedCustomFormatResource[] = [];
   let errorCFs: string[] = [];
@@ -45,7 +45,7 @@ export const manageCf = async (
     const tr = trashIdToObject.get(carrId);
 
     if (!tr) {
-      logger.info(`TrashID to manage ${carrId} does not exists`);
+      logger.warn(`TrashID to manage ${carrId} does not exists`);
       errorCFs.push(carrId);
       return;
     }
@@ -64,7 +64,7 @@ export const manageCf = async (
             logger.info(`DryRun: Would update CF: ${existingCf.id} - ${existingCf.name}`);
             updatedCFs.push(existingCf);
           } else {
-            const updatedCf = await api.v3CustomformatUpdate(existingCf.id + "", {
+            const updatedCf = await api.updateCustomFormat(existingCf.id + "", {
               id: existingCf.id,
               ...tr.requestConfig,
             });
@@ -85,7 +85,7 @@ export const manageCf = async (
         if (IS_DRY_RUN) {
           logger.info(`Would create CF: ${tr.requestConfig.name}`);
         } else {
-          const createResult = await api.v3CustomformatCreate(tr.requestConfig);
+          const createResult = await api.createCustomFormat(tr.requestConfig);
           logger.info(`Created CF ${tr.requestConfig.name}`);
           createCFs.push(createResult);
         }

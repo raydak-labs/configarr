@@ -2,7 +2,7 @@ import "dotenv/config";
 
 import fs from "node:fs";
 import { MergedCustomFormatResource } from "./__generated__/mergedTypes";
-import { configureApi, getArrApi, unsetApi } from "./api";
+import { configureApi, getUnifiedClient, unsetApi } from "./clients/unified-client";
 import { getConfig, validateConfig } from "./config";
 import { calculateCFsToManage, loadCFFromConfig, loadLocalCfs, loadServerCustomFormats, manageCf, mergeCfSources } from "./custom-formats";
 import { loadLocalRecyclarrTemplate } from "./local-importer";
@@ -185,7 +185,7 @@ const mergeConfigsAndTemplates = async (
 };
 
 const pipeline = async (value: InputConfigArrInstance, arrType: ArrType) => {
-  const api = getArrApi();
+  const api = getUnifiedClient();
 
   const { config, mergedCFs } = await mergeConfigsAndTemplates(value, arrType);
 
@@ -240,7 +240,7 @@ const pipeline = async (value: InputConfigArrInstance, arrType: ArrType) => {
         logger.info("DryRun: Would update QualityDefinitions.");
       } else {
         logger.info(`Diffs in quality definitions found`, changeMap.values());
-        await api.v3QualitydefinitionUpdateUpdate(restData as any); // TODO hack Ignore types
+        await api.updateQualityDefinitions(restData);
         // refresh QDs
         serverQD = await loadQualityDefinitionFromServer();
         logger.info(`Updated QualityDefinitions`);
@@ -269,7 +269,7 @@ const pipeline = async (value: InputConfigArrInstance, arrType: ArrType) => {
   if (!IS_DRY_RUN) {
     for (const element of create) {
       try {
-        const newProfile = await api.v3QualityprofileCreate(element as any); // Ignore types
+        const newProfile = await api.createQualityProfile(element);
         logger.info(`Created QualityProfile: ${newProfile.name}`);
       } catch (error: any) {
         logger.error(`Failed creating QualityProfile (${element.name})`);
@@ -279,7 +279,7 @@ const pipeline = async (value: InputConfigArrInstance, arrType: ArrType) => {
 
     for (const element of changedQPs) {
       try {
-        const newProfile = await api.v3QualityprofileUpdate("" + element.id, element as any); // Ignore types
+        const newProfile = await api.updateQualityProfile("" + element.id, element);
         logger.info(`Updated QualityProfile: ${newProfile.name}`);
       } catch (error: any) {
         logger.error(`Failed updating QualityProfile (${element.name})`);
