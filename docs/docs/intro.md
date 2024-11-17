@@ -14,9 +14,10 @@ Configarr is a powerful configuration and synchronization tool designed specific
 
 ### Experimental support
 
-Experimental support also available for:
+Experimental support also available for [(check experimental support)](./configuration/experimental-support):
 
 - Whisparr v3
+- Readarr v1
 
 ### Key Features
 
@@ -52,7 +53,6 @@ If you're managing a media server with Sonarr and Radarr (or other \*Arr tools),
 Ready to streamline your media server configuration? Let's get started with the basic setup.
 
 [Continue to Installation →](./category/installation)
-[Check experimental support](./configuration/experimental-support)
 
 ### Related/Inspired Projects
 

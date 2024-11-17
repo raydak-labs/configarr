@@ -1,5 +1,6 @@
 import { KyHttpClient } from "./__generated__/ky-client";
 import { Api as RadarrApi } from "./__generated__/radarr/Api";
+import { Api as ReadarrApi } from "./__generated__/readarr/Api";
 import { Api as SonarrApi } from "./__generated__/sonarr/Api";
 import { Api as WhisparrApi } from "./__generated__/whisparr/Api";
 import { logger } from "./logger";
@@ -8,15 +9,17 @@ import { ArrType } from "./types/common.types";
 let sonarrClient: SonarrApi<unknown> | undefined;
 let radarrClient: RadarrApi<unknown> | undefined;
 let whisparrClient: WhisparrApi<unknown> | undefined;
+let readarrClient: ReadarrApi<unknown> | undefined;
 
 export const unsetApi = () => {
   sonarrClient = undefined;
   radarrClient = undefined;
   whisparrClient = undefined;
+  readarrClient = undefined;
 };
 
-export const getArrApi = (): SonarrApi<unknown> | RadarrApi<unknown> | WhisparrApi<unknown> => {
-  const client = sonarrClient || radarrClient || whisparrClient;
+export const getArrApi = (): SonarrApi<unknown> | RadarrApi<unknown> | WhisparrApi<unknown> | ReadarrApi<unknown> => {
+  const client = sonarrClient || radarrClient || whisparrClient || readarrClient;
 
   if (client) {
     return client;
@@ -62,15 +65,15 @@ const handleErrorApi = (error: any, arrType: ArrType) => {
   throw new Error(message);
 };
 
-export const configureApi = async (type: ArrType, url: string, apiKey: string) => {
+export const configureApi = async (type: ArrType, baseUrl: string, apiKey: string) => {
   unsetApi();
-  validateParams(url, apiKey, type);
+  validateParams(baseUrl, apiKey, type);
 
   const httpClient = new KyHttpClient({
     headers: {
       "X-Api-Key": apiKey,
     },
-    prefixUrl: url,
+    prefixUrl: baseUrl,
   });
 
   let api;
@@ -87,6 +90,10 @@ export const configureApi = async (type: ArrType, url: string, apiKey: string) =
     case "WHISPARR":
       api = new WhisparrApi(httpClient);
       whisparrClient = api;
+      break;
+    case "READARR":
+      api = new ReadarrApi(httpClient);
+      readarrClient = api;
       break;
     default:
       throw new Error(`Invalid API type: ${type}`);

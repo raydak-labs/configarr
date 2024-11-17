@@ -29,6 +29,7 @@ services:
       - 6501:7878
     restart: unless-stopped
 
+  # experimental
   whisparr:
     image: ghcr.io/hotio/whisparr:v3-3.0.0.695
     networks:
@@ -45,6 +46,22 @@ services:
       - ${PWD}/whisparr.xml:/config/config.xml:rw
     restart: unless-stopped
 
+  # experimental
+  readarr:
+    image: lscr.io/linuxserver/readarr:develop-0.4.3.2665-ls130
+    networks:
+      - configarr-full
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+    volumes:
+      - readarr:/config
+      - ${PWD}/readarr.xml:/config/config.xml:rw
+    ports:
+      - 6503:8787
+    restart: unless-stopped
+
 networks:
   configarr-full:
     name: configarr-full
@@ -53,3 +70,4 @@ volumes:
   sonarr:
   radarr:
   whisparr:
+  readarr:

@@ -352,6 +352,26 @@ const run = async () => {
       unsetApi();
     }
   }
+
+  const readarrConfig = applicationConfig.readarr;
+
+  if (
+    readarrConfig == null ||
+    Array.isArray(readarrConfig) ||
+    typeof readarrConfig !== "object" ||
+    Object.keys(readarrConfig).length <= 0
+  ) {
+    logHeading(`No Readarr instances defined.`);
+  } else {
+    logHeading(`Processing Readarr ...`);
+
+    for (const [instanceName, instance] of Object.entries(readarrConfig)) {
+      logger.info(`Processing Readarr Instance: ${instanceName}`);
+      await configureApi("READARR", instance.base_url, instance.api_key);
+      await pipeline(instance, "READARR");
+      unsetApi();
+    }
+  }
 };
 
 run();

@@ -30,6 +30,13 @@ Other projects:
   - Provide CFs directly in config (Convert JSON with https://www.bairesdev.com/tools/json2yaml/)
   - Merge order is `TrashGuide -> LocalFiles -> CFs in Config`
 
+### Supported \*arr Applications
+
+- Radarr
+- Sonarr
+- Whisparr (experimental)
+- Readarr (experimental)
+
 ## Configuration
 
 Full documentation can be found here: https://configarr.raydak.de
