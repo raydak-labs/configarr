@@ -17,6 +17,18 @@ customFormatDefinitions:
         required: false
         fields:
           value: 4
+  - trash_id: example-release-title-cf
+    trash_scores:
+      default: 0
+    name: ExampleReleaseTitleCF
+    includeCustomFormatWhenRenaming: false
+    specifications:
+      - name: Preferred Words
+        implementation: ReleaseTitleSpecification
+        negate: false
+        required: false
+        fields:
+          value: "\\b(SPARKS|Framestor)\\b"
 
 sonarr:
   instance1:
@@ -96,6 +108,34 @@ whisparr:
     custom_formats: # Custom format assignments
       - trash_ids:
           - example-in-config-cf
+        assign_scores_to:
+          - name: ExampleProfile
+            score: 1000
+
+    quality_profiles:
+      # TODO: language not correctly mapped
+      - name: ExampleProfile
+        upgrade:
+          until_score: 200
+          # Not supported in whisparr
+          #min_format_score: 200
+
+readarr:
+  instance1: # Instance name (can be any unique identifier)
+    base_url: http://readarr:8787 # instance URL
+    api_key: !secret READARR_API_KEY # Reference to API key in secrets.yml
+
+    # not supported
+    # quality_definition:
+    #   type: movies # Quality definition type
+
+    include:
+      # only custom defined templates available
+      - template: readarr
+
+    custom_formats: # Custom format assignments
+      - trash_ids:
+          - example-release-title-cf
         assign_scores_to:
           - name: ExampleProfile
             score: 1000

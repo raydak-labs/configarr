@@ -6,6 +6,7 @@ const PATH_TO_OUTPUT_DIR = path.resolve(process.cwd(), "./src/__generated__");
 const PATH_SONARR_DIR = path.resolve(PATH_TO_OUTPUT_DIR, "sonarr");
 const PATH_RADARR_DIR = path.resolve(PATH_TO_OUTPUT_DIR, "radarr");
 const PATH_WHISPARR_DIR = path.resolve(PATH_TO_OUTPUT_DIR, "whisparr");
+const PATH_READARR_DIR = path.resolve(PATH_TO_OUTPUT_DIR, "readarr");
 
 const main = async () => {
   await generateApi({
@@ -41,9 +42,21 @@ const main = async () => {
     },
   });
 
+  await generateApi({
+    output: PATH_READARR_DIR,
+    url: "https://raw.githubusercontent.com/Readarr/Readarr/develop/src/Readarr.Api.V1/openapi.json",
+    modular: true,
+    singleHttpClient: true,
+    // @ts-ignore little hack to have one single client (we are deleting the weird created file for the http-client)
+    fileNames: {
+      httpClient: "../ky-client",
+    },
+  });
+
   unlinkSync(path.resolve(PATH_SONARR_DIR, "..ts"));
   unlinkSync(path.resolve(PATH_RADARR_DIR, "..ts"));
   unlinkSync(path.resolve(PATH_WHISPARR_DIR, "..ts"));
+  unlinkSync(path.resolve(PATH_READARR_DIR, "..ts"));
 };
 
 main();

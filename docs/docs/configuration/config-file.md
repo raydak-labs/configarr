@@ -162,32 +162,10 @@ radarr:
           min_format_score: 200
 
 # experimental support: check https://configarr.rayak.de/docs/configuration/experimental-support
-whisparr:
-  instance1: # Instance name (can be any unique identifier)
-    base_url: http://whisparr:6969 # instance URL
-    api_key: !secret WHISPARR_API_KEY # Reference to API key in secrets.yml
+whisparr: {}
 
-    quality_definition:
-      type: movies # TODO: not checked yet
-
-    include:
-      # only custom defined templates available
-      - template: whisparr
-
-    custom_formats: # Custom format assignments
-      - trash_ids:
-          - example-in-config-cf
-        assign_scores_to:
-          - name: ExampleProfile
-            score: 1000
-
-    quality_profiles:
-      # TODO: language not correctly mapped
-      - name: ExampleProfile
-        upgrade:
-          until_score: 200
-          # Not supported in whisparr
-          #min_format_score: 200
+# experimental support: check https://configarr.rayak.de/docs/configuration/experimental-support
+readarr: {}
 ```
 
 ### secrets.yml

@@ -1,0 +1,13 @@
+quality_profiles:
+  - name: ExampleProfile
+    reset_unmatched_scores:
+      enabled: true
+    upgrade:
+      allowed: true
+      until_quality: MOBI
+      until_score: 1000
+    min_format_score: 5
+    quality_sort: top
+    qualities:
+      - name: EPUB
+      - name: MOBI

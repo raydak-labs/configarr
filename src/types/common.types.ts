@@ -66,7 +66,7 @@ export type MappedTemplates = Partial<
 
 export type MappedMergedTemplates = MappedTemplates & Required<Pick<MappedTemplates, "custom_formats" | "quality_profiles">>;
 
-export type ArrType = "SONARR" | "RADARR" | "WHISPARR"; // anime and series exists in trash guide
+export type ArrType = "RADARR" | "SONARR" | "WHISPARR" | "READARR";
 
 export type QualityDefintionsSonarr = "anime" | "series" | "custom";
 export type QualityDefintionsRadarr = "movie" | "custom";
