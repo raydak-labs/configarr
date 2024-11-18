@@ -4,7 +4,7 @@ import fs from "node:fs";
 import { MergedCustomFormatResource } from "./__generated__/mergedTypes";
 import { configureApi, getUnifiedClient, unsetApi } from "./clients/unified-client";
 import { getConfig, validateConfig } from "./config";
-import { calculateCFsToManage, loadCFFromConfig, loadLocalCfs, loadServerCustomFormats, manageCf, mergeCfSources } from "./custom-formats";
+import { calculateCFsToManage, loadCustomFormatDefinitions, loadServerCustomFormats, manageCf } from "./custom-formats";
 import { loadLocalRecyclarrTemplate } from "./local-importer";
 import { logHeading, logger } from "./logger";
 import { calculateQualityDefinitionDiff, loadQualityDefinitionFromServer } from "./quality-definitions";
@@ -14,12 +14,17 @@ import {
   cloneTrashRepo,
   loadQPFromTrash,
   loadQualityDefinitionFromTrash,
-  loadSonarrTrashCFs,
   transformTrashQPCFs,
   transformTrashQPToTemplate,
 } from "./trash-guide";
 import { ArrType, CFProcessing, MappedMergedTemplates } from "./types/common.types";
-import { ConfigQualityProfile, InputConfigArrInstance, InputConfigIncludeItem, MergedConfigInstance } from "./types/config.types";
+import {
+  ConfigQualityProfile,
+  CustomFormatDefinitions,
+  InputConfigArrInstance,
+  InputConfigIncludeItem,
+  MergedConfigInstance,
+} from "./types/config.types";
 import { TrashQualityDefintion } from "./types/trashguide.types";
 import { DEBUG_CREATE_FILES, IS_DRY_RUN } from "./util";
 
@@ -147,11 +152,20 @@ const mergeConfigsAndTemplates = async (
 
   recylarrMergedTemplates.quality_profiles = filterInvalidQualityProfiles(recylarrMergedTemplates.quality_profiles);
 
-  const trashCFs = await loadSonarrTrashCFs(arrType);
+  /* 
+  TODO: do we want to load all available local templates or only the included ones in the instance?
+  Example: we have a local template folder which we can always traverse. So we could load every CF defined there.
+  But then we could also have in theory conflicted CF IDs if user want to define same CF in different templates.
+  How to handle overwrite? Maybe also support overriding CFs defined in Trash or something?
+  */
+  const localTemplateCFDs = Array.from(localTemplateMap.values()).reduce((p, c) => {
+    if (c.customFormatDefinitions) {
+      p.push(...c.customFormatDefinitions);
+    }
+    return p;
+  }, [] as CustomFormatDefinitions);
 
-  const localFileCFs = await loadLocalCfs();
-  const configCFDefinition = loadCFFromConfig();
-  const mergedCFs = mergeCfSources([trashCFs, localFileCFs, configCFDefinition]);
+  const mergedCFs = await loadCustomFormatDefinitions(arrType, localTemplateCFDs);
 
   // merge profiles from recyclarr templates into one
   const qualityProfilesMerged = recylarrMergedTemplates.quality_profiles.reduce((p, c) => {

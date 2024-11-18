@@ -1,4 +1,7 @@
-import { TrashScores } from "./trashguide.types";
+import { ConfigarrCFMeta } from "./common.types";
+import { TrashCFMeta, TrashScores } from "./trashguide.types";
+
+export type CustomFormatDefinitions = (TrashCFMeta | ConfigarrCFMeta)[];
 
 export type InputConfigSchema = {
   trashGuideUrl?: string;
@@ -7,7 +10,7 @@ export type InputConfigSchema = {
   recyclarrRevision?: string;
   localCustomFormatsPath?: string;
   localConfigTemplatesPath?: string;
-  customFormatDefinitions?: [];
+  customFormatDefinitions?: CustomFormatDefinitions;
 
   sonarr?: Record<string, InputConfigArrInstance>;
   radarr?: Record<string, InputConfigArrInstance>;
@@ -35,7 +38,7 @@ export type InputConfigArrInstance = {
   custom_formats?: InputConfigCustomFormat[];
   // TODO this is not correct. The profile can be added partly -> InputConfigQualityProfile
   quality_profiles: ConfigQualityProfile[];
-};
+} & Pick<InputConfigSchema, "customFormatDefinitions">;
 
 export type InputConfigQualityProfile = {
   name: string;

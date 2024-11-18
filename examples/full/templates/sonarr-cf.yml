@@ -15,3 +15,18 @@ custom_formats:
     quality_profiles:
       - name: ExampleProfile
         score: -10000
+
+customFormatDefinitions:
+  - trash_id: sonarr-cf
+    trash_scores:
+      default: -10000
+    trash_description: "Language: German Only 2"
+    name: "Language: Not German 2"
+    includeCustomFormatWhenRenaming: false
+    specifications:
+      - name: Not German Language
+        implementation: LanguageSpecification
+        negate: true
+        required: false
+        fields:
+          value: 4

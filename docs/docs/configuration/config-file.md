@@ -32,22 +32,42 @@ Configarr supports two types of templates:
    - Can be overridden using `trashGuideUrl` in config.yml
    - See [Trash Radarr](https://github.com/TRaSH-Guides/Guides/tree/master/docs/json/radarr/quality-profiles) and [Trash Sonarr](https://github.com/TRaSH-Guides/Guides/tree/master/docs/json/sonarr/quality-profiles) for more information
 
-## Custom Formats
+## Custom Formats Definitions
 
 Custom formats can be defined in two ways:
 
 1. **Direct in config.yml**: Define custom formats directly in your configuration file
 2. **Separate files**: Store custom formats in separate files in the `localCustomFormatsPath` directory
+3. **Local templates**: Store custom formats in local templates folder which can be included per instance (at the moment only for local templates and not recyclarr git templates)
 
 Example custom format definition:
 
 ```yaml title="config.yml"
-# ...
+# Directly in the main config.yml
 customFormatDefinitions:
   - trash_id: custom-de-only # Unique identifier
     trash_scores:
       default: -10000 # Default score for this format
     trash_description: "Language: German Only"
+    name: "Language: Not German"
+    includeCustomFormatWhenRenaming: false
+    specifications:
+      - name: Not German Language
+        implementation: LanguageSpecification
+        negate: true
+        required: false
+        fields:
+          value: 4
+# ...
+```
+
+```yaml title="local-templates/template1.yml"
+# or in templates which can be included per instance
+customFormatDefinitions:
+  - trash_id: custom-de-only2 # Unique identifier
+    trash_scores:
+      default: -10000 # Default score for this format
+    trash_description: "Language: German Only 2"
     name: "Language: Not German"
     includeCustomFormatWhenRenaming: false
     specifications:
