@@ -1,4 +1,4 @@
-import { MergedCustomFormatResource } from "../__generated__/mergedTypes";
+import { MergedCustomFormatResource, MergedQualityDefinitionResource, MergedQualityProfileResource } from "../__generated__/mergedTypes";
 import { logger } from "../logger";
 import { ArrType } from "../types/common.types";
 import { RadarrClient } from "./radarr-client";
@@ -70,26 +70,48 @@ export const configureApi = async (type: ArrType, baseUrl: string, apiKey: strin
   return unifiedClient;
 };
 
-export interface IArrClient {
+export type ArrClientCustomFormat = {
+  id?: number;
+};
+
+export type ArrClientQualityDefinition = {
+  id?: number;
+};
+
+export type ArrClientQualityProfile = {
+  id?: number;
+  name?: string | null;
+  // Add other common properties that all quality profiles share
+};
+
+export type ArrClientLanguageResource = {
+  id?: number;
+  name?: string | null;
+  nameLower?: string | null;
+};
+
+export interface IArrClient<
+  QP extends ArrClientQualityProfile = MergedQualityProfileResource,
+  QD extends ArrClientQualityDefinition = MergedQualityDefinitionResource,
+  CF extends ArrClientCustomFormat = MergedCustomFormatResource,
+  L extends ArrClientLanguageResource = ArrClientLanguageResource,
+> {
   // Quality Management
-  getQualityDefinitions(): Promise<any>;
-  updateQualityDefinitions(definitions: any): Promise<any>;
+  getQualityDefinitions(): Promise<QD[]>;
+  updateQualityDefinitions(definitions: QD[]): Promise<QD[]>;
 
   // Quality Profiles
-  getQualityProfiles(): Promise<any>;
-  createQualityProfile(profile: any): Promise<any>;
-  updateQualityProfile(id: string, profile: any): Promise<any>;
+  getQualityProfiles(): Promise<QP[]>;
+  createQualityProfile(profile: QP): Promise<QP>;
+  updateQualityProfile(id: string, profile: QP): Promise<QP>;
 
   // Custom Formats
-  getCustomFormats(): Promise<MergedCustomFormatResource[]>;
-  createCustomFormat(format: MergedCustomFormatResource): Promise<MergedCustomFormatResource>;
-  updateCustomFormat(id: string, format: MergedCustomFormatResource): Promise<MergedCustomFormatResource>;
+  getCustomFormats(): Promise<CF[]>;
+  createCustomFormat(format: CF): Promise<CF>;
+  updateCustomFormat(id: string, format: CF): Promise<CF>;
   deleteCustomFormat(id: string): Promise<void>;
 
-  // Metadata Profiles (Readarr-specific)
-  getMetadataProfiles(): Promise<any>;
-  createMetadataProfile(profile: any): Promise<any>;
-  updateMetadataProfile(id: number, profile: any): Promise<any>;
+  getLanguages(): Promise<L[]>;
 
   // System/Health Check
   getSystemStatus(): Promise<any>;
@@ -121,15 +143,23 @@ export class UnifiedClient implements IArrClient {
     }
   }
 
+  getSpecificClient<T extends IArrClient>(): T {
+    return this.api as T;
+  }
+
+  async getLanguages() {
+    return this.api.getLanguages();
+  }
+
   async getQualityDefinitions() {
     return await this.api.getQualityDefinitions();
   }
 
-  async updateQualityDefinitions(definitions: any) {
+  async updateQualityDefinitions(definitions: MergedQualityDefinitionResource[]) {
     return await this.api.updateQualityDefinitions(definitions);
   }
 
-  async createQualityProfile(profile: any) {
+  async createQualityProfile(profile: MergedQualityProfileResource) {
     return await this.api.createQualityProfile(profile);
   }
 
@@ -137,21 +167,8 @@ export class UnifiedClient implements IArrClient {
     return await this.api.getQualityProfiles();
   }
 
-  async updateQualityProfile(id: string, profile: any) {
+  async updateQualityProfile(id: string, profile: MergedQualityProfileResource) {
     return await this.api.updateQualityProfile(id, profile);
-  }
-
-  // Readarr-specific methods
-  async createMetadataProfile(profile: any) {
-    return await this.api.createMetadataProfile(profile);
-  }
-
-  async getMetadataProfiles() {
-    return await this.api.getMetadataProfiles();
-  }
-
-  async updateMetadataProfile(id: number, profile: any) {
-    return await this.api.updateMetadataProfile(id, profile);
   }
 
   async getCustomFormats() {

@@ -1,10 +1,21 @@
 import { KyHttpClient } from "../__generated__/ky-client";
-import { MergedCustomFormatResource } from "../__generated__/mergedTypes";
 import { Api } from "../__generated__/sonarr/Api";
+import {
+  CustomFormatResource,
+  LanguageResource,
+  QualityDefinitionResource,
+  QualityProfileResource,
+} from "../__generated__/sonarr/data-contracts";
 import { logger } from "../logger";
 import { IArrClient, validateClientParams } from "./unified-client";
 
-export class SonarrClient implements IArrClient {
+export type SonarrQualityProfileResource = {
+  id?: number;
+  name?: string;
+  // Add other common properties that all quality profiles share
+};
+
+export class SonarrClient implements IArrClient<QualityProfileResource, QualityDefinitionResource, CustomFormatResource, LanguageResource> {
   private api!: Api<unknown>;
 
   constructor(baseUrl: string, apiKey: string) {
@@ -24,13 +35,18 @@ export class SonarrClient implements IArrClient {
     this.api = new Api(httpClient);
   }
 
+  async getLanguages() {
+    return this.api.v3LanguageList();
+  }
+
   // Quality Management
   getQualityDefinitions() {
     return this.api.v3QualitydefinitionList();
   }
 
-  updateQualityDefinitions(definitions: any) {
-    return this.api.v3QualitydefinitionUpdateUpdate(definitions);
+  async updateQualityDefinitions(definitions: QualityDefinitionResource[]) {
+    this.api.v3QualitydefinitionUpdateUpdate(definitions);
+    return this.api.v3QualitydefinitionList();
   }
 
   // Quality Profiles
@@ -38,11 +54,11 @@ export class SonarrClient implements IArrClient {
     return this.api.v3QualityprofileList();
   }
 
-  createQualityProfile(profile: any) {
+  createQualityProfile(profile: SonarrQualityProfileResource) {
     return this.api.v3QualityprofileCreate(profile);
   }
 
-  updateQualityProfile(id: string, profile: any) {
+  updateQualityProfile(id: string, profile: SonarrQualityProfileResource) {
     return this.api.v3QualityprofileUpdate(id, profile);
   }
 
@@ -51,29 +67,16 @@ export class SonarrClient implements IArrClient {
     return this.api.v3CustomformatList();
   }
 
-  createCustomFormat(format: MergedCustomFormatResource) {
+  createCustomFormat(format: CustomFormatResource) {
     return this.api.v3CustomformatCreate(format);
   }
 
-  updateCustomFormat(id: string, format: MergedCustomFormatResource) {
+  updateCustomFormat(id: string, format: CustomFormatResource) {
     return this.api.v3CustomformatUpdate(id, format);
   }
 
   deleteCustomFormat(id: string) {
     return this.api.v3CustomformatDelete(+id);
-  }
-
-  // Metadata Profiles
-  async getMetadataProfiles() {
-    throw new Error("Metadata profiles are not supported in Sonarr");
-  }
-
-  async createMetadataProfile(profile: any) {
-    throw new Error("Metadata profiles are not supported in Sonarr");
-  }
-
-  async updateMetadataProfile(id: number, profile: any) {
-    throw new Error("Metadata profiles are not supported in Sonarr");
   }
 
   // System/Health Check

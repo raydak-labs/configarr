@@ -1,11 +1,29 @@
 import { KyHttpClient } from "../__generated__/ky-client";
-import { MergedCustomFormatResource } from "../__generated__/mergedTypes";
 import { Api } from "../__generated__/whisparr/Api";
+import {
+  CustomFormatResource,
+  LanguageResource,
+  QualityDefinitionResource,
+  QualityProfileResource,
+} from "../__generated__/whisparr/data-contracts";
 import { logger } from "../logger";
+import { cloneWithJSON } from "../util";
 import { IArrClient, validateClientParams } from "./unified-client";
 
-export class WhisparrClient implements IArrClient {
+/**
+ * Overwrite wrong types for now
+ */
+declare module "../__generated__/whisparr/data-contracts" {
+  export interface QualityProfileResource {
+    language?: Language;
+  }
+}
+
+export class WhisparrClient
+  implements IArrClient<QualityProfileResource, QualityDefinitionResource, CustomFormatResource, LanguageResource>
+{
   private api!: Api<unknown>;
+  private languageMap: Map<string, LanguageResource> = new Map();
 
   constructor(baseUrl: string, apiKey: string) {
     this.initialize(baseUrl, apiKey);
@@ -24,13 +42,18 @@ export class WhisparrClient implements IArrClient {
     this.api = new Api(httpClient);
   }
 
+  async getLanguages() {
+    return this.api.v3LanguageList();
+  }
+
   // Quality Management
   getQualityDefinitions() {
     return this.api.v3QualitydefinitionList();
   }
 
-  updateQualityDefinitions(definitions: any) {
-    return this.api.v3QualitydefinitionUpdateUpdate(definitions);
+  async updateQualityDefinitions(definitions: QualityDefinitionResource[]) {
+    await this.api.v3QualitydefinitionUpdateUpdate(definitions);
+    return this.api.v3QualitydefinitionList();
   }
 
   // Quality Profiles
@@ -38,11 +61,22 @@ export class WhisparrClient implements IArrClient {
     return this.api.v3QualityprofileList();
   }
 
-  createQualityProfile(profile: any) {
-    return this.api.v3QualityprofileCreate(profile);
+  async createQualityProfile(profile: QualityProfileResource): Promise<QualityProfileResource> {
+    const cloned = cloneWithJSON(profile);
+
+    if (this.languageMap.size <= 0) {
+      const languages = await this.getLanguages();
+      this.languageMap = new Map(languages.map((i) => [i.name!, i]));
+    }
+
+    if (profile.language == null) {
+      cloned.language = this.languageMap.get("Any");
+    }
+
+    return this.api.v3QualityprofileCreate(cloned);
   }
 
-  updateQualityProfile(id: string, profile: any) {
+  updateQualityProfile(id: string, profile: QualityProfileResource) {
     return this.api.v3QualityprofileUpdate(id, profile);
   }
 
@@ -51,29 +85,16 @@ export class WhisparrClient implements IArrClient {
     return this.api.v3CustomformatList();
   }
 
-  createCustomFormat(format: MergedCustomFormatResource) {
+  createCustomFormat(format: CustomFormatResource) {
     return this.api.v3CustomformatCreate(format);
   }
 
-  updateCustomFormat(id: string, format: MergedCustomFormatResource) {
+  updateCustomFormat(id: string, format: CustomFormatResource) {
     return this.api.v3CustomformatUpdate(id, format);
   }
 
   deleteCustomFormat(id: string) {
     return this.api.v3CustomformatDelete(+id);
-  }
-
-  // Metadata Profiles
-  async getMetadataProfiles() {
-    throw new Error("Metadata profiles are not supported in Whisparr");
-  }
-
-  async createMetadataProfile(profile: any) {
-    throw new Error("Metadata profiles are not supported in Whisparr");
-  }
-
-  async updateMetadataProfile(id: number, profile: any) {
-    throw new Error("Metadata profiles are not supported in Whisparr");
   }
 
   // System/Health Check
