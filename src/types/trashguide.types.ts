@@ -12,6 +12,7 @@ export type TrashQualityDefintion = {
   type: string;
   qualities: TrashQualityDefintionQuality[];
 };
+
 export type TrashScores = {
   default?: number;
   "anime-sonarr"?: number;
@@ -25,12 +26,15 @@ export type TrashScores = {
   "french-vostfr"?: number;
 };
 
-export type TrashCF = {
+export type TrashCFMeta = {
   trash_id: string;
   trash_scores?: TrashScores;
   trash_regex?: string;
   trash_description?: string;
-} & ImportCF;
+};
+
+export type TrashCF = TrashCFMeta & ImportCF;
+
 type TrashQPItem = {
   name: string;
   allowed: boolean;

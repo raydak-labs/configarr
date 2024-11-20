@@ -4,8 +4,9 @@ import { MergedCustomFormatResource } from "./__generated__/mergedTypes";
 import { getUnifiedClient } from "./clients/unified-client";
 import { getConfig } from "./config";
 import { logger } from "./logger";
-import { CFProcessing, ConfigarrCF } from "./types/common.types";
-import { ConfigCustomFormatList } from "./types/config.types";
+import { loadTrashCFs } from "./trash-guide";
+import { ArrType, CFProcessing, ConfigarrCF } from "./types/common.types";
+import { ConfigCustomFormatList, CustomFormatDefinitions } from "./types/config.types";
 import { TrashCF } from "./types/trashguide.types";
 import { IS_DRY_RUN, IS_LOCAL_SAMPLE_MODE, compareCustomFormats, loadJsonFile, mapImportCfToRequestCf, toCarrCF } from "./util";
 
@@ -155,18 +156,25 @@ export const loadLocalCfs = async (): Promise<CFProcessing | null> => {
 };
 
 export const loadCFFromConfig = (): CFProcessing | null => {
-  // TODO typings
   const defs = getConfig().customFormatDefinitions;
 
   if (defs == null) {
-    logger.debug(`No CustomFormat definitions defined.`);
+    logger.debug(`No local config CustomFormat definitions defined.`);
+    return null;
+  }
+
+  return mapCustomFormatDefinitions(defs);
+};
+
+export const mapCustomFormatDefinitions = (customFormatDefinitions: CustomFormatDefinitions): CFProcessing | null => {
+  if (customFormatDefinitions == null) {
     return null;
   }
 
   const carrIdToObject = new Map<string, { carrConfig: ConfigarrCF; requestConfig: MergedCustomFormatResource }>();
   const cfNameToCarrObject = new Map<string, ConfigarrCF>();
 
-  for (const def of defs) {
+  for (const def of customFormatDefinitions) {
     const cfD = toCarrCF(def);
 
     carrIdToObject.set(cfD.configarr_id, {
@@ -183,6 +191,18 @@ export const loadCFFromConfig = (): CFProcessing | null => {
     carrIdMapping: carrIdToObject,
     cfNameToCarrConfig: cfNameToCarrObject,
   };
+};
+
+export const loadCustomFormatDefinitions = async (arrType: ArrType, additionalCFDs: CustomFormatDefinitions) => {
+  const trashCFs = await loadTrashCFs(arrType);
+  const localFileCFs = await loadLocalCfs();
+  const configCFDs = loadCFFromConfig();
+
+  logger.debug(
+    `Loaded ${trashCFs.carrIdMapping.size} TrashCFs, ${localFileCFs?.carrIdMapping.size} LocalCFs, ${configCFDs?.carrIdMapping.size} ConfigCFs, ${additionalCFDs.length} AdditionalCFs`,
+  );
+
+  return mergeCfSources([trashCFs, localFileCFs, configCFDs, mapCustomFormatDefinitions(additionalCFDs)]);
 };
 
 export const calculateCFsToManage = (yaml: ConfigCustomFormatList) => {

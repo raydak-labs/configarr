@@ -22,7 +22,16 @@ export const cloneTrashRepo = async () => {
   logger.info(`TrashGuide repo: ref[${cloneResult.ref}], hash[${cloneResult.hash}], path[${cloneResult.localPath}]`);
 };
 
-export const loadSonarrTrashCFs = async (arrType: ArrType): Promise<CFProcessing> => {
+export const loadTrashCFs = async (arrType: ArrType): Promise<CFProcessing> => {
+  if (arrType !== "RADARR" && arrType !== "SONARR") {
+    logger.debug(`Unsupported arrType: ${arrType}. Skipping TrashCFs.`);
+
+    return {
+      carrIdMapping: new Map(),
+      cfNameToCarrConfig: new Map(),
+    };
+  }
+
   const trashRepoPath = "./repos/trash-guides";
   const trashJsonDir = "docs/json";
   const trashRadarrPath = `${trashJsonDir}/radarr`;
@@ -61,7 +70,7 @@ export const loadSonarrTrashCFs = async (arrType: ArrType): Promise<CFProcessing
     }
   }
 
-  logger.info(`Trash CFs: ${carrIdToObject.size}`);
+  logger.debug(`Trash CFs: ${carrIdToObject.size}`);
 
   return {
     carrIdMapping: carrIdToObject,

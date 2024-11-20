@@ -44,10 +44,12 @@ export type ImportCF = OmitTyped<MergedCustomFormatResource, "specifications"> &
   specifications?: TCM[] | null;
 };
 
-export type ConfigarrCF = {
+export type ConfigarrCFMeta = {
   configarr_id: string;
   configarr_scores?: TrashCF["trash_scores"];
-} & ImportCF;
+};
+
+export type ConfigarrCF = ConfigarrCFMeta & ImportCF;
 
 export type CFProcessing = {
   carrIdMapping: Map<
@@ -61,7 +63,7 @@ export type CFProcessing = {
 };
 
 export type MappedTemplates = Partial<
-  Pick<InputConfigArrInstance, "quality_definition" | "custom_formats" | "include" | "quality_profiles">
+  Pick<InputConfigArrInstance, "quality_definition" | "custom_formats" | "include" | "quality_profiles" | "customFormatDefinitions">
 >;
 
 export type MappedMergedTemplates = MappedTemplates & Required<Pick<MappedTemplates, "custom_formats" | "quality_profiles">>;
