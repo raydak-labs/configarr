@@ -1,10 +1,15 @@
 import { KyHttpClient } from "../__generated__/ky-client";
-import { MergedCustomFormatResource } from "../__generated__/mergedTypes";
 import { Api } from "../__generated__/readarr/Api";
+import {
+  CustomFormatResource,
+  MetadataProfileResource,
+  QualityDefinitionResource,
+  QualityProfileResource,
+} from "../__generated__/readarr/data-contracts";
 import { logger } from "../logger";
 import { IArrClient, validateClientParams } from "./unified-client";
 
-export class ReadarrClient implements IArrClient {
+export class ReadarrClient implements IArrClient<QualityProfileResource, QualityDefinitionResource, CustomFormatResource> {
   private api!: Api<unknown>;
 
   constructor(baseUrl: string, apiKey: string) {
@@ -29,8 +34,9 @@ export class ReadarrClient implements IArrClient {
     return this.api.v1QualitydefinitionList();
   }
 
-  updateQualityDefinitions(definitions: any) {
-    return this.api.v1QualitydefinitionUpdateUpdate(definitions);
+  async updateQualityDefinitions(definitions: QualityDefinitionResource[]) {
+    await this.api.v1QualitydefinitionUpdateUpdate(definitions);
+    return this.api.v1QualitydefinitionList();
   }
 
   // Quality Profiles
@@ -38,11 +44,11 @@ export class ReadarrClient implements IArrClient {
     return this.api.v1QualityprofileList();
   }
 
-  createQualityProfile(profile: any) {
+  createQualityProfile(profile: QualityProfileResource) {
     return this.api.v1QualityprofileCreate(profile);
   }
 
-  updateQualityProfile(id: string, profile: any) {
+  updateQualityProfile(id: string, profile: QualityProfileResource) {
     return this.api.v1QualityprofileUpdate(id, profile);
   }
 
@@ -51,11 +57,11 @@ export class ReadarrClient implements IArrClient {
     return this.api.v1CustomformatList();
   }
 
-  createCustomFormat(format: MergedCustomFormatResource) {
+  createCustomFormat(format: CustomFormatResource) {
     return this.api.v1CustomformatCreate(format);
   }
 
-  updateCustomFormat(id: string, format: MergedCustomFormatResource) {
+  updateCustomFormat(id: string, format: CustomFormatResource) {
     return this.api.v1CustomformatUpdate(id, format);
   }
 
@@ -68,11 +74,11 @@ export class ReadarrClient implements IArrClient {
     return this.api.v1MetadataprofileList();
   }
 
-  async createMetadataProfile(profile: any) {
+  async createMetadataProfile(profile: MetadataProfileResource) {
     return this.api.v1MetadataprofileCreate(profile);
   }
 
-  async updateMetadataProfile(id: number, profile: any) {
+  async updateMetadataProfile(id: number, profile: MetadataProfileResource) {
     return this.api.v1MetadataprofileUpdate(id.toString(), profile);
   }
 

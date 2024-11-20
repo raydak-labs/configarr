@@ -1,10 +1,10 @@
 import { KyHttpClient } from "../__generated__/ky-client";
-import { MergedCustomFormatResource } from "../__generated__/mergedTypes";
 import { Api } from "../__generated__/whisparr/Api";
+import { CustomFormatResource, QualityDefinitionResource, QualityProfileResource } from "../__generated__/whisparr/data-contracts";
 import { logger } from "../logger";
 import { IArrClient, validateClientParams } from "./unified-client";
 
-export class WhisparrClient implements IArrClient {
+export class WhisparrClient implements IArrClient<QualityProfileResource, QualityDefinitionResource, CustomFormatResource> {
   private api!: Api<unknown>;
 
   constructor(baseUrl: string, apiKey: string) {
@@ -29,8 +29,9 @@ export class WhisparrClient implements IArrClient {
     return this.api.v3QualitydefinitionList();
   }
 
-  updateQualityDefinitions(definitions: any) {
-    return this.api.v3QualitydefinitionUpdateUpdate(definitions);
+  async updateQualityDefinitions(definitions: QualityDefinitionResource[]) {
+    await this.api.v3QualitydefinitionUpdateUpdate(definitions);
+    return this.api.v3QualitydefinitionList();
   }
 
   // Quality Profiles
@@ -38,11 +39,11 @@ export class WhisparrClient implements IArrClient {
     return this.api.v3QualityprofileList();
   }
 
-  createQualityProfile(profile: any) {
+  createQualityProfile(profile: QualityProfileResource) {
     return this.api.v3QualityprofileCreate(profile);
   }
 
-  updateQualityProfile(id: string, profile: any) {
+  updateQualityProfile(id: string, profile: QualityProfileResource) {
     return this.api.v3QualityprofileUpdate(id, profile);
   }
 
@@ -51,29 +52,16 @@ export class WhisparrClient implements IArrClient {
     return this.api.v3CustomformatList();
   }
 
-  createCustomFormat(format: MergedCustomFormatResource) {
+  createCustomFormat(format: CustomFormatResource) {
     return this.api.v3CustomformatCreate(format);
   }
 
-  updateCustomFormat(id: string, format: MergedCustomFormatResource) {
+  updateCustomFormat(id: string, format: CustomFormatResource) {
     return this.api.v3CustomformatUpdate(id, format);
   }
 
   deleteCustomFormat(id: string) {
     return this.api.v3CustomformatDelete(+id);
-  }
-
-  // Metadata Profiles
-  async getMetadataProfiles() {
-    throw new Error("Metadata profiles are not supported in Whisparr");
-  }
-
-  async createMetadataProfile(profile: any) {
-    throw new Error("Metadata profiles are not supported in Whisparr");
-  }
-
-  async updateMetadataProfile(id: number, profile: any) {
-    throw new Error("Metadata profiles are not supported in Whisparr");
   }
 
   // System/Health Check
