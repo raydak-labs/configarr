@@ -84,10 +84,17 @@ export type ArrClientQualityProfile = {
   // Add other common properties that all quality profiles share
 };
 
+export type ArrClientLanguageResource = {
+  id?: number;
+  name?: string | null;
+  nameLower?: string | null;
+};
+
 export interface IArrClient<
   QP extends ArrClientQualityProfile = MergedQualityProfileResource,
   QD extends ArrClientQualityDefinition = MergedQualityDefinitionResource,
   CF extends ArrClientCustomFormat = MergedCustomFormatResource,
+  L extends ArrClientLanguageResource = ArrClientLanguageResource,
 > {
   // Quality Management
   getQualityDefinitions(): Promise<QD[]>;
@@ -103,6 +110,8 @@ export interface IArrClient<
   createCustomFormat(format: CF): Promise<CF>;
   updateCustomFormat(id: string, format: CF): Promise<CF>;
   deleteCustomFormat(id: string): Promise<void>;
+
+  getLanguages(): Promise<L[]>;
 
   // System/Health Check
   getSystemStatus(): Promise<any>;
@@ -136,6 +145,10 @@ export class UnifiedClient implements IArrClient {
 
   getSpecificClient<T extends IArrClient>(): T {
     return this.api as T;
+  }
+
+  async getLanguages() {
+    return this.api.getLanguages();
   }
 
   async getQualityDefinitions() {

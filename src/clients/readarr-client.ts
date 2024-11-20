@@ -2,6 +2,7 @@ import { KyHttpClient } from "../__generated__/ky-client";
 import { Api } from "../__generated__/readarr/Api";
 import {
   CustomFormatResource,
+  LanguageResource,
   MetadataProfileResource,
   QualityDefinitionResource,
   QualityProfileResource,
@@ -9,7 +10,9 @@ import {
 import { logger } from "../logger";
 import { IArrClient, validateClientParams } from "./unified-client";
 
-export class ReadarrClient implements IArrClient<QualityProfileResource, QualityDefinitionResource, CustomFormatResource> {
+export class ReadarrClient
+  implements IArrClient<QualityProfileResource, QualityDefinitionResource, CustomFormatResource, LanguageResource>
+{
   private api!: Api<unknown>;
 
   constructor(baseUrl: string, apiKey: string) {
@@ -27,6 +30,10 @@ export class ReadarrClient implements IArrClient<QualityProfileResource, Quality
     });
 
     this.api = new Api(httpClient);
+  }
+
+  async getLanguages() {
+    return this.api.v1LanguageList();
   }
 
   // Quality Management

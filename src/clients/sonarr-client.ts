@@ -1,6 +1,11 @@
 import { KyHttpClient } from "../__generated__/ky-client";
 import { Api } from "../__generated__/sonarr/Api";
-import { CustomFormatResource, QualityDefinitionResource, QualityProfileResource } from "../__generated__/sonarr/data-contracts";
+import {
+  CustomFormatResource,
+  LanguageResource,
+  QualityDefinitionResource,
+  QualityProfileResource,
+} from "../__generated__/sonarr/data-contracts";
 import { logger } from "../logger";
 import { IArrClient, validateClientParams } from "./unified-client";
 
@@ -10,7 +15,7 @@ export type SonarrQualityProfileResource = {
   // Add other common properties that all quality profiles share
 };
 
-export class SonarrClient implements IArrClient<QualityProfileResource, QualityDefinitionResource, CustomFormatResource> {
+export class SonarrClient implements IArrClient<QualityProfileResource, QualityDefinitionResource, CustomFormatResource, LanguageResource> {
   private api!: Api<unknown>;
 
   constructor(baseUrl: string, apiKey: string) {
@@ -28,6 +33,10 @@ export class SonarrClient implements IArrClient<QualityProfileResource, QualityD
     });
 
     this.api = new Api(httpClient);
+  }
+
+  async getLanguages() {
+    return this.api.v3LanguageList();
   }
 
   // Quality Management
