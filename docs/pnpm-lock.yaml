@@ -15,25 +15,25 @@ importers:
         specifier: 3.6.0
         version: 3.6.0(@algolia/client-search@5.12.0)(@mdx-js/react@3.1.0(@types/react@18.3.12)(react@18.3.1))(@types/react@18.3.12)(acorn@8.14.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(search-insights@2.17.2)(typescript@5.6.3)
       '@mdx-js/react':
-        specifier: ^3.0.0
+        specifier: 3.1.0
         version: 3.1.0(@types/react@18.3.12)(react@18.3.1)
       clsx:
-        specifier: ^2.0.0
+        specifier: 2.1.1
         version: 2.1.1
       docusaurus-lunr-search:
-        specifier: ^3.5.0
+        specifier: 3.5.0
         version: 3.5.0(@docusaurus/core@3.6.0(@docusaurus/types@3.6.0(acorn@8.14.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(@mdx-js/react@3.1.0(@types/react@18.3.12)(react@18.3.1))(acorn@8.14.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(typescript@5.6.3))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       lunr:
-        specifier: ^2.3.9
+        specifier: 2.3.9
         version: 2.3.9
       prism-react-renderer:
-        specifier: ^2.3.0
+        specifier: 2.4.0
         version: 2.4.0(react@18.3.1)
       react:
-        specifier: ^18.0.0
+        specifier: 18.3.1
         version: 18.3.1
       react-dom:
-        specifier: ^18.0.0
+        specifier: 18.3.1
         version: 18.3.1(react@18.3.1)
     devDependencies:
       '@docusaurus/module-type-aliases':
@@ -46,7 +46,7 @@ importers:
         specifier: 3.6.0
         version: 3.6.0(acorn@8.14.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       typescript:
-        specifier: ~5.6.2
+        specifier: 5.6.3
         version: 5.6.3
 
 packages:
