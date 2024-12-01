@@ -23,7 +23,7 @@
     "pino-pretty": "11.3.0",
     "simple-git": "3.27.0",
     "tsx": "4.19.2",
-    "yaml": "2.6.0"
+    "yaml": "2.6.1"
   },
   "devDependencies": {
     "@hyrious/esbuild-plugin-commonjs": "0.2.4",
