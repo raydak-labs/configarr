@@ -1,0 +1,32 @@
+services:
+  configarr:
+    image: ghcr.io/raydak-labs/configarr:latest
+    networks:
+      - configarr-full
+    volumes:
+      - ${CONFIGARR_FULL_PATH:?"missing"}/config:/app/config
+      - ${CONFIGARR_FULL_PATH:?"missing"}/dockerrepos:/app/repos
+      #- ${CONFIGARR_FULL_PATH:?"missing"}/cfs:/app/cfs
+      #- ${CONFIGARR_FULL_PATH:?"missing"}/templates:/app/templates
+
+  configarr-run:
+    image: ghcr.io/raydak-labs/configarr:latest
+    networks:
+      - configarr-full
+    volumes:
+      - ${CONFIGARR_FULL_PATH:?"missing"}/config:/app/config
+      - ${CONFIGARR_FULL_PATH:?"missing"}/dockerrepos:/app/repos
+      #- ${CONFIGARR_FULL_PATH:?"missing"}/cfs:/app/cfs
+      #- ${CONFIGARR_FULL_PATH:?"missing"}/templates:/app/templates
+
+  cron:
+    image: blackdark93/dockerfiles-cron-dind:main
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ${CONFIGARR_FULL_PATH:?"missing"}/cron:/app/schedules:ro
+      - ${CONFIGARR_FULL_PATH:?"missing"}/docker-compose.cron.yml:/app/docker-compose.yaml:ro
+
+networks:
+  configarr-full:
+    name: configarr-full
+    external: true

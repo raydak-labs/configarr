@@ -1,0 +1,22 @@
+services:
+  radarr:
+    image: lscr.io/linuxserver/radarr:5.15.1
+    networks:
+      - configarr-full
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+    volumes:
+      - radarr:/config
+      - ${PWD}/radarr.xml:/config/config.xml:rw
+    ports:
+      - 6501:7878
+    restart: unless-stopped
+
+networks:
+  configarr-full:
+    name: configarr-full
+
+volumes:
+  radarr:
