@@ -1,0 +1,59 @@
+name: Documentation (Preview)
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches: [main]
+    paths:
+      - docs/**
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    name: Deploy
+    permissions:
+      contents: read
+      deployments: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Inject enhanced GitHub environment variables
+        uses: rlespinasse/github-slug-action@v5
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: latest
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: pnpm
+
+      - name: Install & build
+        working-directory: docs
+        run: |
+          pnpm i
+          pnpm build
+
+      - name: Deploy
+        uses: cloudflare/wrangler-action@v3
+        id: cloudflare-deploy
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy ./docs/build --project-name=configarr-preview --branch=${{ env.GITHUB_REF_SLUG_URL }}
+          # Optional: Enable this if you want to have GitHub Deployments triggered
+          #gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Comment PR
+        uses: thollander/actions-comment-pull-request@v3
+        with:
+          message: |
+            Doc preview deployed to: ${{ steps.cloudflare-deploy.outputs.deployment-url }}
+          comment-tag: docs-preview
