@@ -1,0 +1,24 @@
+services:
+  configarr:
+    container_name: configarr-reused
+    image: ghcr.io/raydak-labs/configarr:latest
+    networks:
+      - configarr-full
+    volumes:
+      - ./config:/app/config
+      - ./dockerrepos:/app/repos
+      #- ./cfs:/app/cfs
+      #- ./templates:/app/templates
+
+  ofelia:
+    image: mcuadros/ofelia:latest
+    command: daemon --config=/opt/config.ini
+    #command: daemon --docker
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./ofelia.ini:/opt/config.ini
+
+networks:
+  configarr-full:
+    name: configarr-full
+    external: true

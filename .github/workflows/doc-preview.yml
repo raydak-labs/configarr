@@ -53,6 +53,7 @@ jobs:
 
       - name: Comment PR
         uses: thollander/actions-comment-pull-request@v3
+        if: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'main' }}
         with:
           message: |
             Doc preview deployed to: ${{ steps.cloudflare-deploy.outputs.deployment-url }}

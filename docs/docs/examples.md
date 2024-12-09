@@ -145,3 +145,11 @@ sonarr:
           - name: MyLocalProfile # name must match with given profiles (found in recyclarr or trashguide)
             score: 123
 ```
+
+## Scheduled Example
+
+This is an example of how to execute configarr in a scheduled manner.
+
+You can find the full example at: [configarr/examples/scheduled](https://github.com/raydak-labs/configarr/tree/main/examples/scheduled)
+
+Please check the documentation for how to configure and use the variants.

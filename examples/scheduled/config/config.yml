@@ -1,0 +1,21 @@
+#trashGuideUrl: https://github.com/BlackDark/fork-TRASH-Guides
+#recyclarrConfigUrl: https://github.com/BlackDark/fork-recyclarr-configs
+localCustomFormatsPath: /app/cfs
+localConfigTemplatesPath: /app/templates
+
+radarr:
+  instance1:
+    # Set the URL/API Key to your actual instance
+    base_url: http://radarr:7878
+    #base_url: https://sonarr.oci.eduard-marbach.de/
+    api_key: !secret RADARR_API_KEY
+
+    quality_definition:
+      type: movies
+
+    include:
+      - template: radarr-quality-definition-movie
+      - template: radarr-quality-profile-hd-bluray-web
+      - template: radarr-custom-formats-hd-bluray-web
+
+    custom_formats: []

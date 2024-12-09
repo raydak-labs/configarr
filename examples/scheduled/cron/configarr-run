@@ -1,0 +1,4 @@
+LOGFILE_DEFAULT=/var/log/cron.log
+#CONFIGARR_FULL_PATH=/tmp/configarr/full/path
+
+* * * * * root docker compose -f /app/docker-compose.yaml -p cron run --rm configarr-run >> $LOGFILE_DEFAULT 2>&1
