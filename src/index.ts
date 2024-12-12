@@ -1,4 +1,7 @@
+// those must be run first!
 import "dotenv/config";
+import { getEnvs, initEnvs } from "./env";
+initEnvs();
 
 import fs from "node:fs";
 import { MergedCustomFormatResource } from "./__generated__/mergedTypes";
@@ -26,7 +29,6 @@ import {
   MergedConfigInstance,
 } from "./types/config.types";
 import { TrashQualityDefintion } from "./types/trashguide.types";
-import { DEBUG_CREATE_FILES, IS_DRY_RUN } from "./util";
 
 /**
  * Load data from trash, recyclarr, custom configs and merge.
@@ -250,7 +252,7 @@ const pipeline = async (value: InputConfigArrInstance, arrType: ArrType) => {
     const { changeMap, create, restData } = calculateQualityDefinitionDiff(serverQD, qdTrash, config.quality_definition?.preferred_ratio);
 
     if (changeMap.size > 0) {
-      if (IS_DRY_RUN) {
+      if (getEnvs().DRY_RUN) {
         logger.info("DryRun: Would update QualityDefinitions.");
       } else {
         logger.info(`Diffs in quality definitions found`, changeMap.values());
@@ -272,7 +274,7 @@ const pipeline = async (value: InputConfigArrInstance, arrType: ArrType) => {
   const serverQP = await loadQualityProfilesFromServer();
   const { changedQPs, create, noChanges } = await calculateQualityProfilesDiff(mergedCFs, config, serverQP, serverQD, serverCFs);
 
-  if (DEBUG_CREATE_FILES) {
+  if (getEnvs().DEBUG_CREATE_FILES) {
     create.concat(changedQPs).forEach((e, i) => {
       fs.writeFileSync(`debug/test${i}.json`, JSON.stringify(e, null, 2), "utf-8");
     });
@@ -280,7 +282,7 @@ const pipeline = async (value: InputConfigArrInstance, arrType: ArrType) => {
 
   logger.info(`QualityProfiles: Create: ${create.length}, Update: ${changedQPs.length}, Unchanged: ${noChanges.length}`);
 
-  if (!IS_DRY_RUN) {
+  if (!getEnvs().DRY_RUN) {
     for (const element of create) {
       try {
         const newProfile = await api.createQualityProfile(element);
@@ -306,7 +308,7 @@ const pipeline = async (value: InputConfigArrInstance, arrType: ArrType) => {
 };
 
 const run = async () => {
-  if (IS_DRY_RUN) {
+  if (getEnvs().DRY_RUN) {
     logger.info("DryRun: Running in dry-run mode!");
   }
 

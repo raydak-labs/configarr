@@ -29,8 +29,6 @@ COPY esbuild.ts ./
 RUN pnpm run build
 
 FROM base AS dev
-ENV CONFIG_LOCATION=/app/config/config.yml
-ENV SECRETS_LOCATION=/app/config/secrets.yml
 # manually mount src etc
 
 CMD [ "pnpm", "start" ]
@@ -45,9 +43,6 @@ RUN apk add --no-cache libstdc++ dumb-init git
 #USER node
 
 COPY --from=builder /app/bundle.cjs /app/index.js
-
-ENV CONFIG_LOCATION=/app/config/config.yml
-ENV SECRETS_LOCATION=/app/config/secrets.yml
 
 # Run with dumb-init to not start node with PID=1, since Node.js was not designed to run as PID 1
 CMD ["dumb-init", "node", "index.js"]

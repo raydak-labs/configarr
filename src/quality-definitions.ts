@@ -1,12 +1,13 @@
 import path from "node:path";
 import { MergedQualityDefinitionResource } from "./__generated__/mergedTypes";
 import { getUnifiedClient } from "./clients/unified-client";
+import { getEnvs } from "./env";
 import { logger } from "./logger";
 import { TrashQualityDefintion, TrashQualityDefintionQuality } from "./types/trashguide.types";
-import { IS_LOCAL_SAMPLE_MODE, loadJsonFile } from "./util";
+import { loadJsonFile } from "./util";
 
 export const loadQualityDefinitionFromServer = async (): Promise<MergedQualityDefinitionResource[]> => {
-  if (IS_LOCAL_SAMPLE_MODE) {
+  if (getEnvs().LOAD_LOCAL_SAMPLES) {
     return loadJsonFile(path.resolve(__dirname, "../tests/samples/qualityDefinition.json"));
   }
   return await getUnifiedClient().getQualityDefinitions();

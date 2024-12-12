@@ -1,5 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import yaml from "yaml";
+import { getHelpers } from "./env";
 import { logger } from "./logger";
 import {
   ConfigArrInstance,
@@ -12,10 +13,6 @@ import {
   InputConfigSchema,
   MergedConfigInstance,
 } from "./types/config.types";
-import { ROOT_PATH } from "./util";
-
-const CONFIG_LOCATION = process.env.CONFIG_LOCATION ?? `${ROOT_PATH}/config.yml`;
-const SECRETS_LOCATION = process.env.SECRETS_LOCATION ?? `${ROOT_PATH}/secrets.yml`;
 
 let config: ConfigSchema;
 let secrets: any;
@@ -50,12 +47,14 @@ export const getConfig = (): ConfigSchema => {
     return config;
   }
 
-  if (!existsSync(CONFIG_LOCATION)) {
-    logger.error(`Config file in location "${CONFIG_LOCATION}" does not exists.`);
+  const configLocation = getHelpers().configLocation;
+
+  if (!existsSync(configLocation)) {
+    logger.error(`Config file in location "${configLocation}" does not exists.`);
     throw new Error("Config file not found.");
   }
 
-  const file = readFileSync(CONFIG_LOCATION, "utf8");
+  const file = readFileSync(configLocation, "utf8");
 
   const inputConfig = yaml.parse(file, { customTags: [secretsTag, envTag] }) as InputConfigSchema;
 
@@ -65,12 +64,14 @@ export const getConfig = (): ConfigSchema => {
 };
 
 export const readConfigRaw = (): object => {
-  if (!existsSync(CONFIG_LOCATION)) {
-    logger.error(`Config file in location "${CONFIG_LOCATION}" does not exists.`);
+  const configLocation = getHelpers().configLocation;
+
+  if (!existsSync(configLocation)) {
+    logger.error(`Config file in location "${configLocation}" does not exists.`);
     throw new Error("Config file not found.");
   }
 
-  const file = readFileSync(CONFIG_LOCATION, "utf8");
+  const file = readFileSync(configLocation, "utf8");
 
   const inputConfig = yaml.parse(file, { customTags: [secretsTag, envTag] });
 
@@ -82,12 +83,14 @@ export const getSecrets = () => {
     return secrets;
   }
 
-  if (!existsSync(SECRETS_LOCATION)) {
-    logger.error(`Secret file in location "${SECRETS_LOCATION}" does not exists.`);
+  const secretLocation = getHelpers().secretLocation;
+
+  if (!existsSync(secretLocation)) {
+    logger.error(`Secret file in location "${secretLocation}" does not exists.`);
     throw new Error("Secret file not found.");
   }
 
-  const file = readFileSync(SECRETS_LOCATION, "utf8");
+  const file = readFileSync(secretLocation, "utf8");
   config = yaml.parse(file);
   return config;
 };

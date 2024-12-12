@@ -7,3 +7,5 @@ repos
 dockerrepos
 playwright-report
 test-results
+config.yml
+secrets.yml
