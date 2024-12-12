@@ -16,8 +16,6 @@ COPY index.ts esbuild.ts ./
 RUN deno --allow-env --allow-read --allow-run esbuild.ts
 
 FROM base AS dev
-ENV CONFIG_LOCATION=/app/config/config.yml
-ENV SECRETS_LOCATION=/app/config/secrets.yml
 ENV DENO_DIR=/app/.deno_cache
 # manually mount src etc
 
@@ -34,8 +32,6 @@ RUN apk add --no-cache libstdc++ dumb-init git
 
 COPY --from=builder /app/bundle.cjs /app/index.cjs
 
-ENV CONFIG_LOCATION=/app/config/config.yml
-ENV SECRETS_LOCATION=/app/config/secrets.yml
 ENV DENO_DIR=/app/.deno_cache
 
 # Compile cache / modify for multi-user

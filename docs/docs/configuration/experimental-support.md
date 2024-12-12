@@ -1,5 +1,5 @@
 ---
-sidebar_position: 2
+sidebar_position: 3
 title: Experimental Support
 description: "Experimental and testing support for other *Arr tools"
 keywords: [configarr configuration, yaml config, custom formats, expermintal, whisparr, readarr]

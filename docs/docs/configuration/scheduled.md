@@ -1,5 +1,5 @@
 ---
-sidebar_position: 3
+sidebar_position: 4
 title: Scheduling
 description: "How to run configarr regulary/schedueld"
 keywords: [configarr configuration, schedule, scheduler, regular, cron]

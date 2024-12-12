@@ -3,12 +3,13 @@ import path from "node:path";
 import { MergedCustomFormatResource } from "./__generated__/mergedTypes";
 import { getUnifiedClient } from "./clients/unified-client";
 import { getConfig } from "./config";
+import { getEnvs } from "./env";
 import { logger } from "./logger";
 import { loadTrashCFs } from "./trash-guide";
 import { ArrType, CFProcessing, ConfigarrCF } from "./types/common.types";
 import { ConfigCustomFormatList, CustomFormatDefinitions } from "./types/config.types";
 import { TrashCF } from "./types/trashguide.types";
-import { IS_DRY_RUN, IS_LOCAL_SAMPLE_MODE, compareCustomFormats, loadJsonFile, mapImportCfToRequestCf, toCarrCF } from "./util";
+import { compareCustomFormats, loadJsonFile, mapImportCfToRequestCf, toCarrCF } from "./util";
 
 export const deleteAllCustomFormats = async () => {
   const api = getUnifiedClient();
@@ -21,7 +22,7 @@ export const deleteAllCustomFormats = async () => {
 };
 
 export const loadServerCustomFormats = async (): Promise<MergedCustomFormatResource[]> => {
-  if (IS_LOCAL_SAMPLE_MODE) {
+  if (getEnvs().LOAD_LOCAL_SAMPLES) {
     return loadJsonFile<MergedCustomFormatResource[]>(path.resolve(__dirname, "../tests/samples/cfs.json"));
   }
   const api = getUnifiedClient();
@@ -61,7 +62,7 @@ export const manageCf = async (
         logger.info(`Found mismatch for ${tr.requestConfig.name}: ${comparison.changes}`);
 
         try {
-          if (IS_DRY_RUN) {
+          if (getEnvs().DRY_RUN) {
             logger.info(`DryRun: Would update CF: ${existingCf.id} - ${existingCf.name}`);
             updatedCFs.push(existingCf);
           } else {
@@ -83,7 +84,7 @@ export const manageCf = async (
     } else {
       // Create
       try {
-        if (IS_DRY_RUN) {
+        if (getEnvs().DRY_RUN) {
           logger.info(`Would create CF: ${tr.requestConfig.name}`);
         } else {
           const createResult = await api.createCustomFormat(tr.requestConfig);
@@ -114,6 +115,7 @@ export const manageCf = async (
 
   return { createCFs, updatedCFs, validCFs, errorCFs };
 };
+
 export const loadLocalCfs = async (): Promise<CFProcessing | null> => {
   const config = getConfig();
 

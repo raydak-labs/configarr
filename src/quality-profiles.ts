@@ -7,10 +7,11 @@ import {
   MergedQualityProfileResource,
 } from "./__generated__/mergedTypes";
 import { getUnifiedClient } from "./clients/unified-client";
+import { getEnvs } from "./env";
 import { logger } from "./logger";
 import { CFProcessing } from "./types/common.types";
 import { ConfigQualityProfile, ConfigQualityProfileItem, MergedConfigInstance } from "./types/config.types";
-import { IS_LOCAL_SAMPLE_MODE, cloneWithJSON, loadJsonFile, notEmpty, zip } from "./util";
+import { cloneWithJSON, loadJsonFile, notEmpty, zip } from "./util";
 
 // merge CFs of templates and custom CFs into one mapping of QualityProfile -> CFs + Score
 export const mapQualityProfiles = ({ carrIdMapping }: CFProcessing, { custom_formats, quality_profiles }: MergedConfigInstance) => {
@@ -69,7 +70,7 @@ export const mapQualityProfiles = ({ carrIdMapping }: CFProcessing, { custom_for
 };
 
 export const loadQualityProfilesFromServer = async (): Promise<MergedQualityProfileResource[]> => {
-  if (IS_LOCAL_SAMPLE_MODE) {
+  if (getEnvs().LOAD_LOCAL_SAMPLES) {
     return loadJsonFile(path.resolve(__dirname, `../tests/samples/quality_profiles.json`));
   }
   const api = getUnifiedClient();

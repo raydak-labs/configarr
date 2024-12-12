@@ -2,17 +2,12 @@ import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import simpleGit, { CheckRepoActions } from "simple-git";
 import { MergedCustomFormatResource } from "./__generated__/mergedTypes";
+import { getHelpers } from "./env";
 import { logger } from "./logger";
 import { ConfigarrCF, ImportCF, UserFriendlyField } from "./types/common.types";
 import { TrashCF } from "./types/trashguide.types";
 
-export const IS_DRY_RUN = process.env.DRY_RUN === "true";
-export const IS_LOCAL_SAMPLE_MODE = process.env.LOAD_LOCAL_SAMPLES === "true";
-export const DEBUG_CREATE_FILES = process.env.DEBUG_CREATE_FILES === "true";
-
-export const repoPath = path.resolve(process.env.CUSTOM_REPO_ROOT || "./repos");
-
-const recyclarrConfigPath = `${repoPath}/recyclarr-config`;
+const recyclarrConfigPath = `${getHelpers().repoPath}/recyclarr-config`;
 const recyclarrSonarrRoot = `${recyclarrConfigPath}/sonarr`;
 const recyclarrSonarrCFs = `${recyclarrSonarrRoot}/includes/custom-formats`;
 const recyclarrSonarrQDs = `${recyclarrSonarrRoot}/includes/quality-definitions`;
@@ -23,8 +18,8 @@ const recyclarrRadarrCFs = `${recyclarrRadarrRoot}/includes/custom-formats`;
 const recyclarrRadarrQDs = `${recyclarrRadarrRoot}/includes/quality-definitions`;
 const recyclarrRadarrQPs = `${recyclarrRadarrRoot}/includes/quality-profiles`;
 
+const trashRepoRoot = `${getHelpers().repoPath}/trash-guides`;
 const trashRepoPath = "docs/json";
-const trashRepoRoot = `${repoPath}/trash-guides`;
 const trashRepoSonarrRoot = `${trashRepoRoot}/${trashRepoPath}/sonarr`;
 const trashRepoRadarrRoot = `${trashRepoRoot}/${trashRepoPath}/radarr`;
 
@@ -254,6 +249,7 @@ export const cloneGitRepo = async (localPath: string, gitUrl: string, revision: 
   const r = await gitClient.checkIsRepo(CheckRepoActions.IS_REPO_ROOT);
 
   if (!r) {
+    logger.info(`Freshly cloned repository: '${gitUrl}' at '${revision}'`);
     await simpleGit().clone(gitUrl, rootPath);
   }
 
@@ -266,6 +262,7 @@ export const cloneGitRepo = async (localPath: string, gitUrl: string, revision: 
     const res = await gitClient.pull();
     if (res.files.length > 0) {
       updated = true;
+      logger.info(`Repository updated to new commit: '${gitUrl}' at '${revision}'`);
     }
   }
 

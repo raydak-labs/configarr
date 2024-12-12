@@ -1,7 +1,6 @@
 import { levels, pino } from "pino";
 import pretty from "pino-pretty";
-
-export const LOG_LEVEL = process.env.LOG_LEVEL ?? `info`;
+import { getEnvs, getHelpers } from "./env";
 
 const maxArrayLength = Object.values(levels.labels).reduce((maxLength, currentArray) => {
   return Math.max(maxLength, currentArray.length);
@@ -31,7 +30,7 @@ const stream = pretty({
 
 export const logger = pino(
   {
-    level: LOG_LEVEL,
+    level: getEnvs().LOG_LEVEL,
     // transport: {
     //   target: "pino-pretty",
     //   options: {
@@ -53,3 +52,6 @@ export const logHeading = (title: string) => {
   logSeparator();
   logger.info("");
 };
+
+// For debugging how envs have been loaded
+logger.debug({ envs: getEnvs(), helpers: getHelpers() }, `Loaded following configuration from ENVs and mapped`);
