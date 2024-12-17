@@ -63,7 +63,16 @@ export type CFProcessing = {
 };
 
 export type MappedTemplates = Partial<
-  Pick<InputConfigArrInstance, "quality_definition" | "custom_formats" | "include" | "quality_profiles" | "customFormatDefinitions">
+  Pick<
+    InputConfigArrInstance,
+    | "quality_definition"
+    | "custom_formats"
+    | "include"
+    | "quality_profiles"
+    | "customFormatDefinitions"
+    | "media_management"
+    | "media_naming"
+  >
 >;
 
 export type MappedMergedTemplates = MappedTemplates & Required<Pick<MappedTemplates, "custom_formats" | "quality_profiles">>;

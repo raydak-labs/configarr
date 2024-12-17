@@ -10,6 +10,7 @@ import { getConfig, validateConfig } from "./config";
 import { calculateCFsToManage, loadCustomFormatDefinitions, loadServerCustomFormats, manageCf } from "./custom-formats";
 import { loadLocalRecyclarrTemplate } from "./local-importer";
 import { logHeading, logger } from "./logger";
+import { calculateMediamanagementDiff, calculateNamingDiff } from "./media-management";
 import { calculateQualityDefinitionDiff, loadQualityDefinitionFromServer } from "./quality-definitions";
 import { calculateQualityProfilesDiff, filterInvalidQualityProfiles, loadQualityProfilesFromServer } from "./quality-profiles";
 import { cloneRecyclarrTemplateRepo, loadRecyclarrTemplates } from "./recyclarr-importer";
@@ -99,6 +100,14 @@ const mergeConfigsAndTemplates = async (
         }
       }
 
+      if (template.media_management) {
+        recylarrMergedTemplates.media_management = { ...recylarrMergedTemplates.media_management, ...template.media_management };
+      }
+
+      if (template.media_naming) {
+        recylarrMergedTemplates.media_naming = { ...recylarrMergedTemplates.media_naming, ...template.media_naming };
+      }
+
       // TODO Ignore recursive include for now
       if (template.include) {
         logger.warn(`Recursive includes not supported at the moment. Ignoring.`);
@@ -125,6 +134,14 @@ const mergeConfigsAndTemplates = async (
 
   if (value.quality_profiles) {
     recylarrMergedTemplates.quality_profiles.push(...value.quality_profiles);
+  }
+
+  if (value.media_management) {
+    recylarrMergedTemplates.media_management = { ...recylarrMergedTemplates.media_management, ...value.media_management };
+  }
+
+  if (value.media_naming) {
+    recylarrMergedTemplates.media_naming = { ...recylarrMergedTemplates.media_naming, ...value.media_naming };
   }
 
   const recyclarrProfilesMerged = recylarrMergedTemplates.quality_profiles.reduce<Map<string, ConfigQualityProfile>>((p, c) => {
@@ -267,6 +284,30 @@ const pipeline = async (value: InputConfigArrInstance, arrType: ArrType) => {
 
     if (create.length > 0) {
       logger.info(`Currently not implemented this case for quality definitions.`);
+    }
+  }
+
+  const namingDiff = await calculateNamingDiff(config.media_naming);
+
+  if (namingDiff) {
+    if (getEnvs().DRY_RUN) {
+      logger.info("DryRun: Would update MediaNaming.");
+    } else {
+      // TODO this will need a radarr/sonarr separation for sure to have good and correct typings
+      await api.updateNaming(namingDiff.updatedData.id! + "", namingDiff.updatedData as any); // Ignore types
+      logger.info(`Updated MediaNaming`);
+    }
+  }
+
+  const managementDiff = await calculateMediamanagementDiff(config.media_management);
+
+  if (managementDiff) {
+    if (getEnvs().DRY_RUN) {
+      logger.info("DryRun: Would update MediaManagement.");
+    } else {
+      // TODO this will need a radarr/sonarr separation for sure to have good and correct typings
+      await api.updateMediamanagement(managementDiff.updatedData.id! + "", managementDiff.updatedData as any); // Ignore types
+      logger.info(`Updated MediaManagement`);
     }
   }
 

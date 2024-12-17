@@ -38,7 +38,21 @@ export type InputConfigArrInstance = {
   custom_formats?: InputConfigCustomFormat[];
   // TODO this is not correct. The profile can be added partly -> InputConfigQualityProfile
   quality_profiles: ConfigQualityProfile[];
+  /* @experimental */
+  media_management?: MediaManagementType;
+  /* @experimental */
+  media_naming?: MediaNamingType;
 } & Pick<InputConfigSchema, "customFormatDefinitions">;
+
+// HINT: Experimental
+export type MediaManagementType = {
+  // APIs not consistent across different *arrs. Keeping empty or generic
+};
+
+// HINT: Experimental
+export type MediaNamingType = {
+  // APIs not consistent across different *arrs. Keeping empty or generic
+};
 
 export type InputConfigQualityProfile = {
   name: string;

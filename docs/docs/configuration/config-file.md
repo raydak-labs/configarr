@@ -82,6 +82,8 @@ customFormatDefinitions:
 
 ## Configuration Files Reference
 
+If you want to deep dive into available values and parameters you can always check the direct source code reference for available configurations: [Source Code](https://github.com/raydak-labs/configarr/blob/main/src/types/config.types.ts)
+
 ### config.yml
 
 The main configuration file that defines your Sonarr and Radarr instances, custom formats, and template includes.
@@ -131,6 +133,12 @@ sonarr:
       - template: sonarr-quality-definition-series
       - template: sonarr-v4-quality-profile-web-1080p
       - template: sonarr-v4-custom-formats-web-1080p
+
+    # experimental available in all *arr
+    #media_management: {}
+
+    # experimental available in all *arr
+    #media_naming: {}
 
     custom_formats: # Custom format assignments
       - trash_ids:
@@ -205,3 +213,25 @@ RADARR_API_KEY: your_radarr_api_key_here
 4. For Kubernetes deployments, create ConfigMaps/Secrets from these files
 
 Configarr will automatically load these configurations on startup and apply them to your Sonarr/Radarr instances.
+
+## Experimental supported fields
+
+- Experimental support for `media_management` and `media_naming` (since v1.5.0)
+  With those you can configure different settings in the different tabs available per *arr.
+  Both fields are under experimental support.
+  The supports elements in those are dependent on the *arr used.
+  Check following API documentation of available fields:
+
+  Naming APIs:
+
+  - https://radarr.video/docs/api/#/NamingConfig/get_api_v3_config_naming
+  - https://sonarr.tv/docs/api/#/NamingConfig/get_api_v3_config_naming
+  - https://whisparr.com/docs/api/#/NamingConfig/get_api_v3_config_naming
+  - https://readarr.com/docs/api/#/NamingConfig/get_api_v1_config_naming
+
+  MediaManagement APIs:
+
+  - https://radarr.video/docs/api/#/MediaManagementConfig/get_api_v3_config_mediamanagement
+  - https://sonarr.tv/docs/api/#/MediaManagementConfig/get_api_v3_config_mediamanagement
+  - https://whisparr.com/docs/api/#/MediaManagementConfig/get_api_v3_config_mediamanagement
+  - https://readarr.com/docs/api/#/MediaManagementConfig/get_api_v1_config_mediamanagement
