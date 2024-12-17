@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file.
 
+
+## [1.5.0](https://github.com/raydak-labs/configarr/compare/v1.4.0...v1.5.0) (2024-12-17)
+
+### Features
+
+* add configuration options for media management tab ([c2f2110](https://github.com/raydak-labs/configarr/commit/c2f2110f58f05cd7400ad12f0dc7bf77b0343d3c))
+* add support for loading customformat definitions ([4014d93](https://github.com/raydak-labs/configarr/commit/4014d938f5ab4b747be90c5a65e180941a3dcbdb))
+* optimize envs and add support for custom root for data [#117](https://github.com/raydak-labs/configarr/issues/117) ([f218b56](https://github.com/raydak-labs/configarr/commit/f218b56cf6b43e0508efa1f061223c264985bc1e))
+
+### Bug Fixes
+
+* **deps:** pin dependencies ([#118](https://github.com/raydak-labs/configarr/issues/118)) ([912130a](https://github.com/raydak-labs/configarr/commit/912130a347ff7e06f012778c87a72db20e8aee2b))
+* **deps:** update dependencies (non-major) ([a181831](https://github.com/raydak-labs/configarr/commit/a181831ad10b30b945683a1d0f005a6ed54d64c7))
+* **deps:** update dependency pino-pretty to v13 ([c05c07f](https://github.com/raydak-labs/configarr/commit/c05c07f1241c0c0f47f916071b9c426883b2117e))
+* set default language for new profiles to any ([ffd6faa](https://github.com/raydak-labs/configarr/commit/ffd6faae718df8e13e520db8bf7d4525bcc31d5b))
+
+### (internal) Refactorings
+
+* improve typings for client ([b9ad772](https://github.com/raydak-labs/configarr/commit/b9ad772418fd041f72fd9432d89bb2adf54b083b))
+
 ## [1.4.0](https://github.com/raydak-labs/configarr/compare/v1.3.0...v1.4.0) (2024-11-17)
 
 ### Features
