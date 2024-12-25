@@ -9,7 +9,7 @@ Configuration and synchronization tool for Sonarr and Radarr.
 
 Official support only for Sonarr v4 and radarr v5.
 
-This will be a project similar to [Recyclarr](https://github.com/recyclarr/recyclarr) or [Notifiarr](https://notifiarr.wiki/) but support for additional specification and not only what [TrashGuides](https://trash-guides.info/) offer.
+This will be a project similar to [Recyclarr](https://github.com/recyclarr/recyclarr) or [Notifiarr](https://notifiarr.wiki/) but support for additional specification and not only what [TRaSH-Guides](https://trash-guides.info/) offer.
 
 Other projects:
 
@@ -19,16 +19,16 @@ Other projects:
 
 ## Features
 
-- Use TrashGuide defined custom formats
+- Use TRaSH-Guides defined custom formats
 - Compatible with recyclarr templates
 - Include own defined custom formats
 - Custom defined formats for different languages/countries like Germany
 - Support all CustomFormat specifications
 - Provide CFs in different ways
-  - Sync from TrashGuide
+  - Sync from TRaSH-Guides
   - Sync with local file CFs
   - Provide CFs directly in config (Convert JSON with https://www.bairesdev.com/tools/json2yaml/)
-  - Merge order is `TrashGuide -> LocalFiles -> CFs in Config`
+  - Merge order is `TRaSH-Guides -> LocalFiles -> CFs in Config`
 
 ### Supported \*arr Applications
 
@@ -49,7 +49,7 @@ Full documentation can be found here: https://configarr.raydak.de
 
 ## Custom formats
 
-This repository also provide additional custom formats what TrashGuide does not offer.
+This repository also provide additional custom formats what TRaSH-Guides does not offer.
 
 See [here](./custom/cfs/)
 
