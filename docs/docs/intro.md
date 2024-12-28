@@ -1,7 +1,20 @@
 ---
 sidebar_position: 1
 description: "Configarr - A powerful synchronization tool for Sonarr, Radarr and other *Arr tools that helps manage custom formats and quality profiles using TRaSH-Guides and custom configurations"
-keywords: [configarr, sonarr, radarr, trash guides, TRaSH-Guides, custom formats, media management, automation, recyclarr, quality profiles, whisparr]
+keywords:
+  [
+    configarr,
+    sonarr,
+    radarr,
+    trash guides,
+    TRaSH-Guides,
+    custom formats,
+    media management,
+    automation,
+    recyclarr,
+    quality profiles,
+    whisparr,
+  ]
 ---
 
 # Introduction
