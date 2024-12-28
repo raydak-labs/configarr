@@ -134,7 +134,7 @@ Increase the log level with the `LOG_LEVEL` environment variable to get more det
 
    - Ensure user matches your required user
    - Check folder permissions on the config directory
-   - after changing the user, adjust the user in the git repos (trash guide, recyclarr) to match
+   - after changing the user, adjust the user in the git repos (TRaSH-Guides, recyclarr) to match
 
 2. **Connection Issues**
 

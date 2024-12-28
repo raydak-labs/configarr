@@ -43,15 +43,15 @@ Quality profiles define what types of releases you want for your media. They com
 
 Release groups are teams or individuals who release media content. Different groups often have different standards and specialties for their releases.
 
-### TRaSH Guides
+### TRaSH-Guides
 
-[TRaSH Guides](https://trash-guides.info/) is a comprehensive collection of guides and configurations for various media management tools. It provides recommended settings, custom formats, and quality profiles that represent community best practices.
+[TRaSH-Guides](https://trash-guides.info/) is a comprehensive collection of guides and configurations for various media management tools. It provides recommended settings, custom formats, and quality profiles that represent community best practices.
 
 ## How They Work Together
 
 - **Quality Profiles** use **Custom Formats** to score and select releases
 - **Sonarr/Radarr** use these profiles to make download decisions
-- **TRaSH Guides** provides optimized configurations for both
+- **TRaSH-Guides** provides optimized configurations for both
 - **Configarr** helps manage and synchronize all these components
 
 :::tip
