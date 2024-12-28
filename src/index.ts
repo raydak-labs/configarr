@@ -114,7 +114,7 @@ const mergeConfigsAndTemplates = async (
       }
     });
 
-    // TODO: local trash guide QP templates do not work yet
+    // TODO: local TRaSH-Guides QP templates do not work yet
     mappedIncludes.trash.forEach((e) => {
       const template = trashTemplates.get(e.template);
 

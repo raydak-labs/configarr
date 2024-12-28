@@ -1,16 +1,16 @@
 ---
 sidebar_position: 1
-description: "Configarr - A powerful synchronization tool for Sonarr, Radarr and other *Arr tools that helps manage custom formats and quality profiles using TRaSH Guides and custom configurations"
-keywords: [configarr, sonarr, radarr, trash guides, custom formats, media management, automation, recyclarr, quality profiles, whisparr]
+description: "Configarr - A powerful synchronization tool for Sonarr, Radarr and other *Arr tools that helps manage custom formats and quality profiles using TRaSH-Guides and custom configurations"
+keywords: [configarr, sonarr, radarr, trash guides, TRaSH-Guides, custom formats, media management, automation, recyclarr, quality profiles, whisparr]
 ---
 
 # Introduction
 
-Welcome to Configarr - your all-in-one solution for managing Sonarr and Radarr (and other \*Arr tools) configurations with seamless integration of TRaSH Guides and custom formats.
+Welcome to Configarr - your all-in-one solution for managing Sonarr and Radarr (and other \*Arr tools) configurations with seamless integration of TRaSH-Guides and custom formats.
 
 ## What is Configarr?
 
-Configarr is a powerful configuration and synchronization tool designed specifically for Sonarr v4 and Radarr v5. It streamlines the process of managing custom formats and quality profiles by automatically synchronizing settings from TRaSH Guides while supporting additional customizations.
+Configarr is a powerful configuration and synchronization tool designed specifically for Sonarr v4 and Radarr v5. It streamlines the process of managing custom formats and quality profiles by automatically synchronizing settings from TRaSH-Guides while supporting additional customizations.
 
 ### Experimental support
 
@@ -21,15 +21,15 @@ Experimental support also available for [(check experimental support)](./configu
 
 ### Key Features
 
-- 🔄 **TRaSH Guides Integration**: Directly sync custom formats and quality profiles from TRaSH Guides
+- 🔄 **TRaSH-Guides Integration**: Directly sync custom formats and quality profiles from TRaSH-Guides
 - 🔗 **Recyclarr Template Compatibility**: Works with existing Recyclarr templates
 - 🎯 **Custom Format Support**: Create and manage your own custom formats
 - 🌍 **Multi-language Support**: Includes specialized formats for different languages/countries
 - 🔧 **Flexible Configuration**: Multiple ways to provide custom formats:
-  - Sync from TRaSH Guides
+  - Sync from TRaSH-Guides
   - Sync from local files
   - Direct configuration in YAML
-  - Smart merging (TRaSH Guide → Local Files → Config)
+  - Smart merging (TRaSH-Guide → Local Files → Config)
 
 ### Why Choose Configarr?
 
@@ -37,9 +37,9 @@ If you're managing a media server with Sonarr and Radarr (or other \*Arr tools),
 
 - Save time by automating configuration management
 - Maintain consistency across your media servers
-- Easily implement best practices from TRaSH Guides
+- Easily implement best practices from TRaSH-Guides
 - Customize settings for your specific needs
-- We provide custom formats for different languages/countries as long as TrashGuide does not include them
+- We provide custom formats for different languages/countries as long as TRaSH-Guides does not include them
 
 ## Requirements
 
@@ -56,7 +56,7 @@ Ready to streamline your media server configuration? Let's get started with the 
 
 ### Related/Inspired Projects
 
-- [TRaSH Guides](https://trash-guides.info/)
+- [TRaSH-Guides](https://trash-guides.info/)
 - [Recyclarr](https://github.com/recyclarr/recyclarr)
 - [Notifiarr](https://notifiarr.com/)
 - [Profilarr](https://github.com/Dictionarry-Hub/profilarr)

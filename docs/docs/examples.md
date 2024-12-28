@@ -53,9 +53,9 @@ To remove all containers and volumes:
 docker-compose down -v
 ```
 
-## Adjusting provided templates by TrashGuide/Recyclarr
+## Adjusting provided templates by TRaSH-Guides/Recyclarr
 
-It is a common use case to use existing templates from TrashGuide or Recyclarr and modify them with either own scores or own additional custom formats.
+It is a common use case to use existing templates from TRaSH-Guides or Recyclarr and modify them with either own scores or own additional custom formats.
 We can easily do this with Configarr because we support both use cases and can add own custom formats when needed.
 
 ```yaml
@@ -86,7 +86,7 @@ sonarr:
       - template: sonarr-v4-quality-profile-web-1080p
       - template: sonarr-v4-custom-formats-web-1080p
 
-      # HINT: if you want to use trash guides own templates you can use them too
+      # HINT: if you want to use TRaSH-Guides guides own templates you can use them too
       #- template: d1498e7d189fbe6c7110ceaabb7473e6
       #  source: TRASH # RECYCLARR (default) or TRASH
 
@@ -95,18 +95,18 @@ sonarr:
       - trash_ids:
           - example-in-config-cf
         quality_profiles:
-          - name: WEB-1080p # name must match with given profiles (found in recyclarr or trashguide)
+          - name: WEB-1080p # name must match with given profiles (found in recyclarr or TRaSH-Guides)
             # score: 0 # Uncomment this line to add custom scoring
 
       # Overwrite existing scores
       - trash_ids:
           - e6258996055b9fbab7e9cb2f75819294 # WEB Tier 01
         quality_profiles:
-          - name: WEB-1080p # name must match with given profiles (found in recyclarr or trashguide)
+          - name: WEB-1080p # name must match with given profiles (found in recyclarr or TRaSH-Guides)
             score: 123
 ```
 
-## Using templates from TrashGuide/Recyclarr but different names
+## Using templates from TRaSH-Guides/Recyclarr but different names
 
 This is currently not possible.
 What you can do is copy those templates and paste it locally mounted folder.
@@ -132,7 +132,7 @@ sonarr:
       - template: my-local-quality-profile
       - template: my-local-custom-formats
 
-      # HINT: if you want to use trash guides own templates you can use them too
+      # HINT: if you want to use TRaSH-Guides own templates you can use them too
       #- template: d1498e7d189fbe6c7110ceaabb7473e6
       #  source: TRASH # RECYCLARR (default) or TRASH
 

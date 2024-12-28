@@ -28,7 +28,7 @@ Following things are currently not supported or tested:
     type: movies # not checked yet
   ```
 - initial language of quality profiles is not correct -> `0`
-- no available presets because nothings provided in trash guide or recyclarr -> needs to be done manually with local templates and custom formats
+- no available presets because nothings provided in TRaSH-Guides or recyclarr -> needs to be done manually with local templates and custom formats
 
 ### Configuration File
 
@@ -96,7 +96,7 @@ Following things are currently not supported or tested:
     type: movies # not checked yet
   ```
 - metadata profiles are not supported. This is a specific thing to readarr and requires custom implementation and breaking out of some abstraction layer we have in the code
-- no available presets because nothings provided in trash guide or recyclarr -> needs to be done manually with local templates and custom formats
+- no available presets because nothings provided in TRaSH-Guides or recyclarr -> needs to be done manually with local templates and custom formats
 
 ### Configuration File
 

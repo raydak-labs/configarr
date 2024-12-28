@@ -27,10 +27,10 @@ Configarr supports two types of templates:
    - Documentation: [Recyclarr Templates Wiki](https://github.com/recyclarr/recyclarr/wiki/Templates)
    - Location: Place template files in the directory specified by `localConfigTemplatesPath`
 
-2. **TRaSH Guide Templates**: Standard templates from TRaSH Guides
-   - These are automatically pulled from the TRaSH Guide repository
+2. **TRaSH-Guides Templates**: Standard templates from TRaSH-Guides
+   - These are automatically pulled from the TRaSH-Guides repository
    - Can be overridden using `trashGuideUrl` in config.yml
-   - See [Trash Radarr](https://github.com/TRaSH-Guides/Guides/tree/master/docs/json/radarr/quality-profiles) and [Trash Sonarr](https://github.com/TRaSH-Guides/Guides/tree/master/docs/json/sonarr/quality-profiles) for more information
+   - See [TRaSH-Guides Radarr](https://github.com/TRaSH-Guides/Guides/tree/master/docs/json/radarr/quality-profiles) and [TRaSH-Guides Sonarr](https://github.com/TRaSH-Guides/Guides/tree/master/docs/json/sonarr/quality-profiles) for more information
 
 ## Custom Formats Definitions
 

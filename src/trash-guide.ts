@@ -11,7 +11,7 @@ import { cloneGitRepo, loadJsonFile, mapImportCfToRequestCf, notEmpty, toCarrCF,
 const DEFAULT_TRASH_GIT_URL = "https://github.com/TRaSH-Guides/Guides";
 
 export const cloneTrashRepo = async () => {
-  logger.info(`Checking TrashGuide repo ...`);
+  logger.info(`Checking TRaSH-Guides repo ...`);
 
   const rootPath = trashRepoPaths.root;
   const applicationConfig = getConfig();
@@ -19,7 +19,7 @@ export const cloneTrashRepo = async () => {
   const revision = applicationConfig.trashRevision ?? "master";
 
   const cloneResult = await cloneGitRepo(rootPath, gitUrl, revision);
-  logger.info(`TrashGuide repo: ref[${cloneResult.ref}], hash[${cloneResult.hash}], path[${cloneResult.localPath}]`);
+  logger.info(`TRaSH-Guides repo: ref[${cloneResult.ref}], hash[${cloneResult.hash}], path[${cloneResult.localPath}]`);
 };
 
 export const loadTrashCFs = async (arrType: ArrType): Promise<CFProcessing> => {
@@ -106,7 +106,7 @@ export const loadQPFromTrash = async (arrType: ArrType) => {
     const files = fs.readdirSync(`${trashPath}`).filter((fn) => fn.endsWith("json"));
 
     if (files.length <= 0) {
-      logger.info(`Not found any TrashGuide QualityProfiles. Skipping.`);
+      logger.info(`Not found any TRaSH-Guides QualityProfiles. Skipping.`);
     }
 
     for (const item of files) {
@@ -115,7 +115,7 @@ export const loadQPFromTrash = async (arrType: ArrType) => {
       map.set(importTrashQP.trash_id, importTrashQP);
     }
   } catch (err: any) {
-    logger.warn("Failed loading TrashGuide QualityProfiles. Continue without ...", err?.message);
+    logger.warn("Failed loading TRaSH-Guides QualityProfiles. Continue without ...", err?.message);
   }
 
   // const localPath = getLocalTemplatePath();
@@ -124,7 +124,7 @@ export const loadQPFromTrash = async (arrType: ArrType) => {
   //   fillMap(localPath);
   // }
 
-  logger.debug(`Found ${map.size} TrashGuide QualityProfiles.`);
+  logger.debug(`Found ${map.size} TRaSH-Guides QualityProfiles.`);
   return map;
 };
 
