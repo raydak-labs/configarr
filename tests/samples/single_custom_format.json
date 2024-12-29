@@ -1,0 +1,28 @@
+{
+  "id": 1,
+  "name": "BR-DISK",
+  "includeCustomFormatWhenRenaming": false,
+  "specifications": [
+    {
+      "name": "BR-DISK",
+      "implementation": "ReleaseTitleSpecification",
+      "implementationName": "Release Title",
+      "infoLink": "https://wiki.servarr.com/sonarr/settings#custom-formats-2",
+      "negate": false,
+      "required": true,
+      "fields": [
+        {
+          "order": 0,
+          "name": "value",
+          "label": "Regular Expression",
+          "helpText": "Custom Format RegEx is Case Insensitive",
+          "value": "^(?!.*\\b((?<!HD[._ -]|HD)DVD|BDRip|720p|MKV|XviD|WMV|d3g|(BD)?REMUX|^(?=.*1080p)(?=.*HEVC)|[xh][-_. ]?26[45]|German.*[DM]L|((?<=\\d{4}).*German.*([DM]L)?)(?=.*\\b(AVC|HEVC|VC[-_. ]?1|MVC|MPEG[-_. ]?2)\\b))\\b)(((?=.*\\b(Blu[-_. ]?ray|BD|HD[-_. ]?DVD)\\b)(?=.*\\b(AVC|HEVC|VC[-_. ]?1|MVC|MPEG[-_. ]?2|BDMV|ISO)\\b))|^((?=.*\\b(((?=.*\\b((.*_)?COMPLETE.*|Dis[ck])\\b)(?=.*(Blu[-_. ]?ray|HD[-_. ]?DVD)))|3D[-_. ]?BD|BR[-_. ]?DISK|Full[-_. ]?Blu[-_. ]?ray|^((?=.*((BD|UHD)[-_. ]?(25|50|66|100|ISO)))))))).*",
+          "type": "textbox",
+          "advanced": false,
+          "privacy": "normal",
+          "isFloat": false
+        }
+      ]
+    }
+  ]
+}

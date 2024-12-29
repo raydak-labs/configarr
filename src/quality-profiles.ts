@@ -186,7 +186,7 @@ export const doAllQualitiesExist = (serverResource: ConfigQualityProfileItem[], 
   const sortedServerConfig = serverCloned.sort((a, b) => (a.name < b.name ? -1 : 1));
   const sortedLocalConfig = localCloned.sort((a, b) => (a.name < b.name ? -1 : 1));
 
-  if (sortedLocalConfig.length !== sortedServerConfig.length) {
+  if (sortedLocalConfig.length !== sortedServerConfig.length || sortedLocalConfig.length === 0) {
     return false;
   }
 
@@ -256,7 +256,7 @@ export const calculateQualityProfilesDiff = async (
         return p;
       }, new Map()) ?? new Map();
 
-    if (!serverMatch) {
+    if (serverMatch == null) {
       logger.info(`QualityProfile '${name}' not found in server. Will be created.`);
       const mappedQ = mapQualities(serverQD, value);
 
@@ -350,10 +350,10 @@ export const calculateQualityProfilesDiff = async (
 
     // TODO do we want to enforce the whole structure or only match those which are enabled by us?
     if (!doAllQualitiesExist(serverQualitiesMapped, value.qualities)) {
-      logger.info(`QualityProfile items mismatch will update whole array`);
+      logger.info(`QualityProfile qualities mismatch will update whole array`);
       diffExist = true;
 
-      changeList.push(`QualityProfile items do not match`);
+      changeList.push(`QualityProfile qualities mismatch will update whole array`);
       updatedServerObject.items = mapQualities(serverQD, value);
     } else {
       if (!isOrderOfQualitiesEqual(value.qualities, serverQualitiesMapped.toReversed())) {
@@ -378,7 +378,7 @@ export const calculateQualityProfilesDiff = async (
       return p;
     }, new Map());
 
-    if (value.min_format_score) {
+    if (value.min_format_score != null) {
       if (serverMatch.minFormatScore !== value.min_format_score) {
         updatedServerObject.minFormatScore = value.min_format_score;
         diffExist = true;
@@ -386,7 +386,7 @@ export const calculateQualityProfilesDiff = async (
       }
     }
 
-    if (value.upgrade) {
+    if (value.upgrade != null) {
       if (serverMatch.upgradeAllowed !== value.upgrade.allowed) {
         updatedServerObject.upgradeAllowed = value.upgrade.allowed;
         diffExist = true;
@@ -396,7 +396,7 @@ export const calculateQualityProfilesDiff = async (
 
       const upgradeUntil = qualityToId.get(value.upgrade.until_quality);
 
-      if (!upgradeUntil) {
+      if (upgradeUntil == null) {
         throw new Error(`Did not find expected Quality to upgrade until: ${value.upgrade.until_quality}`);
       }
 
@@ -431,7 +431,7 @@ export const calculateQualityProfilesDiff = async (
 
     let scoringDiff = false;
 
-    if (scoringForQP) {
+    if (scoringForQP != null) {
       const newCFFormats: MergedProfileFormatItemResource[] = [];
 
       for (const [scoreKey, scoreValue] of scoringForQP.entries()) {
@@ -477,7 +477,7 @@ export const calculateQualityProfilesDiff = async (
 
       updatedServerObject.formatItems = newCFFormats;
     } else {
-      logger.info(`No scoring for QualityProfile ${serverMatch.name!} found`);
+      logger.info(`No scoring for QualityProfile '${serverMatch.name!}' found`);
     }
 
     logger.debug(

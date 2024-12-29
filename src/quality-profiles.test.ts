@@ -1,9 +1,24 @@
+import path from "path";
 import { describe, expect, test } from "vitest";
-import { MergedQualityDefinitionResource } from "./__generated__/mergedTypes";
-import { doAllQualitiesExist, isOrderOfQualitiesEqual, mapQualities } from "./quality-profiles";
-import { ConfigQualityProfile, ConfigQualityProfileItem } from "./types/config.types";
+import { MergedCustomFormatResource, MergedQualityDefinitionResource, MergedQualityProfileResource } from "./__generated__/mergedTypes";
+import { calculateQualityProfilesDiff, doAllQualitiesExist, isOrderOfQualitiesEqual, mapQualities } from "./quality-profiles";
+import { CFProcessing } from "./types/common.types";
+import { ConfigQualityProfile, ConfigQualityProfileItem, MergedConfigInstance } from "./types/config.types";
+import { cloneWithJSON, loadJsonFile } from "./util";
 
 describe("QualityProfiles", async () => {
+  const sampleQualityProfile = loadJsonFile<MergedQualityProfileResource>(
+    path.resolve(__dirname, `../tests/samples/single_quality_profile.json`),
+  );
+
+  const sampleQualityDefinitions = loadJsonFile<MergedQualityDefinitionResource[]>(
+    path.resolve(__dirname, `../tests/samples/qualityDefinition.json`),
+  );
+
+  const sampleCustomFormat = loadJsonFile<MergedCustomFormatResource>(
+    path.resolve(__dirname, `../tests/samples/single_custom_format.json`),
+  );
+
   test("doAllQualitiesExist - all exist", async ({}) => {
     const fromConfig: ConfigQualityProfileItem[] = [
       { name: "WEB 1080p", qualities: ["WEBDL-1080p", "WEBRip-1080p"] },
@@ -184,12 +199,111 @@ describe("QualityProfiles", async () => {
     expect(result[2]!.allowed).toBe(true);
   });
 
-  test("calculateQualityProfilesDiff - should diff if minUpgradeFormatScore is different", async ({}) => {
-    // TODO
+  test("calculateQualityProfilesDiff - should diff if minUpgradeFormatScore / minFormatScore is different", async ({}) => {
+    const cfMap: CFProcessing = { carrIdMapping: new Map(), cfNameToCarrConfig: new Map() };
+
+    const fromConfig: ConfigQualityProfileItem[] = [{ name: "HDTV-1080p", enabled: false }];
+
+    const resources: MergedQualityDefinitionResource[] = [
+      { id: 1, title: "HDTV-1080p", weight: 2, quality: { id: 1, name: "HDTV-1080p" } },
+    ];
+
+    const profile: ConfigQualityProfile = {
+      name: "hi",
+      min_format_score: 2,
+      qualities: fromConfig,
+      quality_sort: "sort",
+      upgrade: { allowed: true, until_quality: "HDTV-1080p", until_score: 1000 },
+      score_set: "default",
+    };
+
+    const config: MergedConfigInstance = {
+      custom_formats: [],
+      quality_profiles: [profile],
+      customFormatDefinitions: [],
+      media_management: {},
+      media_naming: {},
+    };
+
+    const serverProfile = cloneWithJSON(sampleQualityProfile);
+    serverProfile.name = "hi";
+    serverProfile.formatItems = [];
+    serverProfile.minUpgradeFormatScore = 3;
+    serverProfile.minFormatScore = 3;
+    serverProfile.cutoff = 1;
+    serverProfile.items = [{ allowed: false, items: [], quality: { id: 1, name: "HDTV-1080p" } }];
+
+    const serverQP: MergedQualityProfileResource[] = [serverProfile];
+    const serverQD: MergedQualityDefinitionResource[] = resources;
+    const serverCF: MergedCustomFormatResource[] = [cloneWithJSON(sampleCustomFormat)];
+
+    let diff = await calculateQualityProfilesDiff(cfMap, config, serverQP, serverQD, serverCF);
+    expect(diff.changedQPs.length).toBe(1);
+    expect(diff.create.length).toBe(0);
+    expect(diff.noChanges.length).toBe(0);
+
+    serverProfile.minFormatScore = 0;
+    diff = await calculateQualityProfilesDiff(cfMap, config, serverQP, serverQD, serverCF);
+    expect(diff.changedQPs.length).toBe(1);
+    expect(diff.create.length).toBe(0);
+    expect(diff.noChanges.length).toBe(0);
+
+    serverProfile.minUpgradeFormatScore = 0;
+    diff = await calculateQualityProfilesDiff(cfMap, config, serverQP, serverQD, serverCF);
+    expect(diff.changedQPs.length).toBe(1);
+    expect(diff.create.length).toBe(0);
+    expect(diff.noChanges.length).toBe(0);
+
+    profile.min_format_score = 0;
+    serverProfile.minFormatScore = 1;
+    diff = await calculateQualityProfilesDiff(cfMap, config, serverQP, serverQD, serverCF);
+    expect(diff.changedQPs.length).toBe(1);
+    expect(diff.create.length).toBe(0);
+    expect(diff.noChanges.length).toBe(0);
   });
 
-  test("calculateQualityProfilesDiff - should not diff if minUpgradeFormatScore is equal", async ({}) => {
-    // TODO
+  test("calculateQualityProfilesDiff - should not diff if minFormatScore is equal", async ({}) => {
+    const cfMap: CFProcessing = { carrIdMapping: new Map(), cfNameToCarrConfig: new Map() };
+
+    const fromConfig: ConfigQualityProfileItem[] = [{ name: "HDTV-1080p", enabled: false }];
+
+    const resources: MergedQualityDefinitionResource[] = [
+      { id: 1, title: "HDTV-1080p", weight: 2, quality: { id: 1, name: "HDTV-1080p" } },
+    ];
+
+    const profile: ConfigQualityProfile = {
+      name: "hi",
+      min_format_score: 2,
+      qualities: fromConfig,
+      quality_sort: "sort",
+      upgrade: { allowed: true, until_quality: "HDTV-1080p", until_score: 1000 },
+      score_set: "default",
+    };
+
+    const config: MergedConfigInstance = {
+      custom_formats: [],
+      quality_profiles: [profile],
+      customFormatDefinitions: [],
+      media_management: {},
+      media_naming: {},
+    };
+
+    const serverProfile = cloneWithJSON(sampleQualityProfile);
+    serverProfile.name = "hi";
+    serverProfile.formatItems = [];
+    serverProfile.minUpgradeFormatScore = 3;
+    serverProfile.minFormatScore = 2;
+    serverProfile.cutoff = 1;
+    serverProfile.items = [{ allowed: false, items: [], quality: { id: 1, name: "HDTV-1080p" } }];
+
+    const serverQP: MergedQualityProfileResource[] = [serverProfile];
+    const serverQD: MergedQualityDefinitionResource[] = resources;
+    const serverCF: MergedCustomFormatResource[] = [cloneWithJSON(sampleCustomFormat)];
+
+    const diff = await calculateQualityProfilesDiff(cfMap, config, serverQP, serverQD, serverCF);
+    expect(diff.changedQPs.length).toBe(0);
+    expect(diff.create.length).toBe(0);
+    expect(diff.noChanges.length).toBe(1);
   });
 
   test("calculateQualityProfilesDiff - should not diff if minUpgradeFormatScore is not configured", async ({}) => {
