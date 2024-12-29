@@ -65,7 +65,7 @@ You can use existing base templates from:
             until_quality: Merged QPs
             until_score: 25000
   # Uncomment one of the next 2 lines dependent on if you want English Releases
-          min_format_score: 1600 # Get English Releases and Upgrade to German when available
+          min_format_score: 0 # Get English Releases and Upgrade to German when available
   #        min_format_score: 10000 # Skip English Releases
           quality_sort: top
           qualities:
@@ -161,7 +161,7 @@ You can use existing base templates from:
             until_quality: Merged QPs
             until_score: 25000
   # Uncomment one of the next 2 lines dependent on if you want English Releases
-          min_format_score: 1600 # Get English Releases and Upgrade to German when available
+          min_format_score: 0 # Get English Releases and Upgrade to German when available
   #        min_format_score: 10000 # Skip English Releases
           quality_sort: top
           qualities:
@@ -311,7 +311,7 @@ You can use existing base templates from:
             until_quality: Merged QPs
             until_score: 25000
   # Uncomment one of the next 2 lines dependent on if you want English Releases
-          min_format_score: 1600 # Get English Releases and Upgrade to German when available
+          min_format_score: 0 # Get English Releases and Upgrade to German when available
   #        min_format_score: 10000 # Skip English Releases
           quality_sort: top
           qualities:
