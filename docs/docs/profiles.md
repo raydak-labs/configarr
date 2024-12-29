@@ -115,7 +115,7 @@ You can use existing base templates from:
   #            score: 0
 
   ### x265 Releases
-        - trash_ids:
+  #      - trash_ids:
   # Uncomment the next six lines to allow x265 HD releases with HDR/DV
   # Uncomment the next four lines to allow any x265 HD releases
   #          - dc98083864ea246d05a42df0d05f81cc # x265 (HD)
@@ -244,7 +244,7 @@ You can use existing base templates from:
   #            score: 0
 
   ### x265 Releases
-        - trash_ids:
+  #      - trash_ids:
   # Uncomment the next six lines to allow x265 HD releases with HDR/DV
   # Uncomment the next four lines to allow any x265 HD releases
   #          - dc98083864ea246d05a42df0d05f81cc # x265 (HD)
@@ -395,7 +395,7 @@ You can use existing base templates from:
   #            score: 0
 
   ### x265 Releases
-        - trash_ids:
+  #      - trash_ids:
   # Uncomment the next six lines to allow x265 HD releases with HDR/DV
   # Uncomment the next four lines to allow any x265 HD releases
   #          - dc98083864ea246d05a42df0d05f81cc # x265 (HD)
