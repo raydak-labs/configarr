@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.5.1](https://github.com/raydak-labs/configarr/compare/v1.5.0...v1.5.1) (2024-12-29)
+
+### Bug Fixes
+
+- correctly handle diffs for minFormatScores ([a2494db](https://github.com/raydak-labs/configarr/commit/a2494db839f283d9b0b16b18584b7b745af65e20))
+
 ## [1.5.0](https://github.com/raydak-labs/configarr/compare/v1.4.0...v1.5.0) (2024-12-17)
 
 ### Features
