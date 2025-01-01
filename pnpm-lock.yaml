@@ -33,7 +33,7 @@ importers:
         specifier: 2.6.1
         version: 2.6.1
       zod:
-        specifier: ^3.24.1
+        specifier: 3.24.1
         version: 3.24.1
     devDependencies:
       '@hyrious/esbuild-plugin-commonjs':
