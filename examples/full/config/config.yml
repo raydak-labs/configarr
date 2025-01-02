@@ -61,7 +61,7 @@ radarr:
     api_key: !secret RADARR_API_KEY
 
     quality_definition:
-      type: movies
+      type: movie
 
     # experimental
     media_management:
