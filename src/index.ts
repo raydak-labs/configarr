@@ -144,6 +144,10 @@ const mergeConfigsAndTemplates = async (
     recylarrMergedTemplates.media_naming = { ...recylarrMergedTemplates.media_naming, ...value.media_naming };
   }
 
+  if (value.quality_definition) {
+    recylarrMergedTemplates.quality_definition = { ...recylarrMergedTemplates.quality_definition, ...value.quality_definition };
+  }
+
   const recyclarrProfilesMerged = recylarrMergedTemplates.quality_profiles.reduce<Map<string, ConfigQualityProfile>>((p, c) => {
     const profile = p.get(c.name);
 
@@ -285,6 +289,8 @@ const pipeline = async (value: InputConfigArrInstance, arrType: ArrType) => {
     if (create.length > 0) {
       logger.info(`Currently not implemented this case for quality definitions.`);
     }
+  } else {
+    logger.info(`No QualityDefinition configured.`);
   }
 
   const namingDiff = await calculateNamingDiff(config.media_naming);
