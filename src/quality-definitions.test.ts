@@ -103,12 +103,10 @@ describe("QualityDefinitions", async () => {
     expect(result.create).toHaveLength(0);
 
     const resultLow = calculateQualityDefinitionDiff(server, clone, 0.0);
-    console.log(resultLow);
     expect(resultLow.changeMap.size).toBe(1);
     expect(resultLow.create).toHaveLength(0);
 
     const resultHigh = calculateQualityDefinitionDiff(server, clone, 1.0);
-    console.log(resultHigh);
     expect(resultHigh.changeMap.size).toBe(1);
     expect(resultHigh.create).toHaveLength(0);
   });
