@@ -4,7 +4,7 @@ import { getUnifiedClient } from "./clients/unified-client";
 import { getEnvs } from "./env";
 import { logger } from "./logger";
 import { TrashQualityDefintion, TrashQualityDefintionQuality } from "./types/trashguide.types";
-import { loadJsonFile } from "./util";
+import { cloneWithJSON, loadJsonFile, roundToDecimal } from "./util";
 
 export const loadQualityDefinitionFromServer = async (): Promise<MergedQualityDefinitionResource[]> => {
   if (getEnvs().LOAD_LOCAL_SAMPLES) {
@@ -28,49 +28,51 @@ export const calculateQualityDefinitionDiff = (
 
   const restData: MergedQualityDefinitionResource[] = [];
 
-  for (const tq of trashQD.qualities) {
-    const element = serverMap.get(tq.quality);
+  for (const trashQuality of trashQD.qualities) {
+    const clonedQuality = cloneWithJSON(trashQuality);
+    const serverQuality = serverMap.get(trashQuality.quality);
 
-    if (element) {
+    // Adjust preffered size if preferedRatio is set
+    if (preferedRatio != null) {
+      if (preferedRatio < 0 || preferedRatio > 1) {
+        logger.warn(`QualityDefinition: PreferredRatio must be between 0 and 1. Ignoring`);
+      } else {
+        const adjustedPreferred = interpolateSize(trashQuality.min, trashQuality.max, trashQuality.preferred, preferedRatio);
+        clonedQuality.preferred = adjustedPreferred;
+        logger.debug(
+          `QualityDefinition "${trashQuality.quality} adjusting preferred by ratio ${preferedRatio} to value "${adjustedPreferred}"`,
+        );
+      }
+    }
+
+    if (serverQuality) {
       const changes: string[] = [];
 
-      if (element.minSize !== tq.min) {
-        changes.push(`MinSize diff: Server ${element.minSize} - Config ${tq.min}`);
+      if (serverQuality.minSize !== trashQuality.min) {
+        changes.push(`MinSize diff: Server ${serverQuality.minSize} - Config ${trashQuality.min}`);
       }
-      if (element.maxSize !== tq.max) {
-        changes.push(`MaxSize diff: Server ${element.maxSize} - Config ${tq.max}`);
-      }
-
-      let preferred = tq.preferred;
-
-      if (preferedRatio != null) {
-        if (preferedRatio < 0 || preferedRatio > 1) {
-          logger.warn(`QualityDefinition: PreferredRatio must be between 0 and 1. Ignoring`);
-        } else {
-          preferred = interpolateSize(tq.min, tq.max, tq.preferred, preferedRatio);
-          console.log(tq, preferred, preferedRatio);
-          logger.debug(`QualityDefinition adjusting preferred by ratio ${preferedRatio}`);
-        }
+      if (serverQuality.maxSize !== trashQuality.max) {
+        changes.push(`MaxSize diff: Server ${serverQuality.maxSize} - Config ${trashQuality.max}`);
       }
 
-      if (element.preferredSize !== preferred) {
-        changes.push(`PreferredSize diff: Server ${element.preferredSize} - Config ${preferred}`);
+      if (serverQuality.preferredSize !== clonedQuality.preferred) {
+        changes.push(`PreferredSize diff: Server ${serverQuality.preferredSize} - Config ${clonedQuality.preferred}`);
       }
 
       if (changes.length > 0) {
-        changeMap.set(element.title!, changes);
+        changeMap.set(serverQuality.title!, changes);
         restData.push({
-          ...element,
-          maxSize: tq.max,
-          minSize: tq.min,
-          preferredSize: tq.preferred,
+          ...serverQuality,
+          maxSize: clonedQuality.max,
+          minSize: clonedQuality.min,
+          preferredSize: clonedQuality.preferred,
         });
       } else {
-        restData.push(element);
+        restData.push(serverQuality);
       }
     } else {
       // TODO create probably never happens?
-      create.push(tq);
+      create.push(clonedQuality);
     }
   }
 
@@ -83,9 +85,9 @@ export function interpolateSize(min: number, max: number, pref: number, ratio: n
   }
   if (ratio <= 0.5) {
     // Interpolate between min and pref
-    return min + (pref - min) * (ratio / 0.5);
+    return roundToDecimal(min + (pref - min) * (ratio / 0.5), 1);
   } else {
     // Interpolate between pref and max
-    return pref + (max - pref) * ((ratio - 0.5) / 0.5);
+    return roundToDecimal(pref + (max - pref) * ((ratio - 0.5) / 0.5), 1);
   }
 }

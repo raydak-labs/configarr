@@ -290,3 +290,8 @@ export const cloneGitRepo = async (localPath: string, gitUrl: string, revision: 
     updated,
   };
 };
+
+export const roundToDecimal = (num: number, decimalPlaces = 0) => {
+  const p = Math.pow(10, decimalPlaces);
+  return Math.round((num + Number.EPSILON) * p) / p;
+};
