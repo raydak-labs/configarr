@@ -50,7 +50,6 @@ export const calculateMediamanagementDiff = async (mediaManagement?: MediaManage
 
   const serverData = await loadMediamanagementConfigFromServer();
 
-  console.log(serverData, mediaManagement);
   logger.debug(serverData, "Media Server");
   logger.debug(mediaManagement, "Media Local");
   const { changes, equal } = compareMediamanagement(serverData, mediaManagement);
