@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.5.2](https://github.com/raydak-labs/configarr/compare/v1.5.1...v1.5.2) (2025-01-03)
+
+### Bug Fixes
+
+- correctly set preferred size value if adjusted by ratio ([5d9dc5c](https://github.com/raydak-labs/configarr/commit/5d9dc5c652f9288063391bb5317f31ad2a9d50dc))
+- **deps:** pin dependency zod to 3.24.1 ([#133](https://github.com/raydak-labs/configarr/issues/133)) ([3773dde](https://github.com/raydak-labs/configarr/commit/3773ddeb7ffecb7bc979d5fa27f6f091f983e983))
+- **deps:** update dependencies (non-major) ([#135](https://github.com/raydak-labs/configarr/issues/135)) ([3ac7b7c](https://github.com/raydak-labs/configarr/commit/3ac7b7c5cad63ac3acc99a3cd95fe3c9854634f6))
+- **deps:** update react monorepo to v19 ([c57a95b](https://github.com/raydak-labs/configarr/commit/c57a95b2394875843d2554d4a1fb910ca32a96be))
+- use quality_defintion from main config if defined ([94d1861](https://github.com/raydak-labs/configarr/commit/94d186160832a2249dfa7626d532a690d91ea72a))
+
+### (internal) Refactorings
+
+- rename variables in code only ([f2f3736](https://github.com/raydak-labs/configarr/commit/f2f37362153bbc09b8633f710b506ed5d26d9db5))
+
 ## [1.5.1](https://github.com/raydak-labs/configarr/compare/v1.5.0...v1.5.1) (2024-12-29)
 
 ### Bug Fixes
