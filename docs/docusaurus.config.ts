@@ -63,7 +63,21 @@ const config: Config = {
     ],
   ],
 
-  plugins: [lunrSearch],
+  plugins: [
+    lunrSearch,
+    () => ({
+      name: "inject-tag",
+      injectHtmlTags() {
+        return {
+          headTags: [
+            `<script defer data-domain="configarr.raydak.de" src="https://plausible.raydak.de/js/script.file-downloads.hash.outbound-links.tagged-events.js"></script>
+<script>window.plausible = window.plausible || function() { (window.plausible.q = window.plausible.q || []).push(arguments) }</script>
+`,
+          ],
+        };
+      },
+    }),
+  ],
 
   themeConfig: {
     // Replace with your project's social card
