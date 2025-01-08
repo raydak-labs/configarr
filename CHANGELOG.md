@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.5.3](https://github.com/raydak-labs/configarr/compare/v1.5.2...v1.5.3) (2025-01-08)
+
+### Bug Fixes
+
+- allow loading custom format definition correctly from templates ([a5f0f92](https://github.com/raydak-labs/configarr/commit/a5f0f9211b6eac001b9467476aab2a19c93ec6aa))
+
+### (internal) Refactorings
+
+- make CF loading cleaner ([5b33849](https://github.com/raydak-labs/configarr/commit/5b33849e8d30d53e38c2503c33d319035d02b9a0))
+- move merge config to config.ts ([388875d](https://github.com/raydak-labs/configarr/commit/388875dd2240866b071df67d3560e5d461bc2bb7))
+
 ## [1.5.2](https://github.com/raydak-labs/configarr/compare/v1.5.1...v1.5.2) (2025-01-03)
 
 ### Bug Fixes
