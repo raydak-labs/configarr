@@ -176,7 +176,7 @@ export const mergeConfigsAndTemplates = async (
     `Loaded ${recyclarrTemplateMap.size} Recyclarr templates, ${localTemplateMap.size} local templates and ${trashTemplates.size} trash templates.`,
   );
 
-  const recyclarrMergedTemplates: MappedMergedTemplates = {
+  const mergedTemplates: MappedMergedTemplates = {
     custom_formats: [],
     quality_profiles: [],
   };
@@ -214,31 +214,31 @@ export const mergeConfigsAndTemplates = async (
       }
 
       if (template.custom_formats) {
-        recyclarrMergedTemplates.custom_formats?.push(...template.custom_formats);
+        mergedTemplates.custom_formats?.push(...template.custom_formats);
       }
 
       if (template.quality_definition) {
-        recyclarrMergedTemplates.quality_definition = template.quality_definition;
+        mergedTemplates.quality_definition = template.quality_definition;
       }
 
       if (template.quality_profiles) {
         for (const qp of template.quality_profiles) {
-          recyclarrMergedTemplates.quality_profiles.push(qp);
+          mergedTemplates.quality_profiles.push(qp);
         }
       }
 
       if (template.media_management) {
-        recyclarrMergedTemplates.media_management = { ...recyclarrMergedTemplates.media_management, ...template.media_management };
+        mergedTemplates.media_management = { ...mergedTemplates.media_management, ...template.media_management };
       }
 
       if (template.media_naming) {
-        recyclarrMergedTemplates.media_naming = { ...recyclarrMergedTemplates.media_naming, ...template.media_naming };
+        mergedTemplates.media_naming = { ...mergedTemplates.media_naming, ...template.media_naming };
       }
 
       if (template.customFormatDefinitions) {
         if (Array.isArray(template.customFormatDefinitions)) {
-          recyclarrMergedTemplates.customFormatDefinitions = [
-            ...(recyclarrMergedTemplates.customFormatDefinitions || []),
+          mergedTemplates.customFormatDefinitions = [
+            ...(mergedTemplates.customFormatDefinitions || []),
             ...template.customFormatDefinitions,
           ];
         } else {
@@ -261,44 +261,41 @@ export const mergeConfigsAndTemplates = async (
         return;
       }
 
-      recyclarrMergedTemplates.quality_profiles.push(transformTrashQPToTemplate(template));
-      recyclarrMergedTemplates.custom_formats.push(transformTrashQPCFs(template));
+      mergedTemplates.quality_profiles.push(transformTrashQPToTemplate(template));
+      mergedTemplates.custom_formats.push(transformTrashQPCFs(template));
     });
   }
 
   // Config values overwrite template values
   if (value.custom_formats) {
-    recyclarrMergedTemplates.custom_formats.push(...value.custom_formats);
+    mergedTemplates.custom_formats.push(...value.custom_formats);
   }
 
   if (value.quality_profiles) {
-    recyclarrMergedTemplates.quality_profiles.push(...value.quality_profiles);
+    mergedTemplates.quality_profiles.push(...value.quality_profiles);
   }
 
   if (value.media_management) {
-    recyclarrMergedTemplates.media_management = { ...recyclarrMergedTemplates.media_management, ...value.media_management };
+    mergedTemplates.media_management = { ...mergedTemplates.media_management, ...value.media_management };
   }
 
   if (value.media_naming) {
-    recyclarrMergedTemplates.media_naming = { ...recyclarrMergedTemplates.media_naming, ...value.media_naming };
+    mergedTemplates.media_naming = { ...mergedTemplates.media_naming, ...value.media_naming };
   }
 
   if (value.quality_definition) {
-    recyclarrMergedTemplates.quality_definition = { ...recyclarrMergedTemplates.quality_definition, ...value.quality_definition };
+    mergedTemplates.quality_definition = { ...mergedTemplates.quality_definition, ...value.quality_definition };
   }
 
   if (value.customFormatDefinitions) {
     if (Array.isArray(value.customFormatDefinitions)) {
-      recyclarrMergedTemplates.customFormatDefinitions = [
-        ...(recyclarrMergedTemplates.customFormatDefinitions || []),
-        ...value.customFormatDefinitions,
-      ];
+      mergedTemplates.customFormatDefinitions = [...(mergedTemplates.customFormatDefinitions || []), ...value.customFormatDefinitions];
     } else {
       logger.warn(`CustomFormatDefinitions in config file must be an array. Ignoring.`);
     }
   }
 
-  const recyclarrProfilesMerged = recyclarrMergedTemplates.quality_profiles.reduce<Map<string, ConfigQualityProfile>>((p, c) => {
+  const recyclarrProfilesMerged = mergedTemplates.quality_profiles.reduce<Map<string, ConfigQualityProfile>>((p, c) => {
     const profile = p.get(c.name);
 
     if (profile == null) {
@@ -321,12 +318,12 @@ export const mergeConfigsAndTemplates = async (
     return p;
   }, new Map());
 
-  recyclarrMergedTemplates.quality_profiles = Array.from(recyclarrProfilesMerged.values());
+  mergedTemplates.quality_profiles = Array.from(recyclarrProfilesMerged.values());
 
-  recyclarrMergedTemplates.quality_profiles = filterInvalidQualityProfiles(recyclarrMergedTemplates.quality_profiles);
+  mergedTemplates.quality_profiles = filterInvalidQualityProfiles(mergedTemplates.quality_profiles);
 
   // merge profiles from recyclarr templates into one
-  const qualityProfilesMerged = recyclarrMergedTemplates.quality_profiles.reduce((p, c) => {
+  const qualityProfilesMerged = mergedTemplates.quality_profiles.reduce((p, c) => {
     let existingQp = p.get(c.name);
 
     if (!existingQp) {
@@ -349,9 +346,9 @@ export const mergeConfigsAndTemplates = async (
     return p;
   }, new Map<string, ConfigQualityProfile>());
 
-  recyclarrMergedTemplates.quality_profiles = Array.from(qualityProfilesMerged.values());
+  mergedTemplates.quality_profiles = Array.from(qualityProfilesMerged.values());
 
-  const validatedConfig = validateConfig(recyclarrMergedTemplates);
+  const validatedConfig = validateConfig(mergedTemplates);
   logger.debug(`Merged config: '${JSON.stringify(validatedConfig)}'`);
 
   /*
