@@ -125,6 +125,14 @@ const config: Config = {
               label: "Stack Overflow",
               href: "https://stackoverflow.com/questions/tagged/configarr",
             },
+            {
+              label: "YouTube",
+              href: "https://www.youtube.com/@raydak-labs",
+            },
+            {
+              label: "German Discord (UsenetDE)",
+              href: "https://discord.gg/Z2wTmrmFgn",
+            },
             // {
             //   label: "Discord",
             //   href: "https://discordapp.com/invite/docusaurus",
@@ -145,6 +153,10 @@ const config: Config = {
             {
               label: "GitHub",
               href: "https://github.com/raydak-labs/configarr",
+            },
+            {
+              label: "Raydak",
+              href: "https://raydak.de",
             },
           ],
         },
