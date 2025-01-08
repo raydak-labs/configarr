@@ -3,7 +3,7 @@ import path from "node:path";
 import { MergedCustomFormatResource } from "./__generated__/mergedTypes";
 import { getConfig } from "./config";
 import { logger } from "./logger";
-import { ArrType, CFProcessing, ConfigarrCF, QualityDefintionsRadarr, QualityDefintionsSonarr } from "./types/common.types";
+import { ArrType, CFIDToConfigGroup, ConfigarrCF, QualityDefintionsRadarr, QualityDefintionsSonarr } from "./types/common.types";
 import { ConfigCustomFormat, ConfigQualityProfile, ConfigQualityProfileItem } from "./types/config.types";
 import { TrashCF, TrashQP, TrashQualityDefintion } from "./types/trashguide.types";
 import { cloneGitRepo, loadJsonFile, mapImportCfToRequestCf, notEmpty, toCarrCF, trashRepoPaths } from "./util";
@@ -22,14 +22,11 @@ export const cloneTrashRepo = async () => {
   logger.info(`TRaSH-Guides repo: ref[${cloneResult.ref}], hash[${cloneResult.hash}], path[${cloneResult.localPath}]`);
 };
 
-export const loadTrashCFs = async (arrType: ArrType): Promise<CFProcessing> => {
+export const loadTrashCFs = async (arrType: ArrType): Promise<CFIDToConfigGroup> => {
   if (arrType !== "RADARR" && arrType !== "SONARR") {
     logger.debug(`Unsupported arrType: ${arrType}. Skipping TrashCFs.`);
 
-    return {
-      carrIdMapping: new Map(),
-      cfNameToCarrConfig: new Map(),
-    };
+    return new Map();
   }
 
   const trashRepoPath = "./repos/trash-guides";
@@ -41,7 +38,6 @@ export const loadTrashCFs = async (arrType: ArrType): Promise<CFProcessing> => {
   const trashSonarrCfPath = `${trashSonarrPath}/cf`;
 
   const carrIdToObject = new Map<string, { carrConfig: ConfigarrCF; requestConfig: MergedCustomFormatResource }>();
-  const cfNameToCarrObject = new Map<string, ConfigarrCF>();
 
   let pathForFiles: string;
 
@@ -64,18 +60,11 @@ export const loadTrashCFs = async (arrType: ArrType): Promise<CFProcessing> => {
       carrConfig: carrConfig,
       requestConfig: mapImportCfToRequestCf(carrConfig),
     });
-
-    if (carrConfig.name) {
-      cfNameToCarrObject.set(carrConfig.name, carrConfig);
-    }
   }
 
   logger.debug(`Trash CFs: ${carrIdToObject.size}`);
 
-  return {
-    carrIdMapping: carrIdToObject,
-    cfNameToCarrConfig: cfNameToCarrObject,
-  };
+  return carrIdToObject;
 };
 
 export const loadQualityDefinitionFromTrash = async (

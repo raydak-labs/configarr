@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as config from "./config";
 import { calculateCFsToManage, loadCustomFormatDefinitions, loadLocalCfs, mergeCfSources } from "./custom-formats";
 import { loadTrashCFs } from "./trash-guide";
-import { CFProcessing } from "./types/common.types";
+import { CFIDToConfigGroup } from "./types/common.types";
 import { ConfigCustomFormatList } from "./types/config.types";
 import { TrashCF } from "./types/trashguide.types";
 import * as util from "./util";
@@ -43,7 +43,7 @@ describe("CustomFormats", () => {
       vi.spyOn(config, "getConfig").mockReturnValue({ localCustomFormatsPath: undefined });
 
       const result = await loadLocalCfs();
-      expect(result).toBeNull();
+      expect(result.size).toBe(0);
     });
 
     it("should return null when configured path doesn't exist", async () => {
@@ -51,7 +51,7 @@ describe("CustomFormats", () => {
       vi.spyOn(fs, "existsSync").mockReturnValue(false);
 
       const result = await loadLocalCfs();
-      expect(result).toBeNull();
+      expect(result.size).toBe(0);
     });
 
     it("should load and process JSON files from configured path", async () => {
@@ -65,22 +65,16 @@ describe("CustomFormats", () => {
 
       const result = await loadLocalCfs();
       expect(result).not.toBeNull();
-      expect(result!.carrIdMapping.size).toBe(1);
-      expect(result!.carrIdMapping.get(customCF.trash_id)).not.toBeNull();
+      expect(result.size).toBe(1);
+      expect(result.get(customCF.trash_id)).not.toBeNull();
     });
   });
 
   describe("mergeCfSources", () => {
     it("should merge multiple CF sources correctly", () => {
-      const source1: CFProcessing = {
-        carrIdMapping: new Map([["id1", { carrConfig: { configarr_id: "id1", name: "CF1" }, requestConfig: {} }]]),
-        cfNameToCarrConfig: new Map([["CF1", { configarr_id: "id1", name: "CF1" }]]),
-      };
+      const source1: CFIDToConfigGroup = new Map([["id1", { carrConfig: { configarr_id: "id1", name: "CF1" }, requestConfig: {} }]]);
 
-      const source2: CFProcessing = {
-        carrIdMapping: new Map([["id2", { carrConfig: { configarr_id: "id2", name: "CF2" }, requestConfig: {} }]]),
-        cfNameToCarrConfig: new Map([["CF2", { configarr_id: "id2", name: "CF2" }]]),
-      };
+      const source2: CFIDToConfigGroup = new Map([["id2", { carrConfig: { configarr_id: "id2", name: "CF2" }, requestConfig: {} }]]);
 
       const result = mergeCfSources(new Set(["id1", "id2"]), [source1, source2, null]);
 
@@ -112,10 +106,9 @@ describe("CustomFormats", () => {
 
   describe("loadCustomFormatDefinitions", () => {
     it("should load and merge (trash CFDs", async () => {
-      const mockTrashCFs: CFProcessing = {
-        carrIdMapping: new Map([["trash1", { carrConfig: { configarr_id: "trash1", name: "trash1" }, requestConfig: {} }]]),
-        cfNameToCarrConfig: new Map(),
-      };
+      const mockTrashCFs: CFIDToConfigGroup = new Map([
+        ["trash1", { carrConfig: { configarr_id: "trash1", name: "trash1" }, requestConfig: {} }],
+      ]);
 
       vi.mock("./trash-guide");
       vi.mocked(loadTrashCFs).mockResolvedValue(mockTrashCFs);
@@ -128,10 +121,9 @@ describe("CustomFormats", () => {
     });
 
     it("should load and merge (additional CFDs)", async () => {
-      const mockTrashCFs: CFProcessing = {
-        carrIdMapping: new Map([["trash1", { carrConfig: { configarr_id: "trash1", name: "trash1" }, requestConfig: {} }]]),
-        cfNameToCarrConfig: new Map(),
-      };
+      const mockTrashCFs: CFIDToConfigGroup = new Map([
+        ["trash1", { carrConfig: { configarr_id: "trash1", name: "trash1" }, requestConfig: {} }],
+      ]);
 
       vi.mock("./trash-guide");
       vi.mocked(loadTrashCFs).mockResolvedValue(mockTrashCFs);
@@ -144,10 +136,9 @@ describe("CustomFormats", () => {
     });
 
     it("should ignore not managed CFs", async () => {
-      const mockTrashCFs: CFProcessing = {
-        carrIdMapping: new Map([["trash1", { carrConfig: { configarr_id: "trash1", name: "trash1" }, requestConfig: {} }]]),
-        cfNameToCarrConfig: new Map(),
-      };
+      const mockTrashCFs: CFIDToConfigGroup = new Map([
+        ["trash1", { carrConfig: { configarr_id: "trash1", name: "trash1" }, requestConfig: {} }],
+      ]);
 
       vi.mock("./trash-guide");
       vi.mocked(loadTrashCFs).mockResolvedValue(mockTrashCFs);
