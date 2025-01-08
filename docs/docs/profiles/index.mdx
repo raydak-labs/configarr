@@ -1,0 +1,119 @@
+---
+sidebar_position: 4
+description: "Sample profiles"
+keywords: [configarr, examples, configuration, profiles]
+---
+
+import CodeBlock from "@theme/CodeBlock";
+import QPGermanHDWEB from "!!raw-loader!./_radarr/qp_german_hd_web.yml";
+import QPGermanRemuxWEB from "!!raw-loader!./_radarr/qp_german_remux_web.yml";
+import QPGermanUHDWEB from "!!raw-loader!./_radarr/qp_german_uhd_web.yml";
+
+import SonarrGermanCustomNewCfs from "!!raw-loader!./_sonarr/sonarr-german-new-cfs.yml";
+import SonarrGermanCustomNewCfsQuality from "!!raw-loader!./_sonarr/sonarr-german-new-cfs-quality.yml";
+import SonarrGermanCustomCfs from "!!raw-loader!./_sonarr/sonarr-german-cfs.yml";
+import SonarrGermanCustomQps from "!!raw-loader!./_sonarr/sonarr-german-qps.yml";
+import SonarrGermanCustomConfig from "!!raw-loader!./_sonarr/sonarr-german-config.yml";
+
+# Quality profiles
+
+Profiles you can copy and paste to use for your desired profiles. You can always modify and create own profiles just copy the existing configs as base and modify as wanted.
+
+For example you like the base for the german custom formats:
+
+- you can either just adjust scorings for specific custom formats
+- or you can copy everything as base and maintain the scores without the need of a forked templates repo
+
+## Existing base templates
+
+You can use existing base templates from:
+
+- Recyclarr: https://github.com/recyclarr/config-templates
+- TRaSH-Guides:
+  - [Radarr](https://github.com/TRaSH-Guides/Guides/tree/master/docs/json/radarr/quality-profiles)
+  - [Sonarr](https://github.com/TRaSH-Guides/Guides/tree/master/docs/json/sonarr/quality-profiles)
+
+## German profiles
+
+### Radarr
+
+- TRaSH-Guides:
+  - [Radarr](https://trash-guides.info/Radarr/radarr-setup-quality-profiles-german-en/)
+- Recyclarr Configs:
+  - https://github.com/recyclarr/config-templates/pull/102
+  - https://github.com/recyclarr/config-templates/pull/103
+
+<!-- prettier-ignore-start -->
+- Profiles:
+  <details>
+    <summary>HD Bluray + WEB</summary>
+    <CodeBlock language="yml">{QPGermanHDWEB}</CodeBlock>
+  </details>
+
+
+  <details>
+    <summary>UHD Bluray + WEB</summary>
+    <CodeBlock language="yml">{QPGermanUHDWEB}</CodeBlock>
+  </details>
+
+
+  <details>
+    <summary>Remux + WEB 2160p</summary>
+    <CodeBlock language="yml">{QPGermanRemuxWEB}</CodeBlock>
+  </details>
+
+<!-- prettier-ignore-end -->
+
+### Sonarr
+
+- TRaSH-Guides (not available yet):
+  - [Sonarr](https://trash-guides.info/Sonarr/sonarr-setup-quality-profiles-german-en/)
+- Recyclarr Configs (not available yet):
+  - TBD
+
+As those are not yet available as resource in TRaSH we have to manually create the CFs.
+Thanks for providing prepared configs from discord user `zombobrain`.
+
+<!-- prettier-ignore-start -->
+
+- Templates for CustomFormats, Mapping of CustomFormats and QualityProfiles:
+  :::tip
+  This is one example. You can modify and maintain it as you need it for your setup.
+
+  You can of course also merge all files into one single file or place individual JSON files like in the TRaSH-Guide (see [configuration](/docs/configuration/config-file.md))
+  :::
+
+  <details>
+    <summary>New CustomFormats</summary>
+    <CodeBlock language="yml" title="templates/sonarr-german-new-cfs.yml">
+      {SonarrGermanCustomNewCfs}
+    </CodeBlock>
+  </details>
+
+  <details>
+    <summary>New CustomFormats (Quality)</summary>
+    <CodeBlock language="yml" title="templates/sonarr-german-new-cfs-quality.yml">
+      {SonarrGermanCustomNewCfsQuality}
+    </CodeBlock>
+  </details>
+
+  <details>
+    <summary>CustomFormats Mapping</summary>
+    <CodeBlock language="yml" title="templates/sonarr-german-cfs.yml">
+      {SonarrGermanCustomCfs}
+    </CodeBlock>
+  </details>
+
+  <details>
+    <summary>QualityProfiles</summary>
+    <CodeBlock language="yml" title="templates/sonarr-german-qps.yml">
+      {SonarrGermanCustomQps}
+    </CodeBlock>
+  </details>
+
+  <details>
+    <summary>Config</summary>
+    <CodeBlock language="yml" title="config.yml">
+      {SonarrGermanCustomConfig}
+    </CodeBlock>
+  </details>

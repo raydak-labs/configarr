@@ -1,0 +1,56 @@
+quality_profiles:
+  # German DL -> Fallback to German only
+  - name: DL>DE
+    reset_unmatched_scores:
+      enabled: true
+    upgrade:
+      allowed: true
+      until_quality: Merged QPs
+      until_score: 50000
+    min_format_score: 0
+    quality_sort: top
+    qualities:
+      - name: Merged QPs
+        qualities:
+          # Comment any qualities you are not interested in
+          - Bluray-2160p Remux
+          - Bluray-2160p
+          - WEBDL-2160p
+          - WEBRip-2160p
+          - Bluray-1080p Remux
+          - Bluray-1080p
+          - WEBDL-1080p
+          - WEBRip-1080p
+          - Bluray-720p
+          - WEBDL-720p
+          - WEBRip-720p
+          - WEBDL-480p
+          - WEBRip-480p
+
+  # German DL -> Fallback to English only
+  - name: DL>EN
+    reset_unmatched_scores:
+      enabled: true
+    upgrade:
+      allowed: true
+      until_quality: Merged QPs
+      until_score: 50000
+    min_format_score: 0
+    quality_sort: top
+    qualities:
+      - name: Merged QPs
+        qualities:
+          # Comment any qualities you are not interested in
+          - Bluray-2160p Remux
+          - Bluray-2160p
+          - WEBDL-2160p
+          - WEBRip-2160p
+          - Bluray-1080p Remux
+          - Bluray-1080p
+          - WEBDL-1080p
+          - WEBRip-1080p
+          - Bluray-720p
+          - WEBDL-720p
+          - WEBRip-720p
+          - WEBDL-480p
+          - WEBRip-480p

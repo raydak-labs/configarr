@@ -42,7 +42,7 @@ export type TCM = TC1 | TC2;
 
 export type ImportCF = OmitTyped<MergedCustomFormatResource, "specifications"> & {
   specifications?: TCM[] | null;
-};
+} & Required<Pick<MergedCustomFormatResource, "name">>;
 
 export type ConfigarrCFMeta = {
   configarr_id: string;

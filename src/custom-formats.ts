@@ -195,16 +195,16 @@ export const mapCustomFormatDefinitions = (customFormatDefinitions: CustomFormat
   };
 };
 
-export const loadCustomFormatDefinitions = async (arrType: ArrType, additionalCFDs: CustomFormatDefinitions) => {
+export const loadCustomFormatDefinitions = async (idsToMange: Set<string>, arrType: ArrType, additionalCFDs: CustomFormatDefinitions) => {
+  // TODO: the object CFProcessing is only needed as result from this method. All other should only work with ID -> object
   const trashCFs = await loadTrashCFs(arrType);
   const localFileCFs = await loadLocalCfs();
-  const configCFDs = loadCFFromConfig();
 
   logger.debug(
-    `Loaded ${trashCFs.carrIdMapping.size} TrashCFs, ${localFileCFs?.carrIdMapping.size} LocalCFs, ${configCFDs?.carrIdMapping.size} ConfigCFs, ${additionalCFDs.length} AdditionalCFs`,
+    `Total loaded CF definitions: ${trashCFs.carrIdMapping.size} TrashCFs, ${localFileCFs?.carrIdMapping.size == null ? 0 : localFileCFs?.carrIdMapping.size} LocalCFs, ${additionalCFDs.length} ConfigCFs`,
   );
 
-  return mergeCfSources([trashCFs, localFileCFs, configCFDs, mapCustomFormatDefinitions(additionalCFDs)]);
+  return mergeCfSources(idsToMange, [trashCFs, localFileCFs, mapCustomFormatDefinitions(additionalCFDs)]);
 };
 
 export const calculateCFsToManage = (yaml: ConfigCustomFormatList) => {
@@ -219,25 +219,29 @@ export const calculateCFsToManage = (yaml: ConfigCustomFormatList) => {
   return cfTrashToManage;
 };
 
-export const mergeCfSources = (listOfCfs: (CFProcessing | null)[]): CFProcessing => {
+export const mergeCfSources = (idsToManage: Set<string>, listOfCfs: (CFProcessing | null)[]): CFProcessing => {
   return listOfCfs.reduce<CFProcessing>(
     (p, c) => {
       if (!c) {
         return p;
       }
 
-      for (const [key, value] of c.carrIdMapping.entries()) {
-        if (p.carrIdMapping.has(key)) {
-          logger.info(`Overwriting ${key} during CF merge`);
-        }
-        p.carrIdMapping.set(key, value);
-      }
+      for (const test of idsToManage) {
+        const value = c.carrIdMapping.get(test);
+        const cfName = value?.carrConfig.name!;
 
-      for (const [key, value] of c.cfNameToCarrConfig.entries()) {
-        if (p.cfNameToCarrConfig.has(key)) {
-          logger.info(`Overwriting ${key} during CF merge`);
+        if (value) {
+          if (p.carrIdMapping.has(test)) {
+            logger.warn(`Overwriting CF with id '${test}' during merge.`);
+          }
+
+          if (p.cfNameToCarrConfig.has(cfName)) {
+            logger.warn(`Overwriting CF with name '${cfName}' (ID: ${test}) during merge.`);
+          }
+
+          p.carrIdMapping.set(test, value);
+          p.cfNameToCarrConfig.set(value.carrConfig.name!, value.carrConfig);
         }
-        p.cfNameToCarrConfig.set(key, value);
       }
 
       return p;

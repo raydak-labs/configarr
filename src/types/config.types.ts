@@ -1,7 +1,7 @@
-import { ConfigarrCFMeta } from "./common.types";
-import { TrashCFMeta, TrashScores } from "./trashguide.types";
+import { ConfigarrCF } from "./common.types";
+import { TrashCF, TrashScores } from "./trashguide.types";
 
-export type CustomFormatDefinitions = (TrashCFMeta | ConfigarrCFMeta)[];
+export type CustomFormatDefinitions = (TrashCF | ConfigarrCF)[];
 
 export type InputConfigSchema = {
   trashGuideUrl?: string;
