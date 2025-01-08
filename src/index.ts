@@ -21,26 +21,18 @@ import {
   transformTrashQPCFs,
   transformTrashQPToTemplate,
 } from "./trash-guide";
-import { ArrType, CFProcessing, MappedMergedTemplates } from "./types/common.types";
-import {
-  ConfigQualityProfile,
-  CustomFormatDefinitions,
-  InputConfigArrInstance,
-  InputConfigIncludeItem,
-  MergedConfigInstance,
-} from "./types/config.types";
+import { ArrType, MappedMergedTemplates } from "./types/common.types";
+import { ConfigQualityProfile, InputConfigArrInstance, InputConfigIncludeItem, MergedConfigInstance } from "./types/config.types";
 import { TrashQualityDefintion } from "./types/trashguide.types";
 
 /**
  * Load data from trash, recyclarr, custom configs and merge.
  * Afterwards do sanitize and check against required configuration.
+ * TODO: probably move to config.ts and write tests for it for different merge scenarios
  * @param value
  * @param arrType
  */
-const mergeConfigsAndTemplates = async (
-  value: InputConfigArrInstance,
-  arrType: ArrType,
-): Promise<{ mergedCFs: CFProcessing; config: MergedConfigInstance }> => {
+const mergeConfigsAndTemplates = async (value: InputConfigArrInstance, arrType: ArrType): Promise<{ config: MergedConfigInstance }> => {
   const recyclarrTemplateMap = loadRecyclarrTemplates(arrType);
   const localTemplateMap = loadLocalRecyclarrTemplate(arrType);
   const trashTemplates = await loadQPFromTrash(arrType);
@@ -54,7 +46,7 @@ const mergeConfigsAndTemplates = async (
     quality_profiles: [],
   };
 
-  // TODO: customFormatDefinitions not supported in templates yet
+  // HINT: we assume customFormatDefinitions only exist in RECYCLARR
   if (value.include) {
     const mappedIncludes = value.include.reduce<{ recyclarr: InputConfigIncludeItem[]; trash: InputConfigIncludeItem[] }>(
       (previous, current) => {
@@ -108,6 +100,17 @@ const mergeConfigsAndTemplates = async (
         recyclarrMergedTemplates.media_naming = { ...recyclarrMergedTemplates.media_naming, ...template.media_naming };
       }
 
+      if (template.customFormatDefinitions) {
+        if (Array.isArray(template.customFormatDefinitions)) {
+          recyclarrMergedTemplates.customFormatDefinitions = [
+            ...(recyclarrMergedTemplates.customFormatDefinitions || []),
+            ...template.customFormatDefinitions,
+          ];
+        } else {
+          logger.warn(`CustomFormatDefinitions in template must be an array. Ignoring.`);
+        }
+      }
+
       // TODO Ignore recursive include for now
       if (template.include) {
         logger.warn(`Recursive includes not supported at the moment. Ignoring.`);
@@ -128,6 +131,7 @@ const mergeConfigsAndTemplates = async (
     });
   }
 
+  // Config values overwrite template values
   if (value.custom_formats) {
     recyclarrMergedTemplates.custom_formats.push(...value.custom_formats);
   }
@@ -146,6 +150,17 @@ const mergeConfigsAndTemplates = async (
 
   if (value.quality_definition) {
     recyclarrMergedTemplates.quality_definition = { ...recyclarrMergedTemplates.quality_definition, ...value.quality_definition };
+  }
+
+  if (value.customFormatDefinitions) {
+    if (Array.isArray(value.customFormatDefinitions)) {
+      recyclarrMergedTemplates.customFormatDefinitions = [
+        ...(recyclarrMergedTemplates.customFormatDefinitions || []),
+        ...value.customFormatDefinitions,
+      ];
+    } else {
+      logger.warn(`CustomFormatDefinitions in config file must be an array. Ignoring.`);
+    }
   }
 
   const recyclarrProfilesMerged = recyclarrMergedTemplates.quality_profiles.reduce<Map<string, ConfigQualityProfile>>((p, c) => {
@@ -175,21 +190,6 @@ const mergeConfigsAndTemplates = async (
 
   recyclarrMergedTemplates.quality_profiles = filterInvalidQualityProfiles(recyclarrMergedTemplates.quality_profiles);
 
-  /* 
-  TODO: do we want to load all available local templates or only the included ones in the instance?
-  Example: we have a local template folder which we can always traverse. So we could load every CF defined there.
-  But then we could also have in theory conflicted CF IDs if user want to define same CF in different templates.
-  How to handle overwrite? Maybe also support overriding CFs defined in Trash or something?
-  */
-  const localTemplateCFDs = Array.from(localTemplateMap.values()).reduce((p, c) => {
-    if (c.customFormatDefinitions) {
-      p.push(...c.customFormatDefinitions);
-    }
-    return p;
-  }, [] as CustomFormatDefinitions);
-
-  const mergedCFs = await loadCustomFormatDefinitions(arrType, localTemplateCFDs);
-
   // merge profiles from recyclarr templates into one
   const qualityProfilesMerged = recyclarrMergedTemplates.quality_profiles.reduce((p, c) => {
     let existingQp = p.get(c.name);
@@ -218,17 +218,32 @@ const mergeConfigsAndTemplates = async (
 
   const validatedConfig = validateConfig(recyclarrMergedTemplates);
   logger.debug(`Merged config: '${JSON.stringify(validatedConfig)}'`);
-  return { mergedCFs: mergedCFs, config: validatedConfig };
+
+  /* 
+  TODO: do we want to load all available local templates or only the included ones in the instance?
+  Example: we have a local template folder which we can always traverse. So we could load every CF defined there.
+  But then we could also have in theory conflicted CF IDs if user want to define same CF in different templates.
+  How to handle overwrite? Maybe also support overriding CFs defined in Trash or something?
+  */
+  // const localTemplateCFDs = Array.from(localTemplateMap.values()).reduce((p, c) => {
+  //   if (c.customFormatDefinitions) {
+  //     p.push(...c.customFormatDefinitions);
+  //   }
+  //   return p;
+  // }, [] as CustomFormatDefinitions);
+
+  return { config: validatedConfig };
 };
 
 const pipeline = async (value: InputConfigArrInstance, arrType: ArrType) => {
   const api = getUnifiedClient();
 
-  const { config, mergedCFs } = await mergeConfigsAndTemplates(value, arrType);
+  const { config } = await mergeConfigsAndTemplates(value, arrType);
 
   const idsToManage = calculateCFsToManage(config);
-
   logger.debug(Array.from(idsToManage), `CustomFormats to manage`);
+
+  const mergedCFs = await loadCustomFormatDefinitions(idsToManage, arrType, config.customFormatDefinitions || []);
 
   let serverCFs = await loadServerCustomFormats();
   logger.info(`CustomFormats on server: ${serverCFs.length}`);

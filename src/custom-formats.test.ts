@@ -82,7 +82,7 @@ describe("CustomFormats", () => {
         cfNameToCarrConfig: new Map([["CF2", { configarr_id: "id2", name: "CF2" }]]),
       };
 
-      const result = mergeCfSources([source1, source2, null]);
+      const result = mergeCfSources(new Set(["id1", "id2"]), [source1, source2, null]);
 
       expect(result.carrIdMapping.size).toBe(2);
       expect(result.cfNameToCarrConfig.size).toBe(2);
@@ -113,7 +113,7 @@ describe("CustomFormats", () => {
   describe("loadCustomFormatDefinitions", () => {
     it("should load and merge (trash CFDs", async () => {
       const mockTrashCFs: CFProcessing = {
-        carrIdMapping: new Map([["trash1", { carrConfig: { configarr_id: "trash1" }, requestConfig: {} }]]),
+        carrIdMapping: new Map([["trash1", { carrConfig: { configarr_id: "trash1", name: "trash1" }, requestConfig: {} }]]),
         cfNameToCarrConfig: new Map(),
       };
 
@@ -121,7 +121,7 @@ describe("CustomFormats", () => {
       vi.mocked(loadTrashCFs).mockResolvedValue(mockTrashCFs);
       vi.spyOn(config, "getConfig").mockReturnValue({ localCustomFormatsPath: undefined });
 
-      const result = await loadCustomFormatDefinitions("RADARR", []);
+      const result = await loadCustomFormatDefinitions(new Set(["trash1"]), "RADARR", []);
 
       expect(result.carrIdMapping.size).toBe(1);
       expect(result.carrIdMapping.has("trash1")).toBeTruthy();
@@ -129,7 +129,7 @@ describe("CustomFormats", () => {
 
     it("should load and merge (additional CFDs)", async () => {
       const mockTrashCFs: CFProcessing = {
-        carrIdMapping: new Map([["trash1", { carrConfig: { configarr_id: "trash1" }, requestConfig: {} }]]),
+        carrIdMapping: new Map([["trash1", { carrConfig: { configarr_id: "trash1", name: "trash1" }, requestConfig: {} }]]),
         cfNameToCarrConfig: new Map(),
       };
 
@@ -137,30 +137,26 @@ describe("CustomFormats", () => {
       vi.mocked(loadTrashCFs).mockResolvedValue(mockTrashCFs);
       vi.spyOn(config, "getConfig").mockReturnValue({ localCustomFormatsPath: undefined });
 
-      const result = await loadCustomFormatDefinitions("RADARR", [customCF]);
+      const result = await loadCustomFormatDefinitions(new Set(["trash1", customCF.trash_id]), "RADARR", [customCF]);
 
       expect(result.carrIdMapping.size).toBe(2);
       expect(result.carrIdMapping.has("trash1")).toBeTruthy();
     });
 
-    it("should load and merge (config CFDs)", async () => {
+    it("should ignore not managed CFs", async () => {
       const mockTrashCFs: CFProcessing = {
-        carrIdMapping: new Map(),
+        carrIdMapping: new Map([["trash1", { carrConfig: { configarr_id: "trash1", name: "trash1" }, requestConfig: {} }]]),
         cfNameToCarrConfig: new Map(),
       };
 
-      const clonedCFD: TrashCF = JSON.parse(JSON.stringify(customCF));
-      clonedCFD.trash_id = "trash2";
-      clonedCFD.name = "Trash2";
-
       vi.mock("./trash-guide");
       vi.mocked(loadTrashCFs).mockResolvedValue(mockTrashCFs);
-      vi.spyOn(config, "getConfig").mockReturnValue({ localCustomFormatsPath: undefined, customFormatDefinitions: [customCF] });
+      vi.spyOn(config, "getConfig").mockReturnValue({ localCustomFormatsPath: undefined });
 
-      const result = await loadCustomFormatDefinitions("RADARR", [clonedCFD]);
+      const result = await loadCustomFormatDefinitions(new Set(["trash1"]), "RADARR", [customCF]);
 
-      expect(result.carrIdMapping.size).toBe(2);
-      expect(result.carrIdMapping.has("trash2")).toBeTruthy();
+      expect(result.carrIdMapping.size).toBe(1);
+      expect(result.carrIdMapping.has("trash1")).toBeTruthy();
     });
   });
 });
