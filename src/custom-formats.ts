@@ -6,7 +6,7 @@ import { getConfig } from "./config";
 import { getEnvs } from "./env";
 import { logger } from "./logger";
 import { loadTrashCFs } from "./trash-guide";
-import { ArrType, CFProcessing, ConfigarrCF } from "./types/common.types";
+import { ArrType, CFIDToConfigGroup, CFProcessing, ConfigarrCF } from "./types/common.types";
 import { ConfigCustomFormatList, CustomFormatDefinitions } from "./types/config.types";
 import { TrashCF } from "./types/trashguide.types";
 import { compareCustomFormats, loadJsonFile, mapImportCfToRequestCf, toCarrCF } from "./util";
@@ -116,24 +116,23 @@ export const manageCf = async (
   return { createCFs, updatedCFs, validCFs, errorCFs };
 };
 
-export const loadLocalCfs = async (): Promise<CFProcessing | null> => {
+export const loadLocalCfs = async (): Promise<CFIDToConfigGroup> => {
   const config = getConfig();
+  const carrIdToObject = new Map<string, { carrConfig: ConfigarrCF; requestConfig: MergedCustomFormatResource }>();
 
   if (config.localCustomFormatsPath == null) {
     logger.debug(`No local custom formats specified. Skipping.`);
-    return null;
+    return carrIdToObject;
   }
 
   const cfPath = path.resolve(config.localCustomFormatsPath);
 
   if (!fs.existsSync(cfPath)) {
     logger.info(`Provided local custom formats path '${config.localCustomFormatsPath}' does not exist.`);
-    return null;
+    return carrIdToObject;
   }
 
   const files = fs.readdirSync(`${cfPath}`).filter((fn) => fn.endsWith("json"));
-  const carrIdToObject = new Map<string, { carrConfig: ConfigarrCF; requestConfig: MergedCustomFormatResource }>();
-  const cfNameToCarrObject = new Map<string, ConfigarrCF>();
 
   for (const file of files) {
     const name = `${cfPath}/${file}`;
@@ -145,19 +144,12 @@ export const loadLocalCfs = async (): Promise<CFProcessing | null> => {
       carrConfig: cfD,
       requestConfig: mapImportCfToRequestCf(cfD),
     });
-
-    if (cfD.name) {
-      cfNameToCarrObject.set(cfD.name, cfD);
-    }
   }
 
-  return {
-    carrIdMapping: carrIdToObject,
-    cfNameToCarrConfig: cfNameToCarrObject,
-  };
+  return carrIdToObject;
 };
 
-export const loadCFFromConfig = (): CFProcessing | null => {
+export const loadCFFromConfig = (): CFIDToConfigGroup | null => {
   const defs = getConfig().customFormatDefinitions;
 
   if (defs == null) {
@@ -168,41 +160,34 @@ export const loadCFFromConfig = (): CFProcessing | null => {
   return mapCustomFormatDefinitions(defs);
 };
 
-export const mapCustomFormatDefinitions = (customFormatDefinitions: CustomFormatDefinitions): CFProcessing | null => {
+export const mapCustomFormatDefinitions = (customFormatDefinitions: CustomFormatDefinitions): CFIDToConfigGroup | null => {
   if (customFormatDefinitions == null) {
     return null;
   }
 
   const carrIdToObject = new Map<string, { carrConfig: ConfigarrCF; requestConfig: MergedCustomFormatResource }>();
-  const cfNameToCarrObject = new Map<string, ConfigarrCF>();
 
   for (const def of customFormatDefinitions) {
     const cfD = toCarrCF(def);
+
+    if (carrIdToObject.has(cfD.configarr_id)) {
+      logger.warn(`Duplicate ConfigCF ID found: '${cfD.configarr_id}'. Overwriting with name '${cfD.name}'`);
+    }
 
     carrIdToObject.set(cfD.configarr_id, {
       carrConfig: cfD,
       requestConfig: mapImportCfToRequestCf(cfD),
     });
-
-    if (cfD.name) {
-      cfNameToCarrObject.set(cfD.name, cfD);
-    }
   }
 
-  return {
-    carrIdMapping: carrIdToObject,
-    cfNameToCarrConfig: cfNameToCarrObject,
-  };
+  return carrIdToObject;
 };
 
 export const loadCustomFormatDefinitions = async (idsToMange: Set<string>, arrType: ArrType, additionalCFDs: CustomFormatDefinitions) => {
-  // TODO: the object CFProcessing is only needed as result from this method. All other should only work with ID -> object
   const trashCFs = await loadTrashCFs(arrType);
   const localFileCFs = await loadLocalCfs();
 
-  logger.debug(
-    `Total loaded CF definitions: ${trashCFs.carrIdMapping.size} TrashCFs, ${localFileCFs?.carrIdMapping.size == null ? 0 : localFileCFs?.carrIdMapping.size} LocalCFs, ${additionalCFDs.length} ConfigCFs`,
-  );
+  logger.debug(`Total loaded CF definitions: ${trashCFs.size} TrashCFs, ${localFileCFs.size} LocalCFs, ${additionalCFDs.length} ConfigCFs`);
 
   return mergeCfSources(idsToMange, [trashCFs, localFileCFs, mapCustomFormatDefinitions(additionalCFDs)]);
 };
@@ -219,15 +204,15 @@ export const calculateCFsToManage = (yaml: ConfigCustomFormatList) => {
   return cfTrashToManage;
 };
 
-export const mergeCfSources = (idsToManage: Set<string>, listOfCfs: (CFProcessing | null)[]): CFProcessing => {
+export const mergeCfSources = (idsToManage: Set<string>, listOfCfs: (CFIDToConfigGroup | null)[]): CFProcessing => {
   return listOfCfs.reduce<CFProcessing>(
     (p, c) => {
-      if (!c) {
+      if (c == null) {
         return p;
       }
 
       for (const test of idsToManage) {
-        const value = c.carrIdMapping.get(test);
+        const value = c.get(test);
         const cfName = value?.carrConfig.name!;
 
         if (value) {

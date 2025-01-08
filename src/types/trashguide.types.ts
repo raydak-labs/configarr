@@ -24,6 +24,7 @@ export type TrashScores = {
   "sqp-4"?: number;
   "sqp-5"?: number;
   "french-vostfr"?: number;
+  german?: number;
 };
 
 export type TrashCFMeta = {
@@ -44,7 +45,8 @@ type TrashQPItem = {
 export type TrashQP = {
   trash_id: string;
   name: string;
-  trash_score_set: keyof TrashCF["trash_scores"];
+  trash_score_set: keyof Required<TrashScores>;
+  language?: string;
   upgradeAllowed: boolean;
   cutoff: string;
   minFormatScore: number;

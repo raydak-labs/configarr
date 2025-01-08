@@ -51,14 +51,15 @@ export type ConfigarrCFMeta = {
 
 export type ConfigarrCF = ConfigarrCFMeta & ImportCF;
 
+type CFConfigGroup = {
+  carrConfig: ConfigarrCF;
+  requestConfig: MergedCustomFormatResource;
+};
+
+export type CFIDToConfigGroup = Map<string, CFConfigGroup>;
+
 export type CFProcessing = {
-  carrIdMapping: Map<
-    string,
-    {
-      carrConfig: ConfigarrCF;
-      requestConfig: MergedCustomFormatResource;
-    }
-  >;
+  carrIdMapping: CFIDToConfigGroup;
   cfNameToCarrConfig: Map<string, ConfigarrCF>;
 };
 
