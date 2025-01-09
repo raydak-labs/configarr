@@ -26,10 +26,12 @@ const trashRepoRadarrRoot = `${trashRepoRoot}/${trashRepoPath}/radarr`;
 export const trashRepoPaths = {
   root: trashRepoRoot,
   sonarrCF: `${trashRepoSonarrRoot}/cf`,
+  sonarrCFGroups: `${trashRepoSonarrRoot}/cf-groups`,
   sonarrQualitySize: `${trashRepoSonarrRoot}/quality-size`,
   sonarrQP: `${trashRepoSonarrRoot}/quality-profiles`,
   sonarrNaming: `${trashRepoSonarrRoot}/naming`,
   radarrCF: `${trashRepoRadarrRoot}/cf`,
+  radarrCFGroups: `${trashRepoRadarrRoot}/cf-groups`,
   radarrQualitySize: `${trashRepoRadarrRoot}/quality-size`,
   radarrQP: `${trashRepoRadarrRoot}/quality-profiles`,
   radarrNaming: `${trashRepoRadarrRoot}/naming`,

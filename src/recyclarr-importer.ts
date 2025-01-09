@@ -2,8 +2,8 @@ import { default as fs } from "node:fs";
 import yaml from "yaml";
 import { getConfig } from "./config";
 import { logger } from "./logger";
-import { ArrType, MappedTemplates } from "./types/common.types";
-import { RecyclarrTemplates } from "./types/recyclarr.types";
+import { MappedTemplates } from "./types/common.types";
+import { RecyclarrArrSupported, RecyclarrTemplates } from "./types/recyclarr.types";
 import { cloneGitRepo, recyclarrRepoPaths } from "./util";
 
 const DEFAULT_RECYCLARR_GIT_URL = "https://github.com/recyclarr/config-templates";
@@ -20,7 +20,7 @@ export const cloneRecyclarrTemplateRepo = async () => {
   logger.info(`Recyclarr repo: ref[${cloneResult.ref}], hash[${cloneResult.hash}], path[${cloneResult.localPath}]`);
 };
 
-export const loadRecyclarrTemplates = (arrType: ArrType): Map<string, MappedTemplates> => {
+export const loadRecyclarrTemplates = (arrType: RecyclarrArrSupported): Map<string, MappedTemplates> => {
   const map = new Map<string, RecyclarrTemplates>();
 
   const fillMap = (path: string) => {

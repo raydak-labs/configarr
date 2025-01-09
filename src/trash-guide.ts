@@ -3,9 +3,9 @@ import path from "node:path";
 import { MergedCustomFormatResource } from "./__generated__/mergedTypes";
 import { getConfig } from "./config";
 import { logger } from "./logger";
-import { ArrType, CFIDToConfigGroup, ConfigarrCF, QualityDefintionsRadarr, QualityDefintionsSonarr } from "./types/common.types";
+import { CFIDToConfigGroup, ConfigarrCF, QualityDefintionsRadarr, QualityDefintionsSonarr } from "./types/common.types";
 import { ConfigCustomFormat, ConfigQualityProfile, ConfigQualityProfileItem } from "./types/config.types";
-import { TrashCF, TrashQP, TrashQualityDefintion } from "./types/trashguide.types";
+import { TrashArrSupported, TrashCF, TrashQP, TrashQualityDefintion } from "./types/trashguide.types";
 import { cloneGitRepo, loadJsonFile, mapImportCfToRequestCf, notEmpty, toCarrCF, trashRepoPaths } from "./util";
 
 const DEFAULT_TRASH_GIT_URL = "https://github.com/TRaSH-Guides/Guides";
@@ -22,29 +22,21 @@ export const cloneTrashRepo = async () => {
   logger.info(`TRaSH-Guides repo: ref[${cloneResult.ref}], hash[${cloneResult.hash}], path[${cloneResult.localPath}]`);
 };
 
-export const loadTrashCFs = async (arrType: ArrType): Promise<CFIDToConfigGroup> => {
+export const loadTrashCFs = async (arrType: TrashArrSupported): Promise<CFIDToConfigGroup> => {
   if (arrType !== "RADARR" && arrType !== "SONARR") {
     logger.debug(`Unsupported arrType: ${arrType}. Skipping TrashCFs.`);
 
     return new Map();
   }
 
-  const trashRepoPath = "./repos/trash-guides";
-  const trashJsonDir = "docs/json";
-  const trashRadarrPath = `${trashJsonDir}/radarr`;
-  const trashRadarrCfPath = `${trashRadarrPath}/cf`;
-
-  const trashSonarrPath = `${trashJsonDir}/sonarr`;
-  const trashSonarrCfPath = `${trashSonarrPath}/cf`;
-
   const carrIdToObject = new Map<string, { carrConfig: ConfigarrCF; requestConfig: MergedCustomFormatResource }>();
 
   let pathForFiles: string;
 
   if (arrType === "RADARR") {
-    pathForFiles = `${trashRepoPath}/${trashRadarrCfPath}`;
+    pathForFiles = trashRepoPaths.radarrCF;
   } else {
-    pathForFiles = `${trashRepoPath}/${trashSonarrCfPath}`;
+    pathForFiles = trashRepoPaths.sonarrCF;
   }
 
   const files = fs.readdirSync(pathForFiles).filter((fn) => fn.endsWith("json"));
@@ -69,7 +61,7 @@ export const loadTrashCFs = async (arrType: ArrType): Promise<CFIDToConfigGroup>
 
 export const loadQualityDefinitionFromTrash = async (
   qdType: QualityDefintionsSonarr | QualityDefintionsRadarr,
-  arrType: ArrType,
+  arrType: TrashArrSupported,
 ): Promise<TrashQualityDefintion> => {
   let trashPath = arrType === "RADARR" ? trashRepoPaths.radarrQualitySize : trashRepoPaths.sonarrQualitySize;
 
@@ -87,7 +79,7 @@ export const loadQualityDefinitionFromTrash = async (
   }
 };
 
-export const loadQPFromTrash = async (arrType: ArrType) => {
+export const loadQPFromTrash = async (arrType: TrashArrSupported) => {
   let trashPath = arrType === "RADARR" ? trashRepoPaths.radarrQP : trashRepoPaths.sonarrQP;
   const map = new Map<string, TrashQP>();
 
