@@ -82,4 +82,4 @@ const ArrTypeConst = ["RADARR", "SONARR", "WHISPARR", "READARR"] as const;
 export type ArrType = (typeof ArrTypeConst)[number];
 
 export type QualityDefintionsSonarr = "anime" | "series" | "custom";
-export type QualityDefintionsRadarr = "movie" | "custom";
+export type QualityDefintionsRadarr = "movie" | "sqp-streaming" | "sqp-uhd" | "custom";
