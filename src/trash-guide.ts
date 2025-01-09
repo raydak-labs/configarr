@@ -5,7 +5,15 @@ import { getConfig } from "./config";
 import { logger } from "./logger";
 import { CFIDToConfigGroup, ConfigarrCF, QualityDefintionsRadarr, QualityDefintionsSonarr } from "./types/common.types";
 import { ConfigCustomFormat, ConfigQualityProfile, ConfigQualityProfileItem } from "./types/config.types";
-import { TrashArrSupported, TrashCache, TrashCF, TrashQP, TrashQualityDefintion } from "./types/trashguide.types";
+import {
+  TrashArrSupported,
+  TrashCache,
+  TrashCF,
+  TrashQP,
+  TrashQualityDefintion,
+  TrashRadarrNaming,
+  TrashSonarrNaming,
+} from "./types/trashguide.types";
 import { cloneGitRepo, loadJsonFile, mapImportCfToRequestCf, notEmpty, toCarrCF, trashRepoPaths } from "./util";
 
 const DEFAULT_TRASH_GIT_URL = "https://github.com/TRaSH-Guides/Guides";
@@ -18,6 +26,9 @@ const createCache = async () => {
 
   const radarrCF = await loadTrashCFs("RADARR");
   const sonarrCF = await loadTrashCFs("SONARR");
+
+  const radarrNaming = await loadNamingFromTrashRadarr();
+  const sonarrNaming = await loadNamingFromTrashSonarr();
 
   const radarrQP = await loadQPFromTrash("RADARR");
   const sonarrQP = await loadQPFromTrash("SONARR");
@@ -34,6 +45,7 @@ const createCache = async () => {
         anime: sonarrQDAnime,
         series: sonarrQDSeries,
       },
+      naming: sonarrNaming,
     },
     RADARR: {
       qualityProfiles: radarrQP,
@@ -41,6 +53,7 @@ const createCache = async () => {
       qualityDefinition: {
         movie: radarrQDMovie,
       },
+      naming: radarrNaming,
     },
   };
 
@@ -161,6 +174,82 @@ export const loadQPFromTrash = async (arrType: TrashArrSupported) => {
 
   logger.debug(`(${arrType}) Found ${map.size} TRaSH-Guides QualityProfiles.`);
   return map;
+};
+
+/**
+ * HINT: for now we only support one naming file per arrType
+ */
+const loadNamingFromTrash = async <T>(arrType: TrashArrSupported): Promise<T | null> => {
+  let trashPath = arrType === "RADARR" ? trashRepoPaths.radarrNaming : trashRepoPaths.sonarrNaming;
+
+  const map = new Map<string, T>();
+
+  try {
+    const files = fs.readdirSync(`${trashPath}`).filter((fn) => fn.endsWith("json"));
+
+    if (files.length <= 0) {
+      logger.info(`(${arrType}) Not found any TRaSH-Guides Naming files. Skipping.`);
+    }
+
+    for (const item of files) {
+      const importTrashQP = loadJsonFile<T>(`${trashPath}/${item}`);
+
+      map.set(item, importTrashQP);
+    }
+  } catch (err: any) {
+    logger.warn(`(${arrType}) Failed loading TRaSH-Guides QualityProfiles. Continue without ...`, err?.message);
+  }
+
+  logger.debug(`(${arrType}) Found ${map.size} TRaSH-Guides Naming files.`);
+
+  if (map.size <= 0) {
+    return null;
+  }
+
+  if (map.size > 1) {
+    logger.warn(`(${arrType}) Found more than one TRaSH-Guides Naming file. Using the first one.`);
+  }
+
+  const firstValue = map.values().next().value!;
+
+  return firstValue;
+};
+
+export const loadNamingFromTrashSonarr = async (): Promise<TrashSonarrNaming | null> => {
+  if (cacheReady) {
+    return cache["SONARR"].naming;
+  }
+
+  const firstValue = await loadNamingFromTrash<TrashSonarrNaming>("SONARR");
+
+  if (firstValue == null) {
+    return firstValue;
+  }
+
+  logger.debug(`(SONARR) Available TRaSH-Guide season keys: ${Object.keys(firstValue.season)}`);
+  logger.debug(`(SONARR) Available TRaSH-Guide series keys: ${Object.keys(firstValue.series)}`);
+  logger.debug(`(SONARR) Available TRaSH-Guide standard episode keys: ${Object.keys(firstValue.episodes.standard)}`);
+  logger.debug(`(SONARR) Available TRaSH-Guide daily episode keys: ${Object.keys(firstValue.episodes.daily)}`);
+  logger.debug(`(SONARR) Available TRaSH-Guide anime episode keys: ${Object.keys(firstValue.episodes.anime)}`);
+
+  return firstValue;
+};
+
+export const loadNamingFromTrashRadarr = async (): Promise<TrashRadarrNaming | null> => {
+  if (cacheReady) {
+    return cache["RADARR"].naming;
+  }
+
+  const firstValue = await loadNamingFromTrash<TrashRadarrNaming>("RADARR");
+
+  if (firstValue == null) {
+    return firstValue;
+  }
+
+  logger.debug(`(RADARR) Available TRaSH-Guide folder keys: ${Object.keys(firstValue.folder)}`);
+  logger.debug(`(RADARR) Available TRaSH-Guide file keys: ${Object.keys(firstValue.file)}`);
+
+  return firstValue;
 };
 
 // TODO merge two methods?

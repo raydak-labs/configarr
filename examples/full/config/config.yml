@@ -68,6 +68,9 @@ radarr:
       recycleBin: "/tmp"
 
     # experimental
+    media_naming_api: {}
+
+    # naming from TRaSH. See docs
     media_naming: {}
 
     include:

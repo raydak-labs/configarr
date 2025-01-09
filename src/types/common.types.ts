@@ -73,6 +73,7 @@ export type MappedTemplates = Partial<
     | "customFormatDefinitions"
     | "media_management"
     | "media_naming"
+    | "media_naming_api"
   >
 >;
 

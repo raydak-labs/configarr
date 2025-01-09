@@ -184,7 +184,12 @@ export const mapCustomFormatDefinitions = (customFormatDefinitions: CustomFormat
 };
 
 export const loadCustomFormatDefinitions = async (idsToMange: Set<string>, arrType: ArrType, additionalCFDs: CustomFormatDefinitions) => {
-  const trashCFs = await loadTrashCFs(arrType);
+  let trashCFs: CFIDToConfigGroup = new Map();
+
+  if (arrType === "RADARR" || arrType === "SONARR") {
+    trashCFs = await loadTrashCFs(arrType);
+  }
+
   const localFileCFs = await loadLocalCfs();
 
   logger.debug(`Total loaded CF definitions: ${trashCFs.size} TrashCFs, ${localFileCFs.size} LocalCFs, ${additionalCFDs.length} ConfigCFs`);

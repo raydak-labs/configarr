@@ -1,6 +1,6 @@
 import { getUnifiedClient } from "./clients/unified-client";
 import { logger } from "./logger";
-import { MediaManagementType, MediaNamingType } from "./types/config.types";
+import { MediaManagementType, MediaNamingApiType } from "./types/config.types";
 import { compareMediamanagement, compareNaming } from "./util";
 
 const loadNamingFromServer = async () => {
@@ -15,9 +15,9 @@ const loadMediamanagementConfigFromServer = async () => {
   return result;
 };
 
-export const calculateNamingDiff = async (mediaNaming?: MediaNamingType) => {
+export const calculateNamingDiff = async (mediaNaming?: MediaNamingApiType) => {
   if (mediaNaming == null) {
-    logger.debug(`Config 'media_naming' not specified. Ignoring.`);
+    logger.debug(`Config 'media_naming_api' not specified. Ignoring.`);
     return null;
   }
 
@@ -26,12 +26,12 @@ export const calculateNamingDiff = async (mediaNaming?: MediaNamingType) => {
   const { changes, equal } = compareNaming(serverData, mediaNaming);
 
   if (equal) {
-    logger.debug(`Media naming settings are in sync`);
+    logger.debug(`Media naming API settings are in sync`);
     return null;
   }
 
-  logger.info(`Found ${changes.length} differences for media naming.`);
-  logger.debug(changes, `Found following changes for media naming`);
+  logger.info(`Found ${changes.length} differences for media naming api.`);
+  logger.debug(changes, `Found following changes for media naming api`);
 
   return {
     changes,

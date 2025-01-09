@@ -138,6 +138,9 @@ sonarr:
     #media_management: {}
 
     # experimental available in all *arr
+    #media_naming_api: {}
+
+    # naming from recyclarr: https://recyclarr.dev/wiki/yaml/config-reference/media-naming/
     #media_naming: {}
 
     custom_formats: # Custom format assignments
@@ -205,6 +208,66 @@ SONARR_API_KEY: your_sonarr_api_key_here
 RADARR_API_KEY: your_radarr_api_key_here
 ```
 
+## Media Naming
+
+You can use the predefined naming configurations from TRaSH-Guide like in recyclarr with the `media_naming` key.
+
+- [TRaSH-Guide Sonarr Naming](https://github.com/TRaSH-Guides/Guides/blob/master/docs/json/sonarr/naming/sonarr-naming.json)
+- [TRaSH-Guide Radarr Naming](https://github.com/TRaSH-Guides/Guides/blob/master/docs/json/radarr/naming/radarr-naming.json)
+- [Recyclarr Wiki](https://recyclarr.dev/wiki/yaml/config-reference/media-naming/)
+
+The configuration values differs between Radarr and Sonarr.
+
+**Radarr**
+
+```yml
+radarr:
+  instance1:
+    # Media Naming Configuration
+    media_naming:
+      folder: default
+      movie:
+        rename: true
+        standard: default
+```
+
+| **Property**     | **Description**                                                               | **Default** |
+| ---------------- | ----------------------------------------------------------------------------- | ----------- |
+| `folder`         | Key for "Movie Folder Format". Check debug logs or TRaSH-Guide for values.    | Not synced  |
+| `movie.rename`   | If set to `true`, this enables the "Rename Movies" checkbox in the Radarr UI. | Not synced  |
+| `movie.standard` | Key for "Standard Movie Format". Check debug logs or TRaSH-Guide for values.  | Not synced  |
+
+All configurations above directly affect the "Movie Naming" settings under **Settings > Media Management** in the Radarr UI. If a property is _not specified_, Configarr will not sync that setting, allowing manual configuration.
+
+---
+
+**Sonarr**
+
+```yml
+sonarr:
+  instance1:
+    # Media Naming Configuration
+    media_naming:
+      series: default
+      season: default
+      episodes:
+        rename: true
+        standard: default
+        daily: default
+        anime: default
+```
+
+| **Property**        | **Description**                                                                 | **Default** |
+| ------------------- | ------------------------------------------------------------------------------- | ----------- |
+| `series`            | Key for "Series Folder Format". Check debug logs or TRaSH-Guide for values.     | Not synced  |
+| `season`            | Key for "Season Folder Format". Check debug logs or TRaSH-Guide for values.     | Not synced  |
+| `episodes.rename`   | If set to `true`, this enables the "Rename Episodes" checkbox in the Sonarr UI. | Not synced  |
+| `episodes.standard` | Key for "Standard Episode Format". Check debug logs or TRaSH-Guide for values.  | Not synced  |
+| `episodes.daily`    | Key for "Daily Episode Format". Check debug logs or TRaSH-Guide for values.     | Not synced  |
+| `episodes.anime`    | Key for "Anime Episode Format". Check debug logs or TRaSH-Guide for values.     | Not synced  |
+
+All configurations above directly affect the "Episode Naming" settings under **Settings > Media Management** in the Sonarr UI. If a property is _not specified_, Configarr will not sync that setting, allowing manual configuration.
+
 ## Usage
 
 1. Create both `config.yml` and `secrets.yml` files
@@ -216,7 +279,7 @@ Configarr will automatically load these configurations on startup and apply them
 
 ## Experimental supported fields
 
-- Experimental support for `media_management` and `media_naming` (since v1.5.0)
+- Experimental support for `media_management` and `media_naming_api` (since v1.5.0)
   With those you can configure different settings in the different tabs available per *arr.
   Both fields are under experimental support.
   The supports elements in those are dependent on the *arr used.

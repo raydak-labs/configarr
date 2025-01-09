@@ -41,6 +41,9 @@ export type InputConfigArrInstance = {
   /* @experimental */
   media_management?: MediaManagementType;
   /* @experimental */
+  media_naming_api?: MediaNamingApiType;
+
+  // this is recyclarr specific: https://recyclarr.dev/wiki/yaml/config-reference/media-naming/
   media_naming?: MediaNamingType;
 } & Pick<InputConfigSchema, "customFormatDefinitions">;
 
@@ -50,8 +53,27 @@ export type MediaManagementType = {
 };
 
 // HINT: Experimental
-export type MediaNamingType = {
+export type MediaNamingApiType = {
   // APIs not consistent across different *arrs. Keeping empty or generic
+};
+
+export type MediaNamingType = {
+  // radarr
+  folder?: string;
+  movie?: {
+    rename?: boolean;
+    standard?: string;
+  };
+
+  // sonarr
+  series?: string;
+  season?: string;
+  episodes?: {
+    rename?: boolean;
+    standard?: string;
+    daily?: string;
+    anime?: string;
+  };
 };
 
 export type InputConfigQualityProfile = {

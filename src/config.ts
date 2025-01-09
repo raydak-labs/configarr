@@ -1,12 +1,20 @@
 import { existsSync, readFileSync } from "node:fs";
 import yaml from "yaml";
+import { NamingConfigResource as RadarrNamingConfigResource } from "./__generated__/radarr/data-contracts";
+import { NamingConfigResource as SonarrNamingConfigResource } from "./__generated__/sonarr/data-contracts";
 import { getHelpers } from "./env";
 import { loadLocalRecyclarrTemplate } from "./local-importer";
 import { logger } from "./logger";
 import { filterInvalidQualityProfiles } from "./quality-profiles";
 import { loadRecyclarrTemplates } from "./recyclarr-importer";
-import { loadQPFromTrash, transformTrashQPCFs, transformTrashQPToTemplate } from "./trash-guide";
-import { ArrType, MappedMergedTemplates } from "./types/common.types";
+import {
+  loadNamingFromTrashRadarr,
+  loadNamingFromTrashSonarr,
+  loadQPFromTrash,
+  transformTrashQPCFs,
+  transformTrashQPToTemplate,
+} from "./trash-guide";
+import { ArrType, MappedMergedTemplates, MappedTemplates } from "./types/common.types";
 import {
   ConfigArrInstance,
   ConfigCustomFormat,
@@ -17,8 +25,10 @@ import {
   InputConfigIncludeItem,
   InputConfigInstance,
   InputConfigSchema,
+  MediaNamingType,
   MergedConfigInstance,
 } from "./types/config.types";
+import { TrashQP } from "./types/trashguide.types";
 
 let config: ConfigSchema;
 let secrets: any;
@@ -168,9 +178,15 @@ export const mergeConfigsAndTemplates = async (
   value: InputConfigArrInstance,
   arrType: ArrType,
 ): Promise<{ config: MergedConfigInstance }> => {
-  const recyclarrTemplateMap = loadRecyclarrTemplates(arrType);
   const localTemplateMap = loadLocalRecyclarrTemplate(arrType);
-  const trashTemplates = await loadQPFromTrash(arrType);
+  let recyclarrTemplateMap: Map<string, MappedTemplates> = new Map();
+  let trashTemplates: Map<string, TrashQP> = new Map();
+
+  if (arrType === "RADARR" || arrType === "SONARR") {
+    // TODO: separation maybe not the best. Maybe time to split up processing for each arrType
+    recyclarrTemplateMap = loadRecyclarrTemplates(arrType);
+    trashTemplates = await loadQPFromTrash(arrType);
+  }
 
   logger.debug(
     `Loaded ${recyclarrTemplateMap.size} Recyclarr templates, ${localTemplateMap.size} local templates and ${trashTemplates.size} trash templates.`,
@@ -235,6 +251,10 @@ export const mergeConfigsAndTemplates = async (
         mergedTemplates.media_naming = { ...mergedTemplates.media_naming, ...template.media_naming };
       }
 
+      if (template.media_naming_api) {
+        mergedTemplates.media_naming_api = { ...mergedTemplates.media_naming_api, ...template.media_naming_api };
+      }
+
       if (template.customFormatDefinitions) {
         if (Array.isArray(template.customFormatDefinitions)) {
           mergedTemplates.customFormatDefinitions = [
@@ -280,7 +300,14 @@ export const mergeConfigsAndTemplates = async (
   }
 
   if (value.media_naming) {
-    mergedTemplates.media_naming = { ...mergedTemplates.media_naming, ...value.media_naming };
+    mergedTemplates.media_naming_api = {
+      ...mergedTemplates.media_naming_api,
+      ...(await mapConfigMediaNamingToApi(arrType, value.media_naming)),
+    };
+  }
+
+  if (value.media_naming_api) {
+    mergedTemplates.media_naming_api = { ...mergedTemplates.media_naming_api, ...value.media_naming_api };
   }
 
   if (value.quality_definition) {
@@ -365,4 +392,82 @@ export const mergeConfigsAndTemplates = async (
   // }, [] as CustomFormatDefinitions);
 
   return { config: validatedConfig };
+};
+
+const mapConfigMediaNamingToApi = async (arrType: ArrType, mediaNaming: MediaNamingType): Promise<any | null> => {
+  if (arrType === "RADARR") {
+    const trashNaming = await loadNamingFromTrashRadarr();
+
+    if (trashNaming == null) {
+      return null;
+    }
+
+    const folderFormat = mediaNamingToApiWithLog("RADARR", mediaNaming.folder, trashNaming.folder, "mediaNaming.folder");
+    const standardFormat = mediaNamingToApiWithLog("RADARR", mediaNaming.movie?.standard, trashNaming.file, "mediaNaming.movie.standard");
+
+    const apiObject: RadarrNamingConfigResource = {
+      ...(folderFormat && { movieFolderFormat: folderFormat }),
+      ...(standardFormat && { standardMovieFormat: standardFormat }),
+      ...(mediaNaming.movie?.rename != null && { renameMovies: mediaNaming.movie?.rename === true }),
+    };
+
+    logger.debug(apiObject, `Mapped mediaNaming to API:`);
+    return apiObject;
+  }
+
+  if (arrType === "SONARR") {
+    const trashNaming = await loadNamingFromTrashSonarr();
+
+    if (trashNaming == null) {
+      return null;
+    }
+
+    const seriesFormat = mediaNamingToApiWithLog("SONARR", mediaNaming.series, trashNaming.series, "mediaNaming.series");
+    const seasonsFormat = mediaNamingToApiWithLog("SONARR", mediaNaming.season, trashNaming.season, "mediaNaming.season");
+    const standardFormat = mediaNamingToApiWithLog(
+      "SONARR",
+      mediaNaming.episodes?.standard,
+      trashNaming.episodes.standard,
+      "mediaNaming.episodes.standard",
+    );
+    const dailyFormat = mediaNamingToApiWithLog(
+      "SONARR",
+      mediaNaming.episodes?.daily,
+      trashNaming.episodes.daily,
+      "mediaNaming.episodes.daily",
+    );
+    const animeFormat = mediaNamingToApiWithLog(
+      "SONARR",
+      mediaNaming.episodes?.anime,
+      trashNaming.episodes.anime,
+      "mediaNaming.episodes.anime",
+    );
+
+    const apiObject: SonarrNamingConfigResource = {
+      ...(seriesFormat && { seriesFolderFormat: seriesFormat }),
+      ...(seasonsFormat && { seasonFolderFormat: seasonsFormat }),
+      ...(standardFormat && { standardEpisodeFormat: standardFormat }),
+      ...(dailyFormat && { dailyEpisodeFormat: dailyFormat }),
+      ...(animeFormat && { animeEpisodeFormat: animeFormat }),
+      ...(mediaNaming.episodes?.rename != null && { renameEpisodes: mediaNaming.episodes?.rename === true }),
+    };
+
+    logger.debug(apiObject, `Mapped mediaNaming to API:`);
+
+    return apiObject;
+  }
+
+  logger.warn(`MediaNaming not supported for ${arrType}`);
+};
+
+const mediaNamingToApiWithLog = (arrType: ArrType, key: string | undefined, trashObject: any, label: string) => {
+  if (key) {
+    if (trashObject[key] == null) {
+      logger.warn(`(${arrType}) Specified ${label} '${key}' could not be found in TRaSH-Guide. Check debug logs for available keys.`);
+    } else {
+      return trashObject[key];
+    }
+  }
+
+  return null;
 };

@@ -61,12 +61,34 @@ export type TrashCFSpF = { min: number; max: number; exceptLanguage: boolean; va
 
 export type TrashArrSupported = Subset<ArrType, "RADARR" | "SONARR">;
 
-export type TrashNamingFile = {
+export type TrashRadarrNaming = {
   folder: {
     [key: string]: string;
   };
   file: {
     [key: string]: string;
+  };
+};
+
+export type TrashSonarrNaming = {
+  season: {
+    [key: string]: string;
+  };
+  series: {
+    [key: string]: string;
+  };
+  episodes: {
+    standard: {
+      [key: string]: string;
+    };
+
+    daily: {
+      [key: string]: string;
+    };
+
+    anime: {
+      [key: string]: string;
+    };
   };
 };
 
@@ -78,6 +100,7 @@ export type TrashCache = {
       series: TrashQualityDefintion;
       anime: TrashQualityDefintion;
     };
+    naming: TrashSonarrNaming | null;
   };
   RADARR: {
     qualityProfiles: Map<string, TrashQP>;
@@ -85,5 +108,6 @@ export type TrashCache = {
     qualityDefinition: {
       movie: TrashQualityDefintion;
     };
+    naming: TrashRadarrNaming | null;
   };
 };

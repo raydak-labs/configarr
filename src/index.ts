@@ -91,7 +91,7 @@ const pipeline = async (value: InputConfigArrInstance, arrType: ArrType) => {
     logger.info(`No QualityDefinition configured.`);
   }
 
-  const namingDiff = await calculateNamingDiff(config.media_naming);
+  const namingDiff = await calculateNamingDiff(config.media_naming_api);
 
   if (namingDiff) {
     if (getEnvs().DRY_RUN) {
