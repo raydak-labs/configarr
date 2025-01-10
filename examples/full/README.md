@@ -15,3 +15,11 @@ URLs:
 - radarr: http://localhost:6501
 
 Cleanup: `docker-compose down -v`
+
+## Development
+
+You can also use this full example template as testing environment by utilizing the `docker-compose.local.yml` file.
+
+- Build image: `docker-compose -f docker-compose.local.yml build`
+- Run image: `docker-compose -f docker-compose.local.yml run --rm configarr`
+  - This will run always with the current code changes; no need to rebuild for simple code changes because the code will be mounted into the container

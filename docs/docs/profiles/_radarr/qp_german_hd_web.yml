@@ -1,12 +1,11 @@
 ###################################################################################################
 # Recyclarr Configuration Template: HD Bluray + WEB (GER)                                         #
-# Updated: 2024-12-28                                                                             #
+# Updated: 2025-01-10                                                                             #
 # Documentation: https://recyclarr.dev                                                            #
 # Note: If you are using multiple profiles in a single instance, please read the following        #
 # documentation about file merging:                                                               #
 # https://recyclarr.dev/wiki/yaml/config-examples/#merge-single-instance                          #
 ###################################################################################################
-
 # Instance Definition: https://recyclarr.dev/wiki/yaml/config-reference/basic/
 
 radarr:
@@ -17,32 +16,11 @@ radarr:
     include:
       - template: radarr-quality-definition-movie
       - template: radarr-custom-formats-hd-bluray-web-german
+      - template: radarr-quality-profile-hd-bluray-web-german
 
     quality_profiles:
       - name: HD Bluray + WEB (GER)
-        reset_unmatched_scores:
-          enabled: false
-        upgrade:
-          allowed: true
-          until_quality: Merged QPs
-          until_score: 25000
-        # Uncomment one of the next 2 lines dependent on if you want English Releases
-        min_format_score: 0 # Get English Releases and Upgrade to German when available
-        #        min_format_score: 10000 # Skip English Releases
-        quality_sort: top
-        qualities:
-          - name: Merged QPs
-            # Comment any qualities you are not interested in
-            qualities:
-              #              - Bluray-2160p
-              #              - WEBDL-2160p
-              #              - WEBRip-2160p
-              - Bluray-1080p
-              - WEBRip-1080p
-              - WEBDL-1080p
-              - Bluray-720p
-              - WEBDL-720p
-              - WEBRip-720p
+    #        min_format_score: 10000 # Uncomment this line to skip English Releases
 
     custom_formats:
       ### Optional
@@ -56,31 +34,29 @@ radarr:
         assign_scores_to:
           - name: HD Bluray + WEB (GER)
 
-      ### Resolution Boosters
-      # Uncomment any ID corresponding to resolutions you are not interested in
+      ### Movie Versions
       - trash_ids:
-          - 3bc8df3a71baaac60a31ef696ea72d36 # German 1080p Booster
-          - cc7b1e64e2513a6a271090cdfafaeb55 # German 2160p Booster
-          - b2be17d608fc88818940cd1833b0b24c # 720p
-          - 820b09bb9acbfde9c35c71e0e565dad8 # 1080p
-          - fb392fb0d61a010ae38e49ceaa24a1ef # 2160p
+        # Uncomment any of the following lines to prefer these movie versions
+        #          - 570bc9ebecd92723d2d21500f4be314c # Remaster
+        #          - eca37840c13c6ef2dd0262b141a5482f # 4K Remaster
+        #          - e0c07d59beb37348e975a930d5e50319 # Criterion Collection
+        #          - 9d27d9d2181838f76dee150882bdc58c # Masters of Cinema
+        #          - db9b4c4b53d312a3ca5f1378f6440fc9 # Vinegar Syndrome
+        #          - 957d0f44b592285f26449575e8b1167e # Special Edition
+        #          - eecf3a857724171f968a66cb5719e152 # IMAX
+        #          - 9f6cbff8cfe4ebbc1bde14c7b7bec0de # IMAX Enhanced
         assign_scores_to:
           - name: HD Bluray + WEB (GER)
-### Generated Dynamic HDR
-# Uncomment the next 5 lines if you dont care about Generated Dynamic HDR and/or want to grab VECTOR
-#      - trash_ids:
-#          - e6886871085226c3da1830830146846c # Generated Dynamic HDR
-#        assign_scores_to:
-#          - name: HD Bluray + WEB (GER)
-#            score: 0
 
-### x265 Releases
-#      - trash_ids:
-# Uncomment the next six lines to allow x265 HD releases with HDR/DV
-# Uncomment the next four lines to allow any x265 HD releases
-#          - dc98083864ea246d05a42df0d05f81cc # x265 (HD)
-#        assign_scores_to:
-#          - name: HD Bluray + WEB (GER)
-#            score: 0
-#      - trash_ids:
-#          - 839bea857ed2c0a8e084f3cbdbd65ecb # x265 (no HDR/DV)
+      ### Others
+      - trash_ids:
+        #          - 839bea857ed2c0a8e084f3cbdbd65ecb # Uncomment this line to allow HDR/DV x265 HD releases
+        assign_scores_to:
+          - name: HD Bluray + WEB (GER)
+
+      - trash_ids:
+        #          - dc98083864ea246d05a42df0d05f81cc # Uncomment this line to allow any x265 HD releases
+        #          - e6886871085226c3da1830830146846c # Uncomment this line to allow Generated Dynamic HDR
+        assign_scores_to:
+          - name: HD Bluray + WEB (GER)
+            score: 0
