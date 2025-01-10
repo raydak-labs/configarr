@@ -3,12 +3,62 @@ import path from "node:path";
 import { MergedCustomFormatResource } from "./__generated__/mergedTypes";
 import { getConfig } from "./config";
 import { logger } from "./logger";
-import { ArrType, CFIDToConfigGroup, ConfigarrCF, QualityDefintionsRadarr, QualityDefintionsSonarr } from "./types/common.types";
+import { CFIDToConfigGroup, ConfigarrCF, QualityDefintionsRadarr, QualityDefintionsSonarr } from "./types/common.types";
 import { ConfigCustomFormat, ConfigQualityProfile, ConfigQualityProfileItem } from "./types/config.types";
-import { TrashCF, TrashQP, TrashQualityDefintion } from "./types/trashguide.types";
+import {
+  TrashArrSupported,
+  TrashCache,
+  TrashCF,
+  TrashQP,
+  TrashQualityDefintion,
+  TrashRadarrNaming,
+  TrashSonarrNaming,
+} from "./types/trashguide.types";
 import { cloneGitRepo, loadJsonFile, mapImportCfToRequestCf, notEmpty, toCarrCF, trashRepoPaths } from "./util";
 
 const DEFAULT_TRASH_GIT_URL = "https://github.com/TRaSH-Guides/Guides";
+
+let cache: TrashCache;
+let cacheReady = false;
+
+const createCache = async () => {
+  logger.debug(`Creating TRaSH-Guides cache ...`);
+
+  const radarrCF = await loadTrashCFs("RADARR");
+  const sonarrCF = await loadTrashCFs("SONARR");
+
+  const radarrNaming = await loadNamingFromTrashRadarr();
+  const sonarrNaming = await loadNamingFromTrashSonarr();
+
+  const radarrQP = await loadQPFromTrash("RADARR");
+  const sonarrQP = await loadQPFromTrash("SONARR");
+
+  const radarrQDMovie = await loadQualityDefinitionFromTrash("movie", "RADARR");
+  const sonarrQDSeries = await loadQualityDefinitionFromTrash("series", "SONARR");
+  const sonarrQDAnime = await loadQualityDefinitionFromTrash("anime", "SONARR");
+
+  cache = {
+    SONARR: {
+      qualityProfiles: sonarrQP,
+      customFormats: sonarrCF,
+      qualityDefinition: {
+        anime: sonarrQDAnime,
+        series: sonarrQDSeries,
+      },
+      naming: sonarrNaming,
+    },
+    RADARR: {
+      qualityProfiles: radarrQP,
+      customFormats: radarrCF,
+      qualityDefinition: {
+        movie: radarrQDMovie,
+      },
+      naming: radarrNaming,
+    },
+  };
+
+  cacheReady = true;
+};
 
 export const cloneTrashRepo = async () => {
   logger.info(`Checking TRaSH-Guides repo ...`);
@@ -20,31 +70,28 @@ export const cloneTrashRepo = async () => {
 
   const cloneResult = await cloneGitRepo(rootPath, gitUrl, revision);
   logger.info(`TRaSH-Guides repo: ref[${cloneResult.ref}], hash[${cloneResult.hash}], path[${cloneResult.localPath}]`);
+  await createCache();
 };
 
-export const loadTrashCFs = async (arrType: ArrType): Promise<CFIDToConfigGroup> => {
+export const loadTrashCFs = async (arrType: TrashArrSupported): Promise<CFIDToConfigGroup> => {
   if (arrType !== "RADARR" && arrType !== "SONARR") {
     logger.debug(`Unsupported arrType: ${arrType}. Skipping TrashCFs.`);
 
     return new Map();
   }
 
-  const trashRepoPath = "./repos/trash-guides";
-  const trashJsonDir = "docs/json";
-  const trashRadarrPath = `${trashJsonDir}/radarr`;
-  const trashRadarrCfPath = `${trashRadarrPath}/cf`;
-
-  const trashSonarrPath = `${trashJsonDir}/sonarr`;
-  const trashSonarrCfPath = `${trashSonarrPath}/cf`;
+  if (cacheReady) {
+    return cache[arrType].customFormats;
+  }
 
   const carrIdToObject = new Map<string, { carrConfig: ConfigarrCF; requestConfig: MergedCustomFormatResource }>();
 
   let pathForFiles: string;
 
   if (arrType === "RADARR") {
-    pathForFiles = `${trashRepoPath}/${trashRadarrCfPath}`;
+    pathForFiles = trashRepoPaths.radarrCF;
   } else {
-    pathForFiles = `${trashRepoPath}/${trashSonarrCfPath}`;
+    pathForFiles = trashRepoPaths.sonarrCF;
   }
 
   const files = fs.readdirSync(pathForFiles).filter((fn) => fn.endsWith("json"));
@@ -62,16 +109,23 @@ export const loadTrashCFs = async (arrType: ArrType): Promise<CFIDToConfigGroup>
     });
   }
 
-  logger.debug(`Trash CFs: ${carrIdToObject.size}`);
+  logger.debug(`(${arrType}) Trash CFs: ${carrIdToObject.size}`);
 
   return carrIdToObject;
 };
 
 export const loadQualityDefinitionFromTrash = async (
   qdType: QualityDefintionsSonarr | QualityDefintionsRadarr,
-  arrType: ArrType,
+  arrType: TrashArrSupported,
 ): Promise<TrashQualityDefintion> => {
   let trashPath = arrType === "RADARR" ? trashRepoPaths.radarrQualitySize : trashRepoPaths.sonarrQualitySize;
+
+  if (cacheReady) {
+    const cacheObject = cache[arrType].qualityDefinition as any;
+    if (qdType in cacheObject) {
+      return cacheObject[qdType];
+    }
+  }
 
   switch (qdType) {
     case "anime":
@@ -81,21 +135,26 @@ export const loadQualityDefinitionFromTrash = async (
     case "movie":
       return loadJsonFile(path.resolve(`${trashPath}/movie.json`));
     case "custom":
-      throw new Error("Not implemented yet");
+      throw new Error(`(${arrType}) Not implemented yet`);
     default:
-      throw new Error(`Unknown QualityDefintion type: ${qdType}`);
+      throw new Error(`(${arrType}) Unknown QualityDefintion type: ${qdType}`);
   }
 };
 
-export const loadQPFromTrash = async (arrType: ArrType) => {
+export const loadQPFromTrash = async (arrType: TrashArrSupported) => {
   let trashPath = arrType === "RADARR" ? trashRepoPaths.radarrQP : trashRepoPaths.sonarrQP;
+
+  if (cacheReady) {
+    return cache[arrType].qualityProfiles;
+  }
+
   const map = new Map<string, TrashQP>();
 
   try {
     const files = fs.readdirSync(`${trashPath}`).filter((fn) => fn.endsWith("json"));
 
     if (files.length <= 0) {
-      logger.info(`Not found any TRaSH-Guides QualityProfiles. Skipping.`);
+      logger.info(`(${arrType}) Not found any TRaSH-Guides QualityProfiles. Skipping.`);
     }
 
     for (const item of files) {
@@ -104,7 +163,7 @@ export const loadQPFromTrash = async (arrType: ArrType) => {
       map.set(importTrashQP.trash_id, importTrashQP);
     }
   } catch (err: any) {
-    logger.warn("Failed loading TRaSH-Guides QualityProfiles. Continue without ...", err?.message);
+    logger.warn(`(${arrType}) Failed loading TRaSH-Guides QualityProfiles. Continue without ...`, err?.message);
   }
 
   // const localPath = getLocalTemplatePath();
@@ -113,8 +172,84 @@ export const loadQPFromTrash = async (arrType: ArrType) => {
   //   fillMap(localPath);
   // }
 
-  logger.debug(`Found ${map.size} TRaSH-Guides QualityProfiles.`);
+  logger.debug(`(${arrType}) Found ${map.size} TRaSH-Guides QualityProfiles.`);
   return map;
+};
+
+/**
+ * HINT: for now we only support one naming file per arrType
+ */
+const loadNamingFromTrash = async <T>(arrType: TrashArrSupported): Promise<T | null> => {
+  let trashPath = arrType === "RADARR" ? trashRepoPaths.radarrNaming : trashRepoPaths.sonarrNaming;
+
+  const map = new Map<string, T>();
+
+  try {
+    const files = fs.readdirSync(`${trashPath}`).filter((fn) => fn.endsWith("json"));
+
+    if (files.length <= 0) {
+      logger.info(`(${arrType}) Not found any TRaSH-Guides Naming files. Skipping.`);
+    }
+
+    for (const item of files) {
+      const importTrashQP = loadJsonFile<T>(`${trashPath}/${item}`);
+
+      map.set(item, importTrashQP);
+    }
+  } catch (err: any) {
+    logger.warn(`(${arrType}) Failed loading TRaSH-Guides QualityProfiles. Continue without ...`, err?.message);
+  }
+
+  logger.debug(`(${arrType}) Found ${map.size} TRaSH-Guides Naming files.`);
+
+  if (map.size <= 0) {
+    return null;
+  }
+
+  if (map.size > 1) {
+    logger.warn(`(${arrType}) Found more than one TRaSH-Guides Naming file. Using the first one.`);
+  }
+
+  const firstValue = map.values().next().value!;
+
+  return firstValue;
+};
+
+export const loadNamingFromTrashSonarr = async (): Promise<TrashSonarrNaming | null> => {
+  if (cacheReady) {
+    return cache["SONARR"].naming;
+  }
+
+  const firstValue = await loadNamingFromTrash<TrashSonarrNaming>("SONARR");
+
+  if (firstValue == null) {
+    return firstValue;
+  }
+
+  logger.debug(`(SONARR) Available TRaSH-Guide season keys: ${Object.keys(firstValue.season)}`);
+  logger.debug(`(SONARR) Available TRaSH-Guide series keys: ${Object.keys(firstValue.series)}`);
+  logger.debug(`(SONARR) Available TRaSH-Guide standard episode keys: ${Object.keys(firstValue.episodes.standard)}`);
+  logger.debug(`(SONARR) Available TRaSH-Guide daily episode keys: ${Object.keys(firstValue.episodes.daily)}`);
+  logger.debug(`(SONARR) Available TRaSH-Guide anime episode keys: ${Object.keys(firstValue.episodes.anime)}`);
+
+  return firstValue;
+};
+
+export const loadNamingFromTrashRadarr = async (): Promise<TrashRadarrNaming | null> => {
+  if (cacheReady) {
+    return cache["RADARR"].naming;
+  }
+
+  const firstValue = await loadNamingFromTrash<TrashRadarrNaming>("RADARR");
+
+  if (firstValue == null) {
+    return firstValue;
+  }
+
+  logger.debug(`(RADARR) Available TRaSH-Guide folder keys: ${Object.keys(firstValue.folder)}`);
+  logger.debug(`(RADARR) Available TRaSH-Guide file keys: ${Object.keys(firstValue.file)}`);
+
+  return firstValue;
 };
 
 // TODO merge two methods?

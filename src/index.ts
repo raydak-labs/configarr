@@ -15,13 +15,13 @@ import { calculateQualityProfilesDiff, loadQualityProfilesFromServer } from "./q
 import { cloneRecyclarrTemplateRepo } from "./recyclarr-importer";
 import { cloneTrashRepo, loadQualityDefinitionFromTrash } from "./trash-guide";
 import { ArrType } from "./types/common.types";
-import { InputConfigArrInstance } from "./types/config.types";
+import { InputConfigArrInstance, InputConfigSchema } from "./types/config.types";
 import { TrashQualityDefintion } from "./types/trashguide.types";
 
-const pipeline = async (value: InputConfigArrInstance, arrType: ArrType) => {
+const pipeline = async (globalConfig: InputConfigSchema, instanceConfig: InputConfigArrInstance, arrType: ArrType) => {
   const api = getUnifiedClient();
 
-  const { config } = await mergeConfigsAndTemplates(value, arrType);
+  const { config } = await mergeConfigsAndTemplates(globalConfig, instanceConfig, arrType);
 
   const idsToManage = calculateCFsToManage(config);
   logger.debug(Array.from(idsToManage), `CustomFormats to manage`);
@@ -91,7 +91,7 @@ const pipeline = async (value: InputConfigArrInstance, arrType: ArrType) => {
     logger.info(`No QualityDefinition configured.`);
   }
 
-  const namingDiff = await calculateNamingDiff(config.media_naming);
+  const namingDiff = await calculateNamingDiff(config.media_naming_api);
 
   if (namingDiff) {
     if (getEnvs().DRY_RUN) {
@@ -157,14 +157,14 @@ const run = async () => {
     logger.info("DryRun: Running in dry-run mode!");
   }
 
-  const applicationConfig = getConfig();
+  const globalConfig = getConfig();
 
   await cloneRecyclarrTemplateRepo();
   await cloneTrashRepo();
 
   // TODO currently this has to be run sequentially because of the centrally configured api
 
-  const sonarrConfig = applicationConfig.sonarr;
+  const sonarrConfig = globalConfig.sonarr;
 
   if (sonarrConfig == null || Array.isArray(sonarrConfig) || typeof sonarrConfig !== "object" || Object.keys(sonarrConfig).length <= 0) {
     logHeading(`No Sonarr instances defined.`);
@@ -174,12 +174,12 @@ const run = async () => {
     for (const [instanceName, instance] of Object.entries(sonarrConfig)) {
       logger.info(`Processing Sonarr Instance: ${instanceName}`);
       await configureApi("SONARR", instance.base_url, instance.api_key);
-      await pipeline(instance, "SONARR");
+      await pipeline(globalConfig, instance, "SONARR");
       unsetApi();
     }
   }
 
-  const radarrConfig = applicationConfig.radarr;
+  const radarrConfig = globalConfig.radarr;
 
   if (radarrConfig == null || Array.isArray(radarrConfig) || typeof radarrConfig !== "object" || Object.keys(radarrConfig).length <= 0) {
     logHeading(`No Radarr instances defined.`);
@@ -189,12 +189,12 @@ const run = async () => {
     for (const [instanceName, instance] of Object.entries(radarrConfig)) {
       logger.info(`Processing Radarr Instance: ${instanceName}`);
       await configureApi("RADARR", instance.base_url, instance.api_key);
-      await pipeline(instance, "RADARR");
+      await pipeline(globalConfig, instance, "RADARR");
       unsetApi();
     }
   }
 
-  const whisparrConfig = applicationConfig.whisparr;
+  const whisparrConfig = globalConfig.whisparr;
 
   if (
     whisparrConfig == null ||
@@ -209,12 +209,12 @@ const run = async () => {
     for (const [instanceName, instance] of Object.entries(whisparrConfig)) {
       logger.info(`Processing Whisparr Instance: ${instanceName}`);
       await configureApi("WHISPARR", instance.base_url, instance.api_key);
-      await pipeline(instance, "WHISPARR");
+      await pipeline(globalConfig, instance, "WHISPARR");
       unsetApi();
     }
   }
 
-  const readarrConfig = applicationConfig.readarr;
+  const readarrConfig = globalConfig.readarr;
 
   if (
     readarrConfig == null ||
@@ -229,7 +229,7 @@ const run = async () => {
     for (const [instanceName, instance] of Object.entries(readarrConfig)) {
       logger.info(`Processing Readarr Instance: ${instanceName}`);
       await configureApi("READARR", instance.base_url, instance.api_key);
-      await pipeline(instance, "READARR");
+      await pipeline(globalConfig, instance, "READARR");
       unsetApi();
     }
   }

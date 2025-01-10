@@ -3955,6 +3955,21 @@ export class Api<SecurityDataType = unknown> {
   /**
    * No description
    *
+   * @tags SeriesFolder
+   * @name V3SeriesFolderDetail
+   * @request GET:/api/v3/series/{id}/folder
+   * @secure
+   */
+  v3SeriesFolderDetail = (id: number, params: RequestParams = {}) =>
+    this.http.request<void, any>({
+      path: `/api/v3/series/${id}/folder`,
+      method: "GET",
+      secure: true,
+      ...params,
+    });
+  /**
+   * No description
+   *
    * @tags SeriesImport
    * @name V3SeriesImportCreate
    * @request POST:/api/v3/series/import
@@ -3983,11 +3998,12 @@ export class Api<SecurityDataType = unknown> {
     },
     params: RequestParams = {},
   ) =>
-    this.http.request<void, any>({
+    this.http.request<SeriesResource[], any>({
       path: `/api/v3/series/lookup`,
       method: "GET",
       query: query,
       secure: true,
+      format: "json",
       ...params,
     });
   /**

@@ -73,12 +73,14 @@ export type MappedTemplates = Partial<
     | "customFormatDefinitions"
     | "media_management"
     | "media_naming"
+    | "media_naming_api"
   >
 >;
 
 export type MappedMergedTemplates = MappedTemplates & Required<Pick<MappedTemplates, "custom_formats" | "quality_profiles">>;
 
-export type ArrType = "RADARR" | "SONARR" | "WHISPARR" | "READARR";
+const ArrTypeConst = ["RADARR", "SONARR", "WHISPARR", "READARR"] as const;
+export type ArrType = (typeof ArrTypeConst)[number];
 
 export type QualityDefintionsSonarr = "anime" | "series" | "custom";
-export type QualityDefintionsRadarr = "movie" | "custom";
+export type QualityDefintionsRadarr = "movie" | "sqp-streaming" | "sqp-uhd" | "custom";

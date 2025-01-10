@@ -1,4 +1,4 @@
-import { ImportCF } from "./common.types";
+import { ArrType, CFIDToConfigGroup, ImportCF } from "./common.types";
 
 export type TrashQualityDefintionQuality = {
   quality: string;
@@ -56,4 +56,58 @@ export type TrashQP = {
     [key: string]: string;
   };
 };
+
 export type TrashCFSpF = { min: number; max: number; exceptLanguage: boolean; value: any };
+
+export type TrashArrSupported = Subset<ArrType, "RADARR" | "SONARR">;
+
+export type TrashRadarrNaming = {
+  folder: {
+    [key: string]: string;
+  };
+  file: {
+    [key: string]: string;
+  };
+};
+
+export type TrashSonarrNaming = {
+  season: {
+    [key: string]: string;
+  };
+  series: {
+    [key: string]: string;
+  };
+  episodes: {
+    standard: {
+      [key: string]: string;
+    };
+
+    daily: {
+      [key: string]: string;
+    };
+
+    anime: {
+      [key: string]: string;
+    };
+  };
+};
+
+export type TrashCache = {
+  SONARR: {
+    qualityProfiles: Map<string, TrashQP>;
+    customFormats: CFIDToConfigGroup;
+    qualityDefinition: {
+      series: TrashQualityDefintion;
+      anime: TrashQualityDefintion;
+    };
+    naming: TrashSonarrNaming | null;
+  };
+  RADARR: {
+    qualityProfiles: Map<string, TrashQP>;
+    customFormats: CFIDToConfigGroup;
+    qualityDefinition: {
+      movie: TrashQualityDefintion;
+    };
+    naming: TrashRadarrNaming | null;
+  };
+};

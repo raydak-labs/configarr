@@ -46,12 +46,11 @@ sonarr:
       - template: sonarr-quality
 
     custom_formats:
-      # Movie Versions
       - trash_ids:
-          - 9f6cbff8cfe4ebbc1bde14c7b7bec0de # IMAX Enhanced
-        quality_profiles:
+          - e6258996055b9fbab7e9cb2f75819294
+        assign_scores_to:
           - name: ExampleProfile
-            # score: 0 # Uncomment this line to disable prioritised IMAX Enhanced releases
+            # score: 0 # Uncomment this line to change score
 
 radarr:
   instance1:
@@ -60,14 +59,14 @@ radarr:
     #base_url: https://sonarr.oci.eduard-marbach.de/
     api_key: !secret RADARR_API_KEY
 
-    quality_definition:
-      type: movie
-
     # experimental
     media_management:
       recycleBin: "/tmp"
 
     # experimental
+    media_naming_api: {}
+
+    # naming from TRaSH. See docs
     media_naming: {}
 
     include:
@@ -96,7 +95,7 @@ radarr:
       # Movie Versions
       - trash_ids:
           - 9f6cbff8cfe4ebbc1bde14c7b7bec0de # IMAX Enhanced
-        quality_profiles:
+        assign_scores_to:
           - name: ExampleProfile
             # score: 0 # Uncomment this line to disable prioritised IMAX Enhanced releases
 
@@ -105,8 +104,9 @@ whisparr:
     base_url: http://whisparr:6969 # instance URL
     api_key: !secret WHISPARR_API_KEY # Reference to API key in secrets.yml
 
-    quality_definition:
-      type: movies # Quality definition type
+    # not supported
+    # quality_definition:
+    #   type: movie # Quality definition type
 
     include:
       # only custom defined templates available
@@ -134,7 +134,7 @@ readarr:
 
     # not supported
     # quality_definition:
-    #   type: movies # Quality definition type
+    #   type: movie # Quality definition type
 
     include:
       # only custom defined templates available
