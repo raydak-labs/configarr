@@ -551,6 +551,7 @@ export interface HostConfigResource {
   backupInterval?: number;
   /** @format int32 */
   backupRetention?: number;
+  trustCgnatIpAddresses?: boolean;
 }
 
 export interface HttpUri {
@@ -643,6 +644,11 @@ export enum ImportListType {
   Simkl = "simkl",
   Other = "other",
   Advanced = "advanced",
+}
+
+export interface ImportRejectionResource {
+  reason?: string | null;
+  type?: RejectionType;
 }
 
 export interface IndexerBulkResource {
@@ -804,7 +810,7 @@ export interface ManualImportReprocessResource {
   /** @format int32 */
   indexerFlags?: number;
   releaseType?: ReleaseType;
-  rejections?: Rejection[] | null;
+  rejections?: ImportRejectionResource[] | null;
 }
 
 export interface ManualImportResource {
@@ -834,7 +840,7 @@ export interface ManualImportResource {
   /** @format int32 */
   indexerFlags?: number;
   releaseType?: ReleaseType;
-  rejections?: Rejection[] | null;
+  rejections?: ImportRejectionResource[] | null;
 }
 
 export interface MediaCover {
@@ -1198,10 +1204,6 @@ export interface QueueResource {
   /** @format double */
   size?: number;
   title?: string | null;
-  /** @format double */
-  sizeleft?: number;
-  /** @format date-span */
-  timeleft?: string | null;
   /** @format date-time */
   estimatedCompletionTime?: string | null;
   /** @format date-time */
@@ -1218,6 +1220,16 @@ export interface QueueResource {
   indexer?: string | null;
   outputPath?: string | null;
   episodeHasFile?: boolean;
+  /**
+   * @deprecated
+   * @format double
+   */
+  sizeleft?: number;
+  /**
+   * @deprecated
+   * @format date-span
+   */
+  timeleft?: string | null;
 }
 
 export interface QueueResourcePagingResource {
@@ -1265,11 +1277,6 @@ export interface Ratings {
   votes?: number;
   /** @format double */
   value?: number;
-}
-
-export interface Rejection {
-  reason?: string | null;
-  type?: RejectionType;
 }
 
 export enum RejectionType {

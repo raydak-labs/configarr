@@ -554,6 +554,7 @@ export interface HostConfigResource {
   backupInterval?: number;
   /** @format int32 */
   backupRetention?: number;
+  trustCgnatIpAddresses?: boolean;
 }
 
 export interface HttpUri {
@@ -1308,10 +1309,6 @@ export interface QueueResource {
   /** @format double */
   size?: number;
   title?: string | null;
-  /** @format double */
-  sizeleft?: number;
-  /** @format date-span */
-  timeleft?: string | null;
   /** @format date-time */
   estimatedCompletionTime?: string | null;
   /** @format date-time */
@@ -1327,6 +1324,16 @@ export interface QueueResource {
   downloadClientHasPostImportCategory?: boolean;
   indexer?: string | null;
   outputPath?: string | null;
+  /**
+   * @deprecated
+   * @format double
+   */
+  sizeleft?: number;
+  /**
+   * @deprecated
+   * @format date-span
+   */
+  timeleft?: string | null;
 }
 
 export interface QueueResourcePagingResource {

@@ -2987,12 +2987,13 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3MovieImportCreate = (data: MovieResource[], params: RequestParams = {}) =>
-    this.http.request<void, any>({
+    this.http.request<MovieResource[], any>({
       path: `/api/v3/movie/import`,
       method: "POST",
       body: data,
       secure: true,
       type: ContentType.Json,
+      format: "json",
       ...params,
     });
   /**
@@ -3010,11 +3011,12 @@ export class Api<SecurityDataType = unknown> {
     },
     params: RequestParams = {},
   ) =>
-    this.http.request<void, any>({
+    this.http.request<MovieResource, any>({
       path: `/api/v3/movie/lookup/tmdb`,
       method: "GET",
       query: query,
       secure: true,
+      format: "json",
       ...params,
     });
   /**
@@ -3031,11 +3033,12 @@ export class Api<SecurityDataType = unknown> {
     },
     params: RequestParams = {},
   ) =>
-    this.http.request<void, any>({
+    this.http.request<MovieResource, any>({
       path: `/api/v3/movie/lookup/imdb`,
       method: "GET",
       query: query,
       secure: true,
+      format: "json",
       ...params,
     });
   /**
@@ -3052,11 +3055,12 @@ export class Api<SecurityDataType = unknown> {
     },
     params: RequestParams = {},
   ) =>
-    this.http.request<void, any>({
+    this.http.request<MovieResource[], any>({
       path: `/api/v3/movie/lookup`,
       method: "GET",
       query: query,
       secure: true,
+      format: "json",
       ...params,
     });
   /**

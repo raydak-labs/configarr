@@ -846,6 +846,7 @@ export interface HostConfigResource {
   backupInterval?: number;
   /** @format int32 */
   backupRetention?: number;
+  trustCgnatIpAddresses?: boolean;
 }
 
 export interface HttpUri {
