@@ -1,0 +1,29 @@
+services:
+  configarr:
+    #image: ghcr.io/raydak-labs/configarr:1.2.1
+    image: configarr:local
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+      target: dev
+    networks:
+      - configarr-full
+    volumes:
+      - ./config:/app/config
+      - ./dockerrepos:/app/repos
+      - ./cfs:/app/cfs
+      - ./templates:/app/templates
+      - ../../src:/app/src
+      - ${PWD}/../../index.ts:/app/index.ts
+      - ./debug:/app/debug
+      - ./data:/data
+    environment:
+      LOG_LEVEL: debug
+      DEBUG_CREATE_FILES: false
+      # If you want to map all data to new path instead of /app
+      #ROOT_PATH: /data
+
+networks:
+  configarr-full:
+    name: configarr-full
+    external: true

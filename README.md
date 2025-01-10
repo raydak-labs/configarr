@@ -72,6 +72,8 @@ See [here](./custom/cfs/)
    2. Overwrite the hosts in case you are not using the local setup with docker compose
 5. Run the app with `pnpm start` or with the vscode task
 
+Tip: Beside from those steps you can also always test and work with the `full example` and utilizing the docker container with mounted `src` directory.
+
 ## Examples
 
 Some examples for configuration are provided [Examples](./examples/)
