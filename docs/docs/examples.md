@@ -1,5 +1,5 @@
 ---
-sidebar_position: 3
+sidebar_position: 6
 description: "Examples of Configarr usage and configuration"
 keywords: [configarr, examples, configuration, sonarr, radarr]
 ---
