@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.6.0](https://github.com/raydak-labs/configarr/compare/v1.5.3...v1.6.0) (2025-01-10)
+
+### Features
+
+- add media_naming compatibility from recyclarr ([3cf73dc](https://github.com/raydak-labs/configarr/commit/3cf73dc2cbbff6fabd1b6e82a9b5b813a307ef26))
+
+### Bug Fixes
+
+- adjust qualityprofile items to always include items key ([9ed86b3](https://github.com/raydak-labs/configarr/commit/9ed86b306c1e8c26bbc4a8c466acf3c84f0240d3))
+- correct customFormatDefinition loading from top level ([f841617](https://github.com/raydak-labs/configarr/commit/f841617c282d0426625824a7b36939df688854ce))
+
+### (internal) Refactorings
+
+- create trash cache for optimization ([d142fee](https://github.com/raydak-labs/configarr/commit/d142feeda4dcccc0649d4c0ce2d65836d23640bc))
+- improve types ([f44eb35](https://github.com/raydak-labs/configarr/commit/f44eb3521401ef44943b71e0921c52e97a3ca2d9))
+
 ## [1.5.3](https://github.com/raydak-labs/configarr/compare/v1.5.2...v1.5.3) (2025-01-08)
 
 ### Bug Fixes
