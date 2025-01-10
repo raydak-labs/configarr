@@ -30,7 +30,7 @@ export const mapQualityProfiles = ({ carrIdMapping }: CFProcessing, { custom_for
         const carr = carrIdMapping.get(trashId);
 
         if (!carr) {
-          logger.info(`Unknown ID for CF. ${trashId}`);
+          logger.warn(`Unknown ID for CF. ${trashId}`);
           continue;
         }
 
