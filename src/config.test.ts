@@ -157,7 +157,7 @@ describe("mergeConfigsAndTemplates", () => {
       base_url: "http://sonarr:8989",
     };
 
-    const result = await mergeConfigsAndTemplates(inputConfig, "SONARR");
+    const result = await mergeConfigsAndTemplates({}, inputConfig, "SONARR");
 
     expect(result.config.custom_formats.length).toBe(3);
     expect(result.config.quality_profiles.length).toBe(3);
@@ -197,7 +197,7 @@ describe("mergeConfigsAndTemplates", () => {
       base_url: "http://sonarr:8989",
     };
 
-    const result = await mergeConfigsAndTemplates(inputConfig, "SONARR");
+    const result = await mergeConfigsAndTemplates({}, inputConfig, "SONARR");
 
     expect(result.config.custom_formats.length).toBe(0);
     expect(result.config.quality_profiles.length).toBe(0);
@@ -236,7 +236,7 @@ describe("mergeConfigsAndTemplates", () => {
       base_url: "http://sonarr:8989",
     };
 
-    const result = await mergeConfigsAndTemplates(inputConfig, "SONARR");
+    const result = await mergeConfigsAndTemplates({}, inputConfig, "SONARR");
 
     expect(result.config.custom_formats.length).toBe(2);
     expect(result.config.quality_profiles.length).toBe(1);
@@ -282,13 +282,13 @@ describe("mergeConfigsAndTemplates", () => {
       base_url: "http://sonarr:8989",
     };
 
-    const result = await mergeConfigsAndTemplates(inputConfig, "SONARR");
+    const result = await mergeConfigsAndTemplates({}, inputConfig, "SONARR");
 
     expect(result.config.custom_formats.length).toBe(0);
     expect(result.config.quality_profiles.length).toBe(0);
   });
 
   test("should throw error for invalid input configuration", async () => {
-    await expect(mergeConfigsAndTemplates(null as any, "SONARR")).rejects.toThrow();
+    await expect(mergeConfigsAndTemplates({}, null as any, "SONARR")).rejects.toThrow();
   });
 });

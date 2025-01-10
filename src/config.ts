@@ -171,11 +171,12 @@ export const validateConfig = (input: InputConfigInstance): MergedConfigInstance
 /**
  * Load data from trash, recyclarr, custom configs and merge.
  * Afterwards do sanitize and check against required configuration.
- * @param value
+ * @param instanceConfig
  * @param arrType
  */
 export const mergeConfigsAndTemplates = async (
-  value: InputConfigArrInstance,
+  globalConfig: InputConfigSchema,
+  instanceConfig: InputConfigArrInstance,
   arrType: ArrType,
 ): Promise<{ config: MergedConfigInstance }> => {
   const localTemplateMap = loadLocalRecyclarrTemplate(arrType);
@@ -198,8 +199,8 @@ export const mergeConfigsAndTemplates = async (
   };
 
   // HINT: we assume customFormatDefinitions only exist in RECYCLARR
-  if (value.include) {
-    const mappedIncludes = value.include.reduce<{ recyclarr: InputConfigIncludeItem[]; trash: InputConfigIncludeItem[] }>(
+  if (instanceConfig.include) {
+    const mappedIncludes = instanceConfig.include.reduce<{ recyclarr: InputConfigIncludeItem[]; trash: InputConfigIncludeItem[] }>(
       (previous, current) => {
         switch (current.source) {
           case "TRASH":
@@ -218,7 +219,7 @@ export const mergeConfigsAndTemplates = async (
     );
 
     logger.info(
-      `Found ${value.include.length} templates to include. Mapped to [recyclarr]=${mappedIncludes.recyclarr.length}, [trash]=${mappedIncludes.trash.length} ...`,
+      `Found ${instanceConfig.include.length} templates to include. Mapped to [recyclarr]=${mappedIncludes.recyclarr.length}, [trash]=${mappedIncludes.trash.length} ...`,
     );
 
     mappedIncludes.recyclarr.forEach((e) => {
@@ -287,38 +288,52 @@ export const mergeConfigsAndTemplates = async (
   }
 
   // Config values overwrite template values
-  if (value.custom_formats) {
-    mergedTemplates.custom_formats.push(...value.custom_formats);
+  if (instanceConfig.custom_formats) {
+    mergedTemplates.custom_formats.push(...instanceConfig.custom_formats);
   }
 
-  if (value.quality_profiles) {
-    mergedTemplates.quality_profiles.push(...value.quality_profiles);
+  if (instanceConfig.quality_profiles) {
+    mergedTemplates.quality_profiles.push(...instanceConfig.quality_profiles);
   }
 
-  if (value.media_management) {
-    mergedTemplates.media_management = { ...mergedTemplates.media_management, ...value.media_management };
+  if (instanceConfig.media_management) {
+    mergedTemplates.media_management = { ...mergedTemplates.media_management, ...instanceConfig.media_management };
   }
 
-  if (value.media_naming) {
+  if (instanceConfig.media_naming) {
     mergedTemplates.media_naming_api = {
       ...mergedTemplates.media_naming_api,
-      ...(await mapConfigMediaNamingToApi(arrType, value.media_naming)),
+      ...(await mapConfigMediaNamingToApi(arrType, instanceConfig.media_naming)),
     };
   }
 
-  if (value.media_naming_api) {
-    mergedTemplates.media_naming_api = { ...mergedTemplates.media_naming_api, ...value.media_naming_api };
+  if (instanceConfig.media_naming_api) {
+    mergedTemplates.media_naming_api = { ...mergedTemplates.media_naming_api, ...instanceConfig.media_naming_api };
   }
 
-  if (value.quality_definition) {
-    mergedTemplates.quality_definition = { ...mergedTemplates.quality_definition, ...value.quality_definition };
+  if (instanceConfig.quality_definition) {
+    mergedTemplates.quality_definition = { ...mergedTemplates.quality_definition, ...instanceConfig.quality_definition };
   }
 
-  if (value.customFormatDefinitions) {
-    if (Array.isArray(value.customFormatDefinitions)) {
-      mergedTemplates.customFormatDefinitions = [...(mergedTemplates.customFormatDefinitions || []), ...value.customFormatDefinitions];
+  if (globalConfig.customFormatDefinitions) {
+    if (Array.isArray(globalConfig.customFormatDefinitions)) {
+      mergedTemplates.customFormatDefinitions = [
+        ...(mergedTemplates.customFormatDefinitions || []),
+        ...globalConfig.customFormatDefinitions,
+      ];
     } else {
       logger.warn(`CustomFormatDefinitions in config file must be an array. Ignoring.`);
+    }
+  }
+
+  if (instanceConfig.customFormatDefinitions) {
+    if (Array.isArray(instanceConfig.customFormatDefinitions)) {
+      mergedTemplates.customFormatDefinitions = [
+        ...(mergedTemplates.customFormatDefinitions || []),
+        ...instanceConfig.customFormatDefinitions,
+      ];
+    } else {
+      logger.warn(`CustomFormatDefinitions in instance config file must be an array. Ignoring.`);
     }
   }
 
