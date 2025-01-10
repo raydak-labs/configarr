@@ -7,12 +7,12 @@ custom_formats:
       - 58790d4e2fdcd9733aa7ae68ba2bb503 # WEB Tier 02
       - d84935abd3f8556dcd51d4f27e22d0a6 # WEB Tier 03
       - d0c516558625b04b363fa6c5c2c7cfd4 # WEB Scene
-    quality_profiles:
+    assign_scores_to:
       - name: ExampleProfile
 
   - trash_ids:
       - custom-size-more-40gb # custom language
-    quality_profiles:
+    assign_scores_to:
       - name: ExampleProfile
         score: -10000
 

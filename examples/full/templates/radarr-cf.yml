@@ -9,7 +9,7 @@ custom_formats:
       - c20f169ef63c5f40c2def54abaf4438e # WEB Tier 01
       - 403816d65392c79236dcb6dd591aeda4 # WEB Tier 02
       - af94e0fe497124d1f9ce732069ec8c3b # WEB Tier 03
-    quality_profiles:
+    assign_scores_to:
       - name: ExampleProfile
 
   - trash_ids:
@@ -32,11 +32,11 @@ custom_formats:
       - c2863d2a50c9acad1fb50e53ece60817 # STAN
       - f1b0bae9bc222dab32c1b38b5a7a1088 # TVer
       - 279bda7434fd9075786de274e6c3c202 # U-NEXT
-    quality_profiles:
+    assign_scores_to:
       - name: ExampleProfile
 
   - trash_ids:
       - custom-size-more-40gb # custom CF
-    quality_profiles:
+    assign_scores_to:
       - name: ExampleProfile
         score: -10000
