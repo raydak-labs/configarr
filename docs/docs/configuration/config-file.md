@@ -188,10 +188,13 @@ radarr:
         assign_scores_to:
           - name: HD Bluray + WEB
             score: 0
+
     quality_profiles:
       - name: HD Bluray + WEB
         upgrade:
           min_format_score: 200
+        # Support added with 1.7.0. Not support in all *arr applications. Check the application if it is supported.
+        language: Any # The name must match available names in *arr
 
 # experimental support: check https://configarr.rayak.de/docs/configuration/experimental-support
 whisparr: {}

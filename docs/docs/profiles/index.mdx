@@ -117,3 +117,21 @@ Thanks for providing prepared configs from discord user `zombobrain`.
       {SonarrGermanCustomConfig}
     </CodeBlock>
   </details>
+
+## Modifications / Adjustments
+
+- Adjusting the `language` of a QualityProfile.
+  TRaSH-Guide profiles has added support for the `language` in their provided JSON files.
+  This will be used if available.
+  But you can also adjust the value also in the config file.
+
+  ```yaml title="config.yml"
+  radarr:
+    instance1:
+      # ...
+
+      quality_profiles:
+        - name: HD Bluray + WEB
+          # Support added with 1.7.0. Not support in all *arr applications. Check the application if it is supported.
+          language: Any # The name must match available names in *arr
+  ```
