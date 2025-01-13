@@ -5,6 +5,7 @@ import Heading from "@theme/Heading";
 import Layout from "@theme/Layout";
 import clsx from "clsx";
 
+import Head from "@docusaurus/Head";
 import styles from "./index.module.css";
 
 function HomepageHeader() {
@@ -18,7 +19,7 @@ function HomepageHeader() {
         <p className="hero__subtitle">{siteConfig.tagline}</p>
         <div className={styles.buttons}>
           <Link className="button button--secondary button--lg" to="/docs/intro">
-            Configarr Tutorial - 5min ⏱️
+            Tutorial - 5min ⏱️
           </Link>
         </div>
       </div>
@@ -28,8 +29,12 @@ function HomepageHeader() {
 
 export default function Home(): JSX.Element {
   const { siteConfig } = useDocusaurusContext();
+
   return (
-    <Layout title={`${siteConfig.title}`} description="Arr automation made easy">
+    <Layout>
+      <Head>
+        <title>Configarr - Configuration Management Simplified</title>
+      </Head>
       <HomepageHeader />
       <main>
         <HomepageFeatures />

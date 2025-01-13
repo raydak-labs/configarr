@@ -4,7 +4,9 @@ import styles from "./styles.module.css";
 
 type FeatureItem = {
   title: string;
-  Svg: React.ComponentType<React.ComponentProps<"svg">>;
+  Svg?: React.ComponentType<React.ComponentProps<"svg">>;
+  imageUrl?: string;
+  imageAlt?: string;
   description: JSX.Element;
 };
 
@@ -26,15 +28,49 @@ const FeatureList: FeatureItem[] = [
   {
     title: "Automated Setup",
     Svg: require("@site/static/img/undraw_docusaurus_react.svg").default,
-    description: <>Let Configarr handle the complex setup of your media applications. From Sonarr to Radarr, we've got you covered.</>,
+    description: (
+      <>
+        Let Configarr handle the complex setup of your media applications. From Sonarr,Radarr,Lidarr,Readarr, Whisparr: we've got you
+        covered!
+      </>
+    ),
+  },
+  {
+    title: "TRaSH-Guides Support",
+    imageUrl: require("@site/static/img/trash_logo.webp").default, //"https://trash-guides.info/img/logo.png" ,
+    imageAlt: "Logo of TRaSH-Guides",
+    description: (
+      <>
+        Seamlessly integrate TRaSH-Guides into your workflow with robust support for its comprehensive documentation and automation tools.
+        Effortlessly configure QualityProfiles, CustomFormats, and other advanced settings to optimize your media management experience,
+        ensuring precise and efficient handling of your library.
+      </>
+    ),
+  },
+  {
+    title: "Experimental support",
+    Svg: require("@site/static/img/experiment.svg").default,
+    description: (
+      <>
+        Explore cutting-edge features with experimental support for popular Arr tools like Readarr, Lidarr, and Whisparr. Stay ahead of the
+        curve by testing innovative functionalities designed to enhance your media automation and management capabilities.
+      </>
+    ),
+  },
+  {
+    title: "Community Driven",
+    Svg: require("@site/static/img/undraw_docusaurus_react.svg").default,
+    description: (
+      <>Written for the community and working with the community to provide the best experience for managing your media stack!</>
+    ),
   },
 ];
 
-function Feature({ title, Svg, description }: FeatureItem) {
+function Feature({ title, Svg, description, imageUrl, imageAlt }: FeatureItem) {
   return (
     <div className={clsx("col col--4")}>
       <div className="text--center">
-        <Svg className={styles.featureSvg} role="img" />
+        {Svg ? <Svg className={styles.featureSvg} role="img" /> : <img src={imageUrl} className={styles.featureSvg} alt={imageAlt} />}
       </div>
       <div className="text--center padding-horiz--md">
         <Heading as="h3">{title}</Heading>

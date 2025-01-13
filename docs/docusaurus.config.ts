@@ -4,10 +4,9 @@ import { default as lunrSearch } from "docusaurus-lunr-search";
 import { themes as prismThemes } from "prism-react-renderer";
 
 // This runs in Node.js - Don't use client-side code here (browser APIs, JSX...)
-
 const config: Config = {
   title: "Configarr",
-  tagline: "Automate your media server configuration",
+  tagline: "Simplified configuration management for your Arr applications like Sonarr, Radarr and more.",
   favicon: "img/favicon.ico",
 
   // Set the production url of your site here
@@ -85,6 +84,19 @@ const config: Config = {
     colorMode: {
       defaultMode: "dark",
     },
+    metadata: [
+      {
+        name: "description",
+        content: "Configarr - Simplify your configuration management for Arr applications like Sonarr, Radarr, Readarr, Lidarr.",
+      },
+      { name: "keywords", content: "configarr, configuration, management, automation, sonarr, radarr, lidarr, recyclarr, notifiarr" },
+      { name: "robots", content: "index, follow" },
+      { property: "og:title", content: "Configarr - Configuration Management Simplified" },
+      {
+        property: "og:description",
+        content: "Easily manage and automate your configurations in Arr (Sonarr,Radarr,Lidarr,Readarr) with Configarr.",
+      },
+    ],
     navbar: {
       title: "Configarr",
       logo: {
@@ -122,16 +134,12 @@ const config: Config = {
           title: "Community",
           items: [
             {
-              label: "Stack Overflow",
-              href: "https://stackoverflow.com/questions/tagged/configarr",
-            },
-            {
-              label: "YouTube",
-              href: "https://www.youtube.com/@raydak-labs",
-            },
-            {
               label: "German Discord (UsenetDE)",
               href: "https://discord.gg/Z2wTmrmFgn",
+            },
+            {
+              label: "TRaSH-Guides",
+              href: "https://trash-guides.info/",
             },
             // {
             //   label: "Discord",
@@ -157,6 +165,15 @@ const config: Config = {
             {
               label: "Raydak",
               href: "https://raydak.de",
+            },
+
+            {
+              label: "Stack Overflow",
+              href: "https://stackoverflow.com/questions/tagged/configarr",
+            },
+            {
+              label: "YouTube",
+              href: "https://www.youtube.com/@raydak-labs",
             },
           ],
         },
