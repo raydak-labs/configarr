@@ -7,7 +7,6 @@ radarr:
   instance1:
     # Set the URL/API Key to your actual instance
     base_url: http://radarr:7878
-    #base_url: https://sonarr.oci.eduard-marbach.de/
     api_key: !secret RADARR_API_KEY
 
     quality_definition:
