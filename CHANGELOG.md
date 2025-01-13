@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.7.0](https://github.com/raydak-labs/configarr/compare/v1.6.0...v1.7.0) (2025-01-13)
+
+### Features
+
+- use language from TrashQPs ([7e8981b](https://github.com/raydak-labs/configarr/commit/7e8981b54d5296e1dc9830e4ab7342a948c66fc0))
+
+### (internal) Refactorings
+
+- only build update object for objects with keys ([7abe91c](https://github.com/raydak-labs/configarr/commit/7abe91cb9438fb43ff16d92edb1ae7d2e8693e39))
+
 ## [1.6.0](https://github.com/raydak-labs/configarr/compare/v1.5.3...v1.6.0) (2025-01-10)
 
 ### Features
