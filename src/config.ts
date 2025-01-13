@@ -296,18 +296,18 @@ export const mergeConfigsAndTemplates = async (
     mergedTemplates.quality_profiles.push(...instanceConfig.quality_profiles);
   }
 
-  if (instanceConfig.media_management) {
+  if (instanceConfig.media_management && Object.keys(instanceConfig.media_management).length > 0) {
     mergedTemplates.media_management = { ...mergedTemplates.media_management, ...instanceConfig.media_management };
   }
 
-  if (instanceConfig.media_naming) {
+  if (instanceConfig.media_naming && Object.keys(instanceConfig.media_naming).length > 0) {
     mergedTemplates.media_naming_api = {
       ...mergedTemplates.media_naming_api,
       ...(await mapConfigMediaNamingToApi(arrType, instanceConfig.media_naming)),
     };
   }
 
-  if (instanceConfig.media_naming_api) {
+  if (instanceConfig.media_naming_api && Object.keys(instanceConfig.media_naming_api).length > 0) {
     mergedTemplates.media_naming_api = { ...mergedTemplates.media_naming_api, ...instanceConfig.media_naming_api };
   }
 
