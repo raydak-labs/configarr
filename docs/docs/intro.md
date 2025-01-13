@@ -74,6 +74,13 @@ Ready to streamline your media server configuration? Let's get started with the 
 - [Notifiarr](https://notifiarr.com/)
 - [Profilarr](https://github.com/Dictionarry-Hub/profilarr)
 
+## Changes / Changelog
+
+You can find the changes and new features in Github. See:
+
+- [Changelog](https://github.com/raydak-labs/configarr/blob/main/CHANGELOG.md)
+- or [Github Releases](https://github.com/raydak-labs/configarr/releases)
+
 :::tip
 New to media server management? Check out our [concepts guide](./concepts.md) to understand the basics of custom formats and quality profiles.
 :::
