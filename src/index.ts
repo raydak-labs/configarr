@@ -5,6 +5,7 @@ initEnvs();
 
 import fs from "node:fs";
 import { MergedCustomFormatResource } from "./__generated__/mergedTypes";
+import { ServerCache } from "./cache";
 import { configureApi, getUnifiedClient, unsetApi } from "./clients/unified-client";
 import { getConfig, mergeConfigsAndTemplates } from "./config";
 import { calculateCFsToManage, loadCustomFormatDefinitions, loadServerCustomFormats, manageCf } from "./custom-formats";
@@ -21,6 +22,15 @@ import { TrashQualityDefintion } from "./types/trashguide.types";
 const pipeline = async (globalConfig: InputConfigSchema, instanceConfig: InputConfigArrInstance, arrType: ArrType) => {
   const api = getUnifiedClient();
 
+  const serverCFs = await loadServerCustomFormats();
+  const serverQP = await loadQualityProfilesFromServer();
+  const serverQD = await loadQualityDefinitionFromServer();
+  const languages = await api.getLanguages();
+
+  const serverCache = new ServerCache(serverQD, serverQP, serverCFs, languages);
+
+  logger.info(`Server objects: CustomFormats ${serverCFs.length}, QualityProfiles ${serverQP.length}`);
+
   const { config } = await mergeConfigsAndTemplates(globalConfig, instanceConfig, arrType);
 
   const idsToManage = calculateCFsToManage(config);
@@ -28,10 +38,7 @@ const pipeline = async (globalConfig: InputConfigSchema, instanceConfig: InputCo
 
   const mergedCFs = await loadCustomFormatDefinitions(idsToManage, arrType, config.customFormatDefinitions || []);
 
-  let serverCFs = await loadServerCustomFormats();
-  logger.info(`CustomFormats on server: ${serverCFs.length}`);
-
-  const serverCFMapping = serverCFs.reduce((p, c) => {
+  const serverCFMapping = serverCache.cf.reduce((p, c) => {
     p.set(c.name!, c);
     return p;
   }, new Map<string, MergedCustomFormatResource>());
@@ -42,14 +49,12 @@ const pipeline = async (globalConfig: InputConfigSchema, instanceConfig: InputCo
   // serverCFs.push(...cfUpdateResult.createCFs);
   if (cfUpdateResult.createCFs.length > 0 || cfUpdateResult.updatedCFs.length > 0) {
     // refresh cfs
-    serverCFs = await loadServerCustomFormats();
+    serverCache.cf = await loadServerCustomFormats();
   }
 
   logger.info(`CustomFormats synchronized`);
 
   const qualityDefinition = config.quality_definition?.type;
-
-  let serverQD = await loadQualityDefinitionFromServer();
 
   if (qualityDefinition) {
     let qdTrash: TrashQualityDefintion;
@@ -68,7 +73,11 @@ const pipeline = async (globalConfig: InputConfigSchema, instanceConfig: InputCo
         throw new Error(`Unsupported quality defintion ${qualityDefinition}`);
     }
 
-    const { changeMap, create, restData } = calculateQualityDefinitionDiff(serverQD, qdTrash, config.quality_definition?.preferred_ratio);
+    const { changeMap, create, restData } = calculateQualityDefinitionDiff(
+      serverCache.qd,
+      qdTrash,
+      config.quality_definition?.preferred_ratio,
+    );
 
     if (changeMap.size > 0) {
       if (getEnvs().DRY_RUN) {
@@ -77,7 +86,7 @@ const pipeline = async (globalConfig: InputConfigSchema, instanceConfig: InputCo
         logger.info(`Diffs in quality definitions found`, changeMap.values());
         await api.updateQualityDefinitions(restData);
         // refresh QDs
-        serverQD = await loadQualityDefinitionFromServer();
+        serverCache.qd = await loadQualityDefinitionFromServer();
         logger.info(`Updated QualityDefinitions`);
       }
     } else {
@@ -116,8 +125,7 @@ const pipeline = async (globalConfig: InputConfigSchema, instanceConfig: InputCo
   }
 
   // calculate diff from server <-> what we want to be there
-  const serverQP = await loadQualityProfilesFromServer();
-  const { changedQPs, create, noChanges } = await calculateQualityProfilesDiff(mergedCFs, config, serverQP, serverQD, serverCFs);
+  const { changedQPs, create, noChanges } = await calculateQualityProfilesDiff(arrType, mergedCFs, config, serverCache);
 
   if (getEnvs().DEBUG_CREATE_FILES) {
     create.concat(changedQPs).forEach((e, i) => {

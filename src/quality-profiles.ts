@@ -6,10 +6,11 @@ import {
   MergedQualityProfileQualityItemResource,
   MergedQualityProfileResource,
 } from "./__generated__/mergedTypes";
-import { getUnifiedClient } from "./clients/unified-client";
+import { ServerCache } from "./cache";
+import { ArrClientLanguageResource, getUnifiedClient } from "./clients/unified-client";
 import { getEnvs } from "./env";
 import { logger } from "./logger";
-import { CFProcessing } from "./types/common.types";
+import { ArrType, CFProcessing } from "./types/common.types";
 import { ConfigQualityProfile, ConfigQualityProfileItem, MergedConfigInstance } from "./types/config.types";
 import { cloneWithJSON, loadJsonFile, notEmpty, zip } from "./util";
 
@@ -226,13 +227,22 @@ export const isOrderOfQualitiesEqual = (obj1: ConfigQualityProfileItem[], obj2: 
   return true;
 };
 
+/**
+ * TODO: time to split into arr specifc executions
+ * Idea probably to have a common method which will be called by arr specific methods or do generic and call afterwards the specific.
+ * Like: doGeneric -> if sonarr doSonarr
+ *
+ * @param arrType
+ * @param cfMap
+ * @param config
+ * @param serverCache
+ * @returns
+ */
 export const calculateQualityProfilesDiff = async (
+  arrType: ArrType,
   cfMap: CFProcessing,
   config: MergedConfigInstance,
-  serverQP: MergedQualityProfileResource[],
-  // TODO do we need this like this?
-  serverQD: MergedQualityDefinitionResource[],
-  serverCF: MergedCustomFormatResource[],
+  serverCache: ServerCache,
 ): Promise<{
   changedQPs: MergedQualityProfileResource[];
   create: MergedQualityProfileResource[];
@@ -241,8 +251,9 @@ export const calculateQualityProfilesDiff = async (
   // TODO maybe improve?
   const scoring = mapQualityProfiles(cfMap, config);
   const qpMerged = new Map(config.quality_profiles.map((obj) => [obj.name, obj]));
-  const qpServerMap = new Map(serverQP.map((obj) => [obj.name!, obj]));
-  const cfServerMap = new Map(serverCF.map((obj) => [obj.name!, obj]));
+  const qpServerMap = new Map(serverCache.qp.map((obj) => [obj.name!, obj]));
+  const cfServerMap = new Map(serverCache.cf.map((obj) => [obj.name!, obj]));
+  const languageMap = new Map(serverCache.languages.map((obj) => [obj.name!, obj]));
 
   const createQPs: MergedQualityProfileResource[] = [];
   const changedQPs: MergedQualityProfileResource[] = [];
@@ -253,6 +264,18 @@ export const calculateQualityProfilesDiff = async (
   for (const [name, value] of qpMerged.entries()) {
     const serverMatch = qpServerMap.get(name);
     const scoringForQP = scoring.get(name);
+    const mappedServerQD = mapQualities(serverCache.qd, value);
+
+    let profileLanguage: ArrClientLanguageResource | undefined;
+
+    if (value.language) {
+      profileLanguage = languageMap.get(value.language);
+
+      if (profileLanguage == null) {
+        logger.warn(`Profile language '${value.language}' not found in server. Ignoring.`);
+        // profileLanguage = languageMap.get("Any");
+      }
+    }
 
     const resetScoreExceptions: Map<string, boolean> =
       value.reset_unmatched_scores?.except?.reduce((p, c) => {
@@ -262,9 +285,8 @@ export const calculateQualityProfilesDiff = async (
 
     if (serverMatch == null) {
       logger.info(`QualityProfile '${name}' not found in server. Will be created.`);
-      const mappedQ = mapQualities(serverQD, value);
 
-      const qualityToId = mappedQ.reduce<Map<string, number>>((p, c) => {
+      const qualityToId = mappedServerQD.reduce<Map<string, number>>((p, c) => {
         const id = c.id ?? c.quality?.id;
         const qName = c.name ?? c.quality?.name;
 
@@ -296,7 +318,7 @@ export const calculateQualityProfilesDiff = async (
 
       createQPs.push({
         name: value.name,
-        items: mappedQ,
+        items: mappedServerQD,
         cutoff: qualityToId.get(value.upgrade.until_quality),
         cutoffFormatScore: value.upgrade.until_score,
         minFormatScore: value.min_format_score,
@@ -304,6 +326,7 @@ export const calculateQualityProfilesDiff = async (
         formatItems: customFormatsMapped,
         // required since sonarr 4.0.10 (radarr also)
         minUpgradeFormatScore: value.upgrade.min_format_score ?? 1,
+        ...(profileLanguage ? { languageId: profileLanguage.id } : {}), // TODO split out. Not exists for sonarr
       });
       continue;
     }
@@ -358,14 +381,14 @@ export const calculateQualityProfilesDiff = async (
       diffExist = true;
 
       changeList.push(`QualityProfile qualities mismatch will update whole array`);
-      updatedServerObject.items = mapQualities(serverQD, value);
+      updatedServerObject.items = mappedServerQD;
     } else {
       if (!isOrderOfQualitiesEqual(value.qualities, serverQualitiesMapped.toReversed())) {
         logger.info(`QualityProfile quality order mismatch.`);
         diffExist = true;
 
         changeList.push(`QualityProfile quality order does not match`);
-        updatedServerObject.items = mapQualities(serverQD, value);
+        updatedServerObject.items = mappedServerQD;
       }
     }
 
@@ -428,6 +451,12 @@ export const calculateQualityProfilesDiff = async (
           `Min upgrade format score diff: server: ${serverMatch.cutoffFormatScore} - expected: ${configMinUpgradeFormatScore}`,
         );
       }
+    }
+
+    if (profileLanguage != null && serverMatch.language?.name !== profileLanguage.name) {
+      updatedServerObject.language = profileLanguage;
+      diffExist = true;
+      changeList.push(`Language diff: server: ${serverMatch.language?.name} - expected: ${profileLanguage?.name}`);
     }
 
     // CFs matching

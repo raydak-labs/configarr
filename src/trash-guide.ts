@@ -269,6 +269,7 @@ export const transformTrashQPToTemplate = (data: TrashQP): ConfigQualityProfile 
       .filter(notEmpty)
       .toReversed(),
     quality_sort: "top", // default
+    language: data.language,
   };
 };
 

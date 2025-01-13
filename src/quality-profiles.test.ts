@@ -1,6 +1,7 @@
 import path from "path";
 import { describe, expect, test } from "vitest";
 import { MergedCustomFormatResource, MergedQualityDefinitionResource, MergedQualityProfileResource } from "./__generated__/mergedTypes";
+import { ServerCache } from "./cache";
 import { calculateQualityProfilesDiff, doAllQualitiesExist, isOrderOfQualitiesEqual, mapQualities } from "./quality-profiles";
 import { CFProcessing } from "./types/common.types";
 import { ConfigQualityProfile, ConfigQualityProfileItem, MergedConfigInstance } from "./types/config.types";
@@ -237,26 +238,28 @@ describe("QualityProfiles", async () => {
     const serverQD: MergedQualityDefinitionResource[] = resources;
     const serverCF: MergedCustomFormatResource[] = [cloneWithJSON(sampleCustomFormat)];
 
-    let diff = await calculateQualityProfilesDiff(cfMap, config, serverQP, serverQD, serverCF);
+    const serverCache = new ServerCache(serverQD, serverQP, serverCF, []);
+
+    let diff = await calculateQualityProfilesDiff("RADARR", cfMap, config, serverCache);
     expect(diff.changedQPs.length).toBe(1);
     expect(diff.create.length).toBe(0);
     expect(diff.noChanges.length).toBe(0);
 
     serverProfile.minFormatScore = 0;
-    diff = await calculateQualityProfilesDiff(cfMap, config, serverQP, serverQD, serverCF);
+    diff = await calculateQualityProfilesDiff("RADARR", cfMap, config, serverCache);
     expect(diff.changedQPs.length).toBe(1);
     expect(diff.create.length).toBe(0);
     expect(diff.noChanges.length).toBe(0);
 
     serverProfile.minUpgradeFormatScore = 0;
-    diff = await calculateQualityProfilesDiff(cfMap, config, serverQP, serverQD, serverCF);
+    diff = await calculateQualityProfilesDiff("RADARR", cfMap, config, serverCache);
     expect(diff.changedQPs.length).toBe(1);
     expect(diff.create.length).toBe(0);
     expect(diff.noChanges.length).toBe(0);
 
     profile.min_format_score = 0;
     serverProfile.minFormatScore = 1;
-    diff = await calculateQualityProfilesDiff(cfMap, config, serverQP, serverQD, serverCF);
+    diff = await calculateQualityProfilesDiff("RADARR", cfMap, config, serverCache);
     expect(diff.changedQPs.length).toBe(1);
     expect(diff.create.length).toBe(0);
     expect(diff.noChanges.length).toBe(0);
@@ -300,7 +303,9 @@ describe("QualityProfiles", async () => {
     const serverQD: MergedQualityDefinitionResource[] = resources;
     const serverCF: MergedCustomFormatResource[] = [cloneWithJSON(sampleCustomFormat)];
 
-    const diff = await calculateQualityProfilesDiff(cfMap, config, serverQP, serverQD, serverCF);
+    const serverCache = new ServerCache(serverQD, serverQP, serverCF, []);
+
+    const diff = await calculateQualityProfilesDiff("RADARR", cfMap, config, serverCache);
     expect(diff.changedQPs.length).toBe(0);
     expect(diff.create.length).toBe(0);
     expect(diff.noChanges.length).toBe(1);
@@ -308,5 +313,101 @@ describe("QualityProfiles", async () => {
 
   test("calculateQualityProfilesDiff - should not diff if minUpgradeFormatScore is not configured", async ({}) => {
     // TODO
+  });
+
+  test("calculateQualityProfilesDiff - should diff for languageChange (radarr)", async ({}) => {
+    const cfMap: CFProcessing = { carrIdMapping: new Map(), cfNameToCarrConfig: new Map() };
+
+    const fromConfig: ConfigQualityProfileItem[] = [{ name: "HDTV-1080p", enabled: false }];
+
+    const resources: MergedQualityDefinitionResource[] = [
+      { id: 1, title: "HDTV-1080p", weight: 2, quality: { id: 1, name: "HDTV-1080p" } },
+    ];
+
+    const profile: ConfigQualityProfile = {
+      name: "hi",
+      min_format_score: 2,
+      qualities: fromConfig,
+      quality_sort: "sort",
+      upgrade: { allowed: true, until_quality: "HDTV-1080p", until_score: 1000 },
+      score_set: "default",
+      language: "Any",
+    };
+
+    const config: MergedConfigInstance = {
+      custom_formats: [],
+      quality_profiles: [profile],
+      customFormatDefinitions: [],
+      media_management: {},
+      media_naming: {},
+    };
+
+    const serverProfile = cloneWithJSON(sampleQualityProfile);
+    serverProfile.name = "hi";
+    serverProfile.formatItems = [];
+    serverProfile.minUpgradeFormatScore = 3;
+    serverProfile.minFormatScore = 2;
+    serverProfile.cutoff = 1;
+    serverProfile.items = [{ allowed: false, items: [], quality: { id: 1, name: "HDTV-1080p" } }];
+    serverProfile.language = { id: 1, name: "English" };
+
+    const serverQP: MergedQualityProfileResource[] = [serverProfile];
+    const serverQD: MergedQualityDefinitionResource[] = resources;
+    const serverCF: MergedCustomFormatResource[] = [cloneWithJSON(sampleCustomFormat)];
+
+    const serverCache = new ServerCache(serverQD, serverQP, serverCF, [{ id: 0, name: "Any" }]);
+
+    const diff = await calculateQualityProfilesDiff("RADARR", cfMap, config, serverCache);
+    expect(diff.changedQPs.length).toBe(1);
+    expect(diff.create.length).toBe(0);
+    expect(diff.noChanges.length).toBe(0);
+  });
+
+  test("calculateQualityProfilesDiff - should not diff for language (radarr)", async ({}) => {
+    const cfMap: CFProcessing = { carrIdMapping: new Map(), cfNameToCarrConfig: new Map() };
+
+    const fromConfig: ConfigQualityProfileItem[] = [{ name: "HDTV-1080p", enabled: false }];
+
+    const resources: MergedQualityDefinitionResource[] = [
+      { id: 1, title: "HDTV-1080p", weight: 2, quality: { id: 1, name: "HDTV-1080p" } },
+    ];
+
+    const profile: ConfigQualityProfile = {
+      name: "hi",
+      min_format_score: 2,
+      qualities: fromConfig,
+      quality_sort: "sort",
+      upgrade: { allowed: true, until_quality: "HDTV-1080p", until_score: 1000 },
+      score_set: "default",
+      language: "Any",
+    };
+
+    const config: MergedConfigInstance = {
+      custom_formats: [],
+      quality_profiles: [profile],
+      customFormatDefinitions: [],
+      media_management: {},
+      media_naming: {},
+    };
+
+    const serverProfile = cloneWithJSON(sampleQualityProfile);
+    serverProfile.name = "hi";
+    serverProfile.formatItems = [];
+    serverProfile.minUpgradeFormatScore = 3;
+    serverProfile.minFormatScore = 2;
+    serverProfile.cutoff = 1;
+    serverProfile.items = [{ allowed: false, items: [], quality: { id: 1, name: "HDTV-1080p" } }];
+    serverProfile.language = { id: 0, name: "Any" };
+
+    const serverQP: MergedQualityProfileResource[] = [serverProfile];
+    const serverQD: MergedQualityDefinitionResource[] = resources;
+    const serverCF: MergedCustomFormatResource[] = [cloneWithJSON(sampleCustomFormat)];
+
+    const serverCache = new ServerCache(serverQD, serverQP, serverCF, [{ id: 0, name: "Any" }]);
+
+    const diff = await calculateQualityProfilesDiff("RADARR", cfMap, config, serverCache);
+    expect(diff.changedQPs.length).toBe(0);
+    expect(diff.create.length).toBe(0);
+    expect(diff.noChanges.length).toBe(1);
   });
 });
