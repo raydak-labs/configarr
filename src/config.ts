@@ -198,7 +198,6 @@ export const mergeConfigsAndTemplates = async (
     quality_profiles: [],
   };
 
-  // HINT: we assume customFormatDefinitions only exist in RECYCLARR
   if (instanceConfig.include) {
     const mappedIncludes = instanceConfig.include.reduce<{ recyclarr: InputConfigIncludeItem[]; trash: InputConfigIncludeItem[] }>(
       (previous, current) => {
@@ -207,10 +206,11 @@ export const mergeConfigsAndTemplates = async (
             previous.trash.push(current);
             break;
           case "RECYCLARR":
+          case undefined:
             previous.recyclarr.push(current);
             break;
           default:
-            logger.warn(`Unknown type for template requested: ${(current as any).type}. Ignoring.`);
+            logger.warn(`Unknown source type for template requested: '${current.source}'. Ignoring.`);
         }
 
         return previous;
