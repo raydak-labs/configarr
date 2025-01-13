@@ -114,6 +114,13 @@ customFormatDefinitions:
         fields:
           value: 4
 
+# With this options you can disable or enable processing for *arrs. Default is enabled
+#sonarrEnabled: false
+#radarrEnabled: false
+#whisparrEnabled: false
+#readarrEnabled: false
+#lidarrEnabled: false
+
 # Sonarr Configuration
 sonarr:
   instance1: # Instance name (can be any unique identifier)
@@ -201,6 +208,9 @@ whisparr: {}
 
 # experimental support: check https://configarr.rayak.de/docs/configuration/experimental-support
 readarr: {}
+
+# experimental support: check https://configarr.rayak.de/docs/configuration/experimental-support
+lidarr: {}
 ```
 
 ### secrets.yml
@@ -210,6 +220,20 @@ Store sensitive information like API keys in this file. Never commit this file t
 ```yaml title="secrets.yml"
 SONARR_API_KEY: your_sonarr_api_key_here
 RADARR_API_KEY: your_radarr_api_key_here
+```
+
+### Enable/Disable
+
+You can configure enabled `*Arr` instance with options in the `config.yml` file.
+Default everything is `true`.
+
+```yml
+# true or false
+sonarrEnabled: false
+radarrEnabled: false
+whisparrEnabled: false
+readarrEnabled: false
+lidarrEnabled: false
 ```
 
 ## Media Naming
@@ -295,6 +319,7 @@ Configarr will automatically load these configurations on startup and apply them
   - https://sonarr.tv/docs/api/#/NamingConfig/get_api_v3_config_naming
   - https://whisparr.com/docs/api/#/NamingConfig/get_api_v3_config_naming
   - https://readarr.com/docs/api/#/NamingConfig/get_api_v1_config_naming
+  - https://lidarr.audio/docs/api/#/NamingConfig/get_api_v1_config_naming
 
   MediaManagement APIs:
 
@@ -302,3 +327,4 @@ Configarr will automatically load these configurations on startup and apply them
   - https://sonarr.tv/docs/api/#/MediaManagementConfig/get_api_v3_config_mediamanagement
   - https://whisparr.com/docs/api/#/MediaManagementConfig/get_api_v3_config_mediamanagement
   - https://readarr.com/docs/api/#/MediaManagementConfig/get_api_v1_config_mediamanagement
+  - https://lidarr.audio/docs/api/#/MediaManagementConfig/get_api_v1_config_mediamanagement

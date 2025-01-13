@@ -1,6 +1,7 @@
 import { MergedCustomFormatResource, MergedQualityDefinitionResource, MergedQualityProfileResource } from "../__generated__/mergedTypes";
 import { logger } from "../logger";
 import { ArrType } from "../types/common.types";
+import { LidarrClient } from "./lidarr-client";
 import { RadarrClient } from "./radarr-client";
 import { ReadarrClient } from "./readarr-client";
 import { SonarrClient } from "./sonarr-client";
@@ -143,6 +144,9 @@ export class UnifiedClient implements IArrClient {
         break;
       case "WHISPARR":
         this.api = new WhisparrClient(baseUrl, apiKey);
+        break;
+      case "LIDARR":
+        this.api = new LidarrClient(baseUrl, apiKey);
         break;
       default:
         throw new Error(`Invalid API type: ${type}`);

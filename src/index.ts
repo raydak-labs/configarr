@@ -160,6 +160,25 @@ const pipeline = async (globalConfig: InputConfigSchema, instanceConfig: InputCo
   }
 };
 
+const runArrType = async (
+  arrType: ArrType,
+  globalConfig: InputConfigSchema,
+  arrEntry: Record<string, InputConfigArrInstance> | undefined,
+) => {
+  if (arrEntry == null || Array.isArray(arrEntry) || typeof arrEntry !== "object" || Object.keys(arrEntry).length <= 0) {
+    logHeading(`No ${arrType} instances defined.`);
+  } else {
+    logHeading(`Processing ${arrType} ...`);
+
+    for (const [instanceName, instance] of Object.entries(arrEntry)) {
+      logger.info(`Processing ${arrType} Instance: ${instanceName}`);
+      await configureApi(arrType, instance.base_url, instance.api_key);
+      await pipeline(globalConfig, instance, arrType);
+      unsetApi();
+    }
+  }
+};
+
 const run = async () => {
   if (getEnvs().DRY_RUN) {
     logger.info("DryRun: Running in dry-run mode!");
@@ -172,74 +191,39 @@ const run = async () => {
 
   // TODO currently this has to be run sequentially because of the centrally configured api
 
-  const sonarrConfig = globalConfig.sonarr;
-
-  if (sonarrConfig == null || Array.isArray(sonarrConfig) || typeof sonarrConfig !== "object" || Object.keys(sonarrConfig).length <= 0) {
-    logHeading(`No Sonarr instances defined.`);
+  // Sonarr
+  if (globalConfig.sonarrEnabled == null || globalConfig.sonarrEnabled) {
+    await runArrType("SONARR", globalConfig, globalConfig.sonarr);
   } else {
-    logHeading(`Processing Sonarr ...`);
-
-    for (const [instanceName, instance] of Object.entries(sonarrConfig)) {
-      logger.info(`Processing Sonarr Instance: ${instanceName}`);
-      await configureApi("SONARR", instance.base_url, instance.api_key);
-      await pipeline(globalConfig, instance, "SONARR");
-      unsetApi();
-    }
+    logger.debug(`Sonarr disabled in config`);
   }
 
-  const radarrConfig = globalConfig.radarr;
-
-  if (radarrConfig == null || Array.isArray(radarrConfig) || typeof radarrConfig !== "object" || Object.keys(radarrConfig).length <= 0) {
-    logHeading(`No Radarr instances defined.`);
+  // Radarr
+  if (globalConfig.radarrEnabled == null || globalConfig.radarrEnabled) {
+    await runArrType("RADARR", globalConfig, globalConfig.radarr);
   } else {
-    logHeading(`Processing Radarr ...`);
-
-    for (const [instanceName, instance] of Object.entries(radarrConfig)) {
-      logger.info(`Processing Radarr Instance: ${instanceName}`);
-      await configureApi("RADARR", instance.base_url, instance.api_key);
-      await pipeline(globalConfig, instance, "RADARR");
-      unsetApi();
-    }
+    logger.debug(`Radarr disabled in config`);
   }
 
-  const whisparrConfig = globalConfig.whisparr;
-
-  if (
-    whisparrConfig == null ||
-    Array.isArray(whisparrConfig) ||
-    typeof whisparrConfig !== "object" ||
-    Object.keys(whisparrConfig).length <= 0
-  ) {
-    logHeading(`No Whisparr instances defined.`);
+  // Whisparr
+  if (globalConfig.whisparrEnabled == null || globalConfig.whisparrEnabled) {
+    await runArrType("WHISPARR", globalConfig, globalConfig.whisparr);
   } else {
-    logHeading(`Processing Whisparr ...`);
-
-    for (const [instanceName, instance] of Object.entries(whisparrConfig)) {
-      logger.info(`Processing Whisparr Instance: ${instanceName}`);
-      await configureApi("WHISPARR", instance.base_url, instance.api_key);
-      await pipeline(globalConfig, instance, "WHISPARR");
-      unsetApi();
-    }
+    logger.debug(`Whisparr disabled in config`);
   }
 
-  const readarrConfig = globalConfig.readarr;
-
-  if (
-    readarrConfig == null ||
-    Array.isArray(readarrConfig) ||
-    typeof readarrConfig !== "object" ||
-    Object.keys(readarrConfig).length <= 0
-  ) {
-    logHeading(`No Readarr instances defined.`);
+  // Readarr
+  if (globalConfig.readarrEnabled == null || globalConfig.readarrEnabled) {
+    await runArrType("READARR", globalConfig, globalConfig.readarr);
   } else {
-    logHeading(`Processing Readarr ...`);
+    logger.debug(`Readarr disabled in config`);
+  }
 
-    for (const [instanceName, instance] of Object.entries(readarrConfig)) {
-      logger.info(`Processing Readarr Instance: ${instanceName}`);
-      await configureApi("READARR", instance.base_url, instance.api_key);
-      await pipeline(globalConfig, instance, "READARR");
-      unsetApi();
-    }
+  // Lidarr
+  if (globalConfig.lidarrEnabled == null || globalConfig.lidarrEnabled) {
+    await runArrType("LIDARR", globalConfig, globalConfig.lidarr);
+  } else {
+    logger.debug(`Lidarr disabled in config`);
   }
 };
 

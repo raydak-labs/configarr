@@ -1,0 +1,13 @@
+quality_profiles:
+  - name: ExampleProfile
+    reset_unmatched_scores:
+      enabled: true
+    upgrade:
+      allowed: true
+      until_quality: FLAC
+      until_score: 10
+    min_format_score: 1
+    quality_sort: top
+    qualities:
+      - name: FLAC
+      - name: "MP3-96"
