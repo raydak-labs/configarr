@@ -91,6 +91,7 @@ export type InputConfigQualityProfile = {
   min_format_score?: number;
   score_set?: keyof TrashScores;
   quality_sort?: string;
+  language?: string;
   qualities?: InputConfigQualityProfileItem[];
 };
 
@@ -118,10 +119,10 @@ export type ConfigArrInstance = OmitTyped<InputConfigArrInstance, "custom_format
   quality_profiles: ConfigQualityProfile[];
 };
 
-export type ConfigQualityProfile = OmitTyped<Required<InputConfigQualityProfile>, "qualities" | "reset_unmatched_scores"> & {
+export type ConfigQualityProfile = OmitTyped<Required<InputConfigQualityProfile>, "qualities" | "reset_unmatched_scores" | "language"> & {
   qualities: ConfigQualityProfileItem[];
   reset_unmatched_scores?: InputConfigQualityProfile["reset_unmatched_scores"];
-};
+} & Pick<InputConfigQualityProfile, "language">;
 
 export type ConfigQualityProfileItem = InputConfigQualityProfileItem;
 
