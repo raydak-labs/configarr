@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.8.0](https://github.com/raydak-labs/configarr/compare/v1.7.0...v1.8.0) (2025-01-13)
+
+### Features
+
+- add experimental lidarr support ([2093ae0](https://github.com/raydak-labs/configarr/commit/2093ae0fc3fc49b3bb3d77042d33f1ddd45036e4))
+
+### Bug Fixes
+
+- handle local templates as recyclarr templates correctly ([10d7bdb](https://github.com/raydak-labs/configarr/commit/10d7bdb1622ed7b3adbb06bda7d048f113ce24dd))
+
 ## [1.7.0](https://github.com/raydak-labs/configarr/compare/v1.6.0...v1.7.0) (2025-01-13)
 
 ### Features
