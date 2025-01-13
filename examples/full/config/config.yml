@@ -3,6 +3,13 @@
 localCustomFormatsPath: /app/cfs
 localConfigTemplatesPath: /app/templates
 
+# You can enable or disable
+#sonarrEnabled: false
+#radarrEnabled: false
+#whisparrEnabled: false
+#readarrEnabled: false
+#lidarrEnabled: true
+
 customFormatDefinitions:
   - trash_id: example-in-config-cf
     trash_scores:
@@ -34,7 +41,6 @@ sonarr:
   instance1:
     # Set the URL/API Key to your actual instance
     base_url: http://sonarr:8989
-    #base_url: https://sonarr.oci.eduard-marbach.de/
     api_key: !secret SONARR_API_KEY
 
     quality_definition:
@@ -56,7 +62,6 @@ radarr:
   instance1:
     # Set the URL/API Key to your actual instance
     base_url: http://radarr:7878
-    #base_url: https://sonarr.oci.eduard-marbach.de/
     api_key: !secret RADARR_API_KEY
 
     # experimental
@@ -90,6 +95,13 @@ radarr:
       #### Custom
       - template: radarr-cf
       - template: radarr-quality
+      # - template: 2b90e905c99490edc7c7a5787443748b
+      #   source: TRASH
+
+    # Replacing the language of a profile
+    # quality_profiles:
+    #   - name: ExampleProfile
+    #     language: Any
 
     custom_formats:
       # Movie Versions
@@ -139,6 +151,35 @@ readarr:
     include:
       # only custom defined templates available
       - template: readarr
+
+    custom_formats: # Custom format assignments
+      - trash_ids:
+          - example-release-title-cf
+        assign_scores_to:
+          - name: ExampleProfile
+            score: 1000
+
+    quality_profiles:
+      # TODO: language not correctly mapped
+      - name: ExampleProfile
+        upgrade:
+          until_score: 200
+          # Not supported in whisparr
+          #min_format_score: 200
+
+lidarr:
+  instance1:
+    # Set the URL/API Key to your actual instance
+    base_url: http://lidarr:8686
+    api_key: !secret LIDARR_API_KEY
+
+    # not supported
+    # quality_definition:
+    #   type: movie # Quality definition type
+
+    include:
+      # only custom defined templates available
+      - template: lidarr
 
     custom_formats: # Custom format assignments
       - trash_ids:

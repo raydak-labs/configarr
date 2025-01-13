@@ -91,7 +91,6 @@ sonarr:
   instance1:
     # Set the URL/API Key to your actual instance
     base_url: http://sonarr:8989
-    #base_url: https://sonarr.oci.eduard-marbach.de/
     api_key: !secret SONARR_API_KEY
 
     quality_definition:

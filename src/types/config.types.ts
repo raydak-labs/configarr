@@ -13,9 +13,19 @@ export type InputConfigSchema = {
   customFormatDefinitions?: CustomFormatDefinitions;
 
   sonarr?: Record<string, InputConfigArrInstance>;
+  sonarrEnabled?: boolean;
+
   radarr?: Record<string, InputConfigArrInstance>;
+  radarrEnabled?: boolean;
+
   whisparr?: Record<string, InputConfigArrInstance>;
+  whisparrEnabled?: boolean;
+
   readarr?: Record<string, InputConfigArrInstance>;
+  readarrEnabled?: boolean;
+
+  lidarr?: Record<string, InputConfigArrInstance>;
+  lidarrEnabled?: boolean;
 };
 
 export type InputConfigCustomFormat = {

@@ -31,6 +31,7 @@ Experimental support also available for [(check experimental support)](./configu
 
 - Whisparr v3
 - Readarr v1
+- Lidarr v2
 
 ### Key Features
 

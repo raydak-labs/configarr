@@ -62,6 +62,22 @@ services:
       - 6503:8787
     restart: unless-stopped
 
+  # experimental
+  lidarr:
+    image: lscr.io/linuxserver/lidarr:2.8.2
+    networks:
+      - configarr-full
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+    volumes:
+      - lidarr:/config
+      - ${PWD}/lidarr.xml:/config/config.xml:rw
+    ports:
+      - 6504:8686
+    restart: unless-stopped
+
 networks:
   configarr-full:
     name: configarr-full
@@ -71,3 +87,4 @@ volumes:
   radarr:
   whisparr:
   readarr:
+  lidarr:
