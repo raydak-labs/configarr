@@ -163,11 +163,6 @@ const config: Config = {
               href: "https://github.com/raydak-labs/configarr",
             },
             {
-              label: "Raydak",
-              href: "https://raydak.de",
-            },
-
-            {
               label: "Stack Overflow",
               href: "https://stackoverflow.com/questions/tagged/configarr",
             },
