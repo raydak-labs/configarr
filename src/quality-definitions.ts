@@ -20,8 +20,7 @@ export const calculateQualityDefinitionDiff = (
   // TODO add config defined qualities
 ) => {
   const serverMap = serverQDs.reduce((p, c) => {
-    // TODO: validate if title is the correct attribute
-    p.set(c.title!, c);
+    p.set(c.quality!.name!, c);
     return p;
   }, new Map<string, MergedQualityDefinitionResource>());
 
@@ -33,7 +32,7 @@ export const calculateQualityDefinitionDiff = (
   const mergedQualities = Object.values(
     qualityDefinitions.toReversed().reduce<{ [k: string]: TrashQualityDefintionQuality }>((p, c) => {
       if (p[c.quality] != null) {
-        logger.warn(`QualityDefinition: Found duplicate for '${c.quality}'. Using '${JSON.stringify(p[c.quality])}'`);
+        logger.debug(`QualityDefinition: Found duplicate for '${c.quality}'.`);
       } else {
         p[c.quality] = c;
         missingServerQualities.delete(c.quality);
@@ -43,32 +42,37 @@ export const calculateQualityDefinitionDiff = (
     }, {}),
   );
 
-  for (const trashQuality of mergedQualities) {
-    const clonedQuality = cloneWithJSON(trashQuality);
-    const serverQuality = serverMap.get(trashQuality.quality);
+  for (const quality of mergedQualities) {
+    const clonedQuality = cloneWithJSON(quality);
+    const serverQuality = serverMap.get(clonedQuality.quality);
 
     if (serverQuality) {
+      const newData = cloneWithJSON(serverQuality);
+
       const changes: string[] = [];
 
-      if (serverQuality.minSize !== trashQuality.min) {
-        changes.push(`MinSize diff: Server ${serverQuality.minSize} - Config ${trashQuality.min}`);
+      if (clonedQuality.min != null && serverQuality.minSize !== clonedQuality.min) {
+        changes.push(`MinSize diff: Server ${serverQuality.minSize} - Config ${clonedQuality.min}`);
+        newData.minSize = clonedQuality.min;
       }
-      if (serverQuality.maxSize !== trashQuality.max) {
-        changes.push(`MaxSize diff: Server ${serverQuality.maxSize} - Config ${trashQuality.max}`);
+      if (clonedQuality.max != null && serverQuality.maxSize !== clonedQuality.max) {
+        changes.push(`MaxSize diff: Server ${serverQuality.maxSize} - Config ${clonedQuality.max}`);
+        newData.maxSize = clonedQuality.max;
       }
 
-      if (serverQuality.preferredSize !== clonedQuality.preferred) {
+      if (clonedQuality.preferred && serverQuality.preferredSize !== clonedQuality.preferred) {
         changes.push(`PreferredSize diff: Server ${serverQuality.preferredSize} - Config ${clonedQuality.preferred}`);
+        newData.preferredSize = clonedQuality.preferred;
+      }
+
+      if (clonedQuality.title && serverQuality.title !== clonedQuality.title) {
+        changes.push(`Title diff: Server '${serverQuality.title}' - Config '${clonedQuality.title}'`);
+        newData.title = clonedQuality.title;
       }
 
       if (changes.length > 0) {
-        changeMap.set(serverQuality.title!, changes);
-        restData.push({
-          ...serverQuality,
-          maxSize: clonedQuality.max,
-          minSize: clonedQuality.min,
-          preferredSize: clonedQuality.preferred,
-        });
+        changeMap.set(serverQuality.quality!.name!, changes);
+        restData.push(newData);
       } else {
         restData.push(serverQuality);
       }
@@ -79,9 +83,13 @@ export const calculateQualityDefinitionDiff = (
 
   if (missingServerQualities.size > 0) {
     logger.debug(
-      `QualityDefinition: Found missing qualities: '${JSON.stringify(missingServerQualities.values().map((e) => e.quality?.name || e.title))}'`,
+      `QualityDefinition: Found missing qualities will reuse server data: '${Array.from(missingServerQualities.values().map((e) => e.quality?.name || e.title))}'`,
     );
     restData.push(...missingServerQualities.values());
+  }
+
+  if (changeMap.size > 0) {
+    logger.debug(Object.fromEntries(changeMap.entries()), `QualityDefinition diffs:`);
   }
 
   return { changeMap, restData };

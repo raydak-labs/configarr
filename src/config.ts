@@ -244,7 +244,11 @@ export const mergeConfigsAndTemplates = async (
       }
 
       if (template.quality_definition) {
-        mergedTemplates.quality_definition = template.quality_definition;
+        mergedTemplates.quality_definition = {
+          ...mergedTemplates.quality_definition,
+          ...template.quality_definition,
+          qualities: [...(mergedTemplates.quality_definition?.qualities || []), ...(template.quality_definition.qualities || [])],
+        };
       }
 
       if (template.quality_profiles) {
@@ -321,7 +325,11 @@ export const mergeConfigsAndTemplates = async (
   }
 
   if (instanceConfig.quality_definition) {
-    mergedTemplates.quality_definition = { ...mergedTemplates.quality_definition, ...instanceConfig.quality_definition };
+    mergedTemplates.quality_definition = {
+      ...mergedTemplates.quality_definition,
+      ...instanceConfig.quality_definition,
+      qualities: [...(mergedTemplates.quality_definition?.qualities || []), ...(instanceConfig.quality_definition.qualities || [])],
+    };
   }
 
   if (globalConfig.customFormatDefinitions) {

@@ -17,7 +17,7 @@ import { cloneRecyclarrTemplateRepo } from "./recyclarr-importer";
 import { cloneTrashRepo, loadQualityDefinitionFromTrash, transformTrashQDs } from "./trash-guide";
 import { ArrType } from "./types/common.types";
 import { InputConfigArrInstance, InputConfigSchema } from "./types/config.types";
-import { TrashQualityDefintion } from "./types/trashguide.types";
+import { TrashQualityDefintion, TrashQualityDefintionQuality } from "./types/trashguide.types";
 
 const pipeline = async (globalConfig: InputConfigSchema, instanceConfig: InputConfigArrInstance, arrType: ArrType) => {
   const api = getUnifiedClient();
@@ -56,28 +56,40 @@ const pipeline = async (globalConfig: InputConfigSchema, instanceConfig: InputCo
 
   const qualityDefinition = config.quality_definition?.type;
 
-  // TODO: custom qualities
-  if (qualityDefinition) {
-    let qdTrash: TrashQualityDefintion;
+  if (config.quality_definition != null) {
+    const trashQDFileName = config.quality_definition.type;
+    const mergedQDs: TrashQualityDefintionQuality[] = [];
 
-    // TODO: this could be improved
-    switch (qualityDefinition) {
-      case "anime":
-        qdTrash = await loadQualityDefinitionFromTrash("anime", "SONARR");
-        break;
-      case "series":
-        qdTrash = await loadQualityDefinitionFromTrash("series", "SONARR");
-        break;
-      case "movie":
-        qdTrash = await loadQualityDefinitionFromTrash("movie", "RADARR");
-        break;
-      default:
-        throw new Error(`Unsupported quality defintion ${qualityDefinition}`);
+    // TODO: maybe add id reference as usage
+    if (trashQDFileName != null) {
+      let qdTrash: TrashQualityDefintion;
+      // TODO: this could be improved
+      switch (qualityDefinition) {
+        case "anime":
+          qdTrash = await loadQualityDefinitionFromTrash("anime", "SONARR");
+          break;
+        case "series":
+          qdTrash = await loadQualityDefinitionFromTrash("series", "SONARR");
+          break;
+        case "movie":
+          qdTrash = await loadQualityDefinitionFromTrash("movie", "RADARR");
+          break;
+        default:
+          throw new Error(`Unsupported quality defintion ${qualityDefinition}`);
+      }
+
+      const transformed = transformTrashQDs(qdTrash, config.quality_definition?.preferred_ratio);
+
+      mergedQDs.push(...transformed);
+    } else {
+      logger.debug(`QualityDefinition: No TRaSH-Guide filename defined (type).`);
     }
 
-    const transformedTrashQDs = transformTrashQDs(qdTrash, config.quality_definition?.preferred_ratio);
+    if (config.quality_definition.qualities) {
+      mergedQDs.push(...config.quality_definition.qualities);
+    }
 
-    const { changeMap, restData } = calculateQualityDefinitionDiff(serverCache.qd, transformedTrashQDs);
+    const { changeMap, restData } = calculateQualityDefinitionDiff(serverCache.qd, mergedQDs);
 
     if (changeMap.size > 0) {
       if (getEnvs().DRY_RUN) {
@@ -93,7 +105,7 @@ const pipeline = async (globalConfig: InputConfigSchema, instanceConfig: InputCo
       logger.info(`QualityDefinitions do not need update!`);
     }
   } else {
-    logger.info(`No QualityDefinition configured.`);
+    logger.debug(`No QualityDefinition configured.`);
   }
 
   const namingDiff = await calculateNamingDiff(config.media_naming_api);

@@ -1,5 +1,5 @@
 import { ConfigarrCF } from "./common.types";
-import { TrashCF, TrashScores } from "./trashguide.types";
+import { TrashCF, TrashQualityDefintionQuality, TrashScores } from "./trashguide.types";
 
 export type CustomFormatDefinitions = (TrashCF | ConfigarrCF)[];
 
@@ -41,8 +41,10 @@ export type InputConfigArrInstance = {
   base_url: string;
   api_key: string;
   quality_definition?: {
-    type: string;
+    type?: string;
     preferred_ratio?: number; // 0.0 - 1.0
+    // @experimental
+    qualities?: TrashQualityDefintionQuality[];
   };
   include?: InputConfigIncludeItem[];
   custom_formats?: InputConfigCustomFormat[];
