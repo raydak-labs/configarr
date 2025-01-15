@@ -3,6 +3,7 @@ import path from "node:path";
 import { MergedCustomFormatResource } from "./__generated__/mergedTypes";
 import { getConfig } from "./config";
 import { logger } from "./logger";
+import { interpolateSize } from "./quality-definitions";
 import { CFIDToConfigGroup, ConfigarrCF, QualityDefintionsRadarr, QualityDefintionsSonarr } from "./types/common.types";
 import { ConfigCustomFormat, ConfigQualityProfile, ConfigQualityProfileItem } from "./types/config.types";
 import {
@@ -11,6 +12,7 @@ import {
   TrashCF,
   TrashQP,
   TrashQualityDefintion,
+  TrashQualityDefintionQuality,
   TrashRadarrNaming,
   TrashSonarrNaming,
 } from "./types/trashguide.types";
@@ -275,4 +277,21 @@ export const transformTrashQPToTemplate = (data: TrashQP): ConfigQualityProfile 
 
 export const transformTrashQPCFs = (data: TrashQP): ConfigCustomFormat => {
   return { assign_scores_to: [{ name: data.name }], trash_ids: Object.values(data.formatItems) };
+};
+
+export const transformTrashQDs = (data: TrashQualityDefintion, ratio: number | undefined): TrashQualityDefintionQuality[] => {
+  if (ratio == null || ratio < 0 || ratio > 1) {
+    return data.qualities;
+  }
+
+  // TODO: maybe add check for duplicates?
+  const transformQualities = data.qualities.map((trashQuality) => {
+    // Adjust preffered size if preferedRatio is set
+    const adjustedPreferred = interpolateSize(trashQuality.min, trashQuality.max, trashQuality.preferred, ratio);
+    logger.debug(`QualityDefinition "${trashQuality.quality} adjusting preferred by ratio ${ratio} to value "${adjustedPreferred}"`);
+
+    return { ...trashQuality, preferred: adjustedPreferred };
+  });
+
+  return transformQualities;
 };

@@ -2,8 +2,7 @@ import path from "node:path";
 import { MergedQualityDefinitionResource } from "./__generated__/mergedTypes";
 import { getUnifiedClient } from "./clients/unified-client";
 import { getEnvs } from "./env";
-import { logger } from "./logger";
-import { TrashQualityDefintion, TrashQualityDefintionQuality } from "./types/trashguide.types";
+import { TrashQualityDefintionQuality } from "./types/trashguide.types";
 import { cloneWithJSON, loadJsonFile, roundToDecimal } from "./util";
 
 export const loadQualityDefinitionFromServer = async (): Promise<MergedQualityDefinitionResource[]> => {
@@ -15,8 +14,9 @@ export const loadQualityDefinitionFromServer = async (): Promise<MergedQualityDe
 
 export const calculateQualityDefinitionDiff = (
   serverQDs: MergedQualityDefinitionResource[],
-  trashQD: TrashQualityDefintion,
-  preferedRatio?: number,
+  // TODO: this does not has to include all QDs right?
+  trashQDQualities: TrashQualityDefintionQuality[],
+  // TODO add config defined qualities
 ) => {
   const serverMap = serverQDs.reduce((p, c) => {
     p.set(c.title!, c);
@@ -28,22 +28,9 @@ export const calculateQualityDefinitionDiff = (
 
   const restData: MergedQualityDefinitionResource[] = [];
 
-  for (const trashQuality of trashQD.qualities) {
+  for (const trashQuality of trashQDQualities) {
     const clonedQuality = cloneWithJSON(trashQuality);
     const serverQuality = serverMap.get(trashQuality.quality);
-
-    // Adjust preffered size if preferedRatio is set
-    if (preferedRatio != null) {
-      if (preferedRatio < 0 || preferedRatio > 1) {
-        logger.warn(`QualityDefinition: PreferredRatio must be between 0 and 1. Ignoring`);
-      } else {
-        const adjustedPreferred = interpolateSize(trashQuality.min, trashQuality.max, trashQuality.preferred, preferedRatio);
-        clonedQuality.preferred = adjustedPreferred;
-        logger.debug(
-          `QualityDefinition "${trashQuality.quality} adjusting preferred by ratio ${preferedRatio} to value "${adjustedPreferred}"`,
-        );
-      }
-    }
 
     if (serverQuality) {
       const changes: string[] = [];

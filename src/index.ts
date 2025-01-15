@@ -14,7 +14,7 @@ import { calculateMediamanagementDiff, calculateNamingDiff } from "./media-manag
 import { calculateQualityDefinitionDiff, loadQualityDefinitionFromServer } from "./quality-definitions";
 import { calculateQualityProfilesDiff, loadQualityProfilesFromServer } from "./quality-profiles";
 import { cloneRecyclarrTemplateRepo } from "./recyclarr-importer";
-import { cloneTrashRepo, loadQualityDefinitionFromTrash } from "./trash-guide";
+import { cloneTrashRepo, loadQualityDefinitionFromTrash, transformTrashQDs } from "./trash-guide";
 import { ArrType } from "./types/common.types";
 import { InputConfigArrInstance, InputConfigSchema } from "./types/config.types";
 import { TrashQualityDefintion } from "./types/trashguide.types";
@@ -56,9 +56,11 @@ const pipeline = async (globalConfig: InputConfigSchema, instanceConfig: InputCo
 
   const qualityDefinition = config.quality_definition?.type;
 
+  // TODO: custom qualities
   if (qualityDefinition) {
     let qdTrash: TrashQualityDefintion;
 
+    // TODO: this could be improved
     switch (qualityDefinition) {
       case "anime":
         qdTrash = await loadQualityDefinitionFromTrash("anime", "SONARR");
@@ -73,11 +75,9 @@ const pipeline = async (globalConfig: InputConfigSchema, instanceConfig: InputCo
         throw new Error(`Unsupported quality defintion ${qualityDefinition}`);
     }
 
-    const { changeMap, create, restData } = calculateQualityDefinitionDiff(
-      serverCache.qd,
-      qdTrash,
-      config.quality_definition?.preferred_ratio,
-    );
+    const transformedTrashQDs = transformTrashQDs(qdTrash, config.quality_definition?.preferred_ratio);
+
+    const { changeMap, create, restData } = calculateQualityDefinitionDiff(serverCache.qd, transformedTrashQDs);
 
     if (changeMap.size > 0) {
       if (getEnvs().DRY_RUN) {

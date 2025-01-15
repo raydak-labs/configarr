@@ -160,6 +160,14 @@ export const parseIncludes = (input: InputConfigIncludeItem): ConfigIncludeItem 
 
 export const validateConfig = (input: InputConfigInstance): MergedConfigInstance => {
   // TODO add validation and warnings like assign_scores. Setting default values not always the best
+
+  const preferredRatio = input.quality_definition?.preferred_ratio;
+
+  if (preferredRatio != null && (preferredRatio < 0 || preferredRatio > 1)) {
+    logger.warn(`QualityDefinition: PreferredRatio must be between 0 and 1. Ignoring`);
+    delete input.quality_definition!["preferred_ratio"];
+  }
+
   return {
     ...input,
     custom_formats: (input.custom_formats || []).map((e) => ({

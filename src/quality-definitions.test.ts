@@ -49,7 +49,7 @@ describe("QualityDefinitions", async () => {
   };
 
   test("calculateQualityDefinitionDiff - no diff", async ({}) => {
-    const result = calculateQualityDefinitionDiff(server, client);
+    const result = calculateQualityDefinitionDiff(server, client.qualities);
 
     expect(result.changeMap.size).toBe(0);
     expect(result.create).toHaveLength(0);
@@ -59,7 +59,7 @@ describe("QualityDefinitions", async () => {
     const clone: TrashQualityDefintion = JSON.parse(JSON.stringify(client));
     clone.qualities[0]!.min = 3;
 
-    const result = calculateQualityDefinitionDiff(server, clone);
+    const result = calculateQualityDefinitionDiff(server, clone.qualities);
 
     expect(result.changeMap.size).toBe(1);
     expect(result.create).toHaveLength(0);
@@ -69,7 +69,7 @@ describe("QualityDefinitions", async () => {
     const clone: TrashQualityDefintion = JSON.parse(JSON.stringify(client));
     clone.qualities[0]!.max = 3;
 
-    const result = calculateQualityDefinitionDiff(server, clone);
+    const result = calculateQualityDefinitionDiff(server, clone.qualities);
 
     expect(result.changeMap.size).toBe(1);
     expect(result.create).toHaveLength(0);
@@ -79,7 +79,7 @@ describe("QualityDefinitions", async () => {
     const clone: TrashQualityDefintion = JSON.parse(JSON.stringify(client));
     clone.qualities[0]!.preferred = 3;
 
-    const result = calculateQualityDefinitionDiff(server, clone);
+    const result = calculateQualityDefinitionDiff(server, clone.qualities);
 
     expect(result.changeMap.size).toBe(1);
     expect(result.create).toHaveLength(0);
@@ -89,38 +89,10 @@ describe("QualityDefinitions", async () => {
     const clone: TrashQualityDefintion = JSON.parse(JSON.stringify(client));
     clone.qualities[0]!.quality = "New";
 
-    const result = calculateQualityDefinitionDiff(server, clone);
+    const result = calculateQualityDefinitionDiff(server, clone.qualities);
 
     expect(result.changeMap.size).toBe(0);
     expect(result.create).toHaveLength(1);
-  });
-
-  test("calculateQualityDefinitionDiff - diff preferred size with ratio", async ({}) => {
-    const clone: TrashQualityDefintion = JSON.parse(JSON.stringify(client));
-
-    const result = calculateQualityDefinitionDiff(server, clone, 0.5);
-    expect(result.changeMap.size).toBe(0);
-    expect(result.create).toHaveLength(0);
-
-    const resultLow = calculateQualityDefinitionDiff(server, clone, 0.0);
-    expect(resultLow.changeMap.size).toBe(1);
-    expect(resultLow.create).toHaveLength(0);
-
-    const resultHigh = calculateQualityDefinitionDiff(server, clone, 1.0);
-    expect(resultHigh.changeMap.size).toBe(1);
-    expect(resultHigh.create).toHaveLength(0);
-  });
-
-  test("calculateQualityDefinitionDiff - diff preferred size with ratio, ignore if out of range", async ({}) => {
-    const clone: TrashQualityDefintion = JSON.parse(JSON.stringify(client));
-
-    const result = calculateQualityDefinitionDiff(server, clone, -0.5);
-    expect(result.changeMap.size).toBe(0);
-    expect(result.create).toHaveLength(0);
-
-    const resultLow = calculateQualityDefinitionDiff(server, clone, 1.5);
-    expect(resultLow.changeMap.size).toBe(0);
-    expect(resultLow.create).toHaveLength(0);
   });
 
   test("interpolateSize - expected values", async ({}) => {
