@@ -236,6 +236,42 @@ readarrEnabled: false
 lidarrEnabled: false
 ```
 
+## Quality Definition / Size
+
+Support has been added to allow configuring quality definitions manually if required.
+(Hint: Currently evaluation if the current function with `type: string` which represents the filename in the TRaSH-Guide should be deprecated in favor of the more consistent `trash_id`. See [Github Issue](https://github.com/raydak-labs/configarr/issues/155)).
+
+```yml
+# ...
+
+sonarr:
+  instance1:
+    # ...
+    quality_definition:
+      qualities:
+        - quality: "HDTV-720p" # this must always match with the available name / identifier in the *arr
+          title: AdjustedName # optional
+          min: 17.1
+          preferred: 500
+          max: 1000
+
+# other file template.yml
+---
+quality_definition:
+  qualities:
+    - quality: "HDTV-1080p"
+      min: 20
+      preferred: 500
+      max: 1000
+```
+
+Notes:
+
+- `preferredRatio` only applies to TRaSH/Recyclarr imported templates
+- works also with template and `include`
+- merged order is like: TRaSH/Recyclarr templates -> local templates -> config file
+- experimental, available since `v1.9.0`
+
 ## Media Naming
 
 You can use the predefined naming configurations from TRaSH-Guide like in recyclarr with the `media_naming` key.

@@ -2,6 +2,7 @@ import { ArrType, CFIDToConfigGroup, ImportCF } from "./common.types";
 
 export type TrashQualityDefintionQuality = {
   quality: string;
+  title?: string;
   min: number;
   preferred: number;
   max: number;

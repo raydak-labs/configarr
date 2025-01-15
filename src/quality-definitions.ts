@@ -3,7 +3,7 @@ import { MergedQualityDefinitionResource } from "./__generated__/mergedTypes";
 import { getUnifiedClient } from "./clients/unified-client";
 import { getEnvs } from "./env";
 import { logger } from "./logger";
-import { TrashQualityDefintion, TrashQualityDefintionQuality } from "./types/trashguide.types";
+import { TrashQualityDefintionQuality } from "./types/trashguide.types";
 import { cloneWithJSON, loadJsonFile, roundToDecimal } from "./util";
 
 export const loadQualityDefinitionFromServer = async (): Promise<MergedQualityDefinitionResource[]> => {
@@ -15,68 +15,84 @@ export const loadQualityDefinitionFromServer = async (): Promise<MergedQualityDe
 
 export const calculateQualityDefinitionDiff = (
   serverQDs: MergedQualityDefinitionResource[],
-  trashQD: TrashQualityDefintion,
-  preferedRatio?: number,
+  // TODO: this does not has to include all QDs right?
+  qualityDefinitions: TrashQualityDefintionQuality[],
+  // TODO add config defined qualities
 ) => {
   const serverMap = serverQDs.reduce((p, c) => {
-    p.set(c.title!, c);
+    p.set(c.quality!.name!, c);
     return p;
   }, new Map<string, MergedQualityDefinitionResource>());
 
   const changeMap = new Map<string, string[]>();
-  const create: TrashQualityDefintionQuality[] = [];
-
   const restData: MergedQualityDefinitionResource[] = [];
 
-  for (const trashQuality of trashQD.qualities) {
-    const clonedQuality = cloneWithJSON(trashQuality);
-    const serverQuality = serverMap.get(trashQuality.quality);
+  const missingServerQualities = new Map(serverMap);
 
-    // Adjust preffered size if preferedRatio is set
-    if (preferedRatio != null) {
-      if (preferedRatio < 0 || preferedRatio > 1) {
-        logger.warn(`QualityDefinition: PreferredRatio must be between 0 and 1. Ignoring`);
+  const mergedQualities = Object.values(
+    qualityDefinitions.toReversed().reduce<{ [k: string]: TrashQualityDefintionQuality }>((p, c) => {
+      if (p[c.quality] != null) {
+        logger.debug(`QualityDefinition: Found duplicate for '${c.quality}'.`);
       } else {
-        const adjustedPreferred = interpolateSize(trashQuality.min, trashQuality.max, trashQuality.preferred, preferedRatio);
-        clonedQuality.preferred = adjustedPreferred;
-        logger.debug(
-          `QualityDefinition "${trashQuality.quality} adjusting preferred by ratio ${preferedRatio} to value "${adjustedPreferred}"`,
-        );
+        p[c.quality] = c;
+        missingServerQualities.delete(c.quality);
       }
-    }
+
+      return p;
+    }, {}),
+  );
+
+  for (const quality of mergedQualities) {
+    const clonedQuality = cloneWithJSON(quality);
+    const serverQuality = serverMap.get(clonedQuality.quality);
 
     if (serverQuality) {
+      const newData = cloneWithJSON(serverQuality);
+
       const changes: string[] = [];
 
-      if (serverQuality.minSize !== trashQuality.min) {
-        changes.push(`MinSize diff: Server ${serverQuality.minSize} - Config ${trashQuality.min}`);
+      if (clonedQuality.min != null && serverQuality.minSize !== clonedQuality.min) {
+        changes.push(`MinSize diff: Server ${serverQuality.minSize} - Config ${clonedQuality.min}`);
+        newData.minSize = clonedQuality.min;
       }
-      if (serverQuality.maxSize !== trashQuality.max) {
-        changes.push(`MaxSize diff: Server ${serverQuality.maxSize} - Config ${trashQuality.max}`);
+      if (clonedQuality.max != null && serverQuality.maxSize !== clonedQuality.max) {
+        changes.push(`MaxSize diff: Server ${serverQuality.maxSize} - Config ${clonedQuality.max}`);
+        newData.maxSize = clonedQuality.max;
       }
 
-      if (serverQuality.preferredSize !== clonedQuality.preferred) {
+      if (clonedQuality.preferred && serverQuality.preferredSize !== clonedQuality.preferred) {
         changes.push(`PreferredSize diff: Server ${serverQuality.preferredSize} - Config ${clonedQuality.preferred}`);
+        newData.preferredSize = clonedQuality.preferred;
+      }
+
+      if (clonedQuality.title && serverQuality.title !== clonedQuality.title) {
+        changes.push(`Title diff: Server '${serverQuality.title}' - Config '${clonedQuality.title}'`);
+        newData.title = clonedQuality.title;
       }
 
       if (changes.length > 0) {
-        changeMap.set(serverQuality.title!, changes);
-        restData.push({
-          ...serverQuality,
-          maxSize: clonedQuality.max,
-          minSize: clonedQuality.min,
-          preferredSize: clonedQuality.preferred,
-        });
+        changeMap.set(serverQuality.quality!.name!, changes);
+        restData.push(newData);
       } else {
         restData.push(serverQuality);
       }
     } else {
-      // TODO create probably never happens?
-      create.push(clonedQuality);
+      logger.warn(`QualityDefinition: Found definition which is not available in server '${clonedQuality.quality}'. Ignoring.`);
     }
   }
 
-  return { changeMap, restData, create };
+  if (missingServerQualities.size > 0) {
+    logger.debug(
+      `QualityDefinition: Found missing qualities will reuse server data: '${Array.from(missingServerQualities.values().map((e) => e.quality?.name || e.title))}'`,
+    );
+    restData.push(...missingServerQualities.values());
+  }
+
+  if (changeMap.size > 0) {
+    logger.debug(Object.fromEntries(changeMap.entries()), `QualityDefinition diffs:`);
+  }
+
+  return { changeMap, restData };
 };
 
 export function interpolateSize(min: number, max: number, pref: number, ratio: number): number {

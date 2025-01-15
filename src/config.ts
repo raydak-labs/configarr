@@ -160,6 +160,14 @@ export const parseIncludes = (input: InputConfigIncludeItem): ConfigIncludeItem 
 
 export const validateConfig = (input: InputConfigInstance): MergedConfigInstance => {
   // TODO add validation and warnings like assign_scores. Setting default values not always the best
+
+  const preferredRatio = input.quality_definition?.preferred_ratio;
+
+  if (preferredRatio != null && (preferredRatio < 0 || preferredRatio > 1)) {
+    logger.warn(`QualityDefinition: PreferredRatio must be between 0 and 1. Ignoring`);
+    delete input.quality_definition!["preferred_ratio"];
+  }
+
   return {
     ...input,
     custom_formats: (input.custom_formats || []).map((e) => ({
@@ -227,7 +235,7 @@ export const mergeConfigsAndTemplates = async (
       const template = recyclarrTemplateMap.get(e.template) ?? localTemplateMap.get(e.template);
 
       if (!template) {
-        logger.warn(`Unknown recyclarr template requested: ${e.template}`);
+        logger.warn(`Unknown recyclarr template requested: '${e.template}'`);
         return;
       }
 
@@ -236,7 +244,11 @@ export const mergeConfigsAndTemplates = async (
       }
 
       if (template.quality_definition) {
-        mergedTemplates.quality_definition = template.quality_definition;
+        mergedTemplates.quality_definition = {
+          ...mergedTemplates.quality_definition,
+          ...template.quality_definition,
+          qualities: [...(mergedTemplates.quality_definition?.qualities || []), ...(template.quality_definition.qualities || [])],
+        };
       }
 
       if (template.quality_profiles) {
@@ -279,7 +291,7 @@ export const mergeConfigsAndTemplates = async (
       const template = trashTemplates.get(e.template);
 
       if (!template) {
-        logger.warn(`Unknown trash template requested: ${e.template}`);
+        logger.warn(`Unknown trash template requested: '${e.template}'`);
         return;
       }
 
@@ -313,7 +325,11 @@ export const mergeConfigsAndTemplates = async (
   }
 
   if (instanceConfig.quality_definition) {
-    mergedTemplates.quality_definition = { ...mergedTemplates.quality_definition, ...instanceConfig.quality_definition };
+    mergedTemplates.quality_definition = {
+      ...mergedTemplates.quality_definition,
+      ...instanceConfig.quality_definition,
+      qualities: [...(mergedTemplates.quality_definition?.qualities || []), ...(instanceConfig.quality_definition.qualities || [])],
+    };
   }
 
   if (globalConfig.customFormatDefinitions) {

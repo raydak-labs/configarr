@@ -30,7 +30,15 @@ export const loadLocalRecyclarrTemplate = (arrType: ArrType): Map<string, Mapped
   const fillMap = (path: string) => {
     const files = fs.readdirSync(`${path}`).filter((fn) => fn.endsWith("yaml") || fn.endsWith("yml"));
 
-    files.forEach((f) => map.set(f.substring(0, f.lastIndexOf(".")), yaml.parse(fs.readFileSync(`${path}/${f}`, "utf8"))));
+    files.forEach((f) => {
+      const fileContent = yaml.parse(fs.readFileSync(`${path}/${f}`, "utf8"));
+
+      if (fileContent == null) {
+        logger.warn(`Local template content of '${f}' is empty. Ignoring.`);
+      } else {
+        map.set(f.substring(0, f.lastIndexOf(".")), fileContent);
+      }
+    });
   };
 
   const localPath = getLocalTemplatePath();
