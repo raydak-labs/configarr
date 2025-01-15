@@ -77,7 +77,7 @@ const pipeline = async (globalConfig: InputConfigSchema, instanceConfig: InputCo
 
     const transformedTrashQDs = transformTrashQDs(qdTrash, config.quality_definition?.preferred_ratio);
 
-    const { changeMap, create, restData } = calculateQualityDefinitionDiff(serverCache.qd, transformedTrashQDs);
+    const { changeMap, restData } = calculateQualityDefinitionDiff(serverCache.qd, transformedTrashQDs);
 
     if (changeMap.size > 0) {
       if (getEnvs().DRY_RUN) {
@@ -91,10 +91,6 @@ const pipeline = async (globalConfig: InputConfigSchema, instanceConfig: InputCo
       }
     } else {
       logger.info(`QualityDefinitions do not need update!`);
-    }
-
-    if (create.length > 0) {
-      logger.info(`Currently not implemented this case for quality definitions.`);
     }
   } else {
     logger.info(`No QualityDefinition configured.`);

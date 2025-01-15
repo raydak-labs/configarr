@@ -48,11 +48,16 @@ describe("QualityDefinitions", async () => {
     ],
   };
 
+  test("calculateQualityDefinitionDiff - expect restData to always contain all server QDs", async ({}) => {
+    const result = calculateQualityDefinitionDiff(server, client.qualities);
+
+    expect(result.restData.length).toBe(2);
+  });
+
   test("calculateQualityDefinitionDiff - no diff", async ({}) => {
     const result = calculateQualityDefinitionDiff(server, client.qualities);
 
     expect(result.changeMap.size).toBe(0);
-    expect(result.create).toHaveLength(0);
   });
 
   test("calculateQualityDefinitionDiff - diff min size", async ({}) => {
@@ -62,7 +67,6 @@ describe("QualityDefinitions", async () => {
     const result = calculateQualityDefinitionDiff(server, clone.qualities);
 
     expect(result.changeMap.size).toBe(1);
-    expect(result.create).toHaveLength(0);
   });
 
   test("calculateQualityDefinitionDiff - diff max size", async ({}) => {
@@ -72,7 +76,6 @@ describe("QualityDefinitions", async () => {
     const result = calculateQualityDefinitionDiff(server, clone.qualities);
 
     expect(result.changeMap.size).toBe(1);
-    expect(result.create).toHaveLength(0);
   });
 
   test("calculateQualityDefinitionDiff - diff preferred size", async ({}) => {
@@ -82,17 +85,16 @@ describe("QualityDefinitions", async () => {
     const result = calculateQualityDefinitionDiff(server, clone.qualities);
 
     expect(result.changeMap.size).toBe(1);
-    expect(result.create).toHaveLength(0);
   });
 
-  test("calculateQualityDefinitionDiff - create new element", async ({}) => {
+  test("calculateQualityDefinitionDiff - ignore not available qualities on server", async ({}) => {
     const clone: TrashQualityDefintion = JSON.parse(JSON.stringify(client));
     clone.qualities[0]!.quality = "New";
 
     const result = calculateQualityDefinitionDiff(server, clone.qualities);
 
     expect(result.changeMap.size).toBe(0);
-    expect(result.create).toHaveLength(1);
+    expect(result.restData.length).toBe(2);
   });
 
   test("interpolateSize - expected values", async ({}) => {

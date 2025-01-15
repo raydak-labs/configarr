@@ -235,7 +235,7 @@ export const mergeConfigsAndTemplates = async (
       const template = recyclarrTemplateMap.get(e.template) ?? localTemplateMap.get(e.template);
 
       if (!template) {
-        logger.warn(`Unknown recyclarr template requested: ${e.template}`);
+        logger.warn(`Unknown recyclarr template requested: '${e.template}'`);
         return;
       }
 
@@ -287,7 +287,7 @@ export const mergeConfigsAndTemplates = async (
       const template = trashTemplates.get(e.template);
 
       if (!template) {
-        logger.warn(`Unknown trash template requested: ${e.template}`);
+        logger.warn(`Unknown trash template requested: '${e.template}'`);
         return;
       }
 

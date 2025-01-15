@@ -2,6 +2,7 @@ import path from "node:path";
 import { MergedQualityDefinitionResource } from "./__generated__/mergedTypes";
 import { getUnifiedClient } from "./clients/unified-client";
 import { getEnvs } from "./env";
+import { logger } from "./logger";
 import { TrashQualityDefintionQuality } from "./types/trashguide.types";
 import { cloneWithJSON, loadJsonFile, roundToDecimal } from "./util";
 
@@ -15,20 +16,34 @@ export const loadQualityDefinitionFromServer = async (): Promise<MergedQualityDe
 export const calculateQualityDefinitionDiff = (
   serverQDs: MergedQualityDefinitionResource[],
   // TODO: this does not has to include all QDs right?
-  trashQDQualities: TrashQualityDefintionQuality[],
+  qualityDefinitions: TrashQualityDefintionQuality[],
   // TODO add config defined qualities
 ) => {
   const serverMap = serverQDs.reduce((p, c) => {
+    // TODO: validate if title is the correct attribute
     p.set(c.title!, c);
     return p;
   }, new Map<string, MergedQualityDefinitionResource>());
 
   const changeMap = new Map<string, string[]>();
-  const create: TrashQualityDefintionQuality[] = [];
-
   const restData: MergedQualityDefinitionResource[] = [];
 
-  for (const trashQuality of trashQDQualities) {
+  const missingServerQualities = new Map(serverMap);
+
+  const mergedQualities = Object.values(
+    qualityDefinitions.toReversed().reduce<{ [k: string]: TrashQualityDefintionQuality }>((p, c) => {
+      if (p[c.quality] != null) {
+        logger.warn(`QualityDefinition: Found duplicate for '${c.quality}'. Using '${JSON.stringify(p[c.quality])}'`);
+      } else {
+        p[c.quality] = c;
+        missingServerQualities.delete(c.quality);
+      }
+
+      return p;
+    }, {}),
+  );
+
+  for (const trashQuality of mergedQualities) {
     const clonedQuality = cloneWithJSON(trashQuality);
     const serverQuality = serverMap.get(trashQuality.quality);
 
@@ -58,12 +73,18 @@ export const calculateQualityDefinitionDiff = (
         restData.push(serverQuality);
       }
     } else {
-      // TODO create probably never happens?
-      create.push(clonedQuality);
+      logger.warn(`QualityDefinition: Found definition which is not available in server '${clonedQuality.quality}'. Ignoring.`);
     }
   }
 
-  return { changeMap, restData, create };
+  if (missingServerQualities.size > 0) {
+    logger.debug(
+      `QualityDefinition: Found missing qualities: '${JSON.stringify(missingServerQualities.values().map((e) => e.quality?.name || e.title))}'`,
+    );
+    restData.push(...missingServerQualities.values());
+  }
+
+  return { changeMap, restData };
 };
 
 export function interpolateSize(min: number, max: number, pref: number, ratio: number): number {
