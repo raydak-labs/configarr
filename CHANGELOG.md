@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.9.0](https://github.com/raydak-labs/configarr/compare/v1.8.0...v1.9.0) (2025-01-15)
+
+### Features
+
+- allow configuring quality sizes / definitions with config and templates (alpha) ([f41891b](https://github.com/raydak-labs/configarr/commit/f41891bd87b877cc3c292c737d0dca8e060932d8)), closes [#140](https://github.com/raydak-labs/configarr/issues/140)
+
+### (internal) Refactorings
+
+- ensure all quality definitions always exist if updated ([6aa37cd](https://github.com/raydak-labs/configarr/commit/6aa37cd9eafa6dfa748462508d7c1b0d9679ce0a))
+- ignore empty local templates ([1454670](https://github.com/raydak-labs/configarr/commit/145467033c2282078a41cce98322819032ce340b))
+- restructure trash QD preferred scaling ([53da038](https://github.com/raydak-labs/configarr/commit/53da0381ce928aa743f7f2655b00fc9b40c5349f))
+
 ## [1.8.0](https://github.com/raydak-labs/configarr/compare/v1.7.0...v1.8.0) (2025-01-13)
 
 ### Features
