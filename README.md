@@ -1,21 +1,28 @@
 # Configarr
 
+[![Documentation](https://img.shields.io/badge/Documentation-blue)](https://configarr.raydak.de)
 [![GitHub License](https://img.shields.io/github/license/raydak-labs/configarr)](https://github.com/raydak-labs/configarr/blob/main/LICENSE)
 [![GitHub Release](https://img.shields.io/github/v/release/raydak-labs/configarr?logo=github)](https://github.com/raydak-labs/configarr/releases/)
-[![Codacy Badge](https://app.codacy.com/project/badge/Grade/bf3242f8502145d5b4395b9b2aa7c7c6)](https://app.codacy.com/gh/raydak-labs/configarr/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade)
-[![Documentation](https://img.shields.io/badge/Documentation-blue)](https://configarr.raydak.de)
+[![Docker](https://img.shields.io/docker/v/configarr/configarr?label=DockerHub)](https://hub.docker.com/r/configarr/configarr)
+[![Docker Pulls](https://img.shields.io/docker/pulls/configarr/configarr?label=DockerHub-Pulls)](https://hub.docker.com/r/configarr/configarr)
 
-Configuration and synchronization tool for Sonarr and Radarr.
+Configarr is an open-source tool designed to simplify configuration and synchronization for Sonarr and Radarr (and other experimental).
+It integrates with TRaSH Guides to automate updates of custom formats, quality profiles, and other settings, while also supporting user-defined configurations.
+Configarr offers flexibility with deployment options like Docker and Kubernetes, ensuring compatibility with the latest versions of Sonarr and Radarr.
+By streamlining media server management, it saves time, enhances consistency, and reduces manual intervention.
 
 Official support only for Sonarr v4 and radarr v5.
 
 This will be a project similar to [Recyclarr](https://github.com/recyclarr/recyclarr) or [Notifiarr](https://notifiarr.wiki/) but support for additional specification and not only what [TRaSH-Guides](https://trash-guides.info/) offer.
 
-Other projects:
+## Container Images
 
-- https://github.com/recyclarr/recyclarr
-- https://notifiarr.wiki/
-- https://github.com/Dictionarry-Hub/profilarr
+Images are available via Github Container Registry (ghcr) and dockerhub with tags and latest (check the repos for all available tags):
+
+- [GHCR:](https://github.com/raydak-labs/configarr/pkgs/container/configarr)
+  - `ghcr.io/raydak-labs/configarr:latest`
+- [DockerHub:](https://hub.docker.com/repository/docker/configarr/configarr/general)
+  - `docker.io/configarr/configarr:latest` or simply `configarr/configarr:latest`
 
 ## Features
 
@@ -32,14 +39,15 @@ Other projects:
 
 ### Supported \*arr Applications
 
-- Radarr
-- Sonarr
+- Radarr v5
+- Sonarr v4
 - Whisparr (experimental)
 - Readarr (experimental)
+- Lidarr (experimental)
 
 ## Configuration
 
-Full documentation can be found here: https://configarr.raydak.de
+Full documentation can be found here: [Documentation](https://configarr.raydak.de)
 
 - `config.yml`
   - Check the template file [template](./config.yml.template) or check the examples.
@@ -77,3 +85,11 @@ Tip: Beside from those steps you can also always test and work with the `full ex
 ## Examples
 
 Some examples for configuration are provided [Examples](./examples/)
+
+## Related projects
+
+You can compare features here: [Feature Comparison](https://configarr.raydak.de/docs/comparison)
+
+- https://github.com/recyclarr/recyclarr
+- https://notifiarr.wiki/
+- https://github.com/Dictionarry-Hub/profilarr

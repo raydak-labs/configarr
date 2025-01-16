@@ -68,6 +68,15 @@ Ready to streamline your media server configuration? Let's get started with the 
 
 [Continue to Installation →](./category/installation)
 
+### Container Images
+
+Images are available via Github Container Registry (ghcr) and dockerhub with tags and latest (check the repos for all available tags):
+
+- GHCR: https://github.com/raydak-labs/configarr/pkgs/container/configarr
+  - `ghcr.io/raydak-labs/configarr:latest`
+- DockerHub: https://hub.docker.com/repository/docker/configarr/configarr/general
+  - `docker.io/configarr/configarr:latest` or simply `configarr/configarr:latest`
+
 ### Related/Inspired Projects
 
 - [TRaSH-Guides](https://trash-guides.info/)
