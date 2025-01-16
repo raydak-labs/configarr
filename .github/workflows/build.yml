@@ -9,6 +9,10 @@ on:
       - "v*.*.*"
     paths-ignore:
       - "docs/**"
+      - "**/*.md"
+      - ".github/**"
+      - ".vscode/**"
+      - "examples/**"
 
 permissions:
   contents: read

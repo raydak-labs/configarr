@@ -3,7 +3,7 @@
 [![Documentation](https://img.shields.io/badge/Documentation-blue)](https://configarr.raydak.de)
 [![GitHub License](https://img.shields.io/github/license/raydak-labs/configarr)](https://github.com/raydak-labs/configarr/blob/main/LICENSE)
 [![GitHub Release](https://img.shields.io/github/v/release/raydak-labs/configarr?logo=github)](https://github.com/raydak-labs/configarr/releases/)
-[![Docker](https://img.shields.io/docker/v/configarr/configarr?label=DockerHub)](https://hub.docker.com/r/configarr/configarr)
+[![Docker](https://img.shields.io/docker/v/configarr/configarr?sort=semver&label=DockerHub)](https://hub.docker.com/r/configarr/configarr)
 [![Docker Pulls](https://img.shields.io/docker/pulls/configarr/configarr?label=DockerHub-Pulls)](https://hub.docker.com/r/configarr/configarr)
 
 Configarr is an open-source tool designed to simplify configuration and synchronization for Sonarr and Radarr (and other experimental).

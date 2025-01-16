@@ -1,9 +1,6 @@
 name: Documentation (Preview)
 
 on:
-  push:
-    branches:
-      - main
   pull_request:
     branches: [main]
     paths:
