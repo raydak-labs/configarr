@@ -63,6 +63,11 @@ sonarr:
     #   - from: ExampleProfile
     #     to: RenamedExampleProfile
 
+    # Ability to clone profiles
+    # cloneQualityProfiles:
+    #   - from: RenamedExampleProfile
+    #     to: ClonedProfile
+
 radarr:
   instance1:
     # Set the URL/API Key to your actual instance

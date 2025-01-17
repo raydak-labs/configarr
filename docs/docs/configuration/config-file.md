@@ -179,6 +179,11 @@ sonarr:
     # - from: WEB-1080p
     #   to: RenamedProfile
 
+    # Ability to clone profiles
+    # cloneQualityProfiles:
+    #   - from: RenamedExampleProfile
+    #     to: ClonedProfile
+
 # Radarr Configuration
 radarr:
   instance1: # Instance name (can be any unique identifier)
@@ -361,8 +366,37 @@ Notes:
 
 - not supported in templates and will therefore not be merged!
 - rename order will be displayed in `DEBUG` log like: `DEBUG [16:37:09.377]: Will rename quality profiles in this order: 'ExampleProfile' -> 'RenamedExampleProfile','[German] HD Bluray + WEB' -> 'RenamedProfile'`
-- experimental, available since `v1.10.0`
--
+- **experimental**, available since `v1.10.0`
+
+## Quality Profile Cloning {#quality-profile-clone}
+
+Support has been added to allow cloning quality profiles.
+This is useful if you use existing templates for example from TRaSH-Guides but want to duplicate and slightly adjust some Custom Format scores or mappings.
+
+We achieve the clone by duplicating all quality profiles and duplicating all profile references in the custom formats.
+
+:::tip
+The **ordering** of `rename` and `clone` is important. At the moment we `rename` first and then `clone`!
+:::
+
+```yml
+# ...
+
+sonarr:
+  instance1:
+    # ...
+
+    # Ability to clone profiles
+    cloneQualityProfiles:
+      - from: ExampleProfile # must be the exact name of the existing profile
+        to: ClonedProfile1 # will be the new profile
+```
+
+Notes:
+
+- not supported in templates and will therefore not be merged!
+- clone order will be displayed in `DEBUG` log
+- **experimental**, available since `v1.10.0`
 
 ## Usage
 
