@@ -29,6 +29,7 @@ import {
   MergedConfigInstance,
 } from "./types/config.types";
 import { TrashQP } from "./types/trashguide.types";
+import { cloneWithJSON } from "./util";
 
 let config: ConfigSchema;
 let secrets: any;
@@ -397,7 +398,57 @@ export const mergeConfigsAndTemplates = async (
     }
   }
 
-  // TODO clone
+  // Cloning quality profiles
+  if (instanceConfig.cloneQualityProfiles && instanceConfig.cloneQualityProfiles.length > 0) {
+    const cloneOrder: string[] = [];
+
+    const newProfiles: ConfigQualityProfile[] = [];
+
+    instanceConfig.cloneQualityProfiles.forEach((e) => {
+      const cloneSource = e.from;
+      const cloneTarget = e.to;
+
+      cloneOrder.push(`'${cloneSource}' -> '${cloneTarget}'`);
+
+      let cloneQPReferences = 0;
+      let cloneCFAssignments = 0;
+
+      mergedTemplates.quality_profiles.forEach((p) => {
+        if (p.name === cloneSource) {
+          const clonedQP = cloneWithJSON(p);
+          clonedQP.name = cloneTarget;
+          newProfiles.push(clonedQP);
+          cloneQPReferences++;
+        }
+      });
+
+      mergedTemplates.custom_formats.forEach((p) => {
+        const cf = p.assign_scores_to?.find((cf) => {
+          if (cf.name === cloneSource) {
+            cloneCFAssignments++;
+            return true;
+          }
+          return false;
+        });
+
+        if (cf) {
+          p.assign_scores_to?.push({ name: cloneTarget, score: cf.score });
+        }
+      });
+
+      if (cloneQPReferences + cloneCFAssignments > 0) {
+        logger.debug(
+          `Cloning profile: source '${cloneSource}' - target '${cloneTarget}'. Found QP references ${cloneQPReferences}, CF references ${cloneCFAssignments}`,
+        );
+      }
+    });
+
+    mergedTemplates.quality_profiles.push(...newProfiles);
+
+    if (cloneOrder.length > 0) {
+      logger.debug(`Will clone quality profiles in this order: ${cloneOrder}`);
+    }
+  }
 
   const recyclarrProfilesMerged = mergedTemplates.quality_profiles.reduce<Map<string, ConfigQualityProfile>>((p, c) => {
     const profile = p.get(c.name);

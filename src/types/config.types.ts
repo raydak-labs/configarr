@@ -55,6 +55,7 @@ export type InputConfigArrInstance = {
   /* @experimental */
   media_naming_api?: MediaNamingApiType;
   renameQualityProfiles?: { from: string; to: string }[];
+  cloneQualityProfiles?: { from: string; to: string }[];
 
   // this is recyclarr specific: https://recyclarr.dev/wiki/yaml/config-reference/media-naming/
   media_naming?: MediaNamingType;
