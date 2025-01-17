@@ -354,6 +354,51 @@ export const mergeConfigsAndTemplates = async (
     }
   }
 
+  // Rename quality profiles
+  if (instanceConfig.renameQualityProfiles && instanceConfig.renameQualityProfiles.length > 0) {
+    const renameOrder: string[] = [];
+
+    instanceConfig.renameQualityProfiles.forEach((e) => {
+      const renameFrom = e.from;
+      const renameTo = e.to;
+
+      renameOrder.push(`'${renameFrom}' -> '${renameTo}'`);
+
+      let renamedQPReferences = 0;
+      let renamedCFAssignments = 0;
+
+      mergedTemplates.quality_profiles.forEach((p) => {
+        if (p.name === renameFrom) {
+          p.name = renameTo;
+          renamedQPReferences += 1;
+        }
+      });
+
+      mergedTemplates.custom_formats.forEach((p) => {
+        p.assign_scores_to?.some((cf) => {
+          if (cf.name === renameFrom) {
+            cf.name = renameTo;
+            renamedCFAssignments += 1;
+            return true;
+          }
+          return false;
+        });
+      });
+
+      if (renamedQPReferences + renamedCFAssignments > 0) {
+        logger.debug(
+          `Renamed profile from '${renameFrom}' to '${renameTo}'. Found QP references ${renamedQPReferences}, CF references ${renamedCFAssignments}`,
+        );
+      }
+    });
+
+    if (renameOrder.length > 0) {
+      logger.debug(`Will rename quality profiles in this order: ${renameOrder}`);
+    }
+  }
+
+  // TODO clone
+
   const recyclarrProfilesMerged = mergedTemplates.quality_profiles.reduce<Map<string, ConfigQualityProfile>>((p, c) => {
     const profile = p.get(c.name);
 

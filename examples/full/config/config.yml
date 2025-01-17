@@ -58,6 +58,11 @@ sonarr:
           - name: ExampleProfile
             # score: 0 # Uncomment this line to change score
 
+    # Ability to rename profiles
+    # renameQualityProfiles:
+    #   - from: ExampleProfile
+    #     to: RenamedExampleProfile
+
 radarr:
   instance1:
     # Set the URL/API Key to your actual instance

@@ -174,6 +174,11 @@ sonarr:
         upgrade:
           min_format_score: 10000
 
+    # Ability to rename quality profiles
+    # renameQualityProfiles:
+    # - from: WEB-1080p
+    #   to: RenamedProfile
+
 # Radarr Configuration
 radarr:
   instance1: # Instance name (can be any unique identifier)
@@ -331,6 +336,33 @@ sonarr:
 | `episodes.anime`    | Key for "Anime Episode Format". Check debug logs or TRaSH-Guide for values.     | Not synced  |
 
 All configurations above directly affect the "Episode Naming" settings under **Settings > Media Management** in the Sonarr UI. If a property is _not specified_, Configarr will not sync that setting, allowing manual configuration.
+
+## Quality Profile Rename {#quality-profile-rename}
+
+Support has been added to allow renaming quality profiles.
+This is useful if you use existing templates for example from TRaSH-Guides but want to adjust the naming to your liking.
+
+We achieve the renaming by modifying all names in the quality_profiles fields and custom formats score mappings.
+
+```yml
+# ...
+
+sonarr:
+  instance1:
+    # ...
+
+    # Ability to rename profiles
+    renameQualityProfiles:
+      - from: ExampleProfile # must be the exact name of the existing profile
+        to: RenamedExampleProfile # will be the new profile
+```
+
+Notes:
+
+- not supported in templates and will therefore not be merged!
+- rename order will be displayed in `DEBUG` log like: `DEBUG [16:37:09.377]: Will rename quality profiles in this order: 'ExampleProfile' -> 'RenamedExampleProfile','[German] HD Bluray + WEB' -> 'RenamedProfile'`
+- experimental, available since `v1.10.0`
+-
 
 ## Usage
 

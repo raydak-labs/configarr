@@ -297,14 +297,13 @@ sonarr:
 
 ### Using templates from TRaSH-Guides/Recyclarr but different names
 
-This is currently not possible.
-You can copy those templates and paste them into a locally mounted folder.
-Then you can rename them in the templates as required.
+Some features are available others not yet.
 
-Possible feature requests currently under evaluation:
-
-- rename [#114](https://github.com/raydak-labs/configarr/issues/114)
-- clone [#115](https://github.com/raydak-labs/configarr/issues/115).
+- renaming quality profiles. How to implement see here: [Renaming Feature](./configuration/config-file.md##quality-profile-rename)
+- clone [#115](https://github.com/raydak-labs/configarr/issues/115)
+- duplicate templates:
+  You can copy those templates and paste them into a locally mounted folder.
+  Then you can rename them in the templates as required.
 
 ```yaml
 # The path in the container for your templates for copy & paste templates with slight modifications in the files.
