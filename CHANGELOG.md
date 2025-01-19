@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.10.0](https://github.com/raydak-labs/configarr/compare/v1.9.0...v1.10.0) (2025-01-19)
+
+### Features
+
+- add experimental support for cloning quality profiles ([18941ec](https://github.com/raydak-labs/configarr/commit/18941ec259832f291474e5f140fb3f525ed5872c))
+- add experimental support for quality profiles renaming ([504dfe3](https://github.com/raydak-labs/configarr/commit/504dfe3ff4de7df841878d9bf6524201d335ec46))
+
 ## [1.9.0](https://github.com/raydak-labs/configarr/compare/v1.8.0...v1.9.0) (2025-01-15)
 
 ### Features
