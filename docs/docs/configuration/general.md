@@ -1,11 +1,11 @@
 ---
 sidebar_position: 1
-title: Configuration general
+title: Basics
 description: "Here we describe how configarr generally works and how things are done."
-keywords: [general, concept, merge, order]
+keywords: [general, concept, merge, order, basic]
 ---
 
-# General
+# Basics
 
 Here we try to explain how things are handled and done in configarr so you understand how and when things happen.
 

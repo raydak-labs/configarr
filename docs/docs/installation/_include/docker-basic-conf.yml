@@ -1,0 +1,43 @@
+#trashGuideUrl: https://github.com/BlackDark/fork-TRASH-Guides
+#recyclarrConfigUrl: https://github.com/BlackDark/fork-recyclarr-configs
+localCustomFormatsPath: /app/cfs
+localConfigTemplatesPath: /app/templates
+
+customFormatDefinitions:
+  - trash_id: example-in-config-cf
+    trash_scores:
+      default: -10000
+    trash_description: "Language: German Only"
+    name: "Language: Not German"
+    includeCustomFormatWhenRenaming: false
+    specifications:
+      - name: Not German Language
+        implementation: LanguageSpecification
+        negate: true
+        required: false
+        fields:
+          value: 4
+
+sonarr:
+  instance1:
+    # Set the URL/API Key to your actual instance
+    base_url: http://sonarr:8989
+    api_key: !secret SONARR_API_KEY
+
+    quality_definition:
+      type: series
+
+    include:
+      #### Custom
+      - template: sonarr-cf # template name
+      - template: sonarr-quality
+
+    custom_formats:
+      # Movie Versions
+      - trash_ids:
+          - 9f6cbff8cfe4ebbc1bde14c7b7bec0de # IMAX Enhanced
+        quality_profiles:
+          - name: ExampleProfile
+            # score: 0 # Uncomment this line to disable prioritised IMAX Enhanced releases
+
+radarr: {} # no radarr instance

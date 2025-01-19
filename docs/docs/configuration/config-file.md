@@ -1,9 +1,12 @@
 ---
-sidebar_position: 1
+sidebar_position: 2
 title: Configuration File
 description: "Learn how to configure Configarr using config.yml and secrets.yml"
 keywords: [configarr configuration, yaml config, secrets management, custom formats]
 ---
+
+import CodeBlock from "@theme/CodeBlock";
+import ConfigFileSample from "!!raw-loader!./\_include/config-file-sample.yml";
 
 # Configuration Files
 
@@ -89,139 +92,10 @@ If you want to deep dive into available values and parameters you can always che
 
 The main configuration file that defines your Sonarr and Radarr instances, custom formats, and template includes.
 
-```yaml title="config.yml"
-# Optional: Override default repositories
-#trashGuideUrl: https://github.com/BlackDark/fork-TRASH-Guides
-#recyclarrConfigUrl: https://github.com/BlackDark/fork-recyclarr-configs
-
-# Optional: Paths for custom formats and templates
-localCustomFormatsPath: /app/cfs
-localConfigTemplatesPath: /app/templates
-
-# Custom Format Definitions (optional)
-customFormatDefinitions:
-  - trash_id: example-in-config-cf
-    trash_scores:
-      default: -10000
-    trash_description: "Language: German Only"
-    name: "Language: Not German"
-    includeCustomFormatWhenRenaming: false
-    specifications:
-      - name: Not German Language
-        implementation: LanguageSpecification
-        negate: true
-        required: false
-        fields:
-          value: 4
-
-# With this options you can disable or enable processing for *arrs. Default is enabled
-#sonarrEnabled: false
-#radarrEnabled: false
-#whisparrEnabled: false
-#readarrEnabled: false
-#lidarrEnabled: false
-
-# Sonarr Configuration
-sonarr:
-  instance1: # Instance name (can be any unique identifier)
-    base_url: http://sonarr:8989 # Sonarr instance URL
-    api_key: !secret SONARR_API_KEY # Reference to API key in secrets.yml
-    # api_key: !env SONARR_API_KEY # load from environment variable
-
-    quality_definition:
-      type: series # Quality definition type for Sonarr
-
-    include: # Template includes
-      - template: sonarr-cf
-      - template: sonarr-quality
-      - template: d1498e7d189fbe6c7110ceaabb7473e6
-        source: TRASH # RECYCLARR (default) or TRASH
-
-      # WEB-1080p (recyclarr template)
-      - template: sonarr-quality-definition-series
-      - template: sonarr-v4-quality-profile-web-1080p
-      - template: sonarr-v4-custom-formats-web-1080p
-
-    # experimental available in all *arr
-    #media_management: {}
-
-    # experimental available in all *arr
-    #media_naming_api: {}
-
-    # naming from recyclarr: https://recyclarr.dev/wiki/yaml/config-reference/media-naming/
-    #media_naming: {}
-
-    custom_formats: # Custom format assignments
-      - trash_ids:
-          - 47435ece6b99a0b477caf360e79ba0bb # x265 (HD)
-        assign_scores_to:
-          - name: WEB-1080p
-            score: 0
-      - trash_ids:
-          - a3d82cbef5039f8d295478d28a887159 # block HDR10+
-          - 2b239ed870daba8126a53bd5dc8dc1c8 # block DV HDR10+
-        assign_scores_to:
-          - name: WEB-1080p
-            score: -10000
-      - trash_ids:
-          - example-in-config-cf # custom format defined in config.yml
-        assign_scores_to:
-          - name: WEB-1080p
-            score: -5000
-
-    quality_profiles:
-      - name: WEB-1080p
-        upgrade:
-          min_format_score: 10000
-
-    # Ability to rename quality profiles
-    # renameQualityProfiles:
-    # - from: WEB-1080p
-    #   to: RenamedProfile
-
-    # Ability to clone profiles
-    # cloneQualityProfiles:
-    #   - from: RenamedExampleProfile
-    #     to: ClonedProfile
-
-# Radarr Configuration
-radarr:
-  instance1: # Instance name (can be any unique identifier)
-    base_url: http://radarr:7878 # Radarr instance URL
-    api_key: !secret RADARR_API_KEY # Reference to API key in secrets.yml
-
-    quality_definition:
-      type: movies # Quality definition type for Radarr
-
-    include:
-      # Comment out any of the following includes to disable them
-      - template: radarr-quality-definition-movie
-      - template: radarr-quality-profile-hd-bluray-web
-      - template: radarr-custom-formats-hd-bluray-web
-
-    custom_formats: # Custom format assignments
-      - trash_ids:
-          - 9f6cbff8cfe4ebbc1bde14c7b7bec0de # IMAX Enhanced
-        assign_scores_to:
-          - name: HD Bluray + WEB
-            score: 0
-
-    quality_profiles:
-      - name: HD Bluray + WEB
-        upgrade:
-          min_format_score: 200
-        # Support added with 1.7.0. Not support in all *arr applications. Check the application if it is supported.
-        language: Any # The name must match available names in *arr
-
-# experimental support: check https://configarr.rayak.de/docs/configuration/experimental-support
-whisparr: {}
-
-# experimental support: check https://configarr.rayak.de/docs/configuration/experimental-support
-readarr: {}
-
-# experimental support: check https://configarr.rayak.de/docs/configuration/experimental-support
-lidarr: {}
-```
+<details>
+  <summary>Config.yml</summary>
+  <CodeBlock language="yml" title="config.yml">{ConfigFileSample}</CodeBlock>
+</details>
 
 ### secrets.yml
 

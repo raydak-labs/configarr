@@ -1,5 +1,5 @@
 ---
-sidebar_position: 2
+sidebar_position: 3
 title: Environment Variables
 description: "Learn about the environment variables used in our application configuration."
 keywords: [environment variables, configuration, setup]
@@ -22,6 +22,7 @@ Each variable can be set to customize the behavior of the application.
 | `DRY_RUN`            | `"false"`                 | No       | When set to `"true"`, runs the application in dry run mode without making changes.          |
 | `LOAD_LOCAL_SAMPLES` | `"false"`                 | No       | If `"true"`, loads local sample data for testing purposes.                                  |
 | `DEBUG_CREATE_FILES` | `"false"`                 | No       | Enables debugging for file creation processes when set to `"true"`.                         |
+| `TZ`                 | `"Etc/UTC"`               | No       | Timezone for the container.                                                                 |
 
 ## Usage
 

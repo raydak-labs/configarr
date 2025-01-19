@@ -1,5 +1,5 @@
 ---
-sidebar_position: 1
+sidebar_position: 2
 title: Kubernetes Installation
 description: "Learn how to install and configure Configarr using Kubernetes"
 keywords: [configarr kubernetes, kubernetes installation, kubernetes setup, configarr configuration]

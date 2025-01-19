@@ -5,9 +5,18 @@ description: "Learn how to install and configure Configarr using Docker"
 keywords: [configarr docker, docker installation, docker setup, configarr configuration]
 ---
 
+import CodeBlock from "@theme/CodeBlock";
+import DockerBasicConf from "!!raw-loader!./\_include/docker-basic-conf.yml";
+
 # Docker Installation
 
 This guide will walk you through setting up Configarr using Docker.
+
+:::tip
+For quick starting and testing you can use the `latest` tag.
+But if you are ready and finished switch to fixed tag like `1.9.0` so you can update and do required changes if we release new versions.
+Solutions like `Renovate` are good for keeping your dependencies updated.
+:::
 
 ## Quick Start
 
@@ -18,6 +27,13 @@ docker run -d \
   --name=configarr \
   -v /path/to/config:/config \
   ghcr.io/raydak-labs/configarr:latest
+
+# Or use dockerhub image:
+
+docker run -d \
+  --name=configarr \
+  -v /path/to/config:/config \
+  configarr/configarr:latest
 ```
 
 ## Docker Compose (Recommended)
@@ -30,7 +46,7 @@ services:
   configarr:
     image: ghcr.io/raydak-labs/configarr:latest
     container_name: configarr
-    user: 1000:1000 # Optional, defaults to root:root
+    #user: 1000:1000 # Optional, defaults to root:root
     environment:
       - TZ=Etc/UTC
     volumes:
@@ -38,7 +54,7 @@ services:
       - ./dockerrepos:/app/repos # Cache repositories
       - ./custom/cfs:/app/cfs # Optional if custom formats locally provided
       - ./custom/templates:/app/templates # Optional if custom templates
-    restart: unless-stopped
+    # restart: "no" # optional make sure this is set to no or removed. Default is no
 ```
 
 Save this as `docker-compose.yml` and run:
@@ -51,66 +67,26 @@ docker-compose run --rm configarr
 
 ### Volume Mappings
 
-| Volume    | Description                               |
-| --------- | ----------------------------------------- |
-| `/config` | Contains all configuration files and data |
+| Volume           | Description                                                                           |
+| ---------------- | ------------------------------------------------------------------------------------- |
+| `/app/config`    | Contains all configuration files and data. Can be changed with Environment Variables. |
+| `/app/repos`     | Contains cached repos. Can be changed with Environment Variables.                     |
+| `/app/cfs`       | Contains custom cfs. Can be changed with Environment Variables.                       |
+| `/app/templates` | Contains templates. Can be changed with Environment Variables.                        |
 
 ### Environment Variables
 
-| Variable    | Description | Default   |
-| ----------- | ----------- | --------- |
-| `TZ`        | Timezone    | `Etc/UTC` |
-| `LOG_LEVEL` | Log level   | `info`    |
+See [Environment Variables](../configuration/environment-variables.md)
 
 ## Basic Configuration
 
-1. Create a configuration file at `/path/to/config/config.yaml` more information about the config file can be found [here](../configuration/config-file.md):
+Create a configuration file at `/path/to/config/config.yaml` more information about the config file can be found [here](../configuration/config-file.md).
+You can also test everything with the [Full Example](../examples.md) locally.
 
-```yaml title="config.yml (with examples and comments)"
-#trashGuideUrl: https://github.com/BlackDark/fork-TRASH-Guides
-#recyclarrConfigUrl: https://github.com/BlackDark/fork-recyclarr-configs
-localCustomFormatsPath: /app/cfs
-localConfigTemplatesPath: /app/templates
-
-customFormatDefinitions:
-  - trash_id: example-in-config-cf
-    trash_scores:
-      default: -10000
-    trash_description: "Language: German Only"
-    name: "Language: Not German"
-    includeCustomFormatWhenRenaming: false
-    specifications:
-      - name: Not German Language
-        implementation: LanguageSpecification
-        negate: true
-        required: false
-        fields:
-          value: 4
-
-sonarr:
-  instance1:
-    # Set the URL/API Key to your actual instance
-    base_url: http://sonarr:8989
-    api_key: !secret SONARR_API_KEY
-
-    quality_definition:
-      type: series
-
-    include:
-      #### Custom
-      - template: sonarr-cf # template name
-      - template: sonarr-quality
-
-    custom_formats:
-      # Movie Versions
-      - trash_ids:
-          - 9f6cbff8cfe4ebbc1bde14c7b7bec0de # IMAX Enhanced
-        quality_profiles:
-          - name: ExampleProfile
-            # score: 0 # Uncomment this line to disable prioritised IMAX Enhanced releases
-
-radarr: {} # no radarr instance
-```
+<details>
+  <summary>Very basic configuration</summary>
+  <CodeBlock language="yml">{DockerBasicConf}</CodeBlock>
+</details>
 
 ## Updating
 
@@ -118,7 +94,7 @@ To update to the latest version:
 
 ```bash title="shell"
 docker-compose pull
-docker-compose up -d
+docker-compose run --rm configarr
 ```
 
 ## Troubleshooting
@@ -129,20 +105,25 @@ Increase the log level with the `LOG_LEVEL` environment variable to get more det
 
 ### Common Issues
 
-1. **Permission Issues**
+- **Permission Issues**
 
-   - Ensure user matches your required user
-   - Check folder permissions on the config directory
-   - after changing the user, adjust the user in the git repos (TRaSH-Guides, recyclarr) to match
+  - Ensure user matches your required user
+  - Check folder permissions on the config directory
+  - after changing the user, adjust the user in the git repos (TRaSH-Guides, recyclarr) to match
 
-2. **Connection Issues**
+- **Connection Issues**
 
-   - Verify Sonarr/Radarr URLs are accessible from the container
-   - Confirm API keys are correct
-   - Check network connectivity between containers if using Docker networks
+  - Verify Sonarr/Radarr URLs are accessible from the container
+  - Confirm API keys are correct
+  - Check network connectivity between containers if using Docker networks
 
-3. **Configuration Issues**
-   - Validate your YAML syntax
-   - Ensure all required fields are present in config.yaml
+- **Configuration Issues**
+
+  - Validate your YAML syntax
+  - Ensure all required fields are present in config.yaml
+
+- **Container restarting**
+  - Ensure you have not set restart policies and running with `docker-compose up -d`. This triggers the docker daemon to restart the container every minute.
+  - Scheduling is NOT implemented into configarr as described [here](../configuration/scheduled.md). Therefore please check the [Scheduled example](../examples.md)
 
 Need more help? [open an issue](https://github.com/raydak-labs/configarr/issues).
