@@ -459,8 +459,8 @@ export const calculateQualityProfilesDiff = async (
       changeList.push(`Language diff: server: ${serverMatch.language?.name} - expected: ${profileLanguage?.name}`);
     }
 
-    // CFs matching
-    const serverCFMap = new Map(serverMatch.formatItems!.map((obj) => [obj.name!, obj]));
+    // CFs matching. Hint: make sure to execute the method with updated CFs. Otherwise if we create CFs and update existing profiles those could be missing.
+    const serverProfileCFMap = new Map(serverMatch.formatItems!.map((obj) => [obj.name!, obj]));
 
     let scoringDiff = false;
 
@@ -468,8 +468,8 @@ export const calculateQualityProfilesDiff = async (
       const newCFFormats: MergedProfileFormatItemResource[] = [];
 
       for (const [scoreKey, scoreValue] of scoringForQP.entries()) {
-        const serverCF = serverCFMap.get(scoreKey);
-        serverCFMap.delete(scoreKey);
+        const serverCF = serverProfileCFMap.get(scoreKey);
+        serverProfileCFMap.delete(scoreKey);
 
         // TODO (1): check where best handled
         if (scoreValue.score == null) {
@@ -491,7 +491,7 @@ export const calculateQualityProfilesDiff = async (
         }
       }
 
-      const missingCfs = Array.from(serverCFMap.values()).reduce<MergedProfileFormatItemResource[]>((p, c) => {
+      const missingCfs = Array.from(serverProfileCFMap.values()).reduce<MergedProfileFormatItemResource[]>((p, c) => {
         const cfName = c.name!;
         const cfScore = c.score;
 
