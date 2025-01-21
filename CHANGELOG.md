@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.10.1](https://github.com/raydak-labs/configarr/compare/v1.10.0...v1.10.1) (2025-01-21)
+
+### Bug Fixes
+
+- use new cfs in existin g qps correctly ([d24aaa6](https://github.com/raydak-labs/configarr/commit/d24aaa6cfc97806a932389f12d41ae4cecc17719)), closes [#164](https://github.com/raydak-labs/configarr/issues/164)
+
 ## [1.10.0](https://github.com/raydak-labs/configarr/compare/v1.9.0...v1.10.0) (2025-01-19)
 
 ### Features
