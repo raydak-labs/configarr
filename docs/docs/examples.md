@@ -22,7 +22,7 @@ For this approach, we can do 3 different things:
 <details>
   <summary>Use existing TRaSH-Guide profile</summary>
 
-TRaSH-Guide provides predefined profiles via JSON, available in the [Github Repository](https://github.com/TRaSH-Guides/Guides/tree/master/docs/json/radarr/quality-profiles).
+TRaSH-Guide provides predefined profiles via JSON for [Radarr](https://github.com/TRaSH-Guides/Guides/tree/master/docs/json/radarr/quality-profiles) and [Sonarr](https://github.com/TRaSH-Guides/Guides/tree/master/docs/json/sonarr/quality-profiles) in the Github Repository.
 To load QualityProfiles from TRaSH-Guide, use the `trash_id` defined in the profile and specify `source` as `TRASH` in the config.
 
 In this example, we want `german-hd-bluray-web.json`
