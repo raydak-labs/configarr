@@ -23,13 +23,12 @@ const pipeline = async (globalConfig: InputConfigSchema, instanceConfig: InputCo
   const api = getUnifiedClient();
 
   const serverCFs = await loadServerCustomFormats();
-  const serverQP = await loadQualityProfilesFromServer();
   const serverQD = await loadQualityDefinitionFromServer();
   const languages = await api.getLanguages();
 
-  const serverCache = new ServerCache(serverQD, serverQP, serverCFs, languages);
+  const serverCache = new ServerCache(serverQD, [], serverCFs, languages);
 
-  logger.info(`Server objects: CustomFormats ${serverCFs.length}, QualityProfiles ${serverQP.length}`);
+  logger.info(`Server objects: CustomFormats ${serverCFs.length}}`);
 
   const { config } = await mergeConfigsAndTemplates(globalConfig, instanceConfig, arrType);
 
@@ -131,6 +130,11 @@ const pipeline = async (globalConfig: InputConfigSchema, instanceConfig: InputCo
       logger.info(`Updated MediaManagement`);
     }
   }
+
+  const serverQP = await loadQualityProfilesFromServer();
+  serverCache.qp = serverQP;
+
+  logger.info(`Server objects: QualityProfiles ${serverQP.length}`);
 
   // calculate diff from server <-> what we want to be there
   const { changedQPs, create, noChanges } = await calculateQualityProfilesDiff(arrType, mergedCFs, config, serverCache);
