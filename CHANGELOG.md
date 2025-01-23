@@ -2,6 +2,8 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.10.2](https://github.com/raydak-labs/configarr/compare/v1.10.1...v1.10.2) (2025-01-23)
+
 ## [1.10.1](https://github.com/raydak-labs/configarr/compare/v1.10.0...v1.10.1) (2025-01-21)
 
 ### Bug Fixes
