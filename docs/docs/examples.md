@@ -388,3 +388,23 @@ This is an example of how to execute Configarr in a scheduled manner.
 You can find the full example at: [configarr/examples/scheduled](https://github.com/raydak-labs/configarr/tree/main/examples/scheduled)
 
 Please check the documentation for how to configure and use the variants.
+
+### Store execution logs
+
+You can run configarr in different environments and different toolings which do or do not provide logging out of the box.
+
+- If you are running with kubernetes Jobs you can keep the last `x` Job logs and therefore keep the logs of the executions easily.
+- If you are running with the scheduler `ofelia` there the logs are also persistet in the ofelia job logs.
+- If you are running just from docker logs can get lost. So we provide some examples how you can store them in files:
+
+  - `Cron`: If you are running with cron in theory all logs are stored somewhere in cron. But we can also redirect runs into files and keep them persistent:
+
+    ```sh
+    # Assuming you are in the folder with a configured compose. Redirect error logs and normal logs
+    docker compose run --rm configarr >> configarr.log 2>&1
+
+    # truncating file to last 1000 lines
+    tail -n 1000 configarr.log > configarr.log.new
+    rm configarr.log
+    mv configarr.log.new configarr.log
+    ```
