@@ -5,17 +5,8 @@ keywords: [configarr, examples, configuration, profiles]
 ---
 
 import CodeBlock from "@theme/CodeBlock";
-import QPGermanHDWEB from "!!raw-loader!./_radarr/qp_german_hd_web.yml";
-import QPGermanRemuxWEB from "!!raw-loader!./_radarr/qp_german_remux_web.yml";
-import QPGermanUHDWEB from "!!raw-loader!./_radarr/qp_german_uhd_web.yml";
 
-import SonarrGermanCustomNewCfs from "!!raw-loader!./_sonarr/sonarr-german-new-cfs.yml";
-import SonarrGermanCustomNewCfsQuality from "!!raw-loader!./_sonarr/sonarr-german-new-cfs-quality.yml";
-import SonarrGermanCustomCfs from "!!raw-loader!./_sonarr/sonarr-german-cfs.yml";
-import SonarrGermanCustomQps from "!!raw-loader!./_sonarr/sonarr-german-qps.yml";
-import SonarrGermanCustomConfig from "!!raw-loader!./_sonarr/sonarr-german-config.yml";
-
-# Quality profiles
+# Quality Profiles
 
 Profiles you can copy and paste to use for your desired profiles. You can always modify and create own profiles just copy the existing configs as base and modify as wanted.
 
@@ -24,101 +15,41 @@ For example you like the base for the german custom formats:
 - you can either just adjust scorings for specific custom formats
 - or you can copy everything as base and maintain the scores without the need of a forked templates repo
 
+:::tip
+If you are starting to setup probably start taking a look at [HowTos](../examples)
+:::
+
 ## Existing base templates
 
 You can use existing base templates from:
 
-- Recyclarr: https://github.com/recyclarr/config-templates
+- Recyclarr:
+
+  - [Radarr](https://github.com/recyclarr/config-templates/tree/master/radarr)
+  - [Sonarr](https://github.com/recyclarr/config-templates/tree/master/sonarr)
+
+    :::note
+    Recyclarr `includes` will be updated automatically because they are included. Recyclarr `Templates` themselve _NOT_ and you have to update them if they will be changed in repository.
+    :::
+
 - TRaSH-Guides:
   - [Radarr](https://github.com/TRaSH-Guides/Guides/tree/master/docs/json/radarr/quality-profiles)
   - [Sonarr](https://github.com/TRaSH-Guides/Guides/tree/master/docs/json/sonarr/quality-profiles)
 
 ## German profiles
 
-### Radarr
+We can use the existing templates provided in the TRaSH-Guides (recommended) or Recyclarr to start with a good starting base.
+Afterwards you can adjust scores as you need them to be or adopt the profile and customize it completely to your requirements.
+If you need to know how to include those templates [see here](../examples).
 
-- TRaSH-Guides:
-  - [Radarr](https://trash-guides.info/Radarr/radarr-setup-quality-profiles-german-en/)
-- Recyclarr Configs:
-  - https://github.com/recyclarr/config-templates/pull/102
-  - https://github.com/recyclarr/config-templates/pull/103
-
-<!-- prettier-ignore-start -->
-- Profiles:
-  <details>
-    <summary>HD Bluray + WEB</summary>
-    <CodeBlock language="yml">{QPGermanHDWEB}</CodeBlock>
-  </details>
-
-
-  <details>
-    <summary>UHD Bluray + WEB</summary>
-    <CodeBlock language="yml">{QPGermanUHDWEB}</CodeBlock>
-  </details>
-
-
-  <details>
-    <summary>Remux + WEB 2160p</summary>
-    <CodeBlock language="yml">{QPGermanRemuxWEB}</CodeBlock>
-  </details>
-
-<!-- prettier-ignore-end -->
-
-### Sonarr
-
-- TRaSH-Guides (not available yet):
-  - [Sonarr](https://trash-guides.info/Sonarr/sonarr-setup-quality-profiles-german-en/)
-- Recyclarr Configs (not available yet):
-  - TBD
-
-As those are not yet available as resource in TRaSH we have to manually create the CFs.
-Thanks for providing prepared configs from discord user `zombobrain`.
-
-<!-- prettier-ignore-start -->
-
-- Templates for CustomFormats, Mapping of CustomFormats and QualityProfiles:
-  :::tip
-  This is one example. You can modify and maintain it as you need it for your setup.
-
-  You can of course also merge all files into one single file or place individual JSON files like in the TRaSH-Guide (see [configuration](/docs/configuration/config-file.md))
-  :::
-
-  <details>
-    <summary>New CustomFormats</summary>
-    <CodeBlock language="yml" title="templates/sonarr-german-new-cfs.yml">
-      {SonarrGermanCustomNewCfs}
-    </CodeBlock>
-  </details>
-
-  <details>
-    <summary>New CustomFormats (Quality)</summary>
-    <CodeBlock language="yml" title="templates/sonarr-german-new-cfs-quality.yml">
-      {SonarrGermanCustomNewCfsQuality}
-    </CodeBlock>
-  </details>
-
-  <details>
-    <summary>CustomFormats Mapping</summary>
-    <CodeBlock language="yml" title="templates/sonarr-german-cfs.yml">
-      {SonarrGermanCustomCfs}
-    </CodeBlock>
-  </details>
-
-  <details>
-    <summary>QualityProfiles</summary>
-    <CodeBlock language="yml" title="templates/sonarr-german-qps.yml">
-      {SonarrGermanCustomQps}
-    </CodeBlock>
-  </details>
-
-  <details>
-    <summary>Config</summary>
-    <CodeBlock language="yml" title="config.yml">
-      {SonarrGermanCustomConfig}
-    </CodeBlock>
-  </details>
+| Source                  |                                             Radarr                                             |                                             Sonarr                                             |
+| ----------------------- | :--------------------------------------------------------------------------------------------: | :--------------------------------------------------------------------------------------------: |
+| **TRaSH-Guides**        |   [TRaSH Radarr](https://trash-guides.info/Radarr/radarr-setup-quality-profiles-german-en/)    |   [TRaSH Sonarr](https://trash-guides.info/Sonarr/sonarr-setup-quality-profiles-german-en/)    |
+| **Recyclarr Templates** | [Recyclarr Radarr](https://github.com/recyclarr/config-templates/tree/master/radarr/templates) | [Recyclarr Sonarr](https://github.com/recyclarr/config-templates/tree/master/sonarr/templates) |
 
 ## Modifications / Adjustments
+
+Please check the [Config](../configuration/config-file) for all available options.
 
 - Adjusting the `language` of a QualityProfile.
   TRaSH-Guide profiles has added support for the `language` in their provided JSON files.
@@ -134,4 +65,19 @@ Thanks for providing prepared configs from discord user `zombobrain`.
         - name: HD Bluray + WEB
           # Support added with 1.7.0. Not support in all *arr applications. Check the application if it is supported.
           language: Any # The name must match available names in *arr
+  ```
+
+- Adjusting scoring for custom formats:
+
+  ```yaml title="config.yml"
+  radarr:
+    instance1:
+      # ...
+
+    custom_formats: # Custom format assignments
+      - trash_ids:
+          - 9f6cbff8cfe4ebbc1bde14c7b7bec0de # Some existing CustomFormat (this is the ID from TRaSH-Guides)
+        assign_scores_to:
+          - name: HD Bluray + WEB # The existing or new QualityProfile Name. Must match!
+            score: 0 # New scoring
   ```
