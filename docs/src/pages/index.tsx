@@ -7,6 +7,7 @@ import clsx from "clsx";
 
 import Head from "@docusaurus/Head";
 import styles from "./index.module.css";
+import useBaseUrl from "@docusaurus/useBaseUrl";
 
 function HomepageHeader() {
   const { siteConfig } = useDocusaurusContext();
@@ -19,8 +20,17 @@ function HomepageHeader() {
         <p className="hero__subtitle">{siteConfig.tagline}</p>
         <div className={styles.buttons}>
           <Link className="button button--secondary button--lg" to="/docs/intro">
-            Tutorial - 5min ⏱️
+            Get Started !
           </Link>
+
+          <span className={styles.buttonsGithubStars}>
+            <iframe
+              src="https://ghbtns.com/github-btn.html?user=raydak-labs&amp;repo=configarr&amp;type=star&amp;count=true&amp;size=large"
+              width={160}
+              height={30}
+              title="GitHub Stars"
+            />
+          </span>
         </div>
       </div>
     </header>
