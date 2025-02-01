@@ -64,7 +64,7 @@ services:
 
   # experimental
   lidarr:
-    image: lscr.io/linuxserver/lidarr:2.8.2
+    image: lscr.io/linuxserver/lidarr:8.1.2135
     networks:
       - configarr-full
     environment:
