@@ -30,7 +30,7 @@ importers:
         specifier: 2.4.1
         version: 2.4.1(react@19.0.0)
       raw-loader:
-        specifier: ^4.0.2
+        specifier: 4.0.2
         version: 4.0.2(webpack@5.96.1)
       react:
         specifier: 19.0.0
