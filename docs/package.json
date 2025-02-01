@@ -22,7 +22,7 @@
     "docusaurus-lunr-search": "3.5.0",
     "lunr": "2.3.9",
     "prism-react-renderer": "2.4.1",
-    "raw-loader": "^4.0.2",
+    "raw-loader": "4.0.2",
     "react": "19.0.0",
     "react-dom": "19.0.0"
   },
