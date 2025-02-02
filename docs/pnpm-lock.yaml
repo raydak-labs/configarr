@@ -21,8 +21,8 @@ importers:
         specifier: 2.1.1
         version: 2.1.1
       docusaurus-lunr-search:
-        specifier: 3.5.0
-        version: 3.5.0(@docusaurus/core@3.7.0(@mdx-js/react@3.1.0(@types/react@18.3.12)(react@19.0.0))(acorn@8.14.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)(typescript@5.7.3))(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
+        specifier: 3.6.0
+        version: 3.6.0(@docusaurus/core@3.7.0(@mdx-js/react@3.1.0(@types/react@18.3.12)(react@19.0.0))(acorn@8.14.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)(typescript@5.7.3))(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
       lunr:
         specifier: 2.3.9
         version: 2.3.9
@@ -1867,10 +1867,6 @@ packages:
     resolution: {integrity: sha512-neHB9xuzh/wk0dIHweyAXv2aPGZIVk3pLMe+/RNzINf17fe0OG96QroktYAUm7SM1PBnzTabaLboqqxDyMU+SQ==}
     engines: {node: '>=6'}
 
-  clsx@1.2.1:
-    resolution: {integrity: sha512-EcR6r5a8bj6pu3ycsa/E/cKVGuTgZJZdsyUYHOksG/UHIiKfjxzRxYJpyVBwYaQeOvghal9fcc4PidlgzugAQg==}
-    engines: {node: '>=6'}
-
   clsx@2.1.1:
     resolution: {integrity: sha512-eYm0QWBtUrBWZWG0d386OGAw16Z995PiOVo2B7bjWSbHedGl5e0ZWaq65kOGgUSNesEIDkB9ISbTg/JK9dhCZA==}
     engines: {node: '>=6'}
@@ -2245,13 +2241,13 @@ packages:
     resolution: {integrity: sha512-l4gcSouhcgIKRvyy99RNVOgxXiicE+2jZoNmaNmZ6JXiGajBOJAesk1OBlJuM5k2c+eudGdLxDqXuPCKIj6kpw==}
     engines: {node: '>=6'}
 
-  docusaurus-lunr-search@3.5.0:
-    resolution: {integrity: sha512-k3zN4jYMi/prWInJILGKOxE+BVcgYinwj9+gcECsYm52tS+4ZKzXQzbPnVJAEXmvKOfFMcDFvS3MSmm6cEaxIQ==}
+  docusaurus-lunr-search@3.6.0:
+    resolution: {integrity: sha512-CCEAnj5e67sUZmIb2hOl4xb4nDN07fb0fvRDDmdWlYpUvyS1CSKbw4lsGInLyUFEEEBzxQmT6zaVQdF/8Zretg==}
     engines: {node: '>= 8.10.0'}
     peerDependencies:
       '@docusaurus/core': ^2.0.0-alpha.60 || ^2.0.0 || ^3.0.0
-      react: ^16.8.4 || ^17 || ^18
-      react-dom: ^16.8.4 || ^17 || ^18
+      react: ^16.8.4 || ^17 || ^18 || ^19
+      react-dom: ^16.8.4 || ^17 || ^18 || ^19
 
   dom-converter@0.2.0:
     resolution: {integrity: sha512-gd3ypIPfOMr9h5jIKq8E3sHOTCjeirnl0WK5ZdS1AW0Odt0b1PaWaHdJ4Qk4klv+YB9aJBS7mESXjFoDQPu6DA==}
@@ -7879,8 +7875,6 @@ snapshots:
       kind-of: 6.0.3
       shallow-clone: 3.0.1
 
-  clsx@1.2.1: {}
-
   clsx@2.1.1: {}
 
   collapse-white-space@2.1.0: {}
@@ -8246,11 +8240,11 @@ snapshots:
     dependencies:
       '@leichtgewicht/ip-codec': 2.0.5
 
-  docusaurus-lunr-search@3.5.0(@docusaurus/core@3.7.0(@mdx-js/react@3.1.0(@types/react@18.3.12)(react@19.0.0))(acorn@8.14.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)(typescript@5.7.3))(react-dom@19.0.0(react@19.0.0))(react@19.0.0):
+  docusaurus-lunr-search@3.6.0(@docusaurus/core@3.7.0(@mdx-js/react@3.1.0(@types/react@18.3.12)(react@19.0.0))(acorn@8.14.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)(typescript@5.7.3))(react-dom@19.0.0(react@19.0.0))(react@19.0.0):
     dependencies:
       '@docusaurus/core': 3.7.0(@mdx-js/react@3.1.0(@types/react@18.3.12)(react@19.0.0))(acorn@8.14.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)(typescript@5.7.3)
       autocomplete.js: 0.37.1
-      clsx: 1.2.1
+      clsx: 2.1.1
       gauge: 3.0.2
       hast-util-select: 4.0.2
       hast-util-to-text: 2.0.1
