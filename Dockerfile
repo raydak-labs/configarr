@@ -15,8 +15,8 @@ COPY package.json pnpm-lock.yaml ./
 
 # Do it here to add the packageManager field to the package.json
 RUN corepack enable \
-    && corepack prepare pnpm@9 --activate \
-    && corepack use pnpm@9
+    && corepack prepare pnpm@10.0.0 --activate \
+    && corepack use pnpm@10.0.0
 
 RUN pnpm config set store-dir ~/.pnpm-store
 
