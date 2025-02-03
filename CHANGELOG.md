@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.10.3](https://github.com/raydak-labs/configarr/compare/v1.10.2...v1.10.3) (2025-02-03)
+
+### Bug Fixes
+
+- correctly set language for new QualityProfiles ([9ab962b](https://github.com/raydak-labs/configarr/commit/9ab962bd469bb838ba7158594f1f841120890cdb)), closes [#180](https://github.com/raydak-labs/configarr/issues/180)
+- **deps:** pin dependency raw-loader to 4.0.2 ([#171](https://github.com/raydak-labs/configarr/issues/171)) ([1fd8d46](https://github.com/raydak-labs/configarr/commit/1fd8d460f0d331970bc70d53eeac2830be7074d7))
+- **deps:** update dependency docusaurus-lunr-search to v3.6.0 ([#175](https://github.com/raydak-labs/configarr/issues/175)) ([1afcaa2](https://github.com/raydak-labs/configarr/commit/1afcaa2428590509ee94fc8c0d80bd13c3cccb6c))
+
 ## [1.10.2](https://github.com/raydak-labs/configarr/compare/v1.10.1...v1.10.2) (2025-01-23)
 
 ## [1.10.1](https://github.com/raydak-labs/configarr/compare/v1.10.0...v1.10.1) (2025-01-21)
