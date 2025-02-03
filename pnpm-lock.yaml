@@ -43,8 +43,8 @@ importers:
         specifier: 1.50.1
         version: 1.50.1
       '@release-it/conventional-changelog':
-        specifier: 9.0.4
-        version: 9.0.4(conventional-commits-filter@5.0.0)(conventional-commits-parser@6.0.0)(release-it@18.1.2(@types/node@22.13.0)(typescript@5.7.3))
+        specifier: 10.0.0
+        version: 10.0.0(conventional-commits-filter@5.0.0)(conventional-commits-parser@6.0.0)(release-it@18.1.2(@types/node@22.13.0)(typescript@5.7.3))
       '@types/node':
         specifier: 22.13.0
         version: 22.13.0
@@ -774,11 +774,11 @@ packages:
   '@rauschma/stringio@1.4.0':
     resolution: {integrity: sha512-3uor2f/MXZkmX5RJf8r+OC3WvZVzpSme0yyL0rQDPEnatE02qRcqwEwnsgpgriEck0S/n4vWtUd6tTtrJwk45Q==}
 
-  '@release-it/conventional-changelog@9.0.4':
-    resolution: {integrity: sha512-eSZVATX2qiyxzpXdIVNczxTGR+uD4lG/ZEfDDYBJ8vKIj6fKp+eYicIS8Ff/eL3bA9XiQTmllKqxPRzmz9d45w==}
-    engines: {node: ^18.18.0 || ^20.9.0 || ^22.0.0}
+  '@release-it/conventional-changelog@10.0.0':
+    resolution: {integrity: sha512-49qf9phGmPUIGpY2kwfgehs9en1znbPv2zdNn1WMLAH9DtHUh4m6KNSB+mLFGAMUhv24JhsA8ruYRYgluc2UJw==}
+    engines: {node: ^20.9.0 || >=22.0.0}
     peerDependencies:
-      release-it: ^17.0.0
+      release-it: ^18.0.0
 
   '@rollup/rollup-android-arm-eabi@4.13.1':
     resolution: {integrity: sha512-4C4UERETjXpC4WpBXDbkgNVgHyWfG3B/NKY46e7w5H134UDOFqUJKpsLm0UYmuupW+aJmRgeScrDNfvZ5WV80A==}
@@ -3065,7 +3065,7 @@ snapshots:
     dependencies:
       '@types/node': 10.17.60
 
-  '@release-it/conventional-changelog@9.0.4(conventional-commits-filter@5.0.0)(conventional-commits-parser@6.0.0)(release-it@18.1.2(@types/node@22.13.0)(typescript@5.7.3))':
+  '@release-it/conventional-changelog@10.0.0(conventional-commits-filter@5.0.0)(conventional-commits-parser@6.0.0)(release-it@18.1.2(@types/node@22.13.0)(typescript@5.7.3))':
     dependencies:
       concat-stream: 2.0.0
       conventional-changelog: 6.0.0(conventional-commits-filter@5.0.0)
