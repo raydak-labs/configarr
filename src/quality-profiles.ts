@@ -316,18 +316,21 @@ export const calculateQualityProfilesDiff = async (
         };
       });
 
-      createQPs.push({
-        name: value.name,
-        items: mappedServerQD,
-        cutoff: qualityToId.get(value.upgrade.until_quality),
-        cutoffFormatScore: value.upgrade.until_score,
-        minFormatScore: value.min_format_score,
-        upgradeAllowed: value.upgrade.allowed,
-        formatItems: customFormatsMapped,
-        // required since sonarr 4.0.10 (radarr also)
-        minUpgradeFormatScore: value.upgrade.min_format_score ?? 1,
-        ...(profileLanguage ? { languageId: profileLanguage.id } : {}), // TODO split out. Not exists for sonarr
-      });
+      const newProfile = Object.assign<MergedQualityProfileResource, MergedQualityProfileResource | null | undefined>(
+        {
+          name: value.name,
+          items: mappedServerQD,
+          cutoff: qualityToId.get(value.upgrade.until_quality),
+          cutoffFormatScore: value.upgrade.until_score,
+          minFormatScore: value.min_format_score,
+          upgradeAllowed: value.upgrade.allowed,
+          formatItems: customFormatsMapped,
+          // required since sonarr 4.0.10 (radarr also)
+          minUpgradeFormatScore: value.upgrade.min_format_score ?? 1,
+        },
+        profileLanguage && { language: profileLanguage }, // TODO split out. Not exists for sonarr
+      );
+      createQPs.push(newProfile);
       continue;
     }
 
