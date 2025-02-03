@@ -72,13 +72,25 @@ jobs:
             type=semver,pattern={{major}}.{{minor}}
             type=semver,pattern={{major}}
 
+      # We push and build all types of images only when required
+      - name: Set build platforms
+        id: set_platforms
+        run: |
+          if [[ ${{ github.event_name }} == 'workflow_dispatch' || ${{ github.ref }} == refs/tags/* ]]; then
+            echo "platforms=linux/amd64,linux/arm64,linux/arm/v7" >> $GITHUB_OUTPUT
+            echo "push=true" >> $GITHUB_OUTPUT
+          else
+            echo "platforms=linux/amd64" >> $GITHUB_OUTPUT
+            echo "push=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Build and push PMS
         uses: docker/build-push-action@v6
         with:
           context: .
           file: ./Dockerfile
-          platforms: linux/amd64,linux/arm64,linux/arm/v7
-          push: ${{ github.event_name != 'pull_request' }}
+          platforms: ${{ steps.set_platforms.outputs.platforms }}
+          push: ${{ steps.set_platforms.outputs.push }}
           tags: ${{ steps.meta_pms.outputs.tags }}
           labels: ${{ steps.meta_pms.outputs.labels }}
           target: prod
