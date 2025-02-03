@@ -15,7 +15,7 @@ services:
     restart: unless-stopped
 
   radarr:
-    image: lscr.io/linuxserver/radarr:5.17.2
+    image: lscr.io/linuxserver/radarr:5.18.4
     networks:
       - configarr-full
     environment:
@@ -64,7 +64,7 @@ services:
 
   # experimental
   lidarr:
-    image: lscr.io/linuxserver/lidarr:2.8.2
+    image: lscr.io/linuxserver/lidarr:2.9.6
     networks:
       - configarr-full
     environment:
