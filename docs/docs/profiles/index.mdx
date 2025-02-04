@@ -19,38 +19,74 @@ For example you like the base for the german custom formats:
 If you are starting to setup probably start taking a look at [HowTos](../examples)
 :::
 
+## From scratch {#from-scratch}
+
+You can start to implement and share full profiles directly in the config + custom formats.
+Everything can be done directly in your configuration without the need to fork or maintain repository.
+
+See a quick example [here](https://gist.github.com/BlackDark/19e0c10422d7178c9e1ef1dd52a5aa70) for defining everything a profile needs
+
 ## Existing base templates
 
 You can use existing base templates from:
 
-- Recyclarr:
+| Source                  |                                                Radarr                                                |                                                Sonarr                                                |
+| ----------------------- | :--------------------------------------------------------------------------------------------------: | :--------------------------------------------------------------------------------------------------: |
+| **TRaSH-Guides**        | [TRaSH Radarr](https://github.com/TRaSH-Guides/Guides/tree/master/docs/json/radarr/quality-profiles) | [TRaSH Sonarr](https://github.com/TRaSH-Guides/Guides/tree/master/docs/json/sonarr/quality-profiles) |
+| **Recyclarr Templates** |         [Recyclarr Radarr](https://github.com/recyclarr/config-templates/tree/master/radarr)         |         [Recyclarr Sonarr](https://github.com/recyclarr/config-templates/tree/master/sonarr)         |
 
-  - [Radarr](https://github.com/recyclarr/config-templates/tree/master/radarr)
-  - [Sonarr](https://github.com/recyclarr/config-templates/tree/master/sonarr)
+:::note
+Recyclarr `includes` will be updated automatically because they are included. Recyclarr `Templates` themselve _NOT_ and you have to update them if they will be changed in repository.
+:::
 
-    :::note
-    Recyclarr `includes` will be updated automatically because they are included. Recyclarr `Templates` themselve _NOT_ and you have to update them if they will be changed in repository.
-    :::
-
-- TRaSH-Guides:
-  - [Radarr](https://github.com/TRaSH-Guides/Guides/tree/master/docs/json/radarr/quality-profiles)
-  - [Sonarr](https://github.com/TRaSH-Guides/Guides/tree/master/docs/json/sonarr/quality-profiles)
-
-## German profiles
+## Language based
 
 We can use the existing templates provided in the TRaSH-Guides (recommended) or Recyclarr to start with a good starting base.
 Afterwards you can adjust scores as you need them to be or adopt the profile and customize it completely to your requirements.
 If you need to know how to include those templates [see here](../examples).
+
+### English profiles
+
+| Source                  |                                             Radarr                                             |                                             Sonarr                                             |
+| ----------------------- | :--------------------------------------------------------------------------------------------: | :--------------------------------------------------------------------------------------------: |
+| **TRaSH-Guides**        |        [TRaSH Radarr](https://trash-guides.info/Radarr/radarr-setup-quality-profiles/)         |        [TRaSH Sonarr](https://trash-guides.info/Sonarr/sonarr-setup-quality-profiles/)         |
+| **Recyclarr Templates** | [Recyclarr Radarr](https://github.com/recyclarr/config-templates/tree/master/radarr/templates) | [Recyclarr Sonarr](https://github.com/recyclarr/config-templates/tree/master/sonarr/templates) |
+
+### English Profiles (Anime)
+
+| Source                  |                                             Radarr                                             |                                             Sonarr                                             |
+| ----------------------- | :--------------------------------------------------------------------------------------------: | :--------------------------------------------------------------------------------------------: |
+| **TRaSH-Guides**        |     [TRaSH Radarr](https://trash-guides.info/Radarr/radarr-setup-quality-profiles-anime/)      |     [TRaSH Sonarr](https://trash-guides.info/Sonarr/sonarr-setup-quality-profiles-anime/)      |
+| **Recyclarr Templates** | [Recyclarr Radarr](https://github.com/recyclarr/config-templates/tree/master/radarr/templates) | [Recyclarr Sonarr](https://github.com/recyclarr/config-templates/tree/master/sonarr/templates) |
+
+### German profiles
 
 | Source                  |                                             Radarr                                             |                                             Sonarr                                             |
 | ----------------------- | :--------------------------------------------------------------------------------------------: | :--------------------------------------------------------------------------------------------: |
 | **TRaSH-Guides**        |   [TRaSH Radarr](https://trash-guides.info/Radarr/radarr-setup-quality-profiles-german-en/)    |   [TRaSH Sonarr](https://trash-guides.info/Sonarr/sonarr-setup-quality-profiles-german-en/)    |
 | **Recyclarr Templates** | [Recyclarr Radarr](https://github.com/recyclarr/config-templates/tree/master/radarr/templates) | [Recyclarr Sonarr](https://github.com/recyclarr/config-templates/tree/master/sonarr/templates) |
 
+### German Profiles (Anime)
+
+Currently (as of 2025-02) no finished profiles exist for German Anime formats.
+So you can either start with the English ones from TRaSH-Guide and modify with the German language CFs or use some existing templates from the community.
+Example for starting profiles from scratch [here](#from-scratch)
+
+Community configs 👥🤝🤗 :
+
+- https://github.com/nani8ot/configarr-anime
+- https://github.com/MajorPain007/homelab/tree/main/configarr
+
+:::note
+Be sure to copy all required configs and templates when using the community projects.
+And keep in mind that you need to keep track of possible changes on your own.
+:::
+
 ## Modifications / Adjustments
 
 Please check the [Config](../configuration/config-file) for all available options.
 
+- Reference for starting full profiles from scratch: [here](#from-scratch)
 - Adjusting the `language` of a QualityProfile.
   TRaSH-Guide profiles has added support for the `language` in their provided JSON files.
   This will be used if available.
