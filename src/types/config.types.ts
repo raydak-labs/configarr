@@ -39,6 +39,11 @@ export type InputConfigCustomFormat = {
   assign_scores_to?: { name: string; score?: number }[];
 };
 
+export type InputConfigCustomFormatGroup = {
+  trash_guide?: { id: string; include_unrequired?: boolean }[];
+  assign_scores_to?: { name: string }[];
+};
+
 export type InputConfigArrInstance = {
   base_url: string;
   api_key: string;
@@ -64,6 +69,10 @@ export type InputConfigArrInstance = {
     qualities?: TrashQualityDefintionQuality[];
   };
   include?: InputConfigIncludeItem[];
+  /**
+   * @experimental since v1.12.0
+   */
+  custom_format_groups?: InputConfigCustomFormatGroup[];
   custom_formats?: InputConfigCustomFormat[];
   // TODO this is not correct. The profile can be added partly -> InputConfigQualityProfile
   quality_profiles: ConfigQualityProfile[];

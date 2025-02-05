@@ -11,6 +11,8 @@ import {
   loadNamingFromTrashRadarr,
   loadNamingFromTrashSonarr,
   loadQPFromTrash,
+  loadTrashCustomFormatGroups,
+  transformTrashCFGroups,
   transformTrashQPCFs,
   transformTrashQPToTemplate,
 } from "./trash-guide";
@@ -22,14 +24,16 @@ import {
   ConfigQualityProfile,
   ConfigSchema,
   InputConfigArrInstance,
+  InputConfigCustomFormat,
+  InputConfigCustomFormatGroup,
   InputConfigIncludeItem,
   InputConfigInstance,
   InputConfigSchema,
   MediaNamingType,
   MergedConfigInstance,
 } from "./types/config.types";
-import { TrashQP } from "./types/trashguide.types";
-import { cloneWithJSON } from "./util";
+import { TrashCFGroupMapping, TrashQP } from "./types/trashguide.types";
+import { cloneWithJSON, compareCustomFormats } from "./util";
 
 let config: ConfigSchema;
 let secrets: any;
@@ -192,11 +196,14 @@ export const mergeConfigsAndTemplates = async (
   const localTemplateMap = loadLocalRecyclarrTemplate(arrType);
   let recyclarrTemplateMap: Map<string, MappedTemplates> = new Map();
   let trashTemplates: Map<string, TrashQP> = new Map();
+  let trashCFGroupMapping: TrashCFGroupMapping = new Map();
+  const customFormatGroups: InputConfigCustomFormatGroup[] = [];
 
   if (arrType === "RADARR" || arrType === "SONARR") {
     // TODO: separation maybe not the best. Maybe time to split up processing for each arrType
     recyclarrTemplateMap = loadRecyclarrTemplates(arrType);
     trashTemplates = await loadQPFromTrash(arrType);
+    trashCFGroupMapping = await loadTrashCustomFormatGroups(arrType);
   }
 
   logger.debug(
@@ -242,6 +249,10 @@ export const mergeConfigsAndTemplates = async (
 
       if (template.custom_formats) {
         mergedTemplates.custom_formats?.push(...template.custom_formats);
+      }
+
+      if (template.custom_format_groups) {
+        customFormatGroups.push(...template.custom_format_groups);
       }
 
       if (template.quality_definition) {
@@ -310,6 +321,10 @@ export const mergeConfigsAndTemplates = async (
     mergedTemplates.delete_unmanaged_custom_formats = instanceConfig.delete_unmanaged_custom_formats;
   }
 
+  if (instanceConfig.custom_format_groups) {
+    customFormatGroups.push(...instanceConfig.custom_format_groups);
+  }
+
   if (instanceConfig.quality_profiles) {
     mergedTemplates.quality_profiles.push(...instanceConfig.quality_profiles);
   }
@@ -358,6 +373,11 @@ export const mergeConfigsAndTemplates = async (
       logger.warn(`CustomFormatDefinitions in instance config file must be an array. Ignoring.`);
     }
   }
+
+  // Transform CF Groups into CustomFormat mappings
+  const trashCfGroups = transformTrashCFGroups(trashCFGroupMapping, customFormatGroups);
+  trashCfGroups.length > 0 && logger.debug(`Loaded CustomFormats with TrashCF Groups.`);
+  mergedTemplates.custom_formats.push(...trashCfGroups);
 
   // Rename quality profiles
   if (instanceConfig.renameQualityProfiles && instanceConfig.renameQualityProfiles.length > 0) {

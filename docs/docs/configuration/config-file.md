@@ -290,11 +290,43 @@ sonarr:
   instance1:
     # ...
 
-    # since v1.12.0. Optional
+    # (experimental) since v1.12.0. Optional
     delete_unmanaged_custom_formats:
       enabled: true
       ignore: # optional
         - some-cf
+```
+
+Notes:
+
+- **experimental**, available since `v1.12.0`
+
+## CustomFormatGroups {#custom-format-groups}
+
+Support has been added to allow using the TRaSH-Guide custom format groups: [see here](https://github.com/TRaSH-Guides/Guides/tree/master/docs/json/sonarr/cf-groups).
+Those are logically bundled together CustomFormats which will be applied together.
+TRaSH-Guide is using them in an interactive manner with Notifiarr therefore there are also non required CustomFormats.
+Configarr will only load required ones (`required: true`).
+
+If you need some optional ones just add them with the existing `custom_formats` mapping.
+Also the `quality_profiles` mapping in the JSON file is ignored because it does not make sense in Configarr.
+
+```yml
+# ...
+
+sonarr:
+  instance1:
+    # ...
+
+    # (experimental) since v1.12.0
+    # allows using the cf-groups from TRaSH-Guide.
+    custom_format_groups:
+      - id: c4735e1d02e8738044ad4ad1bf58670c # Multiple CFs, default only required=true are loaded
+        #include_unrequired: true # if you want to load all set this to true
+      - trash_ids:
+          - c4735e1d02e8738044ad4ad1bf58670c # Multiple CFs, only where required=true are loaded
+        assign_scores_to:
+          - name: MyProfile
 ```
 
 Notes:
