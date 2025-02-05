@@ -36,6 +36,9 @@ sonarr:
     api_key: !secret SONARR_API_KEY # Reference to API key in secrets.yml
     # api_key: !env SONARR_API_KEY # load from environment variable
 
+    # since v1.11.0. You can disable instances. Optional
+    # enabled: false
+
     quality_definition:
       type: series # Quality definition type for Sonarr
 

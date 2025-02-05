@@ -40,6 +40,10 @@ export type InputConfigCustomFormat = {
 export type InputConfigArrInstance = {
   base_url: string;
   api_key: string;
+  /**
+   * since v1.11.0
+   */
+  enabled?: boolean;
   quality_definition?: {
     type?: string;
     preferred_ratio?: number; // 0.0 - 1.0

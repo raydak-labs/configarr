@@ -185,6 +185,11 @@ const runArrType = async (
     for (const [instanceName, instance] of Object.entries(arrEntry)) {
       logInstanceHeading(`Processing ${arrType} Instance: ${instanceName} ...`);
 
+      if (instance.enabled === false) {
+        logger.info(`Instance ${arrType} - ${instanceName} is disabled!`);
+        continue;
+      }
+
       try {
         await configureApi(arrType, instance.base_url, instance.api_key);
         await pipeline(globalConfig, instance, arrType);

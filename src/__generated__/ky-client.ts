@@ -190,17 +190,27 @@ export class HttpClient<SecurityDataType = unknown> {
       logger.debug(`Error during request with error: ${error?.name}`);
 
       if (error instanceof HTTPError) {
-        if (error.response) {
+        const { response, request } = error;
+
+        if (response) {
           // The request was made and the server responded with a status code
           // that falls out of the range of 2xx
-          const errorJson = await error.response.json();
-          logger.error(errorJson, `Failed executing request: ${error.message}`);
-          throw new Error(errorJson);
-        } else if (error.request) {
+          const contentType = response.headers.get("content-type");
+
+          if (contentType && contentType.includes("application/json")) {
+            // Process JSON data
+            const errorJson = await response.json();
+            logger.error(errorJson, `Failed executing request: ${error.message}`);
+            throw new Error(errorJson);
+          } else {
+            // Handle non-JSON response
+            logger.error(`HTTP Error: ${response.status} ${response.statusText}`);
+          }
+        } else if (request) {
           // The request was made but no response was received
-          // `error.request` is an instance of XMLHttpRequest in the browser and an instance of
+          // `request` is an instance of XMLHttpRequest in the browser and an instance of
           // http.ClientRequest in node.js
-          const errorJson = await error.request.json();
+          const errorJson = await request.json();
           logger.error(errorJson, `Failed during request (probably some connection issues?)`);
           throw error;
         } else {
