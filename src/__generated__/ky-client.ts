@@ -205,12 +205,22 @@ export class HttpClient<SecurityDataType = unknown> {
           throw error;
         } else {
           // Something happened in setting up the request that triggered an Error
-          logger.error(error, `No request/response information. Unknown error`);
+          logger.error(`No request/response information. Unknown error`);
         }
       } else if (error instanceof TypeError) {
-        logger.error(error, `Probably some connection issues. If not, feel free to open an issue with details to improve handling.`);
+        let errorMessage = "Probably some connection issues. If not, feel free to open an issue with details to improve handling.";
+
+        if (error.cause && error.cause instanceof Error) {
+          errorMessage += ` Caused by: '${error.cause.message}'.`;
+
+          if ("code" in error.cause) {
+            errorMessage += ` Error code: '${error.cause.code}'.`;
+          }
+        }
+
+        logger.error(errorMessage);
       } else {
-        logger.error(error, `An not expected error happened. Feel free to open an issue with details to improve handling.`);
+        logger.error(`An not expected error happened. Feel free to open an issue with details to improve handling.`);
       }
 
       throw error;

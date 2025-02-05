@@ -35,15 +35,13 @@ export const validateClientParams = (url: string, apiKey: string, arrType: ArrTy
   }
 };
 
-export const handleErrorApi = (error: any, arrType: ArrType) => {
+export const logConnectionError = (error: any, arrType: ArrType) => {
   let message;
   const arrLabel = arrType.toLowerCase();
   const causeError = error?.cause?.message || error?.cause?.errors?.map((e: any) => e.message).join(";") || undefined;
 
   const errorMessage = (error.message && `Message: ${error.message}`) || "";
   const causeMessage = (causeError && `- Cause: ${causeError}`) || "";
-
-  logger.error(`Error configuring ${arrLabel} API. ${errorMessage} ${causeMessage}`);
 
   if (error.response) {
     // The request was made and the server responded with a status code
@@ -54,18 +52,24 @@ export const handleErrorApi = (error: any, arrType: ArrType) => {
     message = `An unexpected error occurred while setting up the ${arrLabel} request: ${errorMessage} ${causeMessage}. Please try again.`;
   }
 
-  throw new Error(message);
+  return message;
 };
 
 export const configureApi = async (type: ArrType, baseUrl: string, apiKey: string) => {
   unsetApi();
 
   unifiedClient = new UnifiedClient(type, baseUrl, apiKey);
+  let connectionSuccessful = false;
 
   try {
-    await unifiedClient.testConnection();
+    connectionSuccessful = await unifiedClient.testConnection();
   } catch (error: any) {
-    handleErrorApi(error, type);
+    logger.error(`Unhandled connection error.`);
+    throw error;
+  }
+
+  if (!connectionSuccessful) {
+    throw new Error(`Could not connect to client: ${type} - ${baseUrl}`);
   }
 
   return unifiedClient;

@@ -32,6 +32,18 @@ const schema = z.object({
     .transform((x) => x === "true")
     .pipe(z.boolean())
     .default("false"),
+  STOP_ON_ERROR: z
+    .string()
+    .toLowerCase()
+    .transform((x) => x === "true")
+    .pipe(z.boolean())
+    .default("false"),
+  LOG_STACKTRACE: z
+    .string()
+    .toLowerCase()
+    .transform((x) => x === "true")
+    .pipe(z.boolean())
+    .default("false"),
 });
 
 // declare global {

@@ -9,7 +9,7 @@ import { ServerCache } from "./cache";
 import { configureApi, getUnifiedClient, unsetApi } from "./clients/unified-client";
 import { getConfig, mergeConfigsAndTemplates } from "./config";
 import { calculateCFsToManage, loadCustomFormatDefinitions, loadServerCustomFormats, manageCf } from "./custom-formats";
-import { logHeading, logger } from "./logger";
+import { logHeading, logInstanceHeading, logger } from "./logger";
 import { calculateMediamanagementDiff, calculateNamingDiff } from "./media-management";
 import { calculateQualityDefinitionDiff, loadQualityDefinitionFromServer } from "./quality-definitions";
 import { calculateQualityProfilesDiff, loadQualityProfilesFromServer } from "./quality-profiles";
@@ -183,10 +183,24 @@ const runArrType = async (
     logHeading(`Processing ${arrType} ...`);
 
     for (const [instanceName, instance] of Object.entries(arrEntry)) {
-      logger.info(`Processing ${arrType} Instance: ${instanceName}`);
-      await configureApi(arrType, instance.base_url, instance.api_key);
-      await pipeline(globalConfig, instance, arrType);
-      unsetApi();
+      logInstanceHeading(`Processing ${arrType} Instance: ${instanceName} ...`);
+
+      try {
+        await configureApi(arrType, instance.base_url, instance.api_key);
+        await pipeline(globalConfig, instance, arrType);
+      } catch (err: unknown) {
+        logger.error(`Failure during configuring: ${arrType} - ${instanceName}`);
+        if (getEnvs().LOG_STACKTRACE) {
+          logger.error(err);
+        }
+        if (getEnvs().STOP_ON_ERROR) {
+          throw new Error(`Stopping further execution because 'STOP_ON_ERROR' is enabled.`);
+        }
+      } finally {
+        unsetApi();
+      }
+
+      logger.info("");
     }
   }
 };

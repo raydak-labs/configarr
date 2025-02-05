@@ -8,7 +8,7 @@ import {
 } from "../__generated__/whisparr/data-contracts";
 import { logger } from "../logger";
 import { cloneWithJSON } from "../util";
-import { IArrClient, validateClientParams } from "./unified-client";
+import { IArrClient, logConnectionError, validateClientParams } from "./unified-client";
 
 /**
  * Overwrite wrong types for now
@@ -122,7 +122,8 @@ export class WhisparrClient
     try {
       await this.api.v3HealthList();
     } catch (error) {
-      logger.error(error);
+      const message = logConnectionError(error, "WHISPARR");
+      logger.error(message);
       return false;
     }
 

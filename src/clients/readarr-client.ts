@@ -8,7 +8,7 @@ import {
   QualityProfileResource,
 } from "../__generated__/readarr/data-contracts";
 import { logger } from "../logger";
-import { IArrClient, validateClientParams } from "./unified-client";
+import { IArrClient, logConnectionError, validateClientParams } from "./unified-client";
 
 export class ReadarrClient
   implements IArrClient<QualityProfileResource, QualityDefinitionResource, CustomFormatResource, LanguageResource>
@@ -114,7 +114,8 @@ export class ReadarrClient
     try {
       await this.api.v1HealthList();
     } catch (error) {
-      logger.error(error);
+      const message = logConnectionError(error, "READARR");
+      logger.error(message);
       return false;
     }
 

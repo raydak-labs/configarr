@@ -8,7 +8,7 @@ import {
 } from "../__generated__/radarr/data-contracts";
 import { logger } from "../logger";
 import { cloneWithJSON } from "../util";
-import { IArrClient, validateClientParams } from "./unified-client";
+import { IArrClient, logConnectionError, validateClientParams } from "./unified-client";
 
 export class RadarrClient implements IArrClient<QualityProfileResource, QualityDefinitionResource, CustomFormatResource, LanguageResource> {
   private api!: Api<unknown>;
@@ -112,7 +112,8 @@ export class RadarrClient implements IArrClient<QualityProfileResource, QualityD
     try {
       await this.api.v3HealthList();
     } catch (error) {
-      logger.error(error);
+      const message = logConnectionError(error, "RADARR");
+      logger.error(message);
       return false;
     }
 
