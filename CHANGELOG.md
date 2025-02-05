@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.11.0](https://github.com/raydak-labs/configarr/compare/v1.10.3...v1.11.0) (2025-02-05)
+
+### Features
+
+- add option to disable specific instances in config ([e228ccb](https://github.com/raydak-labs/configarr/commit/e228ccb0820cdb54daf1608280f2a3e0f1304113)), closes [#184](https://github.com/raydak-labs/configarr/issues/184)
+
+### Bug Fixes
+
+- do gracefully stop instance processing if an error occurs. ([8f8fca5](https://github.com/raydak-labs/configarr/commit/8f8fca5013d5abec15b35accf568b44abc17027d))
+
+### (internal) Refactorings
+
+- log total execution summary ([35d0c30](https://github.com/raydak-labs/configarr/commit/35d0c3049c2696a940147468c187380b08274d6f))
+
 ## [1.10.3](https://github.com/raydak-labs/configarr/compare/v1.10.2...v1.10.3) (2025-02-03)
 
 ### Bug Fixes
