@@ -118,6 +118,12 @@ radarrEnabled: false
 whisparrEnabled: false
 readarrEnabled: false
 lidarrEnabled: false
+
+# You can also disable on per instance basis
+sonarr:
+  instance1:
+    # ...
+    enabled: false
 ```
 
 ## Quality Definition / Size

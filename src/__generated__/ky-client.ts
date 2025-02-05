@@ -190,27 +190,47 @@ export class HttpClient<SecurityDataType = unknown> {
       logger.debug(`Error during request with error: ${error?.name}`);
 
       if (error instanceof HTTPError) {
-        if (error.response) {
+        const { response, request } = error;
+
+        if (response) {
           // The request was made and the server responded with a status code
           // that falls out of the range of 2xx
-          const errorJson = await error.response.json();
-          logger.error(errorJson, `Failed executing request: ${error.message}`);
-          throw new Error(errorJson);
-        } else if (error.request) {
+          const contentType = response.headers.get("content-type");
+
+          if (contentType && contentType.includes("application/json")) {
+            // Process JSON data
+            const errorJson = await response.json();
+            logger.error(errorJson, `Failed executing request: ${error.message}`);
+            throw new Error(errorJson);
+          } else {
+            // Handle non-JSON response
+            logger.error(`HTTP Error: ${response.status} ${response.statusText}`);
+          }
+        } else if (request) {
           // The request was made but no response was received
-          // `error.request` is an instance of XMLHttpRequest in the browser and an instance of
+          // `request` is an instance of XMLHttpRequest in the browser and an instance of
           // http.ClientRequest in node.js
-          const errorJson = await error.request.json();
+          const errorJson = await request.json();
           logger.error(errorJson, `Failed during request (probably some connection issues?)`);
           throw error;
         } else {
           // Something happened in setting up the request that triggered an Error
-          logger.error(error, `No request/response information. Unknown error`);
+          logger.error(`No request/response information. Unknown error`);
         }
       } else if (error instanceof TypeError) {
-        logger.error(error, `Probably some connection issues. If not, feel free to open an issue with details to improve handling.`);
+        let errorMessage = "Probably some connection issues. If not, feel free to open an issue with details to improve handling.";
+
+        if (error.cause && error.cause instanceof Error) {
+          errorMessage += ` Caused by: '${error.cause.message}'.`;
+
+          if ("code" in error.cause) {
+            errorMessage += ` Error code: '${error.cause.code}'.`;
+          }
+        }
+
+        logger.error(errorMessage);
       } else {
-        logger.error(error, `An not expected error happened. Feel free to open an issue with details to improve handling.`);
+        logger.error(`An not expected error happened. Feel free to open an issue with details to improve handling.`);
       }
 
       throw error;

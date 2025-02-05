@@ -7,7 +7,7 @@ import {
   QualityProfileResource,
 } from "../__generated__/sonarr/data-contracts";
 import { logger } from "../logger";
-import { IArrClient, validateClientParams } from "./unified-client";
+import { IArrClient, logConnectionError, validateClientParams } from "./unified-client";
 
 export type SonarrQualityProfileResource = {
   id?: number;
@@ -104,7 +104,8 @@ export class SonarrClient implements IArrClient<QualityProfileResource, QualityD
     try {
       await this.api.v3HealthList();
     } catch (error) {
-      logger.error(error);
+      const message = logConnectionError(error, "SONARR");
+      logger.error(message);
       return false;
     }
 

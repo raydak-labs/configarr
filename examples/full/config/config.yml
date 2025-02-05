@@ -43,6 +43,9 @@ sonarr:
     base_url: http://sonarr:8989
     api_key: !secret SONARR_API_KEY
 
+    # since v1.11.0, optional, for disabling instances
+    enabled: false
+
     quality_definition:
       type: series
 

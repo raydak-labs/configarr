@@ -15,6 +15,7 @@ Each variable can be set to customize the behavior of the application.
 | Variable Name        | Default Value             | Required | Description                                                                                 |
 | -------------------- | ------------------------- | -------- | ------------------------------------------------------------------------------------------- |
 | `LOG_LEVEL`          | `"info"`                  | No       | Sets the logging level. Options are `trace`, `debug`, `info`, `warn`, `error`, and `fatal`. |
+| `LOG_STACKTRACE`     | `"false"`                 | No       | (Experimental, v1.11.0) Outputs additionally stacktraces of underlying errors.              |
 | `CONFIG_LOCATION`    | `"./config/config.yml"`   | No       | Specifies the path to the configuration file.                                               |
 | `SECRETS_LOCATION`   | `"./config/secrets.yml"`  | No       | Specifies the path to the secrets file.                                                     |
 | `CUSTOM_REPO_ROOT`   | `"./repos"`               | No       | Defines the root directory for custom repositories.                                         |
@@ -23,6 +24,7 @@ Each variable can be set to customize the behavior of the application.
 | `LOAD_LOCAL_SAMPLES` | `"false"`                 | No       | If `"true"`, loads local sample data for testing purposes.                                  |
 | `DEBUG_CREATE_FILES` | `"false"`                 | No       | Enables debugging for file creation processes when set to `"true"`.                         |
 | `TZ`                 | `"Etc/UTC"`               | No       | Timezone for the container.                                                                 |
+| `STOP_ON_ERROR`      | `"false"`                 | No       | (Experimental, v1.11.0) Stop execution on any error on any instance.                        |
 
 ## Usage
 

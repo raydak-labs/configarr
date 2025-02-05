@@ -8,7 +8,7 @@ import {
   QualityProfileResource,
 } from "../__generated__/lidarr/data-contracts";
 import { logger } from "../logger";
-import { IArrClient, validateClientParams } from "./unified-client";
+import { IArrClient, logConnectionError, validateClientParams } from "./unified-client";
 
 export class LidarrClient implements IArrClient<QualityProfileResource, QualityDefinitionResource, CustomFormatResource, LanguageResource> {
   private api!: Api<unknown>;
@@ -112,7 +112,9 @@ export class LidarrClient implements IArrClient<QualityProfileResource, QualityD
     try {
       await this.api.v1HealthList();
     } catch (error) {
-      logger.error(error);
+      const message = logConnectionError(error, "LIDARR");
+      logger.error(message);
+
       return false;
     }
 

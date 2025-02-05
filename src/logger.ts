@@ -53,5 +53,9 @@ export const logHeading = (title: string) => {
   logger.info("");
 };
 
+export const logInstanceHeading = (title: string) => {
+  logger.info(`### ${title}`);
+};
+
 // For debugging how envs have been loaded
 logger.debug({ envs: getEnvs(), helpers: getHelpers() }, `Loaded following configuration from ENVs and mapped`);

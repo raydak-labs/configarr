@@ -9,7 +9,7 @@ import { ServerCache } from "./cache";
 import { configureApi, getUnifiedClient, unsetApi } from "./clients/unified-client";
 import { getConfig, mergeConfigsAndTemplates } from "./config";
 import { calculateCFsToManage, loadCustomFormatDefinitions, loadServerCustomFormats, manageCf } from "./custom-formats";
-import { logHeading, logger } from "./logger";
+import { logHeading, logInstanceHeading, logger } from "./logger";
 import { calculateMediamanagementDiff, calculateNamingDiff } from "./media-management";
 import { calculateQualityDefinitionDiff, loadQualityDefinitionFromServer } from "./quality-definitions";
 import { calculateQualityProfilesDiff, loadQualityProfilesFromServer } from "./quality-profiles";
@@ -177,18 +177,48 @@ const runArrType = async (
   globalConfig: InputConfigSchema,
   arrEntry: Record<string, InputConfigArrInstance> | undefined,
 ) => {
+  const status = {
+    success: 0,
+    failure: 0,
+    skipped: 0,
+  };
+
   if (arrEntry == null || Array.isArray(arrEntry) || typeof arrEntry !== "object" || Object.keys(arrEntry).length <= 0) {
     logHeading(`No ${arrType} instances defined.`);
   } else {
     logHeading(`Processing ${arrType} ...`);
 
     for (const [instanceName, instance] of Object.entries(arrEntry)) {
-      logger.info(`Processing ${arrType} Instance: ${instanceName}`);
-      await configureApi(arrType, instance.base_url, instance.api_key);
-      await pipeline(globalConfig, instance, arrType);
-      unsetApi();
+      logInstanceHeading(`Processing ${arrType} Instance: ${instanceName} ...`);
+
+      if (instance.enabled === false) {
+        logger.info(`Instance ${arrType} - ${instanceName} is disabled!`);
+        status.skipped++;
+        continue;
+      }
+
+      try {
+        await configureApi(arrType, instance.base_url, instance.api_key);
+        await pipeline(globalConfig, instance, arrType);
+        status.success++;
+      } catch (err: unknown) {
+        logger.error(`Failure during configuring: ${arrType} - ${instanceName}`);
+        status.failure++;
+        if (getEnvs().LOG_STACKTRACE) {
+          logger.error(err);
+        }
+        if (getEnvs().STOP_ON_ERROR) {
+          throw new Error(`Stopping further execution because 'STOP_ON_ERROR' is enabled.`);
+        }
+      } finally {
+        unsetApi();
+      }
+
+      logger.info("");
     }
   }
+
+  return status;
 };
 
 const run = async () => {
@@ -203,40 +233,50 @@ const run = async () => {
 
   // TODO currently this has to be run sequentially because of the centrally configured api
 
+  const totalStatus: string[] = [];
+
   // Sonarr
   if (globalConfig.sonarrEnabled == null || globalConfig.sonarrEnabled) {
-    await runArrType("SONARR", globalConfig, globalConfig.sonarr);
+    const result = await runArrType("SONARR", globalConfig, globalConfig.sonarr);
+    totalStatus.push(`SONARR: (${result.success}/${result.failure}/${result.skipped})`);
   } else {
     logger.debug(`Sonarr disabled in config`);
   }
 
   // Radarr
   if (globalConfig.radarrEnabled == null || globalConfig.radarrEnabled) {
-    await runArrType("RADARR", globalConfig, globalConfig.radarr);
+    const result = await runArrType("RADARR", globalConfig, globalConfig.radarr);
+    totalStatus.push(`RADARR: (${result.success}/${result.failure}/${result.skipped})`);
   } else {
     logger.debug(`Radarr disabled in config`);
   }
 
   // Whisparr
   if (globalConfig.whisparrEnabled == null || globalConfig.whisparrEnabled) {
-    await runArrType("WHISPARR", globalConfig, globalConfig.whisparr);
+    const result = await runArrType("WHISPARR", globalConfig, globalConfig.whisparr);
+    totalStatus.push(`WHISPARR: (${result.success}/${result.failure}/${result.skipped})`);
   } else {
     logger.debug(`Whisparr disabled in config`);
   }
 
   // Readarr
   if (globalConfig.readarrEnabled == null || globalConfig.readarrEnabled) {
-    await runArrType("READARR", globalConfig, globalConfig.readarr);
+    const result = await runArrType("READARR", globalConfig, globalConfig.readarr);
+    totalStatus.push(`READARR: (${result.success}/${result.failure}/${result.skipped})`);
   } else {
     logger.debug(`Readarr disabled in config`);
   }
 
   // Lidarr
   if (globalConfig.lidarrEnabled == null || globalConfig.lidarrEnabled) {
-    await runArrType("LIDARR", globalConfig, globalConfig.lidarr);
+    const result = await runArrType("LIDARR", globalConfig, globalConfig.lidarr);
+    totalStatus.push(`LIDARR: (${result.success}/${result.failure}/${result.skipped})`);
   } else {
     logger.debug(`Lidarr disabled in config`);
   }
+
+  logger.info(``);
+  logger.info(`Execution Summary (success/failure/skipped) instances: ${totalStatus.join(" - ")}`);
 };
 
 run();
