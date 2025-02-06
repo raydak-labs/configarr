@@ -13,10 +13,11 @@ export const cloneRecyclarrTemplateRepo = async () => {
 
   const rootPath = recyclarrRepoPaths.root;
   const applicationConfig = getConfig();
-  const gitUrl = getConfig().recyclarrConfigUrl ?? DEFAULT_RECYCLARR_GIT_URL;
+  const gitUrl = applicationConfig.recyclarrConfigUrl ?? DEFAULT_RECYCLARR_GIT_URL;
   const revision = applicationConfig.recyclarrRevision ?? "master";
+  const sparseDisabled = applicationConfig.enableFullGitClone === true;
 
-  const cloneResult = await cloneGitRepo(rootPath, gitUrl, revision);
+  const cloneResult = await cloneGitRepo(rootPath, gitUrl, revision, { disabled: sparseDisabled, sparseDirs: ["radarr/", "sonarr/"] });
   logger.info(`Recyclarr repo: ref[${cloneResult.ref}], hash[${cloneResult.hash}], path[${cloneResult.localPath}]`);
 };
 

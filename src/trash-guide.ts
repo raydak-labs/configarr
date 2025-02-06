@@ -67,10 +67,11 @@ export const cloneTrashRepo = async () => {
 
   const rootPath = trashRepoPaths.root;
   const applicationConfig = getConfig();
-  const gitUrl = getConfig().trashGuideUrl ?? DEFAULT_TRASH_GIT_URL;
+  const gitUrl = applicationConfig.trashGuideUrl ?? DEFAULT_TRASH_GIT_URL;
   const revision = applicationConfig.trashRevision ?? "master";
+  const sparseDisabled = applicationConfig.enableFullGitClone === true;
 
-  const cloneResult = await cloneGitRepo(rootPath, gitUrl, revision);
+  const cloneResult = await cloneGitRepo(rootPath, gitUrl, revision, { disabled: sparseDisabled, sparseDirs: ["docs/json"] });
   logger.info(`TRaSH-Guides repo: ref[${cloneResult.ref}], hash[${cloneResult.hash}], path[${cloneResult.localPath}]`);
   await createCache();
 };

@@ -2,11 +2,15 @@
 #trashGuideUrl: https://github.com/BlackDark/fork-TRASH-Guides
 #recyclarrConfigUrl: https://github.com/BlackDark/fork-recyclarr-configs
 
+# since v1.12.0. Optional. Enable for legacy configuration to clone full repos (trash, recyclarr) instead of sparse.
+# Default is false. Setting to true increases storage usage up to 10x.
+#enableFullGitClone: true
+
 # Optional: Paths for custom formats and templates
 localCustomFormatsPath: /app/cfs
 localConfigTemplatesPath: /app/templates
 
-# Custom Format Definitions (optional)
+# Optional. Custom Format Definitions
 customFormatDefinitions:
   - trash_id: example-in-config-cf
     trash_scores:
