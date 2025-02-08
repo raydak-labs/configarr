@@ -36,7 +36,7 @@ Configarr supports two types of templates:
    - Can be overridden using `trashGuideUrl` in config.yml
    - See [TRaSH-Guides Radarr](https://github.com/TRaSH-Guides/Guides/tree/master/docs/json/radarr/quality-profiles) and [TRaSH-Guides Sonarr](https://github.com/TRaSH-Guides/Guides/tree/master/docs/json/sonarr/quality-profiles) for more information
 
-## Custom Formats Definitions
+## Custom Formats Definitions {#custom-format-definitions}
 
 Custom formats can be defined in two ways:
 

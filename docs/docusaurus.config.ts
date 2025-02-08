@@ -120,7 +120,7 @@ const config: Config = {
           type: "html",
           position: "right",
           value:
-            '<iframe class="navbarGithubStars" src="https://ghbtns.com/github-btn.html?user=raydak-labs&amp;repo=configarr&amp;type=star&amp;count=true&amp;size=small" title="GitHub Stars"/>',
+            '<a href="https://github.com/raydak-labs/configarr" target="_blank"><img alt="GitHub Repo stars" src="https://img.shields.io/github/stars/raydak-labs/configarr"></a>',
         },
       ],
     },
