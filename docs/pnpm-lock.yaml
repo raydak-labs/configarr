@@ -21,8 +21,8 @@ importers:
         specifier: 2.1.1
         version: 2.1.1
       docusaurus-lunr-search:
-        specifier: 3.6.0
-        version: 3.6.0(@docusaurus/core@3.7.0(@mdx-js/react@3.1.0(@types/react@18.3.12)(react@19.0.0))(acorn@8.14.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)(typescript@5.7.3))(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
+        specifier: 3.6.1
+        version: 3.6.1(@docusaurus/core@3.7.0(@mdx-js/react@3.1.0(@types/react@18.3.12)(react@19.0.0))(acorn@8.14.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)(typescript@5.7.3))(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
       lunr:
         specifier: 2.3.9
         version: 2.3.9
@@ -2241,8 +2241,8 @@ packages:
     resolution: {integrity: sha512-l4gcSouhcgIKRvyy99RNVOgxXiicE+2jZoNmaNmZ6JXiGajBOJAesk1OBlJuM5k2c+eudGdLxDqXuPCKIj6kpw==}
     engines: {node: '>=6'}
 
-  docusaurus-lunr-search@3.6.0:
-    resolution: {integrity: sha512-CCEAnj5e67sUZmIb2hOl4xb4nDN07fb0fvRDDmdWlYpUvyS1CSKbw4lsGInLyUFEEEBzxQmT6zaVQdF/8Zretg==}
+  docusaurus-lunr-search@3.6.1:
+    resolution: {integrity: sha512-ms2FWYzR7OrvS2x0/HSPaAenAATrBenGpCwWpjmpK8SnUpqygVPvuss2RG5l2ZuMxpKFP0rhEnEy8Kx4lSQimw==}
     engines: {node: '>= 8.10.0'}
     peerDependencies:
       '@docusaurus/core': ^2.0.0-alpha.60 || ^2.0.0 || ^3.0.0
@@ -8240,7 +8240,7 @@ snapshots:
     dependencies:
       '@leichtgewicht/ip-codec': 2.0.5
 
-  docusaurus-lunr-search@3.6.0(@docusaurus/core@3.7.0(@mdx-js/react@3.1.0(@types/react@18.3.12)(react@19.0.0))(acorn@8.14.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)(typescript@5.7.3))(react-dom@19.0.0(react@19.0.0))(react@19.0.0):
+  docusaurus-lunr-search@3.6.1(@docusaurus/core@3.7.0(@mdx-js/react@3.1.0(@types/react@18.3.12)(react@19.0.0))(acorn@8.14.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)(typescript@5.7.3))(react-dom@19.0.0(react@19.0.0))(react@19.0.0):
     dependencies:
       '@docusaurus/core': 3.7.0(@mdx-js/react@3.1.0(@types/react@18.3.12)(react@19.0.0))(acorn@8.14.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)(typescript@5.7.3)
       autocomplete.js: 0.37.1

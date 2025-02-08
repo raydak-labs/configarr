@@ -119,10 +119,45 @@ radarr:
 
     quality_profiles:
       - name: HD Bluray + WEB
-        upgrade:
-          min_format_score: 200
         # Support added with 1.7.0. Not support in all *arr applications. Check the application if it is supported.
         language: Any # The name must match available names in *arr
+        # Reset existing CustomFormats scores on profile
+        reset_unmatched_scores:
+          enabled: true
+        upgrade:
+          allowed: true
+          until_quality: Remux-1080p
+          until_score: 10000
+        min_format_score: 100
+        # Score set from TRaSH-Guide to use
+        #score_set: anime-radarr
+        # Sorting order of qualities in profile. Either top or bottom
+        #quality_sort: top
+        # How to group and sort profiles
+        qualities:
+          - name: Remux-1080p
+            qualities:
+              - Bluray-1080p
+              - Remux-1080p
+          - name: WEB 1080p
+            qualities:
+              - WEBDL-1080p
+              - WEBRip-1080p
+              - HDTV-1080p
+          - name: Bluray-720p
+          - name: WEB 720p
+            qualities:
+              - WEBDL-720p
+              - WEBRip-720p
+              - HDTV-720p
+          - name: Bluray-576p
+          - name: Bluray-480p
+          - name: WEB 480p
+            qualities:
+              - WEBDL-480p
+              - WEBRip-480p
+          - name: DVD
+          - name: SDTV
 
 # experimental support: check https://configarr.rayak.de/docs/configuration/experimental-support
 whisparr: {}
