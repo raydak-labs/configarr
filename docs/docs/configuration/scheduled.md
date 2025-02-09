@@ -8,6 +8,7 @@ keywords: [configarr configuration, schedule, scheduler, regular, cron]
 # Scheduling configarr
 
 This section describes how you could run configarr in a scheduled manner.
+Depending on your used deployment or third party ([check](../installation/third-party.md)) you can have different methods for running in schedule.
 
 :::info
 Configarr does not support scheduled execution inside the container and most likely never will.

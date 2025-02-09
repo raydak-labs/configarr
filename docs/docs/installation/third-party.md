@@ -15,7 +15,7 @@ As this is new and you are missing some services feel free to create a PR!
 Contributions welcome!
 :::
 
-## Unraid
+## Unraid {#unraid}
 
 :::tip
 Existing apps in Unraid CA are not maintained by us!
@@ -75,4 +75,11 @@ Ofelia should keep running and restarting the configarr in your defined interval
 
 **Enjoy!**
 
- 
+## Synology NAS {#synology}
+
+:::tip
+WIP!
+Contributions welcome!
+:::
+
+- For scheduled runs you can use [scheduled tasks](https://kb.synology.com/en-au/DSM/help/DSM/AdminCenter/system_taskscheduler?version=7) in order to run configarr in a cron way.
