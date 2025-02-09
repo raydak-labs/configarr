@@ -185,6 +185,15 @@ export class HttpClient<SecurityDataType = unknown> {
         hooks,
       });
 
+      // 2025-02-09: Added workaround for delete stuff
+      if (options.method === "DELETE") {
+        if (requestPromise.headers.get("Content-Type")?.includes("application/json")) {
+          return requestPromise.json();
+        } else {
+          return requestPromise.statusText as T;
+        }
+      }
+
       return requestPromise.json();
     } catch (error: any) {
       logger.debug(`Error during request with error: ${error?.name}`);

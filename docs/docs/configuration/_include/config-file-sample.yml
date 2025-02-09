@@ -39,6 +39,12 @@ sonarr:
     # since v1.11.0. You can disable instances. Optional
     # enabled: false
 
+    # since v1.12.0. Optional
+    # delete_unmanaged_custom_formats:
+    #   enabled: true
+    #   ignore: # optional
+    #     - some-cf
+
     quality_definition:
       type: series # Quality definition type for Sonarr
 

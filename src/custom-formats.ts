@@ -21,6 +21,13 @@ export const deleteAllCustomFormats = async () => {
   }
 };
 
+export const deleteCustomFormat = async (customFormat: MergedCustomFormatResource) => {
+  const api = getUnifiedClient();
+
+  await api.deleteCustomFormat(customFormat.id + "");
+  logger.info(`Deleted CF: '${customFormat.name}'`);
+};
+
 export const loadServerCustomFormats = async (): Promise<MergedCustomFormatResource[]> => {
   if (getEnvs().LOAD_LOCAL_SAMPLES) {
     return loadJsonFile<MergedCustomFormatResource[]>(path.resolve(__dirname, "../tests/samples/cfs.json"));
