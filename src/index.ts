@@ -74,7 +74,7 @@ const pipeline = async (globalConfig: InputConfigSchema, instanceConfig: InputCo
           qdTrash = await loadQualityDefinitionFromTrash("movie", "RADARR");
           break;
         default:
-          throw new Error(`Unsupported quality defintion ${qualityDefinition}`);
+          throw new Error(`Unsupported quality defintion '${qualityDefinition}'`);
       }
 
       const transformed = transformTrashQDs(qdTrash, config.quality_definition?.preferred_ratio);
@@ -201,8 +201,10 @@ const runArrType = async (
         await configureApi(arrType, instance.base_url, instance.api_key);
         await pipeline(globalConfig, instance, arrType);
         status.success++;
-      } catch (err: unknown) {
-        logger.error(`Failure during configuring: ${arrType} - ${instanceName}`);
+      } catch (err: any) {
+        logger.error(
+          `Failure during configuring: ${arrType} - ${instanceName} (Detailed logs with env var: LOG_STACKTRACE=true). Error: ${err?.message}`,
+        );
         status.failure++;
         if (getEnvs().LOG_STACKTRACE) {
           logger.error(err);
