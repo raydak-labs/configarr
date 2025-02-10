@@ -248,7 +248,15 @@ export function zipNLength<T extends unknown[][]>(...arrays: T): Array<{ [K in k
   return result as Array<{ [K in keyof T]: T[K] extends (infer U)[] ? U : never }>;
 }
 
-export const cloneGitRepo = async (localPath: string, gitUrl: string, revision: string) => {
+export const cloneGitRepo = async (
+  localPath: string,
+  gitUrl: string,
+  revision: string,
+  cloneConf: {
+    disabled: boolean;
+    sparseDirs?: string[];
+  },
+) => {
   const rootPath = localPath;
 
   if (!existsSync(rootPath)) {
@@ -259,8 +267,18 @@ export const cloneGitRepo = async (localPath: string, gitUrl: string, revision: 
   const r = await gitClient.checkIsRepo(CheckRepoActions.IS_REPO_ROOT);
 
   if (!r) {
+    let sparseEnabled = false;
+
+    if (!cloneConf.disabled && cloneConf.sparseDirs && cloneConf.sparseDirs.length > 0) {
+      sparseEnabled = true;
+    }
+
+    await simpleGit().clone(gitUrl, rootPath, ["--filter=blob:none", (sparseEnabled && "--sparse") || ""]);
+
+    if (sparseEnabled) {
+      await gitClient.raw(["sparse-checkout", "set", ...cloneConf.sparseDirs!]);
+    }
     logger.info(`Freshly cloned repository: '${gitUrl}' at '${revision}'`);
-    await simpleGit().clone(gitUrl, rootPath);
   }
 
   await gitClient.checkout(revision, ["-f"]);

@@ -10,6 +10,8 @@ export type InputConfigSchema = {
   recyclarrRevision?: string;
   localCustomFormatsPath?: string;
   localConfigTemplatesPath?: string;
+  // @experimental since v1.12.0
+  enableFullGitClone?: boolean;
   customFormatDefinitions?: CustomFormatDefinitions;
 
   sonarr?: Record<string, InputConfigArrInstance>;
