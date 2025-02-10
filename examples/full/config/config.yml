@@ -67,6 +67,15 @@ sonarr:
           - name: ExampleProfile
             # score: 0 # Uncomment this line to change score
 
+    # (experimental) since v1.12.0
+    # allows using the cf-groups from TRaSH-Guide.
+    custom_format_groups:
+      - trash_guide:
+          - id: c4735e1d02e8738044ad4ad1bf58670c # Multiple CFs, default only required=true are loaded
+            #include_unrequired: true # if you want to load all set this to true
+        assign_scores_to:
+          - name: ExampleProfile
+
     # Ability to rename profiles
     # renameQualityProfiles:
     #   - from: ExampleProfile

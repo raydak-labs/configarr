@@ -38,6 +38,24 @@ jobs:
         id: buildx
         uses: docker/setup-buildx-action@v3
 
+      # We push and build all types of images only when required
+      - name: Set build platforms
+        id: set_platforms
+        run: |
+          if [[ ${{ github.event_name }} == 'workflow_dispatch' ]]; then
+            echo "MANUAL_RUN=true" >> $GITHUB_OUTPUT
+          else
+            echo "MANUAL_RUN=false" >> $GITHUB_OUTPUT
+          fi
+
+          if [[ ${{ github.event_name }} == 'workflow_dispatch' || ${{ github.ref }} == refs/tags/* ]]; then
+            echo "platforms=linux/amd64,linux/arm64,linux/arm/v7" >> $GITHUB_OUTPUT
+            echo "push=true" >> $GITHUB_OUTPUT
+          else
+            echo "platforms=linux/amd64" >> $GITHUB_OUTPUT
+            echo "push=false" >> $GITHUB_OUTPUT
+          fi
+
       #      - name: Available platforms
       #        run: echo ${{ steps.buildx.outputs.platforms }}
 
@@ -53,7 +71,7 @@ jobs:
         if: github.event_name != 'pull_request'
         uses: docker/login-action@v3
         with:
-          username: ${{ env.DOCKERHUB_USERNAME }}
+          username: ${{ vars.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Docker meta for PMS
@@ -63,26 +81,15 @@ jobs:
           # list of Docker images to use as base name for tags
           images: |
             ghcr.io/raydak-labs/configarr
-            docker.io/configarr/configarr
+            docker.io/configarr/configarr,enable=${{ steps.set_platforms.outputs.MANUAL_RUN == 'false' }}
           # generate Docker tags based on the following events/attributes
           tags: |
-            type=schedule
-            type=ref,event=branch
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=semver,pattern={{major}}
-
-      # We push and build all types of images only when required
-      - name: Set build platforms
-        id: set_platforms
-        run: |
-          if [[ ${{ github.event_name }} == 'workflow_dispatch' || ${{ github.ref }} == refs/tags/* ]]; then
-            echo "platforms=linux/amd64,linux/arm64,linux/arm/v7" >> $GITHUB_OUTPUT
-            echo "push=true" >> $GITHUB_OUTPUT
-          else
-            echo "platforms=linux/amd64" >> $GITHUB_OUTPUT
-            echo "push=false" >> $GITHUB_OUTPUT
-          fi
+            type=ref,event=branch,prefix=dev-,enable=${{ steps.set_platforms.outputs.MANUAL_RUN == 'true' }}
+            type=schedule,enable=${{ steps.set_platforms.outputs.MANUAL_RUN == 'false' }}
+            type=ref,event=branch,enable=${{ steps.set_platforms.outputs.MANUAL_RUN == 'false' }}
+            type=semver,pattern={{version}},enable=${{ steps.set_platforms.outputs.MANUAL_RUN == 'false' }}
+            type=semver,pattern={{major}}.{{minor}},enable=${{ steps.set_platforms.outputs.MANUAL_RUN == 'false' }}
+            type=semver,pattern={{major}},enable=${{ steps.set_platforms.outputs.MANUAL_RUN == 'false' }}
 
       - name: Build and push PMS
         uses: docker/build-push-action@v6

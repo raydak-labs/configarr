@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
-import { loadQPFromTrash, transformTrashQDs } from "./trash-guide";
-import { TrashQualityDefintion } from "./types/trashguide.types";
+import { loadQPFromTrash, transformTrashCFGroups, transformTrashQDs } from "./trash-guide";
+import { TrashCFGroupMapping, TrashQualityDefintion } from "./types/trashguide.types";
+import { InputConfigCustomFormat, InputConfigCustomFormatGroup } from "./types/config.types";
 
 describe("TrashGuide", async () => {
   test("loadQPFromTrash - normal", async ({}) => {
@@ -57,5 +58,79 @@ describe("TrashGuide", async () => {
 
     const resultHigh = transformTrashQDs(clone, 1.5);
     expect(resultHigh[0]!.preferred).toBe(95);
+  });
+
+  test("transformTrashCFGroups - only include required cfs", async ({}) => {
+    const mapping: TrashCFGroupMapping = new Map();
+    mapping.set("id1", {
+      name: "name1",
+      trash_id: "id1",
+      custom_formats: [
+        { name: "cf1", trash_id: "cf1", required: true },
+        { name: "cf2", trash_id: "cf2", required: false },
+      ],
+    });
+
+    const groups: InputConfigCustomFormatGroup[] = [
+      {
+        trash_guide: [{ id: "id1" }],
+        assign_scores_to: [{ name: "qp1" }],
+      },
+    ];
+
+    const result = transformTrashCFGroups(mapping, groups);
+    expect(result).toHaveLength(1);
+    expect(result[0]!.trash_ids!).toHaveLength(1);
+    expect(result[0]!.trash_ids![0]).toBe("cf1");
+    expect(result[0]!.assign_scores_to[0]?.name).toBe("qp1");
+  });
+
+  test("transformTrashCFGroups - include all if attribute set", async ({}) => {
+    const mapping: TrashCFGroupMapping = new Map();
+    mapping.set("id1", {
+      name: "name1",
+      trash_id: "id1",
+      custom_formats: [
+        { name: "cf1", trash_id: "cf1", required: true },
+        { name: "cf2", trash_id: "cf2", required: false },
+      ],
+    });
+
+    const groups: InputConfigCustomFormatGroup[] = [
+      {
+        trash_guide: [{ id: "id1", include_unrequired: true }],
+        assign_scores_to: [{ name: "qp1" }],
+      },
+    ];
+
+    const result = transformTrashCFGroups(mapping, groups);
+
+    expect(result).toHaveLength(1);
+    expect(result[0]!.trash_ids!).toHaveLength(2);
+    expect(result[0]!.assign_scores_to!).toHaveLength(1);
+    expect(result[0]!.assign_scores_to[0]?.name).toBe("qp1");
+  });
+
+  test("transformTrashCFGroups - ignore if mapping missing", async ({}) => {
+    const mapping: TrashCFGroupMapping = new Map();
+    mapping.set("id2", {
+      name: "name1",
+      trash_id: "id1",
+      custom_formats: [
+        { name: "cf1", trash_id: "cf1", required: true },
+        { name: "cf2", trash_id: "cf2", required: false },
+      ],
+    });
+
+    const groups: InputConfigCustomFormatGroup[] = [
+      {
+        trash_guide: [{ id: "id1", include_unrequired: true }],
+        assign_scores_to: [{ name: "qp1" }],
+      },
+    ];
+
+    const result = transformTrashCFGroups(mapping, groups);
+
+    expect(result).toHaveLength(0);
   });
 });

@@ -5,11 +5,13 @@ import { getConfig } from "./config";
 import { logger } from "./logger";
 import { interpolateSize } from "./quality-definitions";
 import { CFIDToConfigGroup, ConfigarrCF, QualityDefintionsRadarr, QualityDefintionsSonarr } from "./types/common.types";
-import { ConfigCustomFormat, ConfigQualityProfile, ConfigQualityProfileItem } from "./types/config.types";
+import { ConfigCustomFormat, ConfigQualityProfile, ConfigQualityProfileItem, InputConfigCustomFormatGroup } from "./types/config.types";
 import {
   TrashArrSupported,
   TrashCache,
   TrashCF,
+  TrashCFGroupMapping,
+  TrashCustomFormatGroups,
   TrashQP,
   TrashQualityDefintion,
   TrashQualityDefintionQuality,
@@ -29,6 +31,9 @@ const createCache = async () => {
   const radarrCF = await loadTrashCFs("RADARR");
   const sonarrCF = await loadTrashCFs("SONARR");
 
+  const radarrCFGroups = await loadTrashCustomFormatGroups("RADARR");
+  const sonarrCFGroups = await loadTrashCustomFormatGroups("SONARR");
+
   const radarrNaming = await loadNamingFromTrashRadarr();
   const sonarrNaming = await loadNamingFromTrashSonarr();
 
@@ -43,6 +48,7 @@ const createCache = async () => {
     SONARR: {
       qualityProfiles: sonarrQP,
       customFormats: sonarrCF,
+      customFormatsGroups: sonarrCFGroups,
       qualityDefinition: {
         anime: sonarrQDAnime,
         series: sonarrQDSeries,
@@ -52,6 +58,7 @@ const createCache = async () => {
     RADARR: {
       qualityProfiles: radarrQP,
       customFormats: radarrCF,
+      customFormatsGroups: radarrCFGroups,
       qualityDefinition: {
         movie: radarrQDMovie,
       },
@@ -115,6 +122,42 @@ export const loadTrashCFs = async (arrType: TrashArrSupported): Promise<CFIDToCo
   logger.debug(`(${arrType}) Trash CFs: ${carrIdToObject.size}`);
 
   return carrIdToObject;
+};
+
+export const loadTrashCustomFormatGroups = async (arrType: TrashArrSupported): Promise<TrashCFGroupMapping> => {
+  if (arrType !== "RADARR" && arrType !== "SONARR") {
+    logger.debug(`Unsupported arrType: ${arrType}. Skipping TrashCustomFormatGroups.`);
+
+    return new Map();
+  }
+
+  if (cacheReady) {
+    return cache[arrType].customFormatsGroups;
+  }
+
+  const cfGroupMapping: TrashCFGroupMapping = new Map();
+
+  let pathForFiles: string;
+
+  if (arrType === "RADARR") {
+    pathForFiles = trashRepoPaths.radarrCFGroups;
+  } else {
+    pathForFiles = trashRepoPaths.sonarrCFGroups;
+  }
+
+  const files = fs.readdirSync(pathForFiles).filter((fn) => fn.endsWith("json"));
+
+  for (const file of files) {
+    const name = `${pathForFiles}/${file}`;
+
+    const cfGroup = loadJsonFile<TrashCustomFormatGroups>(path.resolve(name));
+
+    cfGroupMapping.set(cfGroup.trash_id, cfGroup);
+  }
+
+  logger.debug(`(${arrType}) Trash CustomFormatGroups: ${cfGroupMapping.size}`);
+
+  return cfGroupMapping;
 };
 
 export const loadQualityDefinitionFromTrash = async (
@@ -295,4 +338,21 @@ export const transformTrashQDs = (data: TrashQualityDefintion, ratio: number | u
   });
 
   return transformQualities;
+};
+
+export const transformTrashCFGroups = (trashCFGroupMapping: TrashCFGroupMapping, groups: InputConfigCustomFormatGroup[]) => {
+  return groups.reduce<ConfigCustomFormat[]>((p, c) => {
+    c.trash_guide?.forEach(({ id: trashId, include_unrequired }) => {
+      const mapping = trashCFGroupMapping.get(trashId);
+
+      if (mapping == null) {
+        logger.warn(`Trash CustomFormat Group: ${trashId} is unknown.`);
+      } else {
+        const groupCfs = mapping.custom_formats.filter((e) => e.required || include_unrequired === true).map((e) => e.trash_id);
+
+        p.push({ trash_ids: groupCfs, assign_scores_to: c.assign_scores_to?.map((v) => ({ name: v.name })) || [] });
+      }
+    });
+    return p;
+  }, []);
 };

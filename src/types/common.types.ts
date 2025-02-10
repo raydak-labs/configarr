@@ -68,6 +68,7 @@ export type MappedTemplates = Partial<
     InputConfigArrInstance,
     | "quality_definition"
     | "custom_formats"
+    | "custom_format_groups"
     | "include"
     | "quality_profiles"
     | "customFormatDefinitions"

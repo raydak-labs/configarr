@@ -145,6 +145,7 @@ describe("mergeConfigsAndTemplates", () => {
     vi.spyOn(reclarrImporter, "loadRecyclarrTemplates").mockReturnValue(recyclarrTemplates);
     vi.spyOn(localImporter, "loadLocalRecyclarrTemplate").mockReturnValue(localTemplates);
     vi.spyOn(trashGuide, "loadQPFromTrash").mockReturnValue(Promise.resolve(trashTemplates));
+    vi.spyOn(trashGuide, "loadTrashCustomFormatGroups").mockReturnValue(Promise.resolve(new Map()));
 
     const inputConfig: InputConfigArrInstance = {
       include: [
@@ -185,6 +186,7 @@ describe("mergeConfigsAndTemplates", () => {
     vi.spyOn(reclarrImporter, "loadRecyclarrTemplates").mockReturnValue(recyclarrTemplates);
     vi.spyOn(localImporter, "loadLocalRecyclarrTemplate").mockReturnValue(localTemplates);
     vi.spyOn(trashGuide, "loadQPFromTrash").mockReturnValue(Promise.resolve(trashTemplates));
+    vi.spyOn(trashGuide, "loadTrashCustomFormatGroups").mockReturnValue(Promise.resolve(new Map()));
 
     const inputConfig: InputConfigArrInstance = {
       include: [
@@ -227,6 +229,7 @@ describe("mergeConfigsAndTemplates", () => {
     vi.spyOn(reclarrImporter, "loadRecyclarrTemplates").mockReturnValue(recyclarrTemplates);
     vi.spyOn(localImporter, "loadLocalRecyclarrTemplate").mockReturnValue(new Map());
     vi.spyOn(trashGuide, "loadQPFromTrash").mockReturnValue(Promise.resolve(new Map()));
+    vi.spyOn(trashGuide, "loadTrashCustomFormatGroups").mockReturnValue(Promise.resolve(new Map()));
 
     const inputConfig: InputConfigArrInstance = {
       include: [{ template: "template1", source: "RECYCLARR" }],
@@ -273,6 +276,7 @@ describe("mergeConfigsAndTemplates", () => {
     vi.spyOn(reclarrImporter, "loadRecyclarrTemplates").mockReturnValue(recyclarrTemplates);
     vi.spyOn(localImporter, "loadLocalRecyclarrTemplate").mockReturnValue(new Map());
     vi.spyOn(trashGuide, "loadQPFromTrash").mockReturnValue(Promise.resolve(new Map()));
+    vi.spyOn(trashGuide, "loadTrashCustomFormatGroups").mockReturnValue(Promise.resolve(new Map()));
 
     const inputConfig: InputConfigArrInstance = {
       include: [{ template: "template1", source: "RECYCLARR" }],

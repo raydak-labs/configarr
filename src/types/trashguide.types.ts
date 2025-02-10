@@ -97,6 +97,7 @@ export type TrashCache = {
   SONARR: {
     qualityProfiles: Map<string, TrashQP>;
     customFormats: CFIDToConfigGroup;
+    customFormatsGroups: TrashCFGroupMapping;
     qualityDefinition: {
       series: TrashQualityDefintion;
       anime: TrashQualityDefintion;
@@ -106,9 +107,27 @@ export type TrashCache = {
   RADARR: {
     qualityProfiles: Map<string, TrashQP>;
     customFormats: CFIDToConfigGroup;
+    customFormatsGroups: TrashCFGroupMapping;
     qualityDefinition: {
       movie: TrashQualityDefintion;
     };
     naming: TrashRadarrNaming | null;
   };
 };
+
+type TrashCFGItem = {
+  name: string;
+  trash_id: string;
+  required: boolean;
+};
+
+export type TrashCustomFormatGroups = {
+  name: string;
+  trash_id: string;
+  custom_formats: TrashCFGItem[];
+  quality_profiles?: {
+    exclude: Record<string, string>;
+  };
+};
+
+export type TrashCFGroupMapping = Map<string, TrashCustomFormatGroups>;
