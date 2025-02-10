@@ -46,6 +46,12 @@ sonarr:
     # since v1.11.0, optional, for disabling instances
     enabled: false
 
+    # since v1.12.0. Optional
+    # delete_unmanaged_custom_formats:
+    #   enabled: true
+    #   ignore:
+    #     - CustomFormatToKeep
+
     quality_definition:
       type: series
 

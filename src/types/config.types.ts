@@ -46,6 +46,17 @@ export type InputConfigArrInstance = {
    * since v1.11.0
    */
   enabled?: boolean;
+  /**
+   * since v1.12.0
+   * Deletes all CustomFormats which are not defined in any qualityprofile
+   */
+  delete_unmanaged_custom_formats?: {
+    enabled: boolean;
+    /**
+     * Names of custom formats to ignore deleting
+     */
+    ignore?: string[];
+  };
   quality_definition?: {
     type?: string;
     preferred_ratio?: number; // 0.0 - 1.0

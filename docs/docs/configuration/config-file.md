@@ -278,6 +278,29 @@ Notes:
 - clone order will be displayed in `DEBUG` log
 - **experimental**, available since `v1.10.0`
 
+## Cleanup / Deleting CustomFormats {#cleanup-custom-formats}
+
+You can now enable the option to delete all custom formats which are not managed and used in the quality profiles.
+Additionally you can provide exceptions which should be ignored from deletions.
+
+```yml
+# ...
+
+sonarr:
+  instance1:
+    # ...
+
+    # since v1.12.0. Optional
+    delete_unmanaged_custom_formats:
+      enabled: true
+      ignore: # optional
+        - some-cf
+```
+
+Notes:
+
+- **experimental**, available since `v1.12.0`
+
 ## Usage
 
 1. Create both `config.yml` and `secrets.yml` files

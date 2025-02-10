@@ -8,7 +8,7 @@ import { MergedCustomFormatResource } from "./__generated__/mergedTypes";
 import { ServerCache } from "./cache";
 import { configureApi, getUnifiedClient, unsetApi } from "./clients/unified-client";
 import { getConfig, mergeConfigsAndTemplates } from "./config";
-import { calculateCFsToManage, loadCustomFormatDefinitions, loadServerCustomFormats, manageCf } from "./custom-formats";
+import { calculateCFsToManage, deleteCustomFormat, loadCustomFormatDefinitions, loadServerCustomFormats, manageCf } from "./custom-formats";
 import { logHeading, logInstanceHeading, logger } from "./logger";
 import { calculateMediamanagementDiff, calculateNamingDiff } from "./media-management";
 import { calculateQualityDefinitionDiff, loadQualityDefinitionFromServer } from "./quality-definitions";
@@ -28,7 +28,7 @@ const pipeline = async (globalConfig: InputConfigSchema, instanceConfig: InputCo
 
   const serverCache = new ServerCache(serverQD, [], serverCFs, languages);
 
-  logger.info(`Server objects: CustomFormats ${serverCFs.length}}`);
+  logger.info(`Server objects: CustomFormats ${serverCFs.length}`);
 
   const { config } = await mergeConfigsAndTemplates(globalConfig, instanceConfig, arrType);
 
@@ -49,6 +49,36 @@ const pipeline = async (globalConfig: InputConfigSchema, instanceConfig: InputCo
   if (cfUpdateResult.createCFs.length > 0 || cfUpdateResult.updatedCFs.length > 0) {
     // refresh cfs
     serverCache.cf = await loadServerCustomFormats();
+  }
+
+  if (config.delete_unmanaged_custom_formats?.enabled) {
+    const idToCf = mergedCFs.carrIdMapping;
+
+    const mm = Array.from(idsToManage).reduce((p, c) => {
+      const cfName = idToCf.get(c)?.carrConfig.name;
+      if (cfName != null) {
+        p.set(cfName, true);
+      }
+      return p;
+    }, new Map<string, boolean>());
+
+    config.delete_unmanaged_custom_formats.ignore?.forEach((e) => {
+      mm.set(e, true);
+    });
+
+    const cfsToDelete = serverCache.cf.filter((e) => (e.name && mm.get(e.name)) !== true);
+
+    if (cfsToDelete.length > 0) {
+      logger.info(`Deleting ${cfsToDelete.length} CustomFormats ...`);
+      logger.debug(
+        cfsToDelete.map((e) => e.name),
+        `This CustomFormats will be deleted:`,
+      );
+
+      for (const element of cfsToDelete) {
+        await deleteCustomFormat(element);
+      }
+    }
   }
 
   logger.info(`CustomFormats synchronized`);
