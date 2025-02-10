@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.12.0](https://github.com/raydak-labs/configarr/compare/v1.11.0...v1.12.0) (2025-02-10)
+
+### Features
+
+- add support for cleaning up custom formats ([7a28d54](https://github.com/raydak-labs/configarr/commit/7a28d54f678d9231642c02d12c0df58ee97786dd)), closes [#191](https://github.com/raydak-labs/configarr/issues/191)
+- add support for trash custom format groups ([c307377](https://github.com/raydak-labs/configarr/commit/c30737781a3ce47ddd6dafcc978fddcb33137d41)), closes [#185](https://github.com/raydak-labs/configarr/issues/185)
+
 ## [1.11.0](https://github.com/raydak-labs/configarr/compare/v1.10.3...v1.11.0) (2025-02-05)
 
 ### Features
