@@ -1,11 +1,12 @@
 # https://github.com/nodejs/docker-node/blob/main/docs/BestPractices.md
 # TODO because multiarch build has problems with QEMU and Node we cannot use alpine here: https://github.com/nodejs/docker-node/issues/1798
-FROM node:22.13.1-slim AS base
+FROM node:22.14.0-slim AS base
 WORKDIR /app
 
 ENV PNPM_HOME="/opt/pnpm"
 ENV COREPACK_HOME="/opt/corepack"
 ENV PATH="$PNPM_HOME:$PATH"
+ENV CI=true
 
 RUN apt-get update && apt-get install -y \
     git \
@@ -15,8 +16,8 @@ COPY package.json pnpm-lock.yaml ./
 
 # Do it here to add the packageManager field to the package.json
 RUN corepack enable \
-    && corepack prepare pnpm@10.0.0 --activate \
-    && corepack use pnpm@10.0.0
+    && corepack prepare pnpm@10 --activate \
+    && corepack use pnpm@10
 
 RUN pnpm config set store-dir ~/.pnpm-store
 
@@ -34,7 +35,7 @@ FROM base AS dev
 CMD [ "pnpm", "start" ]
 
 # https://github.com/evanw/esbuild/issues/1921
-FROM node:22.13.1-alpine AS prod
+FROM node:22.14.0-alpine AS prod
 WORKDIR /app
 
 RUN apk add --no-cache libstdc++ dumb-init git
