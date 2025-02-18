@@ -66,7 +66,7 @@ export const manageCf = async (
       const comparison = compareCustomFormats(existingCf, tr.requestConfig);
 
       if (!comparison.equal) {
-        logger.info(`Found mismatch for ${tr.requestConfig.name}: ${comparison.changes}`);
+        logger.debug(`Found mismatch for ${tr.requestConfig.name}: ${comparison.changes}`);
 
         try {
           if (getEnvs().DRY_RUN) {

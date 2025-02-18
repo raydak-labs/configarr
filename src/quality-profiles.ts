@@ -380,14 +380,14 @@ export const calculateQualityProfilesDiff = async (
 
     // TODO do we want to enforce the whole structure or only match those which are enabled by us?
     if (!doAllQualitiesExist(serverQualitiesMapped, value.qualities)) {
-      logger.info(`QualityProfile qualities mismatch will update whole array`);
+      logger.debug(`QualityProfile qualities mismatch will update whole array`);
       diffExist = true;
 
       changeList.push(`QualityProfile qualities mismatch will update whole array`);
       updatedServerObject.items = mappedServerQD;
     } else {
       if (!isOrderOfQualitiesEqual(value.qualities, serverQualitiesMapped.toReversed())) {
-        logger.info(`QualityProfile quality order mismatch.`);
+        logger.debug(`QualityProfile quality order mismatch.`);
         diffExist = true;
 
         changeList.push(`QualityProfile quality order does not match`);
