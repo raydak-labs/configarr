@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.12.1](https://github.com/raydak-labs/configarr/compare/v1.12.0...v1.12.1) (2025-02-19)
+
+### (internal) Refactorings
+
+- **deps:** update node and pnpm ([8574d3b](https://github.com/raydak-labs/configarr/commit/8574d3b4fb380d3fbbad7bf31a0f90809f0534f6))
+- improve logs ([d611c0e](https://github.com/raydak-labs/configarr/commit/d611c0e40d8166b188904f34cb19c7e1f8831860)), closes [#197](https://github.com/raydak-labs/configarr/issues/197)
+
 ## [1.12.0](https://github.com/raydak-labs/configarr/compare/v1.11.0...v1.12.0) (2025-02-10)
 
 ### Features
