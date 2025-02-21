@@ -27,7 +27,8 @@ Configarr supports two types of templates:
 
 1. **Recyclarr Templates**: Used to define reusable configuration blocks
 
-   - Documentation: [Recyclarr Templates Wiki](https://github.com/recyclarr/recyclarr/wiki/Templates)
+   - In Recyclarr also named: `Pre-Built Configuration Files`
+   - Documentation: [Recyclarr Templates Wiki](https://recyclarr.dev/wiki/guide-configs/)
    - Location: Place template files in the directory specified by `localConfigTemplatesPath`
 
 2. **TRaSH-Guides Templates**: Standard templates from TRaSH-Guides
