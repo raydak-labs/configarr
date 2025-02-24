@@ -77,9 +77,23 @@ Ofelia should keep running and restarting the configarr in your defined interval
 
 ## Synology NAS {#synology}
 
-:::tip
-WIP!
-Contributions welcome!
-:::
+For scheduled runs on Synology you can use the [Task Scheduler](https://kb.synology.com/en-au/DSM/help/DSM/AdminCenter/system_taskscheduler?version=7) in order to run configarr in a cron way.
+To configure a scheduled task in DSM 7.2 you go to Control Panel - Services - Task Scheduler. From there you can create a new Scheduled Task (User-defined script).
+As Synology requires root permission to run docker containers, "root" should be chosen as the user. Then within the Schedule tab you can choose your preferred frequency to run configarr.
+For the actual user-defined script you just input the docker run command you also use in an interactive terminal, but be sure to NOT include `sudo` in your command (as your already run the command with root permissions). Like so:
+```
+docker run -d --rm --name=configarr -e TZ=[YOUR-TIMEZONE] -v /[SYNOLOGY-VOLUME]/[SYNOLOGY-SHARED-FOLDER-OF-YOUR-DOCKER-CONTAINERS]/[CONFIGARR-SUBFOLDER]:/app/config ghcr.io/raydak-labs/configarr:[REQUIRED-VERSION]
+```
 
-- For scheduled runs you can use [scheduled tasks](https://kb.synology.com/en-au/DSM/help/DSM/AdminCenter/system_taskscheduler?version=7) in order to run configarr in a cron way.
+For example:
+```
+docker run -d --rm --name=configarr -e TZ=Europe/Amsterdam -v /volume1/docker/configarr:/app/config ghcr.io/raydak-labs/configarr:1.12.0
+```
+
+Alternatively if you want to be able to view the logs within Synology's Container Manager after configarr has finished running, then you could remove the `--rm` flag and start the user-defined script with `docker rm configarr` so that the container is not immediately removed after it has finished running. For example:
+```
+docker rm configarr
+docker run -d --name=configarr -e TZ=Europe/Amsterdam -v /volume1/docker/configarr:/app/config ghcr.io/raydak-labs/configarr:1.12.0
+```
+
+After clicking "OK" it will ask for your password, given that you created a scheduled script with root permissions. After you're done you can perform a run manually to check if everything works by selecting the task and press "Run".
