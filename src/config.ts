@@ -24,7 +24,6 @@ import {
   ConfigQualityProfile,
   ConfigSchema,
   InputConfigArrInstance,
-  InputConfigCustomFormat,
   InputConfigCustomFormatGroup,
   InputConfigIncludeItem,
   InputConfigInstance,
@@ -33,7 +32,7 @@ import {
   MergedConfigInstance,
 } from "./types/config.types";
 import { TrashCFGroupMapping, TrashQP } from "./types/trashguide.types";
-import { cloneWithJSON, compareCustomFormats } from "./util";
+import { cloneWithJSON } from "./util";
 
 let config: ConfigSchema;
 let secrets: any;
@@ -182,6 +181,180 @@ export const validateConfig = (input: InputConfigInstance): MergedConfigInstance
   };
 };
 
+const includeRecyclarrTemplate = (
+  template: MappedTemplates,
+  {
+    mergedTemplates,
+    customFormatGroups,
+  }: {
+    mergedTemplates: MappedMergedTemplates;
+    customFormatGroups: InputConfigCustomFormatGroup[];
+  },
+) => {
+  if (template.custom_formats) {
+    mergedTemplates.custom_formats?.push(...template.custom_formats);
+  }
+
+  if (template.custom_format_groups) {
+    customFormatGroups.push(...template.custom_format_groups);
+  }
+
+  if (template.quality_definition) {
+    mergedTemplates.quality_definition = {
+      ...mergedTemplates.quality_definition,
+      ...template.quality_definition,
+      qualities: [...(mergedTemplates.quality_definition?.qualities || []), ...(template.quality_definition.qualities || [])],
+    };
+  }
+
+  if (template.quality_profiles) {
+    for (const qp of template.quality_profiles) {
+      mergedTemplates.quality_profiles.push(qp);
+    }
+  }
+
+  if (template.media_management) {
+    mergedTemplates.media_management = { ...mergedTemplates.media_management, ...template.media_management };
+  }
+
+  if (template.media_naming) {
+    mergedTemplates.media_naming = { ...mergedTemplates.media_naming, ...template.media_naming };
+  }
+
+  if (template.media_naming_api) {
+    mergedTemplates.media_naming_api = { ...mergedTemplates.media_naming_api, ...template.media_naming_api };
+  }
+
+  if (template.customFormatDefinitions) {
+    if (Array.isArray(template.customFormatDefinitions)) {
+      mergedTemplates.customFormatDefinitions = [...(mergedTemplates.customFormatDefinitions || []), ...template.customFormatDefinitions];
+    } else {
+      logger.warn(`CustomFormatDefinitions in template must be an array. Ignoring.`);
+    }
+  }
+
+  // TODO Ignore recursive include for now
+  if (template.include) {
+    logger.warn(`Recursive includes not supported at the moment. Ignoring.`);
+  }
+};
+
+// TODO: local TRaSH-Guides QP templates do not work yet
+const includeTrashTemplate = (
+  template: TrashQP,
+  {
+    mergedTemplates,
+  }: {
+    mergedTemplates: MappedMergedTemplates;
+    customFormatGroups: InputConfigCustomFormatGroup[];
+  },
+) => {
+  mergedTemplates.quality_profiles.push(transformTrashQPToTemplate(template));
+  mergedTemplates.custom_formats.push(transformTrashQPCFs(template));
+};
+
+const includeTemplateOrderDefault = (
+  include: InputConfigIncludeItem[],
+  {
+    recyclarr,
+    local,
+    trash,
+  }: { recyclarr: Map<string, MappedTemplates>; local: Map<string, MappedTemplates>; trash: Map<string, TrashQP> },
+  { customFormatGroups, mergedTemplates }: { mergedTemplates: MappedMergedTemplates; customFormatGroups: InputConfigCustomFormatGroup[] },
+) => {
+  const mappedIncludes = include.reduce<{
+    local: InputConfigIncludeItem[];
+    recyclarr: InputConfigIncludeItem[];
+    trash: InputConfigIncludeItem[];
+  }>(
+    (previous, current) => {
+      switch (current.source) {
+        case "TRASH":
+          if (trash.has(current.template)) {
+            previous.trash.push(current);
+          } else {
+            logger.warn(`Included 'TRASH' template: ${current.template} not found.`);
+          }
+          break;
+        case "RECYCLARR":
+        // HINT: hard separation would break current default functionality.
+        // if (recyclarr.has(current.template)) {
+        //   previous.recyclarr.push(current);
+        // } else {
+        //   logger.warn(`Included 'RECYCLARR' template: ${current.template} not found.`);
+        // }
+        // break;
+        case undefined:
+          let recyclarrFound = false;
+          let localFound = false;
+
+          if (recyclarr.has(current.template)) {
+            recyclarrFound = true;
+          }
+
+          if (local.has(current.template)) {
+            localFound = true;
+          }
+
+          if (recyclarrFound === true && localFound === true) {
+            logger.warn(`Found matching 'RECYCLARR' and 'LOCAL' template for '${current.template}. Using 'LOCAL'.`);
+            previous.local.push(current);
+          } else if (recyclarrFound === true) {
+            previous.recyclarr.push(current);
+          } else if (localFound === true) {
+            previous.local.push(current);
+          } else {
+            logger.warn(`No matching 'RECYCLARR' or 'LOCAL' template for '${current.template}.`);
+          }
+
+          break;
+        default:
+          logger.warn(`Unknown source type for template requested: '${current.source}'. Ignoring.`);
+      }
+
+      return previous;
+    },
+    { recyclarr: [], trash: [], local: [] },
+  );
+
+  logger.info(
+    `Found ${include.length} templates to include. Mapped to [recyclarr]=${mappedIncludes.recyclarr.length}, [local]=${mappedIncludes.local.length}, [trash]=${mappedIncludes.trash.length} ...`,
+  );
+
+  mappedIncludes.trash.forEach((e) => {
+    const resolvedTemplate = trash.get(e.template);
+
+    if (resolvedTemplate == null) {
+      logger.warn(`Unknown 'trash' template requested: '${e.template}'`);
+      return;
+    }
+
+    includeTrashTemplate(resolvedTemplate, { mergedTemplates, customFormatGroups });
+  });
+
+  mappedIncludes.recyclarr.forEach((e) => {
+    const resolvedTemplate = recyclarr.get(e.template);
+
+    if (resolvedTemplate == null) {
+      logger.warn(`Unknown 'recyclarr' template requested: '${e.template}'`);
+      return;
+    }
+
+    includeRecyclarrTemplate(resolvedTemplate, { mergedTemplates, customFormatGroups });
+  });
+
+  mappedIncludes.local.forEach((e) => {
+    const resolvedTemplate = local.get(e.template);
+
+    if (resolvedTemplate == null) {
+      logger.warn(`Unknown 'local' template requested: '${e.template}'`);
+      return;
+    }
+
+    includeRecyclarrTemplate(resolvedTemplate, { mergedTemplates, customFormatGroups });
+  });
+};
+
 /**
  * Load data from trash, recyclarr, custom configs and merge.
  * Afterwards do sanitize and check against required configuration.
@@ -216,100 +389,18 @@ export const mergeConfigsAndTemplates = async (
   };
 
   if (instanceConfig.include) {
-    const mappedIncludes = instanceConfig.include.reduce<{ recyclarr: InputConfigIncludeItem[]; trash: InputConfigIncludeItem[] }>(
-      (previous, current) => {
-        switch (current.source) {
-          case "TRASH":
-            previous.trash.push(current);
-            break;
-          case "RECYCLARR":
-          case undefined:
-            previous.recyclarr.push(current);
-            break;
-          default:
-            logger.warn(`Unknown source type for template requested: '${current.source}'. Ignoring.`);
-        }
-
-        return previous;
+    includeTemplateOrderDefault(
+      instanceConfig.include,
+      {
+        recyclarr: recyclarrTemplateMap,
+        local: localTemplateMap,
+        trash: trashTemplates,
       },
-      { recyclarr: [], trash: [] },
+      {
+        mergedTemplates,
+        customFormatGroups,
+      },
     );
-
-    logger.info(
-      `Found ${instanceConfig.include.length} templates to include. Mapped to [recyclarr]=${mappedIncludes.recyclarr.length}, [trash]=${mappedIncludes.trash.length} ...`,
-    );
-
-    mappedIncludes.recyclarr.forEach((e) => {
-      const template = recyclarrTemplateMap.get(e.template) ?? localTemplateMap.get(e.template);
-
-      if (!template) {
-        logger.warn(`Unknown recyclarr template requested: '${e.template}'`);
-        return;
-      }
-
-      if (template.custom_formats) {
-        mergedTemplates.custom_formats?.push(...template.custom_formats);
-      }
-
-      if (template.custom_format_groups) {
-        customFormatGroups.push(...template.custom_format_groups);
-      }
-
-      if (template.quality_definition) {
-        mergedTemplates.quality_definition = {
-          ...mergedTemplates.quality_definition,
-          ...template.quality_definition,
-          qualities: [...(mergedTemplates.quality_definition?.qualities || []), ...(template.quality_definition.qualities || [])],
-        };
-      }
-
-      if (template.quality_profiles) {
-        for (const qp of template.quality_profiles) {
-          mergedTemplates.quality_profiles.push(qp);
-        }
-      }
-
-      if (template.media_management) {
-        mergedTemplates.media_management = { ...mergedTemplates.media_management, ...template.media_management };
-      }
-
-      if (template.media_naming) {
-        mergedTemplates.media_naming = { ...mergedTemplates.media_naming, ...template.media_naming };
-      }
-
-      if (template.media_naming_api) {
-        mergedTemplates.media_naming_api = { ...mergedTemplates.media_naming_api, ...template.media_naming_api };
-      }
-
-      if (template.customFormatDefinitions) {
-        if (Array.isArray(template.customFormatDefinitions)) {
-          mergedTemplates.customFormatDefinitions = [
-            ...(mergedTemplates.customFormatDefinitions || []),
-            ...template.customFormatDefinitions,
-          ];
-        } else {
-          logger.warn(`CustomFormatDefinitions in template must be an array. Ignoring.`);
-        }
-      }
-
-      // TODO Ignore recursive include for now
-      if (template.include) {
-        logger.warn(`Recursive includes not supported at the moment. Ignoring.`);
-      }
-    });
-
-    // TODO: local TRaSH-Guides QP templates do not work yet
-    mappedIncludes.trash.forEach((e) => {
-      const template = trashTemplates.get(e.template);
-
-      if (!template) {
-        logger.warn(`Unknown trash template requested: '${e.template}'`);
-        return;
-      }
-
-      mergedTemplates.quality_profiles.push(transformTrashQPToTemplate(template));
-      mergedTemplates.custom_formats.push(transformTrashQPCFs(template));
-    });
   }
 
   // Config values overwrite template values

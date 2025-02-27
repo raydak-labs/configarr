@@ -29,9 +29,10 @@ The general concept is: more precise or better closer to the main `config` the l
 At the moment we have the following order:
 
 - TRaSH
+- Recyclarr templates
 - Local Files
-- Recyclarr Templates / Templates
-- Config file
+- Config file (global level)
+- Config file (instance level)
 
 And this applies for all kind of things: CustomFormats how they are loaded and probably overwritten, QualityProfiles, CustomFormat Mappings to QualityProfiles.
 If we find some duplicates we will print a log message that something is overwritten or will be ignored.
