@@ -322,10 +322,9 @@ sonarr:
     # (experimental) since v1.12.0
     # allows using the cf-groups from TRaSH-Guide.
     custom_format_groups:
-      - id: c4735e1d02e8738044ad4ad1bf58670c # Multiple CFs, default only required=true are loaded
-        #include_unrequired: true # if you want to load all set this to true
       - trash_ids:
-          - c4735e1d02e8738044ad4ad1bf58670c # Multiple CFs, only where required=true are loaded
+          - id: c4735e1d02e8738044ad4ad1bf58670c # Multiple CFs, only where required=true are loaded
+            #include_unrequired: true # if you want to load all set this to true
         assign_scores_to:
           - name: MyProfile
 ```
