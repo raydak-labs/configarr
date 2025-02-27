@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.12.2](https://github.com/raydak-labs/configarr/compare/v1.12.1...v1.12.2) (2025-02-27)
+
+### Bug Fixes
+
+- correctly merge templates and configs ([9235c47](https://github.com/raydak-labs/configarr/commit/9235c47923e3a81da081e73596d018b7c987e9d0))
+
+### (internal) Refactorings
+
+- improve logging for customformatgroups ([f8560df](https://github.com/raydak-labs/configarr/commit/f8560df015b3ee60393461fab3ebd5cacbcff124))
+
 ## [1.12.1](https://github.com/raydak-labs/configarr/compare/v1.12.0...v1.12.1) (2025-02-19)
 
 ### (internal) Refactorings
