@@ -100,4 +100,3 @@ docker run -d --name=configarr -e TZ=Europe/Amsterdam -v /volume1/docker/configa
 ```
 
 After clicking "OK" it will ask for your password, given that you created a scheduled script with root permissions. After you're done you can perform a run manually to check if everything works by selecting the task and press "Run".
-
