@@ -84,5 +84,5 @@ export type MappedMergedTemplates = MappedTemplates & Required<Pick<MappedTempla
 const ArrTypeConst = ["RADARR", "SONARR", "WHISPARR", "READARR", "LIDARR"] as const;
 export type ArrType = (typeof ArrTypeConst)[number];
 
-export type QualityDefintionsSonarr = "anime" | "series" | "custom";
-export type QualityDefintionsRadarr = "movie" | "sqp-streaming" | "sqp-uhd" | "custom";
+export type QualityDefinitionsSonarr = "anime" | "series" | "custom";
+export type QualityDefinitionsRadarr = "movie" | "sqp-streaming" | "sqp-uhd" | "custom";

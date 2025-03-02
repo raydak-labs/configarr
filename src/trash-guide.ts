@@ -4,7 +4,7 @@ import { MergedCustomFormatResource } from "./__generated__/mergedTypes";
 import { getConfig } from "./config";
 import { logger } from "./logger";
 import { interpolateSize } from "./quality-definitions";
-import { CFIDToConfigGroup, ConfigarrCF, QualityDefintionsRadarr, QualityDefintionsSonarr } from "./types/common.types";
+import { CFIDToConfigGroup, ConfigarrCF, QualityDefinitionsRadarr, QualityDefinitionsSonarr } from "./types/common.types";
 import { ConfigCustomFormat, ConfigQualityProfile, ConfigQualityProfileItem, InputConfigCustomFormatGroup } from "./types/config.types";
 import {
   TrashArrSupported,
@@ -13,8 +13,8 @@ import {
   TrashCFGroupMapping,
   TrashCustomFormatGroups,
   TrashQP,
-  TrashQualityDefintion,
-  TrashQualityDefintionQuality,
+  TrashQualityDefinition,
+  TrashQualityDefinitionQuality,
   TrashRadarrNaming,
   TrashSonarrNaming,
 } from "./types/trashguide.types";
@@ -161,9 +161,9 @@ export const loadTrashCustomFormatGroups = async (arrType: TrashArrSupported): P
 };
 
 export const loadQualityDefinitionFromTrash = async (
-  qdType: QualityDefintionsSonarr | QualityDefintionsRadarr,
+  qdType: QualityDefinitionsSonarr | QualityDefinitionsRadarr,
   arrType: TrashArrSupported,
-): Promise<TrashQualityDefintion> => {
+): Promise<TrashQualityDefinition> => {
   let trashPath = arrType === "RADARR" ? trashRepoPaths.radarrQualitySize : trashRepoPaths.sonarrQualitySize;
 
   if (cacheReady) {
@@ -183,7 +183,7 @@ export const loadQualityDefinitionFromTrash = async (
     case "custom":
       throw new Error(`(${arrType}) Not implemented yet`);
     default:
-      throw new Error(`(${arrType}) Unknown QualityDefintion type: ${qdType}`);
+      throw new Error(`(${arrType}) Unknown QualityDefinition type: ${qdType}`);
   }
 };
 
@@ -323,7 +323,7 @@ export const transformTrashQPCFs = (data: TrashQP): ConfigCustomFormat => {
   return { assign_scores_to: [{ name: data.name }], trash_ids: Object.values(data.formatItems) };
 };
 
-export const transformTrashQDs = (data: TrashQualityDefintion, ratio: number | undefined): TrashQualityDefintionQuality[] => {
+export const transformTrashQDs = (data: TrashQualityDefinition, ratio: number | undefined): TrashQualityDefinitionQuality[] => {
   if (ratio == null || ratio < 0 || ratio > 1) {
     return data.qualities;
   }

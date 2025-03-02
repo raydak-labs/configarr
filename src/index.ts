@@ -17,7 +17,7 @@ import { cloneRecyclarrTemplateRepo } from "./recyclarr-importer";
 import { cloneTrashRepo, loadQualityDefinitionFromTrash, transformTrashQDs } from "./trash-guide";
 import { ArrType } from "./types/common.types";
 import { InputConfigArrInstance, InputConfigSchema } from "./types/config.types";
-import { TrashQualityDefintion, TrashQualityDefintionQuality } from "./types/trashguide.types";
+import { TrashQualityDefinition, TrashQualityDefinitionQuality } from "./types/trashguide.types";
 
 const pipeline = async (globalConfig: InputConfigSchema, instanceConfig: InputConfigArrInstance, arrType: ArrType) => {
   const api = getUnifiedClient();
@@ -87,11 +87,11 @@ const pipeline = async (globalConfig: InputConfigSchema, instanceConfig: InputCo
 
   if (config.quality_definition != null) {
     const trashQDFileName = config.quality_definition.type;
-    const mergedQDs: TrashQualityDefintionQuality[] = [];
+    const mergedQDs: TrashQualityDefinitionQuality[] = [];
 
     // TODO: maybe add id reference as usage
     if (trashQDFileName != null) {
-      let qdTrash: TrashQualityDefintion;
+      let qdTrash: TrashQualityDefinition;
       // TODO: this could be improved
       switch (qualityDefinition) {
         case "anime":
@@ -104,7 +104,7 @@ const pipeline = async (globalConfig: InputConfigSchema, instanceConfig: InputCo
           qdTrash = await loadQualityDefinitionFromTrash("movie", "RADARR");
           break;
         default:
-          throw new Error(`Unsupported quality defintion '${qualityDefinition}'`);
+          throw new Error(`Unsupported quality definition '${qualityDefinition}'`);
       }
 
       const transformed = transformTrashQDs(qdTrash, config.quality_definition?.preferred_ratio);
