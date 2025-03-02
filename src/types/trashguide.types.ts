@@ -1,6 +1,6 @@
 import { ArrType, CFIDToConfigGroup, ImportCF } from "./common.types";
 
-export type TrashQualityDefintionQuality = {
+export type TrashQualityDefinitionQuality = {
   quality: string;
   title?: string;
   min: number;
@@ -8,10 +8,10 @@ export type TrashQualityDefintionQuality = {
   max: number;
 };
 
-export type TrashQualityDefintion = {
+export type TrashQualityDefinition = {
   trash_id: string;
   type: string;
-  qualities: TrashQualityDefintionQuality[];
+  qualities: TrashQualityDefinitionQuality[];
 };
 
 export type TrashScores = {
@@ -99,8 +99,8 @@ export type TrashCache = {
     customFormats: CFIDToConfigGroup;
     customFormatsGroups: TrashCFGroupMapping;
     qualityDefinition: {
-      series: TrashQualityDefintion;
-      anime: TrashQualityDefintion;
+      series: TrashQualityDefinition;
+      anime: TrashQualityDefinition;
     };
     naming: TrashSonarrNaming | null;
   };
@@ -109,7 +109,7 @@ export type TrashCache = {
     customFormats: CFIDToConfigGroup;
     customFormatsGroups: TrashCFGroupMapping;
     qualityDefinition: {
-      movie: TrashQualityDefintion;
+      movie: TrashQualityDefinition;
     };
     naming: TrashRadarrNaming | null;
   };

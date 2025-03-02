@@ -3,7 +3,7 @@ import { MergedQualityDefinitionResource } from "./__generated__/mergedTypes";
 import { getUnifiedClient } from "./clients/unified-client";
 import { getEnvs } from "./env";
 import { logger } from "./logger";
-import { TrashQualityDefintionQuality } from "./types/trashguide.types";
+import { TrashQualityDefinitionQuality } from "./types/trashguide.types";
 import { cloneWithJSON, loadJsonFile, roundToDecimal } from "./util";
 
 export const loadQualityDefinitionFromServer = async (): Promise<MergedQualityDefinitionResource[]> => {
@@ -16,7 +16,7 @@ export const loadQualityDefinitionFromServer = async (): Promise<MergedQualityDe
 export const calculateQualityDefinitionDiff = (
   serverQDs: MergedQualityDefinitionResource[],
   // TODO: this does not has to include all QDs right?
-  qualityDefinitions: TrashQualityDefintionQuality[],
+  qualityDefinitions: TrashQualityDefinitionQuality[],
   // TODO add config defined qualities
 ) => {
   const serverMap = serverQDs.reduce((p, c) => {
@@ -30,7 +30,7 @@ export const calculateQualityDefinitionDiff = (
   const missingServerQualities = new Map(serverMap);
 
   const mergedQualities = Object.values(
-    qualityDefinitions.toReversed().reduce<{ [k: string]: TrashQualityDefintionQuality }>((p, c) => {
+    qualityDefinitions.toReversed().reduce<{ [k: string]: TrashQualityDefinitionQuality }>((p, c) => {
       if (p[c.quality] != null) {
         logger.debug(`QualityDefinition: Found duplicate for '${c.quality}'.`);
       } else {

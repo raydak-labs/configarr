@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 import { MergedQualityDefinitionResource } from "./__generated__/mergedTypes";
 import { calculateQualityDefinitionDiff, interpolateSize } from "./quality-definitions";
-import { TrashQualityDefintion } from "./types/trashguide.types";
+import { TrashQualityDefinition } from "./types/trashguide.types";
 
 describe("QualityDefinitions", async () => {
   const server: MergedQualityDefinitionResource[] = [
@@ -61,7 +61,7 @@ describe("QualityDefinitions", async () => {
   });
 
   test("calculateQualityDefinitionDiff - diff min size", async ({}) => {
-    const clone: TrashQualityDefintion = JSON.parse(JSON.stringify(client));
+    const clone: TrashQualityDefinition = JSON.parse(JSON.stringify(client));
     clone.qualities[0]!.min = 3;
 
     const result = calculateQualityDefinitionDiff(server, clone.qualities);
@@ -70,7 +70,7 @@ describe("QualityDefinitions", async () => {
   });
 
   test("calculateQualityDefinitionDiff - diff max size", async ({}) => {
-    const clone: TrashQualityDefintion = JSON.parse(JSON.stringify(client));
+    const clone: TrashQualityDefinition = JSON.parse(JSON.stringify(client));
     clone.qualities[0]!.max = 3;
 
     const result = calculateQualityDefinitionDiff(server, clone.qualities);
@@ -79,7 +79,7 @@ describe("QualityDefinitions", async () => {
   });
 
   test("calculateQualityDefinitionDiff - diff preferred size", async ({}) => {
-    const clone: TrashQualityDefintion = JSON.parse(JSON.stringify(client));
+    const clone: TrashQualityDefinition = JSON.parse(JSON.stringify(client));
     clone.qualities[0]!.preferred = 3;
 
     const result = calculateQualityDefinitionDiff(server, clone.qualities);
@@ -88,7 +88,7 @@ describe("QualityDefinitions", async () => {
   });
 
   test("calculateQualityDefinitionDiff - ignore not available qualities on server", async ({}) => {
-    const clone: TrashQualityDefintion = JSON.parse(JSON.stringify(client));
+    const clone: TrashQualityDefinition = JSON.parse(JSON.stringify(client));
     clone.qualities[0]!.quality = "New";
 
     const result = calculateQualityDefinitionDiff(server, clone.qualities);

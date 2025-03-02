@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 import { loadQPFromTrash, transformTrashCFGroups, transformTrashQDs } from "./trash-guide";
-import { TrashCFGroupMapping, TrashQualityDefintion } from "./types/trashguide.types";
-import { InputConfigCustomFormat, InputConfigCustomFormatGroup } from "./types/config.types";
+import { InputConfigCustomFormatGroup } from "./types/config.types";
+import { TrashCFGroupMapping, TrashQualityDefinition } from "./types/trashguide.types";
 
 describe("TrashGuide", async () => {
   test("loadQPFromTrash - normal", async ({}) => {
@@ -24,7 +24,7 @@ describe("TrashGuide", async () => {
       ],
     };
 
-    const clone: TrashQualityDefintion = JSON.parse(JSON.stringify(trashQualityDef));
+    const clone: TrashQualityDefinition = JSON.parse(JSON.stringify(trashQualityDef));
 
     const result = transformTrashQDs(clone, 0.5);
 
@@ -51,7 +51,7 @@ describe("TrashGuide", async () => {
       ],
     };
 
-    const clone: TrashQualityDefintion = JSON.parse(JSON.stringify(trashQualityDef));
+    const clone: TrashQualityDefinition = JSON.parse(JSON.stringify(trashQualityDef));
 
     const resultLow = transformTrashQDs(clone, -0.5);
     expect(resultLow[0]!.preferred).toBe(95);
