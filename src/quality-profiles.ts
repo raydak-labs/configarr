@@ -537,15 +537,15 @@ export const calculateQualityProfilesDiff = async (
 export const filterInvalidQualityProfiles = (profiles: ConfigQualityProfile[]): ConfigQualityProfile[] => {
   return profiles.filter((p) => {
     if (p.name == null) {
-      logger.info(p, `QualityProfile filtered because no name provided`);
+      logger.warn(p, `QualityProfile filtered because no name provided`);
       return false;
     }
     if (p.qualities == null) {
-      logger.info(`QualityProfile: '${p.name}' filtered because no qualities provided`);
+      logger.warn(`QualityProfile: '${p.name}' filtered because no qualities provided`);
       return false;
     }
     if (p.upgrade == null) {
-      logger.info(`QualityProfile: '${p.name}' filtered because no upgrade definition provided`);
+      logger.warn(`QualityProfile: '${p.name}' filtered because no upgrade definition provided`);
       return false;
     }
 
