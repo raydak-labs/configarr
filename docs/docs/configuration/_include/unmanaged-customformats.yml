@@ -1,0 +1,16 @@
+sonarr:
+  instance1:
+    base_url: http://sonarr:8989
+    api_key: !secret SONARR_API_KEY
+
+    # since v1.13.0. You can assign custom formats to quality profiles which are only managed on the server
+    custom_formats:
+      - trash_ids:
+          - 47435ece6b99a0b477caf360e79ba0bb # x265 (HD)
+        assign_scores_to:
+          - name: Any
+
+    # 'Any' already exists on server
+    # quality_profiles:
+    #   - name: Any
+    #     # ...
