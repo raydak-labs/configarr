@@ -527,7 +527,65 @@ export const calculateQualityProfilesDiff = async (
     }
 
     if (changeList.length > 0) {
-      logger.debug(changeList, `ChangeList for QualityProfile`);
+      logger.debug(changeList, `ChangeList for QualityProfile '${value.name}'`);
+    }
+  }
+
+  const serverQpsUnmanaged = getUnmanagedQualityProfiles(serverCache.qp, config.quality_profiles);
+
+  if (serverQpsUnmanaged.length > 0) {
+    logger.debug(
+      `Found existing ${serverQpsUnmanaged.length} QualityProfiles on server which are not managed. Names: '${serverQpsUnmanaged.map((e) => e.name)}'`,
+    );
+  }
+
+  for (const unmanagedServerQp of serverQpsUnmanaged) {
+    // CFs matching. Hint: make sure to execute the method with updated CFs. Otherwise if we create CFs and update existing profiles those could be missing.
+    const serverProfileCFMap = new Map(unmanagedServerQp.formatItems!.map((obj) => [obj.name!, obj]));
+    const scoringForQP = scoring.get(unmanagedServerQp.name!);
+    let scoringDiff = false;
+    const changeList: string[] = [];
+
+    if (scoringForQP != null) {
+      const newCFFormats: MergedProfileFormatItemResource[] = [];
+
+      for (const [scoreKey, scoreValue] of scoringForQP.entries()) {
+        const serverCF = serverProfileCFMap.get(scoreKey);
+        serverProfileCFMap.delete(scoreKey);
+
+        // TODO (1): check where best handled
+        if (scoreValue.score == null) {
+          newCFFormats.push({ ...serverCF });
+        } else {
+          if (serverCF?.score !== scoreValue.score) {
+            scoringDiff = true;
+            changeList.push(`CF diff '${scoreValue.name}': server: '${serverCF?.score}' - expected: '${scoreValue.score}'`);
+            newCFFormats.push({ ...serverCF, score: scoreValue.score });
+          } else {
+            newCFFormats.push({ ...serverCF });
+          }
+        }
+      }
+
+      const missingCfs = Array.from(serverProfileCFMap.values());
+
+      newCFFormats.push(...missingCfs);
+
+      unmanagedServerQp.formatItems = newCFFormats;
+    } else {
+      logger.debug(`No custom format scoring for unmanaged QualityProfile '${unmanagedServerQp.name!}' found`);
+    }
+
+    logger.debug(`Unmanaged QualityProfile (${unmanagedServerQp.name}) - In Sync: ${changeList.length <= 0}, CF Changes: ${scoringDiff}}`);
+
+    if (scoringDiff) {
+      changedQPs.push(unmanagedServerQp);
+    } else {
+      noChangedQPs.push(unmanagedServerQp.name!);
+    }
+
+    if (changeList.length > 0) {
+      logger.debug(changeList, `ChangeList for unmanaged QualityProfile '${unmanagedServerQp.name}'`);
     }
   }
 
@@ -551,4 +609,13 @@ export const filterInvalidQualityProfiles = (profiles: ConfigQualityProfile[]): 
 
     return true;
   });
+};
+
+export const getUnmanagedQualityProfiles = (
+  serverQP: MergedQualityProfileResource[],
+  configQp: ConfigQualityProfile[],
+): MergedQualityProfileResource[] => {
+  const managedProfileNames = new Set(configQp.map((profile) => profile.name));
+
+  return serverQP.filter((profile) => profile.name && !managedProfileNames.has(profile.name));
 };

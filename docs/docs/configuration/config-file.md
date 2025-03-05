@@ -7,6 +7,7 @@ keywords: [configarr configuration, yaml config, secrets management, custom form
 
 import CodeBlock from "@theme/CodeBlock";
 import ConfigFileSample from "!!raw-loader!./\_include/config-file-sample.yml";
+import ExampleUnamanagedCustomFormats from "!!raw-loader!./\_include/unmanaged-customformats.yml";
 
 # Configuration Files
 
@@ -301,6 +302,15 @@ sonarr:
 Notes:
 
 - **experimental**, available since `v1.12.0`
+
+## Custom Formats
+
+- since `v1.13.0` CustomFormats can now also be assigned to Quality Profiles which only exist on the server and are not configured in the config file or included. This means you can only define the custom format mapping and do not have to provide `quality_profiles` if they already exist on the server.
+
+  <details>
+    <summary>CustomFormats with unmanaged QualityProfiles</summary>
+    <CodeBlock language="yml" title="CustomFormats with unmanaged QualityProfiles">{ExampleUnamanagedCustomFormats}</CodeBlock>
+  </details>
 
 ## CustomFormatGroups {#custom-format-groups}
 
