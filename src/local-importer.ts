@@ -17,7 +17,7 @@ export const getLocalTemplatePath = () => {
   const customPath = path.resolve(config.localConfigTemplatesPath);
 
   if (!fs.existsSync(customPath)) {
-    logger.info(`Provided local templates path '${config.localCustomFormatsPath}' does not exist.`);
+    logger.info(`Provided local templates path '${config.localConfigTemplatesPath}' does not exist.`);
     return null;
   }
 
