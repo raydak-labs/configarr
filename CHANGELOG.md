@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.13.0](https://github.com/raydak-labs/configarr/compare/v1.12.2...v1.13.0) (2025-03-05)
+
+### Features
+
+- support mapping custom formats on unmanaged quality profiles ([cd6dea6](https://github.com/raydak-labs/configarr/commit/cd6dea67c5a7835e68b26255a7f451c73d74720e)), closes [#218](https://github.com/raydak-labs/configarr/issues/218)
+
+### Bug Fixes
+
+- **deps:** update dependencies (non-major) ([#208](https://github.com/raydak-labs/configarr/issues/208)) ([dbe40d1](https://github.com/raydak-labs/configarr/commit/dbe40d12dd7fe5a9a07581f5047a7920640cc8f0))
+
+### (internal) Refactorings
+
+- fix incorrect path in log message ([#215](https://github.com/raydak-labs/configarr/issues/215)) ([ebec0a1](https://github.com/raydak-labs/configarr/commit/ebec0a1a88ed19576a24bdedbabc1f48f8bd5249))
+- fix typo (closes [#202](https://github.com/raydak-labs/configarr/issues/202)) ([1bad256](https://github.com/raydak-labs/configarr/commit/1bad256ffe13bb75431d8175094723bc09ef59f5))
+
 ## [1.12.2](https://github.com/raydak-labs/configarr/compare/v1.12.1...v1.12.2) (2025-02-27)
 
 ### Bug Fixes
