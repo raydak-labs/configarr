@@ -32,8 +32,10 @@ RUN pnpm run build
 FROM base AS dev
 # manually mount src etc
 
-CMD [ "pnpm", "start" ]
+ARG CONFIGARR_VERSION=dev
+ENV CONFIGARR_VERSION=${CONFIGARR_VERSION}
 
+CMD [ "pnpm", "start" ]
 # https://github.com/evanw/esbuild/issues/1921
 FROM node:22.14.0-alpine AS prod
 WORKDIR /app
@@ -45,5 +47,7 @@ RUN apk add --no-cache libstdc++ dumb-init git
 
 COPY --from=builder /app/bundle.cjs /app/index.js
 
+ARG CONFIGARR_VERSION=dev
+ENV CONFIGARR_VERSION=${CONFIGARR_VERSION}
 # Run with dumb-init to not start node with PID=1, since Node.js was not designed to run as PID 1
 CMD ["dumb-init", "node", "index.js"]

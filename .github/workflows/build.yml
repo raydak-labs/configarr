@@ -27,6 +27,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Inject enhanced GitHub environment variables
+        uses: rlespinasse/github-slug-action@v5
+
       # https://github.com/docker/setup-qemu-action
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -101,6 +104,8 @@ jobs:
           tags: ${{ steps.meta_pms.outputs.tags }}
           labels: ${{ steps.meta_pms.outputs.labels }}
           target: prod
+          build-args: |
+            CONFIGARR_VERSION=${{ env.GITHUB_REF_SLUG }}
 
       # - name: Docker Hub Description
       #   if: github.event_name != 'pull_request'
