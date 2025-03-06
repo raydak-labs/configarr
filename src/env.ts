@@ -5,6 +5,7 @@ const DEFAULT_ROOT_PATH = path.resolve(process.cwd());
 
 const schema = z.object({
   // NODE_ENV: z.enum(["production", "development", "test"] as const),
+  CONFIGARR_VERSION: z.string().optional(),
   LOG_LEVEL: z
     .enum(["trace", "debug", "info", "warn", "error", "fatal"] as const)
     .optional()

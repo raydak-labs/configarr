@@ -254,6 +254,8 @@ const runArrType = async (
 };
 
 const run = async () => {
+  logger.info(`Configarr Version: ${getEnvs().CONFIGARR_VERSION}`);
+
   if (getEnvs().DRY_RUN) {
     logger.info("DryRun: Running in dry-run mode!");
   }
