@@ -517,7 +517,7 @@ export const mergeConfigsAndTemplates = async (
   if (instanceConfig.cloneQualityProfiles && instanceConfig.cloneQualityProfiles.length > 0) {
     const cloneOrder: string[] = [];
 
-    const newProfiles: ConfigQualityProfile[] = [];
+    const clonedReorderedProfiles: ConfigQualityProfile[] = [];
 
     instanceConfig.cloneQualityProfiles.forEach((e) => {
       const cloneSource = e.from;
@@ -529,10 +529,12 @@ export const mergeConfigsAndTemplates = async (
       let cloneCFAssignments = 0;
 
       mergedTemplates.quality_profiles.forEach((p) => {
+        clonedReorderedProfiles.push(p);
+
         if (p.name === cloneSource) {
           const clonedQP = cloneWithJSON(p);
           clonedQP.name = cloneTarget;
-          newProfiles.push(clonedQP);
+          clonedReorderedProfiles.push(clonedQP);
           cloneQPReferences++;
         }
       });
@@ -558,7 +560,7 @@ export const mergeConfigsAndTemplates = async (
       }
     });
 
-    mergedTemplates.quality_profiles.push(...newProfiles);
+    mergedTemplates.quality_profiles = clonedReorderedProfiles;
 
     if (cloneOrder.length > 0) {
       logger.debug(`Will clone quality profiles in this order: ${cloneOrder}`);
