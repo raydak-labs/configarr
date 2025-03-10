@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.13.1](https://github.com/raydak-labs/configarr/compare/v1.13.0...v1.13.1) (2025-03-10)
+
+### Bug Fixes
+
+- improve cloning of quality_profiles configs ([89af504](https://github.com/raydak-labs/configarr/commit/89af504f380bc7c21df2ce48a3a8f3748bae23cc)), closes [#223](https://github.com/raydak-labs/configarr/issues/223)
+
 ## [1.13.0](https://github.com/raydak-labs/configarr/compare/v1.12.2...v1.13.0) (2025-03-05)
 
 ### Features
