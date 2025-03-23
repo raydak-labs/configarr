@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.13.2](https://github.com/raydak-labs/configarr/compare/v1.13.1...v1.13.2) (2025-03-23)
+
+### Bug Fixes
+
+- do not fail empty QualityProfiles or CustomFormats are received from server ([d78b441](https://github.com/raydak-labs/configarr/commit/d78b44116aeca689b6543859e711da4b36a8257a)), closes [#230](https://github.com/raydak-labs/configarr/issues/230)
+
 ## [1.13.1](https://github.com/raydak-labs/configarr/compare/v1.13.0...v1.13.1) (2025-03-10)
 
 ### Bug Fixes
