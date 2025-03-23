@@ -1,5 +1,6 @@
 import { MergedCustomFormatResource, MergedQualityDefinitionResource, MergedQualityProfileResource } from "./__generated__/mergedTypes";
 import { ArrClientLanguageResource } from "./clients/unified-client";
+import { logger } from "./logger";
 
 export class ServerCache {
   private cache: Record<string, any> = {};
@@ -34,7 +35,9 @@ export class ServerCache {
 
   public set qd(newQd: MergedQualityDefinitionResource[]) {
     if (newQd == null || newQd.length <= 0) {
-      throw new Error("The QD is invalid");
+      // Empty should never happen
+      logger.debug(`No QualityDefinition received from server.`);
+      throw new Error("No QualityDefinitions received from server.");
     }
     this._qd = newQd;
   }
@@ -45,7 +48,7 @@ export class ServerCache {
 
   public set qp(newQp: MergedQualityProfileResource[]) {
     if (newQp == null || newQp.length <= 0) {
-      throw new Error("The QP is invalid");
+      logger.debug(`No QualityProfiles received from server.`);
     }
     this._qp = newQp;
   }
@@ -56,7 +59,7 @@ export class ServerCache {
 
   public set cf(newCf: MergedCustomFormatResource[]) {
     if (newCf == null || newCf.length <= 0) {
-      throw new Error("The CF is invalid");
+      logger.debug(`No CustomFormats received from server.`);
     }
     this._cf = newCf;
   }
@@ -67,7 +70,9 @@ export class ServerCache {
 
   public set languages(newLanguages: ArrClientLanguageResource[]) {
     if (newLanguages == null || newLanguages.length <= 0) {
-      throw new Error("The CF is invalid");
+      // Empty should never happen
+      logger.debug(`No Languages received from server.`);
+      throw new Error("No Languages received from server.");
     }
     this._languages = newLanguages;
   }
