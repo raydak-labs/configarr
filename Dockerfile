@@ -41,8 +41,6 @@ FROM node:22.14.0-alpine AS prod
 WORKDIR /app
 
 RUN apk add --no-cache libstdc++ dumb-init git
-# Allow global git access independent of container user and directory user. See #240
-RUN git config --global --add safe.directory '*'
 
 # TODO maybe in future. Results in breaking change
 #USER node
@@ -51,5 +49,7 @@ COPY --from=builder /app/bundle.cjs /app/index.js
 
 ARG CONFIGARR_VERSION=dev
 ENV CONFIGARR_VERSION=${CONFIGARR_VERSION}
+# Allow global git access independent of container user and directory user. See #240
+ENV GIT_SAFE_DIRECTORY='*'
 # Run with dumb-init to not start node with PID=1, since Node.js was not designed to run as PID 1
 CMD ["dumb-init", "node", "index.js"]
