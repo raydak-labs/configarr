@@ -41,6 +41,8 @@ FROM node:22.14.0-alpine AS prod
 WORKDIR /app
 
 RUN apk add --no-cache libstdc++ dumb-init git
+# Allow global git access independent of container user and directory user. See #240
+RUN git config --global --add safe.directory '*'
 
 # TODO maybe in future. Results in breaking change
 #USER node
