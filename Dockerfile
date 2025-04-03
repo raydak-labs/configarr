@@ -49,5 +49,7 @@ COPY --from=builder /app/bundle.cjs /app/index.js
 
 ARG CONFIGARR_VERSION=dev
 ENV CONFIGARR_VERSION=${CONFIGARR_VERSION}
+# Allow global git access independent of container user and directory user. See #240
+ENV GIT_SAFE_DIRECTORY='*'
 # Run with dumb-init to not start node with PID=1, since Node.js was not designed to run as PID 1
 CMD ["dumb-init", "node", "index.js"]
