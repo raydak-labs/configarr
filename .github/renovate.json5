@@ -29,6 +29,7 @@
       groupName: "devDependencies (non-major)",
       matchDepTypes: ["devDependencies"],
       matchUpdateTypes: ["patch", "minor"],
+      excludePackageNames: ["swagger-typescript-api"],
     },
     {
       groupName: "dependencies (non-major)",
