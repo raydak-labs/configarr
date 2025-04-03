@@ -29,13 +29,13 @@
     "@hyrious/esbuild-plugin-commonjs": "0.2.5",
     "@playwright/test": "1.51.1",
     "@release-it/conventional-changelog": "10.0.0",
-    "@types/node": "22.13.11",
-    "@vitest/coverage-v8": "3.0.9",
-    "esbuild": "0.25.1",
+    "@types/node": "22.14.0",
+    "@vitest/coverage-v8": "3.1.1",
+    "esbuild": "0.25.2",
     "prettier": "3.5.3",
     "release-it": "18.1.2",
     "swagger-typescript-api": "13.0.23",
     "typescript": "5.8.2",
-    "vitest": "3.0.9"
+    "vitest": "3.1.1"
   }
 }
