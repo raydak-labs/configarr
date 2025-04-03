@@ -8,7 +8,6 @@
     ":prHourlyLimitNone",
     ":pinVersions",
   ],
-  // remove examples from ignore path
   ignorePaths: [
     "**/node_modules/**",
     "**/bower_components/**",
@@ -29,7 +28,7 @@
       groupName: "devDependencies (non-major)",
       matchDepTypes: ["devDependencies"],
       matchUpdateTypes: ["patch", "minor"],
-      excludePackageNames: ["swagger-typescript-api"],
+      matchPackageNames: ["!swagger-typescript-api"],
     },
     {
       groupName: "dependencies (non-major)",
