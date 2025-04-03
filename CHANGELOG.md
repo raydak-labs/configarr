@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.13.3](https://github.com/raydak-labs/configarr/compare/v1.13.2...v1.13.3) (2025-04-03)
+
+### Bug Fixes
+
+- allow all users to access git directory. ([#241](https://github.com/raydak-labs/configarr/issues/241)) ([a9b59da](https://github.com/raydak-labs/configarr/commit/a9b59dac61600963f66c87da8a2544da8dcae1dc)), closes [#240](https://github.com/raydak-labs/configarr/issues/240)
+- **deps:** update dependencies (non-major) ([#238](https://github.com/raydak-labs/configarr/issues/238)) ([5fe6270](https://github.com/raydak-labs/configarr/commit/5fe627082873ca4bdf88e8d494ca4cacdf6d87d9))
+
 ## [1.13.2](https://github.com/raydak-labs/configarr/compare/v1.13.1...v1.13.2) (2025-03-23)
 
 ### Bug Fixes
