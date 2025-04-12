@@ -161,7 +161,7 @@ export const loadTrashCustomFormatGroups = async (arrType: TrashArrSupported): P
 };
 
 export const loadQualityDefinitionFromTrash = async (
-  qdType: QualityDefinitionsSonarr | QualityDefinitionsRadarr,
+  qdType: string, // QualityDefinitionsSonarr | QualityDefinitionsRadarr,
   arrType: TrashArrSupported,
 ): Promise<TrashQualityDefinition> => {
   let trashPath = arrType === "RADARR" ? trashRepoPaths.radarrQualitySize : trashRepoPaths.sonarrQualitySize;
@@ -173,18 +173,14 @@ export const loadQualityDefinitionFromTrash = async (
     }
   }
 
-  switch (qdType) {
-    case "anime":
-      return loadJsonFile(path.resolve(`${trashPath}/anime.json`));
-    case "series":
-      return loadJsonFile(path.resolve(`${trashPath}/series.json`));
-    case "movie":
-      return loadJsonFile(path.resolve(`${trashPath}/movie.json`));
-    case "custom":
-      throw new Error(`(${arrType}) Not implemented yet`);
-    default:
-      throw new Error(`(${arrType}) Unknown QualityDefinition type: ${qdType}`);
+  // TODO: custom quality definition not implemented yet. Not sure if we need to implement this. Qualities can already be defined separately.
+  const filePath = path.resolve(`${trashPath}/${qdType}.json`);
+
+  if (!fs.existsSync(filePath)) {
+    throw new Error(`(${arrType}) QualityDefinition type not found: '${qdType}' for '${arrType}'`);
   }
+
+  return loadJsonFile(filePath);
 };
 
 export const loadQPFromTrash = async (arrType: TrashArrSupported) => {
