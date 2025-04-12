@@ -17,7 +17,8 @@ import { cloneRecyclarrTemplateRepo } from "./recyclarr-importer";
 import { cloneTrashRepo, loadQualityDefinitionFromTrash, transformTrashQDs } from "./trash-guide";
 import { ArrType } from "./types/common.types";
 import { InputConfigArrInstance, InputConfigSchema } from "./types/config.types";
-import { TrashQualityDefinition, TrashQualityDefinitionQuality } from "./types/trashguide.types";
+import { TrashArrSupportedConst, TrashQualityDefinition, TrashQualityDefinitionQuality } from "./types/trashguide.types";
+import { isInConstArray } from "./util";
 
 const pipeline = async (globalConfig: InputConfigSchema, instanceConfig: InputConfigArrInstance, arrType: ArrType) => {
   const api = getUnifiedClient();
@@ -83,33 +84,27 @@ const pipeline = async (globalConfig: InputConfigSchema, instanceConfig: InputCo
 
   logger.info(`CustomFormats synchronized`);
 
-  const qualityDefinition = config.quality_definition?.type;
-
   if (config.quality_definition != null) {
-    const trashQDFileName = config.quality_definition.type;
     const mergedQDs: TrashQualityDefinitionQuality[] = [];
+    const qualityDefinitionType = config.quality_definition.type;
 
     // TODO: maybe add id reference as usage
-    if (trashQDFileName != null) {
-      let qdTrash: TrashQualityDefinition;
-      // TODO: this could be improved
-      switch (qualityDefinition) {
-        case "anime":
-          qdTrash = await loadQualityDefinitionFromTrash("anime", "SONARR");
-          break;
-        case "series":
-          qdTrash = await loadQualityDefinitionFromTrash("series", "SONARR");
-          break;
-        case "movie":
-          qdTrash = await loadQualityDefinitionFromTrash("movie", "RADARR");
-          break;
-        default:
-          throw new Error(`Unsupported quality definition '${qualityDefinition}'`);
+    if (qualityDefinitionType != null) {
+      if (!isInConstArray(TrashArrSupportedConst, arrType)) {
+        logger.warn(`QualityDefinition type is not supported for ${arrType} (${qualityDefinitionType}).`);
+      } else {
+        try {
+          let qdTrash: TrashQualityDefinition = await loadQualityDefinitionFromTrash(qualityDefinitionType, arrType);
+          const transformed = transformTrashQDs(qdTrash, config.quality_definition?.preferred_ratio);
+          mergedQDs.push(...transformed);
+        } catch (e: unknown) {
+          if (e instanceof Error) {
+            logger.error(e.message);
+          } else {
+            throw e;
+          }
+        }
       }
-
-      const transformed = transformTrashQDs(qdTrash, config.quality_definition?.preferred_ratio);
-
-      mergedQDs.push(...transformed);
     } else {
       logger.debug(`QualityDefinition: No TRaSH-Guide filename defined (type).`);
     }

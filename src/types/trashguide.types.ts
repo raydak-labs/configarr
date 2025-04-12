@@ -1,4 +1,4 @@
-import { ArrType, CFIDToConfigGroup, ImportCF } from "./common.types";
+import { ArrType, ArrTypeConst, CFIDToConfigGroup, ImportCF } from "./common.types";
 
 export type TrashQualityDefinitionQuality = {
   quality: string;
@@ -60,7 +60,8 @@ export type TrashQP = {
 
 export type TrashCFSpF = { min: number; max: number; exceptLanguage: boolean; value: any };
 
-export type TrashArrSupported = Subset<ArrType, "RADARR" | "SONARR">;
+export const TrashArrSupportedConst = ["RADARR", "SONARR"] as const satisfies readonly ArrType[];
+export type TrashArrSupported = (typeof TrashArrSupportedConst)[number];
 
 export type TrashRadarrNaming = {
   folder: {

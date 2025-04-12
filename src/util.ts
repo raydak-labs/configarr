@@ -315,3 +315,11 @@ export const roundToDecimal = (num: number, decimalPlaces = 0) => {
   const p = Math.pow(10, decimalPlaces);
   return Math.round((num + Number.EPSILON) * p) / p;
 };
+
+export function pickFromConst<T extends readonly string[], K extends T[number]>(constArray: T, keys: readonly K[]): readonly K[] {
+  return keys.filter((key): key is K => constArray.includes(key));
+}
+
+export function isInConstArray<T extends readonly unknown[]>(array: T, value: unknown): value is T[number] {
+  return array.includes(value as T[number]);
+}
