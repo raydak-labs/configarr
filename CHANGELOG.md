@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.13.4](https://github.com/raydak-labs/configarr/compare/v1.13.3...v1.13.4) (2025-04-12)
+
+### Bug Fixes
+
+- correctly import quality size / definitions from trash github ([1e2099d](https://github.com/raydak-labs/configarr/commit/1e2099d49a7f044f66dc67fc4f1c178b082dac0f))
+- safe directory, see [#241](https://github.com/raydak-labs/configarr/issues/241) ([d1c237b](https://github.com/raydak-labs/configarr/commit/d1c237b2acbadce8c525d882a5a906cdb1318e68))
+
 ## [1.13.3](https://github.com/raydak-labs/configarr/compare/v1.13.2...v1.13.3) (2025-04-03)
 
 ### Bug Fixes
