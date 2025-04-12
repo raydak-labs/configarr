@@ -25,7 +25,7 @@ Following things are currently not supported or tested:
 - quality definition preset is not evaluated
   ```yaml
   quality_definition:
-    type: movies # not checked yet
+    type: movie # not checked yet
   ```
 - initial language of quality profiles is not correct -> `0`
 - no available presets because nothings provided in TRaSH-Guides or recyclarr -> needs to be done manually with local templates and custom formats
@@ -60,7 +60,7 @@ whisparr:
     api_key: !secret WHISPARR_API_KEY # Reference to API key in secrets.yml
 
     quality_definition:
-      type: movies # TODO: not checked yet
+      type: movie # TODO: not checked yet
 
     include:
       # only custom defined templates available
@@ -93,7 +93,7 @@ Following things are currently not supported or tested:
 - quality definition preset is not evaluated
   ```yaml
   quality_definition:
-    type: movies # not checked yet
+    type: movie # not checked yet
   ```
 - metadata profiles are not supported. This is a specific thing to readarr and requires custom implementation and breaking out of some abstraction layer we have in the code
 - no available presets because nothings provided in TRaSH-Guides or recyclarr -> needs to be done manually with local templates and custom formats
@@ -128,7 +128,7 @@ readarr:
 
     # not supported
     # quality_definition:
-    #   type: movies # Quality definition type
+    #   type: movie # Quality definition type
 
     include:
       # only custom defined templates available
@@ -158,7 +158,7 @@ Following things are currently not supported or tested:
 - quality definition preset is not evaluated
   ```yaml
   quality_definition:
-    type: movies # not checked yet
+    type: movie # not checked yet
   ```
 - metadata profiles are not supported. This is a specific thing to lidarr and requires custom implementation and breaking out of some abstraction layer we have in the code
 - no available presets because nothings provided in TRaSH-Guides or recyclarr -> needs to be done manually with local templates and custom formats

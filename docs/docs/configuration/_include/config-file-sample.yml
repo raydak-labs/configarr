@@ -121,7 +121,7 @@ radarr:
     api_key: !secret RADARR_API_KEY # Reference to API key in secrets.yml
 
     quality_definition:
-      type: movies # Quality definition type for Radarr
+      type: movie # Quality definition type for Radarr
 
     include:
       # Comment out any of the following includes to disable them
