@@ -14,7 +14,6 @@ services:
       - ./cfs:/app/cfs
       - ./templates:/app/templates
       - ../../src:/app/src
-      - ${PWD}/../../index.ts:/app/index.ts
       - ./debug:/app/debug
       - ./data:/data
     environment:
