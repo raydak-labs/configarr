@@ -8,6 +8,7 @@
     "coverage": "vitest run --coverage",
     "generateApi": "tsx generate-api.ts && prettier src/__generated__ --write",
     "lint": "prettier . --check",
+    "lint:fix": "prettier . --write",
     "start": "tsx src/index.ts",
     "test": "vitest",
     "typecheck": "tsc --noEmit",

@@ -6,6 +6,10 @@
 [![Docker](https://img.shields.io/docker/v/configarr/configarr?sort=semver&label=DockerHub)](https://hub.docker.com/r/configarr/configarr)
 [![Docker Pulls](https://img.shields.io/docker/pulls/configarr/configarr?label=DockerHub-Pulls)](https://hub.docker.com/r/configarr/configarr)
 
+<p align="center" >
+  <img width="150"  src="./docs/static/img/logo.webp" alt="Logo of configarr" />
+</p>
+
 Configarr is an open-source tool designed to simplify configuration and synchronization for Sonarr and Radarr (and other experimental).
 It integrates with TRaSH Guides to automate updates of custom formats, quality profiles, and other settings, while also supporting user-defined configurations.
 Configarr offers flexibility with deployment options like Docker and Kubernetes, ensuring compatibility with the latest versions of Sonarr and Radarr.
