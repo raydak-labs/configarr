@@ -306,7 +306,7 @@ export const transformTrashQPToTemplate = (data: TrashQP): ConfigQualityProfile 
         if (!e.allowed) {
           return null;
         }
-        return { name: e.name, qualities: e.items };
+        return { name: e.name, qualities: e.items?.reverse() };
       })
       .filter(notEmpty)
       .toReversed(),
