@@ -95,24 +95,26 @@ export const mapQualities = (qd_source: MergedQualityDefinitionResource[], value
         id: 1000 + i,
         name: obj.name,
         items:
-          obj.qualities?.map<MergedQualityProfileQualityItemResource>((obj2) => {
-            const qd = qdMap.get(obj2);
+          obj.qualities
+            ?.map<MergedQualityProfileQualityItemResource>((obj2) => {
+              const qd = qdMap.get(obj2);
 
-            const returnObject: MergedQualityProfileQualityItemResource = {
-              quality: {
-                id: qd?.quality?.id,
-                name: obj2,
-                resolution: qd?.quality?.resolution,
-                source: qd?.quality?.source,
-              },
-              allowed: obj.enabled ?? true,
-              items: [],
-            };
+              const returnObject: MergedQualityProfileQualityItemResource = {
+                quality: {
+                  id: qd?.quality?.id,
+                  name: obj2,
+                  resolution: qd?.quality?.resolution,
+                  source: qd?.quality?.source,
+                },
+                allowed: obj.enabled ?? true,
+                items: [],
+              };
 
-            qdMap.delete(obj2);
+              qdMap.delete(obj2);
 
-            return returnObject;
-          }) || [],
+              return returnObject;
+            })
+            .reverse() || [],
       };
     } else {
       const serverQD = qdMap.get(obj.name);
@@ -161,6 +163,36 @@ export const mapQualities = (qd_source: MergedQualityDefinitionResource[], value
     // default = top
     return [...missingQualities, ...allowedQualities.reverse()];
   }
+};
+
+export const isOrderOfQualitiesEqual = (
+  arr1: MergedQualityProfileQualityItemResource[],
+  arr2: MergedQualityProfileQualityItemResource[],
+) => {
+  if (arr1.length !== arr2.length) {
+    return false;
+  }
+
+  for (const [element1, element2] of zip(arr1, arr2)) {
+    if (element1.name !== element2.name) {
+      return false;
+    }
+
+    if (element1.quality?.name !== element2.quality?.name) {
+      return false;
+    }
+
+    const items1 = element1.items ?? [];
+    const item2s = element2.items ?? [];
+
+    if (!(items1.length === 0 && items1.length === item2s.length)) {
+      if (!isOrderOfQualitiesEqual(element1.items ?? [], element2.items ?? [])) {
+        return false;
+      }
+    }
+  }
+
+  return true;
 };
 
 export const doAllQualitiesExist = (serverResource: ConfigQualityProfileItem[], localResource: ConfigQualityProfileItem[]) => {
@@ -213,7 +245,15 @@ export const doAllQualitiesExist = (serverResource: ConfigQualityProfileItem[], 
   return true;
 };
 
-export const isOrderOfQualitiesEqual = (obj1: ConfigQualityProfileItem[], obj2: ConfigQualityProfileItem[]) => {
+/**
+ * Method to check if the order of qualities in the configuration syntax is equals.
+ * Does not check nested qualities!
+ * @deprecated
+ * @param obj1
+ * @param obj2
+ * @returns
+ */
+export const isOrderOfConfigQualitiesEqual = (obj1: ConfigQualityProfileItem[], obj2: ConfigQualityProfileItem[]) => {
   if (obj1.length !== obj2.length) {
     return false;
   }
@@ -264,7 +304,7 @@ export const calculateQualityProfilesDiff = async (
   for (const [name, value] of qpMerged.entries()) {
     const serverMatch = qpServerMap.get(name);
     const scoringForQP = scoring.get(name);
-    const mappedServerQD = mapQualities(serverCache.qd, value);
+    const mappedQualities = mapQualities(serverCache.qd, value);
 
     let profileLanguage: ArrClientLanguageResource | undefined;
 
@@ -286,7 +326,7 @@ export const calculateQualityProfilesDiff = async (
     if (serverMatch == null) {
       logger.info(`QualityProfile '${name}' not found in server. Will be created.`);
 
-      const qualityToId = mappedServerQD.reduce<Map<string, number>>((p, c) => {
+      const qualityToId = mappedQualities.reduce<Map<string, number>>((p, c) => {
         const id = c.id ?? c.quality?.id;
         const qName = c.name ?? c.quality?.name;
 
@@ -319,7 +359,7 @@ export const calculateQualityProfilesDiff = async (
       const newProfile = Object.assign<MergedQualityProfileResource, MergedQualityProfileResource | null | undefined>(
         {
           name: value.name,
-          items: mappedServerQD,
+          items: mappedQualities,
           cutoff: qualityToId.get(value.upgrade.until_quality),
           cutoffFormatScore: value.upgrade.until_score,
           minFormatScore: value.min_format_score,
@@ -384,14 +424,14 @@ export const calculateQualityProfilesDiff = async (
       diffExist = true;
 
       changeList.push(`QualityProfile qualities mismatch will update whole array`);
-      updatedServerObject.items = mappedServerQD;
+      updatedServerObject.items = mappedQualities;
     } else {
-      if (!isOrderOfQualitiesEqual(value.qualities, serverQualitiesMapped.toReversed())) {
+      if (!isOrderOfQualitiesEqual(mappedQualities, serverMatch.items || [])) {
         logger.debug(`QualityProfile quality order mismatch.`);
         diffExist = true;
 
         changeList.push(`QualityProfile quality order does not match`);
-        updatedServerObject.items = mappedServerQD;
+        updatedServerObject.items = mappedQualities;
       }
     }
 

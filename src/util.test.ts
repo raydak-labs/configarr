@@ -2,7 +2,7 @@ import path from "path";
 import { describe, expect, test } from "vitest";
 import { MergedCustomFormatResource } from "./__generated__/mergedTypes";
 import { TrashCF, TrashCFSpF } from "./types/trashguide.types";
-import { cloneWithJSON, compareCustomFormats, loadJsonFile, mapImportCfToRequestCf, toCarrCF } from "./util";
+import { cloneWithJSON, compareCustomFormats, loadJsonFile, mapImportCfToRequestCf, toCarrCF, zip } from "./util";
 
 const exampleCFImplementations = {
   name: "TestSpec",
@@ -254,5 +254,11 @@ describe("compareImportCFs - general", async () => {
 
     const result = compareCustomFormats(clonedServer, mapImportCfToRequestCf(toCarrCF(copied)));
     expect(result.equal).toBe(true);
+  });
+});
+
+describe("zip function", async () => {
+  test("should work for empty inputs", async () => {
+    expect(zip([], [])).toEqual([]);
   });
 });

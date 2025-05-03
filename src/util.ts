@@ -216,7 +216,7 @@ export function zip<T extends unknown[][]>(...arrays: T): Array<{ [K in keyof T]
   let length = -1;
   let mismatch = false;
 
-  for (const arrayElement in arrays) {
+  for (const arrayElement of arrays) {
     if (length <= 0) {
       length = arrayElement.length;
     } else {
