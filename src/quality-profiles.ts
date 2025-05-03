@@ -195,56 +195,6 @@ export const isOrderOfQualitiesEqual = (
   return true;
 };
 
-export const doAllQualitiesExist = (serverResource: ConfigQualityProfileItem[], localResource: ConfigQualityProfileItem[]) => {
-  const serverCloned = cloneWithJSON(serverResource);
-  const localCloned = cloneWithJSON(localResource);
-
-  function arraysEqual(serverArray: string[], localArray: string[]): boolean {
-    if (serverArray.length !== localArray.length) {
-      return false;
-    }
-
-    const sortedServerArray = serverArray.slice().sort();
-    const sortedLocalArray = localArray.slice().sort();
-
-    for (let i = 0; i < sortedServerArray.length; i++) {
-      if (sortedServerArray[i] !== sortedLocalArray[i]) {
-        return false;
-      }
-    }
-
-    return true;
-  }
-
-  if (serverCloned.length !== localCloned.length) {
-    return false;
-  }
-
-  const sortedServerConfig = serverCloned.sort((a, b) => (a.name < b.name ? -1 : 1));
-  const sortedLocalConfig = localCloned.sort((a, b) => (a.name < b.name ? -1 : 1));
-
-  if (sortedLocalConfig.length !== sortedServerConfig.length || sortedLocalConfig.length === 0) {
-    return false;
-  }
-
-  for (const [serverElement, localElement] of zip(sortedServerConfig, sortedLocalConfig)) {
-    if (serverElement.name !== localElement.name) {
-      return false;
-    }
-
-    // If not set we assume true
-    if ((serverElement.enabled ?? true) !== (localElement.enabled ?? true)) {
-      return false;
-    }
-
-    if (!arraysEqual(serverElement.qualities ?? [], localElement.qualities ?? [])) {
-      return false;
-    }
-  }
-
-  return true;
-};
-
 /**
  * Method to check if the order of qualities in the configuration syntax is equals.
  * Does not check nested qualities!
@@ -381,58 +331,13 @@ export const calculateQualityProfilesDiff = async (
 
     let diffExist = false;
 
-    const valueQualityMap = new Map(value.qualities.map((obj) => [obj.name, obj]));
-
-    // TODO need to better validate if this quality transforming works as expected in different cases
-    const serverQualitiesMapped: ConfigQualityProfileItem[] = (serverMatch.items || [])
-      .map((obj): ConfigQualityProfileItem | null => {
-        let qualityName: string;
-
-        if (obj.id) {
-          qualityName = obj.name!;
-        } else {
-          qualityName = obj.quality?.name!;
-        }
-
-        if (!valueQualityMap.has(qualityName) && !obj.allowed) {
-          // Only return null if quality not specified and not enabled in arr. If enabled we need to disable it.
-          return null;
-        }
-
-        // if ID it is a grouping
-        if (obj.id) {
-          return {
-            name: qualityName,
-            qualities: (obj.items || []).map((qObj) => {
-              return qObj.quality!.name!;
-            }),
-            enabled: obj.allowed,
-          };
-        } else {
-          return {
-            name: qualityName,
-            qualities: [],
-            enabled: obj.allowed,
-          };
-        }
-      })
-      .filter(notEmpty);
-
     // TODO do we want to enforce the whole structure or only match those which are enabled by us?
-    if (!doAllQualitiesExist(serverQualitiesMapped, value.qualities)) {
-      logger.debug(`QualityProfile qualities mismatch will update whole array`);
+    if (!isOrderOfQualitiesEqual(mappedQualities, serverMatch.items || [])) {
+      logger.debug(`QualityProfile quality order mismatch.`);
       diffExist = true;
 
-      changeList.push(`QualityProfile qualities mismatch will update whole array`);
+      changeList.push(`QualityProfile quality order does not match`);
       updatedServerObject.items = mappedQualities;
-    } else {
-      if (!isOrderOfQualitiesEqual(mappedQualities, serverMatch.items || [])) {
-        logger.debug(`QualityProfile quality order mismatch.`);
-        diffExist = true;
-
-        changeList.push(`QualityProfile quality order does not match`);
-        updatedServerObject.items = mappedQualities;
-      }
     }
 
     const qualityToId = updatedServerObject.items!.reduce<Map<string, number>>((p, c) => {
