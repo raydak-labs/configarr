@@ -1,8 +1,19 @@
 import path from "path";
 import { describe, expect, test } from "vitest";
-import { MergedCustomFormatResource, MergedQualityDefinitionResource, MergedQualityProfileResource } from "./__generated__/mergedTypes";
+import {
+  MergedCustomFormatResource,
+  MergedQualityDefinitionResource,
+  MergedQualityProfileQualityItemResource,
+  MergedQualityProfileResource,
+} from "./__generated__/mergedTypes";
 import { ServerCache } from "./cache";
-import { calculateQualityProfilesDiff, doAllQualitiesExist, isOrderOfQualitiesEqual, mapQualities } from "./quality-profiles";
+import {
+  calculateQualityProfilesDiff,
+  doAllQualitiesExist,
+  isOrderOfQualitiesEqual,
+  isOrderOfConfigQualitiesEqual,
+  mapQualities,
+} from "./quality-profiles";
 import { CFProcessing } from "./types/common.types";
 import { ConfigQualityProfile, ConfigQualityProfileItem, MergedConfigInstance } from "./types/config.types";
 import { cloneWithJSON, loadJsonFile } from "./util";
@@ -87,7 +98,7 @@ describe("QualityProfiles", async () => {
     expect(result).toBe(false);
   });
 
-  test("isOrderOfQualitiesEqual - should match", async ({}) => {
+  test("isOrderOfConfigQualitiesEqual - should match", async ({}) => {
     const fromConfig: ConfigQualityProfileItem[] = [
       { name: "WEB 1080p", qualities: ["WEBDL-1080p", "WEBRip-1080p"] },
       { name: "HDTV-1080p" },
@@ -104,12 +115,12 @@ describe("QualityProfiles", async () => {
       { name: "WEB 720p", qualities: ["WEBDL-720p", "WEBRip-720p"] },
       { name: "HDTV-720p" },
     ];
-    const result = isOrderOfQualitiesEqual(fromConfig, fromServer);
+    const result = isOrderOfConfigQualitiesEqual(fromConfig, fromServer);
 
     expect(result).toBe(true);
   });
 
-  test("isOrderOfQualitiesEqual - different order", async ({}) => {
+  test("isOrderOfConfigQualitiesEqual - different order", async ({}) => {
     const fromConfig: ConfigQualityProfileItem[] = [
       { name: "WEB 1080p", qualities: ["WEBDL-1080p", "WEBRip-1080p"] },
       { name: "HDTV-1080p" },
@@ -126,7 +137,7 @@ describe("QualityProfiles", async () => {
       { name: "WEB 1080p", qualities: ["WEBDL-1080p", "WEBRip-1080p"] },
       { name: "Remux-1080p", qualities: [] },
     ];
-    const result = isOrderOfQualitiesEqual(fromConfig, fromServer);
+    const result = isOrderOfConfigQualitiesEqual(fromConfig, fromServer);
 
     expect(result).toBe(false);
   });
@@ -198,6 +209,97 @@ describe("QualityProfiles", async () => {
     expect(result[1]!.allowed).toBe(false);
     expect(result[2]!.name).toBe("WEB 1080p");
     expect(result[2]!.allowed).toBe(true);
+  });
+
+  test("mapQualities - ordering without nested qualities", async ({}) => {
+    const fromConfig: ConfigQualityProfileItem[] = [
+      { name: "WEB 1080p", qualities: ["WEBDL-1080p", "WEBRip-1080p"] },
+      { name: "HDTV-1080p" },
+    ];
+
+    const resources: MergedQualityDefinitionResource[] = [
+      { id: 1, title: "HDTV-1080p", weight: 2, quality: { id: 1, name: "HDTV-1080p" } },
+      { id: 2, title: "WEBDL-1080p", weight: 2, quality: { id: 2, name: "WEBDL-1080p" } },
+      { id: 3, title: "WEBRip-1080p", weight: 2, quality: { id: 3, name: "WEBRip-1080p" } },
+    ];
+
+    const profile: ConfigQualityProfile = {
+      name: "Test Profile",
+      min_format_score: 2,
+      qualities: fromConfig,
+      quality_sort: "top",
+      upgrade: { allowed: true, until_quality: "HDTV-1080p", until_score: 5 },
+      score_set: "default",
+    };
+
+    const result = mapQualities(resources, profile);
+
+    expect(result).toHaveLength(2);
+    // ordering matters. Needs to be reversed for the API
+    expect(result[0]!.quality?.name).toBe("HDTV-1080p");
+    expect(result[1]!.name).toBe("WEB 1080p");
+  });
+
+  test("mapQualities - ordering with nested qualities", async ({}) => {
+    const fromConfig: ConfigQualityProfileItem[] = [{ name: "HD Group", qualities: ["HDTV-1080p", "WEBDL-1080p"] }];
+
+    const resources: MergedQualityDefinitionResource[] = [
+      { id: 1, title: "HDTV-1080p", weight: 2, quality: { id: 1, name: "HDTV-1080p" } },
+      { id: 2, title: "WEBDL-1080p", weight: 2, quality: { id: 2, name: "WEBDL-1080p" } },
+    ];
+
+    const profile: ConfigQualityProfile = {
+      name: "Test Profile",
+      min_format_score: 2,
+      qualities: fromConfig,
+      quality_sort: "top",
+      upgrade: { allowed: true, until_quality: "HDTV-1080p", until_score: 5 },
+      score_set: "default",
+    };
+
+    const result = mapQualities(resources, profile);
+
+    expect(result).toHaveLength(1);
+    expect(result[0]!.name).toBe("HD Group");
+    expect(result[0]!.items).toHaveLength(2);
+    expect(result[0]!.items![0]!.quality?.name).toBe("WEBDL-1080p");
+    expect(result[0]!.items![1]!.quality?.name).toBe("HDTV-1080p");
+  });
+
+  test("mapQualities - ordering with both nested and non-nested qualities", async ({}) => {
+    const fromConfig: ConfigQualityProfileItem[] = [
+      { name: "HD Group", qualities: ["HDTV-1080p", "WEBDL-1080p"] },
+      { name: "WEB 720p", qualities: ["WEBDL-720p", "WEBRip-720p"] },
+    ];
+
+    const resources: MergedQualityDefinitionResource[] = [
+      { id: 1, title: "HDTV-1080p", weight: 2, quality: { id: 1, name: "HDTV-1080p" } },
+      { id: 2, title: "WEBDL-1080p", weight: 2, quality: { id: 2, name: "WEBDL-1080p" } },
+      { id: 3, title: "WEBDL-720p", weight: 2, quality: { id: 3, name: "WEBDL-720p" } },
+      { id: 4, title: "WEBRip-720p", weight: 2, quality: { id: 4, name: "WEBRip-720p" } },
+    ];
+
+    const profile: ConfigQualityProfile = {
+      name: "Test Profile",
+      min_format_score: 2,
+      qualities: fromConfig,
+      quality_sort: "top",
+      upgrade: { allowed: true, until_quality: "HDTV-1080p", until_score: 5 },
+      score_set: "default",
+    };
+
+    const result = mapQualities(resources, profile);
+
+    expect(result).toHaveLength(2);
+    expect(result[0]!.name).toBe("WEB 720p");
+    expect(result[0]!.items).toHaveLength(2);
+    expect(result[0]!.items![0]!.quality?.name).toBe("WEBRip-720p");
+    expect(result[0]!.items![1]!.quality?.name).toBe("WEBDL-720p");
+
+    expect(result[1]!.name).toBe("HD Group");
+    expect(result[1]!.items).toHaveLength(2);
+    expect(result[1]!.items![0]!.quality?.name).toBe("WEBDL-1080p");
+    expect(result[1]!.items![1]!.quality?.name).toBe("HDTV-1080p");
   });
 
   test("calculateQualityProfilesDiff - should diff if minUpgradeFormatScore / minFormatScore is different", async ({}) => {
@@ -409,5 +511,269 @@ describe("QualityProfiles", async () => {
     expect(diff.changedQPs.length).toBe(0);
     expect(diff.create.length).toBe(0);
     expect(diff.noChanges.length).toBe(1);
+  });
+
+  describe("isOrderOfQualitiesEqual", async () => {
+    test("should diff for grouped incorrect order", async ({}) => {
+      const arr1: MergedQualityProfileQualityItemResource[] = [
+        {
+          allowed: true,
+          id: 1000,
+          name: "Merged QPs",
+          items: [
+            {
+              quality: {
+                id: 14,
+                name: "WEBRip-720p",
+                resolution: 720,
+                source: "webrip",
+              },
+              allowed: true,
+              items: [],
+            },
+            {
+              quality: {
+                id: 5,
+                name: "WEBDL-720p",
+                resolution: 720,
+                source: "webdl",
+              },
+              allowed: true,
+              items: [],
+            },
+            {
+              quality: {
+                id: 6,
+                name: "Bluray-720p",
+                resolution: 720,
+                source: "bluray",
+              },
+              allowed: true,
+              items: [],
+            },
+            {
+              quality: {
+                id: 3,
+                name: "WEBDL-1080p",
+                resolution: 1080,
+                source: "webdl",
+              },
+              allowed: true,
+              items: [],
+            },
+            {
+              quality: {
+                id: 15,
+                name: "WEBRip-1080p",
+                resolution: 1080,
+                source: "webrip",
+              },
+              allowed: true,
+              items: [],
+            },
+            {
+              quality: {
+                id: 7,
+                name: "Bluray-1080p",
+                resolution: 1080,
+                source: "bluray",
+              },
+              allowed: true,
+              items: [],
+            },
+          ],
+        },
+      ];
+
+      const arr2: MergedQualityProfileQualityItemResource[] = [
+        {
+          name: "Merged QPs",
+          items: [
+            {
+              quality: {
+                id: 7,
+                name: "Bluray-1080p",
+                source: "bluray",
+                resolution: 1080,
+              },
+              items: [],
+              allowed: true,
+            },
+            {
+              quality: {
+                id: 15,
+                name: "WEBRip-1080p",
+                source: "webrip",
+                resolution: 1080,
+              },
+              items: [],
+              allowed: true,
+            },
+            {
+              quality: {
+                id: 3,
+                name: "WEBDL-1080p",
+                source: "webdl",
+                resolution: 1080,
+              },
+              items: [],
+              allowed: true,
+            },
+            {
+              quality: {
+                id: 6,
+                name: "Bluray-720p",
+                source: "bluray",
+                resolution: 720,
+              },
+              items: [],
+              allowed: true,
+            },
+            {
+              quality: {
+                id: 5,
+                name: "WEBDL-720p",
+                source: "webdl",
+                resolution: 720,
+              },
+              items: [],
+              allowed: true,
+            },
+            {
+              quality: {
+                id: 14,
+                name: "WEBRip-720p",
+                source: "webrip",
+                resolution: 720,
+              },
+              items: [],
+              allowed: true,
+            },
+          ],
+          allowed: true,
+          id: 1000,
+        },
+      ];
+
+      expect(isOrderOfQualitiesEqual(arr1, arr2)).toBe(false);
+    });
+
+    test("should diff for incorrect quality order", async ({}) => {
+      const arr1: MergedQualityProfileQualityItemResource[] = [
+        {
+          allowed: true,
+          quality: {
+            id: 14,
+            name: "WEBRip-720p",
+            resolution: 720,
+            source: "webrip",
+          },
+        },
+        {
+          allowed: true,
+          quality: {
+            id: 15,
+            name: "WEBRip-1080p",
+            resolution: 1080,
+            source: "webrip",
+          },
+        },
+      ];
+
+      const arr2: MergedQualityProfileQualityItemResource[] = [
+        {
+          allowed: true,
+          quality: {
+            id: 15,
+            name: "WEBRip-1080p",
+            resolution: 1080,
+            source: "webrip",
+          },
+        },
+        {
+          allowed: true,
+          quality: {
+            id: 14,
+            name: "WEBRip-720p",
+            resolution: 720,
+            source: "webrip",
+          },
+        },
+      ];
+
+      expect(isOrderOfQualitiesEqual(arr1, arr2)).toBe(false);
+    });
+
+    test("should be equal 1", async ({}) => {
+      const arr1: MergedQualityProfileQualityItemResource[] = [
+        {
+          allowed: true,
+          quality: {
+            id: 14,
+            name: "WEBRip-720p",
+            resolution: 720,
+            source: "webrip",
+          },
+        },
+      ];
+
+      const arr2: MergedQualityProfileQualityItemResource[] = [
+        {
+          allowed: true,
+          quality: {
+            id: 14,
+            name: "WEBRip-720p",
+            resolution: 720,
+            source: "webrip",
+          },
+        },
+      ];
+
+      expect(isOrderOfQualitiesEqual(arr1, arr2)).toBe(true);
+    });
+
+    test("should be equal 2", async ({}) => {
+      const arr1: MergedQualityProfileQualityItemResource[] = [
+        {
+          allowed: true,
+          id: 1000,
+          name: "Merged QPs",
+          items: [
+            {
+              quality: {
+                id: 14,
+                name: "WEBRip-720p",
+                resolution: 720,
+                source: "webrip",
+              },
+              allowed: true,
+              items: [],
+            },
+          ],
+        },
+      ];
+
+      const arr2: MergedQualityProfileQualityItemResource[] = [
+        {
+          allowed: true,
+          id: 1000,
+          name: "Merged QPs",
+          items: [
+            {
+              quality: {
+                id: 14,
+                name: "WEBRip-720p",
+                resolution: 720,
+                source: "webrip",
+              },
+              allowed: true,
+              items: [],
+            },
+          ],
+        },
+      ];
+
+      expect(isOrderOfQualitiesEqual(arr1, arr2)).toBe(true);
+    });
   });
 });
