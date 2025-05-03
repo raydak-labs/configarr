@@ -208,41 +208,42 @@ const runArrType = async (
     skipped: 0,
   };
 
-  if (arrEntry == null || Array.isArray(arrEntry) || typeof arrEntry !== "object" || Object.keys(arrEntry).length <= 0) {
+  if (!arrEntry || typeof arrEntry !== "object" || Object.keys(arrEntry).length === 0) {
     logHeading(`No ${arrType} instances defined.`);
-  } else {
-    logHeading(`Processing ${arrType} ...`);
+    return status;
+  }
 
-    for (const [instanceName, instance] of Object.entries(arrEntry)) {
-      logInstanceHeading(`Processing ${arrType} Instance: ${instanceName} ...`);
+  logHeading(`Processing ${arrType} ...`);
 
-      if (instance.enabled === false) {
-        logger.info(`Instance ${arrType} - ${instanceName} is disabled!`);
-        status.skipped++;
-        continue;
-      }
+  for (const [instanceName, instance] of Object.entries(arrEntry)) {
+    logInstanceHeading(`Processing ${arrType} Instance: ${instanceName} ...`);
 
-      try {
-        await configureApi(arrType, instance.base_url, instance.api_key);
-        await pipeline(globalConfig, instance, arrType);
-        status.success++;
-      } catch (err: any) {
-        logger.error(
-          `Failure during configuring: ${arrType} - ${instanceName} (Detailed logs with env var: LOG_STACKTRACE=true). Error: ${err?.message}`,
-        );
-        status.failure++;
-        if (getEnvs().LOG_STACKTRACE) {
-          logger.error(err);
-        }
-        if (getEnvs().STOP_ON_ERROR) {
-          throw new Error(`Stopping further execution because 'STOP_ON_ERROR' is enabled.`);
-        }
-      } finally {
-        unsetApi();
-      }
-
-      logger.info("");
+    if (instance.enabled === false) {
+      logger.info(`Instance ${arrType} - ${instanceName} is disabled!`);
+      status.skipped++;
+      continue;
     }
+
+    try {
+      await configureApi(arrType, instance.base_url, instance.api_key);
+      await pipeline(globalConfig, instance, arrType);
+      status.success++;
+    } catch (err: any) {
+      logger.error(
+        `Failure during configuring: ${arrType} - ${instanceName} (Detailed logs with env var: LOG_STACKTRACE=true). Error: ${err?.message}`,
+      );
+      status.failure++;
+      if (getEnvs().LOG_STACKTRACE) {
+        logger.error(err);
+      }
+      if (getEnvs().STOP_ON_ERROR) {
+        throw new Error(`Stopping further execution because 'STOP_ON_ERROR' is enabled.`);
+      }
+    } finally {
+      unsetApi();
+    }
+
+    logger.info("");
   }
 
   return status;
@@ -260,51 +261,32 @@ const run = async () => {
   await cloneRecyclarrTemplateRepo();
   await cloneTrashRepo();
 
-  // TODO currently this has to be run sequentially because of the centrally configured api
-
   const totalStatus: string[] = [];
 
-  // Sonarr
-  if (globalConfig.sonarrEnabled == null || globalConfig.sonarrEnabled) {
-    const result = await runArrType("SONARR", globalConfig, globalConfig.sonarr);
-    totalStatus.push(`SONARR: (${result.success}/${result.failure}/${result.skipped})`);
-  } else {
-    logger.debug(`Sonarr disabled in config`);
-  }
+  const disabledArrs: string[] = [];
 
-  // Radarr
-  if (globalConfig.radarrEnabled == null || globalConfig.radarrEnabled) {
-    const result = await runArrType("RADARR", globalConfig, globalConfig.radarr);
-    totalStatus.push(`RADARR: (${result.success}/${result.failure}/${result.skipped})`);
-  } else {
-    logger.debug(`Radarr disabled in config`);
-  }
+  const arrTypes = [
+    { type: "SONARR", enabled: globalConfig.sonarrEnabled, config: globalConfig.sonarr },
+    { type: "RADARR", enabled: globalConfig.radarrEnabled, config: globalConfig.radarr },
+    { type: "WHISPARR", enabled: globalConfig.whisparrEnabled, config: globalConfig.whisparr },
+    { type: "READARR", enabled: globalConfig.readarrEnabled, config: globalConfig.readarr },
+    { type: "LIDARR", enabled: globalConfig.lidarrEnabled, config: globalConfig.lidarr },
+  ];
 
-  // Whisparr
-  if (globalConfig.whisparrEnabled == null || globalConfig.whisparrEnabled) {
-    const result = await runArrType("WHISPARR", globalConfig, globalConfig.whisparr);
-    totalStatus.push(`WHISPARR: (${result.success}/${result.failure}/${result.skipped})`);
-  } else {
-    logger.debug(`Whisparr disabled in config`);
-  }
-
-  // Readarr
-  if (globalConfig.readarrEnabled == null || globalConfig.readarrEnabled) {
-    const result = await runArrType("READARR", globalConfig, globalConfig.readarr);
-    totalStatus.push(`READARR: (${result.success}/${result.failure}/${result.skipped})`);
-  } else {
-    logger.debug(`Readarr disabled in config`);
-  }
-
-  // Lidarr
-  if (globalConfig.lidarrEnabled == null || globalConfig.lidarrEnabled) {
-    const result = await runArrType("LIDARR", globalConfig, globalConfig.lidarr);
-    totalStatus.push(`LIDARR: (${result.success}/${result.failure}/${result.skipped})`);
-  } else {
-    logger.debug(`Lidarr disabled in config`);
+  for (const { type, enabled, config } of arrTypes) {
+    if (enabled == null || enabled) {
+      const result = await runArrType(type as ArrType, globalConfig, config);
+      totalStatus.push(`${type}: (${result.success}/${result.failure}/${result.skipped})`);
+    } else {
+      logger.debug(`${type} disabled in config`);
+      disabledArrs.push(type);
+    }
   }
 
   logger.info(``);
+  if (disabledArrs.length > 0) {
+    logger.info(`Disabled Arrs: ${disabledArrs.join(", ")}`);
+  }
   logger.info(`Execution Summary (success/failure/skipped) instances: ${totalStatus.join(" - ")}`);
 };
 
