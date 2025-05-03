@@ -95,24 +95,26 @@ export const mapQualities = (qd_source: MergedQualityDefinitionResource[], value
         id: 1000 + i,
         name: obj.name,
         items:
-          obj.qualities?.map<MergedQualityProfileQualityItemResource>((obj2) => {
-            const qd = qdMap.get(obj2);
+          obj.qualities
+            ?.map<MergedQualityProfileQualityItemResource>((obj2) => {
+              const qd = qdMap.get(obj2);
 
-            const returnObject: MergedQualityProfileQualityItemResource = {
-              quality: {
-                id: qd?.quality?.id,
-                name: obj2,
-                resolution: qd?.quality?.resolution,
-                source: qd?.quality?.source,
-              },
-              allowed: obj.enabled ?? true,
-              items: [],
-            };
+              const returnObject: MergedQualityProfileQualityItemResource = {
+                quality: {
+                  id: qd?.quality?.id,
+                  name: obj2,
+                  resolution: qd?.quality?.resolution,
+                  source: qd?.quality?.source,
+                },
+                allowed: obj.enabled ?? true,
+                items: [],
+              };
 
-            qdMap.delete(obj2);
+              qdMap.delete(obj2);
 
-            return returnObject;
-          }) || [],
+              return returnObject;
+            })
+            .reverse() || [],
       };
     } else {
       const serverQD = qdMap.get(obj.name);
