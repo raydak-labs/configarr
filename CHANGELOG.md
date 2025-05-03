@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.13.5](https://github.com/raydak-labs/configarr/compare/v1.13.4...v1.13.5) (2025-05-03)
+
+### Bug Fixes
+
+- correctly handle possible empty quality arrays ([1ac9912](https://github.com/raydak-labs/configarr/commit/1ac9912f6af01c20604f04a5d795648104fcb80f))
+- correctly order qualities in groups of a profile ([c27b703](https://github.com/raydak-labs/configarr/commit/c27b7031eca10bcd3b09e39f72fb774f3a9bcf0f))
+- **deps:** update dependencies (non-major) ([#257](https://github.com/raydak-labs/configarr/issues/257)) ([27387bb](https://github.com/raydak-labs/configarr/commit/27387bbf07be44fe9d98569693bbec5ab18f9581))
+- improve check for ordering of qualities ([d9ac0ee](https://github.com/raydak-labs/configarr/commit/d9ac0ee21d8f0dd6d85cfa4080fdd86d10b3f5a4))
+- reverse qualities in groups from trash guide ([83479e7](https://github.com/raydak-labs/configarr/commit/83479e771bf4a23175e698eaa64b9f31f962fed8))
+
+### (internal) Refactorings
+
+- remove unnecessary qualities check ([d55c0ec](https://github.com/raydak-labs/configarr/commit/d55c0ec7893b61ec69531285ffd941d05fc5a6a5))
+- simplify starting code ([b969526](https://github.com/raydak-labs/configarr/commit/b9695265801e5fe5e7c3978cd1c10f6118afedcd))
+
 ## [1.13.4](https://github.com/raydak-labs/configarr/compare/v1.13.3...v1.13.4) (2025-04-12)
 
 ### Bug Fixes
