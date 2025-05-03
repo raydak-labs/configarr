@@ -7,13 +7,7 @@ import {
   MergedQualityProfileResource,
 } from "./__generated__/mergedTypes";
 import { ServerCache } from "./cache";
-import {
-  calculateQualityProfilesDiff,
-  doAllQualitiesExist,
-  isOrderOfQualitiesEqual,
-  isOrderOfConfigQualitiesEqual,
-  mapQualities,
-} from "./quality-profiles";
+import { calculateQualityProfilesDiff, isOrderOfQualitiesEqual, isOrderOfConfigQualitiesEqual, mapQualities } from "./quality-profiles";
 import { CFProcessing } from "./types/common.types";
 import { ConfigQualityProfile, ConfigQualityProfileItem, MergedConfigInstance } from "./types/config.types";
 import { cloneWithJSON, loadJsonFile } from "./util";
@@ -30,73 +24,6 @@ describe("QualityProfiles", async () => {
   const sampleCustomFormat = loadJsonFile<MergedCustomFormatResource>(
     path.resolve(__dirname, `../tests/samples/single_custom_format.json`),
   );
-
-  test("doAllQualitiesExist - all exist", async ({}) => {
-    const fromConfig: ConfigQualityProfileItem[] = [
-      { name: "WEB 1080p", qualities: ["WEBDL-1080p", "WEBRip-1080p"] },
-      { name: "HDTV-1080p" },
-      { name: "Bluray-1080p" },
-      { name: "Remux-1080p" },
-      { name: "WEB 720p", qualities: ["WEBDL-720p", "WEBRip-720p"] },
-      { name: "HDTV-720p" },
-    ];
-    const fromServer: ConfigQualityProfileItem[] = [
-      { name: "Bluray-1080p", qualities: [] },
-      { name: "HDTV-720p", qualities: [] },
-      { name: "WEB 720p", qualities: ["WEBDL-720p", "WEBRip-720p"] },
-      { name: "HDTV-1080p", qualities: [] },
-      { name: "WEB 1080p", qualities: ["WEBDL-1080p", "WEBRip-1080p"] },
-      { name: "Remux-1080p", qualities: [] },
-    ];
-    const result = doAllQualitiesExist(fromServer, fromConfig);
-
-    expect(result).toBe(true);
-  });
-
-  test("doAllQualitiesExist - enabled behaves equals if configured or not", async ({}) => {
-    const fromConfig: ConfigQualityProfileItem[] = [{ name: "WEB 1080p", qualities: ["WEBDL-1080p", "WEBRip-1080p"], enabled: true }];
-    const fromServer: ConfigQualityProfileItem[] = [{ name: "WEB 1080p", qualities: ["WEBDL-1080p", "WEBRip-1080p"] }];
-    const result = doAllQualitiesExist(fromServer, fromConfig);
-
-    expect(result).toBe(true);
-  });
-
-  test("doAllQualitiesExist - enabled false trigger change", async ({}) => {
-    const fromConfig: ConfigQualityProfileItem[] = [{ name: "WEB 1080p", qualities: ["WEBDL-1080p", "WEBRip-1080p"], enabled: false }];
-    const fromServer: ConfigQualityProfileItem[] = [{ name: "WEB 1080p", qualities: ["WEBDL-1080p", "WEBRip-1080p"] }];
-    const result = doAllQualitiesExist(fromServer, fromConfig);
-
-    expect(result).toBe(false);
-  });
-
-  test("doAllQualitiesExist - enabled both false no change", async ({}) => {
-    const fromConfig: ConfigQualityProfileItem[] = [{ name: "WEB 1080p", qualities: ["WEBDL-1080p", "WEBRip-1080p"], enabled: false }];
-    const fromServer: ConfigQualityProfileItem[] = [{ name: "WEB 1080p", qualities: ["WEBDL-1080p", "WEBRip-1080p"], enabled: false }];
-    const result = doAllQualitiesExist(fromServer, fromConfig);
-
-    expect(result).toBe(true);
-  });
-
-  test("doAllQualitiesExist - missing", async ({}) => {
-    const fromConfig: ConfigQualityProfileItem[] = [
-      { name: "WEB 1080p", qualities: ["WEBDL-1080p", "WEBRip-1080p"] },
-      { name: "HDTV-1080p" },
-      { name: "Bluray-1080p" },
-      { name: "Remux-1080p" },
-      { name: "WEB 720p", qualities: ["WEBDL-720p", "WEBRip-720p"] },
-      { name: "HDTV-720p" },
-    ];
-    const fromServer: ConfigQualityProfileItem[] = [
-      { name: "Bluray-1080p", qualities: [] },
-      { name: "WEB 720p", qualities: ["WEBDL-720p", "WEBRip-720p"] },
-      { name: "HDTV-1080p", qualities: [] },
-      { name: "WEB 1080p", qualities: ["WEBDL-1080p", "WEBRip-1080p"] },
-      { name: "Remux-1080p", qualities: [] },
-    ];
-    const result = doAllQualitiesExist(fromServer, fromConfig);
-
-    expect(result).toBe(false);
-  });
 
   test("isOrderOfConfigQualitiesEqual - should match", async ({}) => {
     const fromConfig: ConfigQualityProfileItem[] = [
@@ -159,7 +86,7 @@ describe("QualityProfiles", async () => {
       name: "hi",
       min_format_score: 2,
       qualities: fromConfig,
-      quality_sort: "sort",
+      quality_sort: "top",
       upgrade: { allowed: true, until_quality: "yes", until_score: 5 },
       score_set: "default",
     };
@@ -194,7 +121,7 @@ describe("QualityProfiles", async () => {
       name: "hi",
       min_format_score: 2,
       qualities: fromConfig,
-      quality_sort: "sort",
+      quality_sort: "top",
       upgrade: { allowed: true, until_quality: "yes", until_score: 5 },
       score_set: "default",
     };
@@ -302,6 +229,43 @@ describe("QualityProfiles", async () => {
     expect(result[1]!.items![1]!.quality?.name).toBe("HDTV-1080p");
   });
 
+  test("mapQualities - missing qualities added", async ({}) => {
+    const fromConfig: ConfigQualityProfileItem[] = [
+      { name: "WEB 1080p", qualities: ["WEBDL-1080p", "WEBRip-1080p"] },
+      { name: "HDTV-1080p" },
+    ];
+
+    const resources: MergedQualityDefinitionResource[] = [
+      { id: 1, title: "HDTV-1080p", weight: 2, quality: { id: 1, name: "HDTV-1080p" } },
+      { id: 2, title: "WEBDL-1080p", weight: 2, quality: { id: 2, name: "WEBDL-1080p" } },
+      { id: 3, title: "WEBRip-1080p", weight: 2, quality: { id: 3, name: "WEBRip-1080p" } },
+      { id: 4, title: "Unknown", weight: 2, quality: { id: 4, name: "Unknown" } },
+      { id: 5, title: "Test", weight: 2, quality: { id: 5, name: "Test" } },
+    ];
+
+    const profile: ConfigQualityProfile = {
+      name: "hi",
+      min_format_score: 2,
+      qualities: fromConfig,
+      quality_sort: "top",
+      upgrade: { allowed: true, until_quality: "yes", until_score: 5 },
+      score_set: "default",
+    };
+
+    const result = mapQualities(resources, profile);
+
+    expect(result).toHaveLength(4);
+    // ordering matters
+    expect(result[0]!.quality?.name).toBe("Unknown");
+    expect(result[0]!.allowed).toBe(false);
+    expect(result[1]!.quality?.name).toBe("Test");
+    expect(result[1]!.allowed).toBe(false);
+    expect(result[2]!.quality?.name).toBe("HDTV-1080p");
+    expect(result[2]!.allowed).toBe(true);
+    expect(result[3]!.name).toBe("WEB 1080p");
+    expect(result[3]!.allowed).toBe(true);
+  });
+
   test("calculateQualityProfilesDiff - should diff if minUpgradeFormatScore / minFormatScore is different", async ({}) => {
     const cfMap: CFProcessing = { carrIdMapping: new Map(), cfNameToCarrConfig: new Map() };
 
@@ -315,7 +279,7 @@ describe("QualityProfiles", async () => {
       name: "hi",
       min_format_score: 2,
       qualities: fromConfig,
-      quality_sort: "sort",
+      quality_sort: "top",
       upgrade: { allowed: true, until_quality: "HDTV-1080p", until_score: 1000 },
       score_set: "default",
     };
@@ -380,7 +344,7 @@ describe("QualityProfiles", async () => {
       name: "hi",
       min_format_score: 2,
       qualities: fromConfig,
-      quality_sort: "sort",
+      quality_sort: "top",
       upgrade: { allowed: true, until_quality: "HDTV-1080p", until_score: 1000 },
       score_set: "default",
     };
@@ -430,7 +394,7 @@ describe("QualityProfiles", async () => {
       name: "hi",
       min_format_score: 2,
       qualities: fromConfig,
-      quality_sort: "sort",
+      quality_sort: "top",
       upgrade: { allowed: true, until_quality: "HDTV-1080p", until_score: 1000 },
       score_set: "default",
       language: "Any",
@@ -478,7 +442,7 @@ describe("QualityProfiles", async () => {
       name: "hi",
       min_format_score: 2,
       qualities: fromConfig,
-      quality_sort: "sort",
+      quality_sort: "top",
       upgrade: { allowed: true, until_quality: "HDTV-1080p", until_score: 1000 },
       score_set: "default",
       language: "Any",
