@@ -97,3 +97,7 @@ You can compare features here: [Feature Comparison](https://configarr.raydak.de/
 - https://github.com/recyclarr/recyclarr
 - https://notifiarr.wiki/
 - https://github.com/Dictionarry-Hub/profilarr
+
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=raydak-labs/configarr&type=Date)](https://www.star-history.com/#raydak-labs/configarr&Date)
