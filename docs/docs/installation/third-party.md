@@ -15,6 +15,18 @@ As this is new and you are missing some services feel free to create a PR!
 Contributions welcome!
 :::
 
+## Proxmox VE Helper-Scripts
+
+<div style={{ textAlign: "center" }}>
+  <img height="200" src="https://community-scripts.github.io/ProxmoxVE/logo.png" />
+</div>
+
+Thanks to Community User @finkerle we have now an installation script for Proxmox users!
+With the script you can install & update the configarr version in your proxmox instance automatically.
+The instance will be deployed as an LXC Container.
+
+Check it out here [Configarr Proxmox Helper](https://community-scripts.github.io/ProxmoxVE/scripts?id=configarr).
+
 ## Unraid {#unraid}
 
 :::tip
