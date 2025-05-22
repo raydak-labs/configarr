@@ -18,7 +18,7 @@ Contributions welcome!
 ## Proxmox VE Helper-Scripts
 
 <div style={{ textAlign: "center" }}>
-  <img height="200" src="https://community-scripts.github.io/ProxmoxVE/logo.png" />
+  <img height="200" src="https://community-scripts.github.io/ProxmoxVE/logo.png" title="Proxmox Helper logo" alt="Logo from Proxmox Helper Scripts" />
 </div>
 
 Thanks to Community User @finkerle we have now an installation script for Proxmox users!
