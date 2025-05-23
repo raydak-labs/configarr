@@ -16,6 +16,15 @@ Configarr uses two main configuration files:
 - `config.yml` - Contains your main configuration
 - `secrets.yml` - Stores sensitive information like API keys
 
+## Usage
+
+1. Create both `config.yml` and `secrets.yml` files
+2. Place them in your Configarr configuration directory
+3. For Docker installations, mount these files as volumes
+4. For Kubernetes deployments, create ConfigMaps/Secrets from these files
+
+Configarr will automatically load these configurations on startup and apply them to your Sonarr/Radarr instances.
+
 ## Configuration Structure
 
 We try to be mostly compatible with Recyclarr, but with some small differences.
@@ -37,54 +46,6 @@ Configarr supports two types of templates:
    - `language` field support added with `1.7.0`
    - Can be overridden using `trashGuideUrl` in config.yml
    - See [TRaSH-Guides Radarr](https://github.com/TRaSH-Guides/Guides/tree/master/docs/json/radarr/quality-profiles) and [TRaSH-Guides Sonarr](https://github.com/TRaSH-Guides/Guides/tree/master/docs/json/sonarr/quality-profiles) for more information
-
-## Custom Formats Definitions {#custom-format-definitions}
-
-Custom formats can be defined in two ways:
-
-1. **Direct in config.yml**: Define custom formats directly in your configuration file
-2. **Separate files**: Store custom formats in separate files in the `localCustomFormatsPath` directory
-3. **Local templates**: Store custom formats in local templates folder which can be included per instance (at the moment only for local templates and not recyclarr git templates)
-
-Example custom format definition:
-
-```yaml title="config.yml"
-# Directly in the main config.yml
-customFormatDefinitions:
-  - trash_id: custom-de-only # Unique identifier
-    trash_scores:
-      default: -10000 # Default score for this format
-    trash_description: "Language: German Only"
-    name: "Language: Not German"
-    includeCustomFormatWhenRenaming: false
-    specifications:
-      - name: Not German Language
-        implementation: LanguageSpecification
-        negate: true
-        required: false
-        fields:
-          value: 4
-# ...
-```
-
-```yaml title="local-templates/template1.yml"
-# or in templates which can be included per instance
-customFormatDefinitions:
-  - trash_id: custom-de-only2 # Unique identifier
-    trash_scores:
-      default: -10000 # Default score for this format
-    trash_description: "Language: German Only 2"
-    name: "Language: Not German"
-    includeCustomFormatWhenRenaming: false
-    specifications:
-      - name: Not German Language
-        implementation: LanguageSpecification
-        negate: true
-        required: false
-        fields:
-          value: 4
-# ...
-```
 
 ## Configuration Files Reference
 
@@ -224,7 +185,44 @@ sonarr:
 
 All configurations above directly affect the "Episode Naming" settings under **Settings > Media Management** in the Sonarr UI. If a property is _not specified_, Configarr will not sync that setting, allowing manual configuration.
 
-## Quality Profile Rename {#quality-profile-rename}
+## Quality Profile
+
+This is general structure of a profile which can be directly in the config or in templates.
+Some fields could differ between different \*arrs if some features between mismatch.
+Mostly those should be the same.
+
+```yml
+# ...
+
+sonarr:
+  instance1:
+    # ...
+
+    quality_profiles:
+      - name: ExampleInConfigProfile
+        reset_unmatched_scores:
+          enabled: true # enable to reset scores
+        upgrade:
+          allowed: true # enable to allow updates
+          until_quality: WEB 2160p # update until quality
+          until_score: 1000 # Upgrade until score
+          min_format_score: 5 # Minimum increment for upgrade
+        min_format_score: 0 # Minimum custom format needed to download
+        quality_sort: top # enable to allow updates
+        qualities: # qualtities enabled in the profile. Can be groups.
+          - name: Remux-2160p
+          - name: WEB 2160p # This a group
+            qualities:
+              - WEBDL-2160p
+              - WEBRip-2160p
+          - name: Remux-1080p
+          - name: WEB 1080p
+            qualities:
+              - WEBDL-1080p
+              - WEBRip-1080p
+```
+
+### Quality Profile Rename {#quality-profile-rename}
 
 Support has been added to allow renaming quality profiles.
 This is useful if you use existing templates for example from TRaSH-Guides but want to adjust the naming to your liking.
@@ -250,7 +248,7 @@ Notes:
 - rename order will be displayed in `DEBUG` log like: `DEBUG [16:37:09.377]: Will rename quality profiles in this order: 'ExampleProfile' -> 'RenamedExampleProfile','[German] HD Bluray + WEB' -> 'RenamedProfile'`
 - **experimental**, available since `v1.10.0`
 
-## Quality Profile Cloning {#quality-profile-clone}
+### Quality Profile Cloning {#quality-profile-clone}
 
 Support has been added to allow cloning quality profiles.
 This is useful if you use existing templates for example from TRaSH-Guides but want to duplicate and slightly adjust some Custom Format scores or mappings.
@@ -280,6 +278,63 @@ Notes:
 - clone order will be displayed in `DEBUG` log
 - **experimental**, available since `v1.10.0`
 
+## Custom Formats Definitions {#custom-format-definitions}
+
+Custom formats can be defined in two ways:
+
+1. **Direct in config.yml**: Define custom formats directly in your configuration file
+2. **Separate files**: Store custom formats in separate files in the `localCustomFormatsPath` directory
+3. **Local templates**: Store custom formats in local templates folder which can be included per instance (at the moment only for local templates and not recyclarr git templates)
+
+Example custom format definition:
+
+```yaml title="config.yml"
+# Directly in the main config.yml
+customFormatDefinitions:
+  - trash_id: custom-de-only # Unique identifier
+    trash_scores:
+      default: -10000 # Default score for this format
+    trash_description: "Language: German Only"
+    name: "Language: Not German"
+    includeCustomFormatWhenRenaming: false
+    specifications:
+      - name: Not German Language
+        implementation: LanguageSpecification
+        negate: true
+        required: false
+        fields:
+          value: 4
+# ...
+```
+
+```yaml title="local-templates/template1.yml"
+# or in templates which can be included per instance
+customFormatDefinitions:
+  - trash_id: custom-de-only2 # Unique identifier
+    trash_scores:
+      default: -10000 # Default score for this format
+    trash_description: "Language: German Only 2"
+    name: "Language: Not German"
+    includeCustomFormatWhenRenaming: false
+    specifications:
+      - name: Not German Language
+        implementation: LanguageSpecification
+        negate: true
+        required: false
+        fields:
+          value: 4
+# ...
+```
+
+## Custom Formats
+
+- since `v1.13.0` CustomFormats can now also be assigned to Quality Profiles which only exist on the server and are not configured in the config file or included. This means you can only define the custom format mapping and do not have to provide `quality_profiles` if they already exist on the server.
+
+  <details>
+    <summary>CustomFormats with unmanaged QualityProfiles</summary>
+    <CodeBlock language="yml" title="CustomFormats with unmanaged QualityProfiles">{ExampleUnamanagedCustomFormats}</CodeBlock>
+  </details>
+
 ## Cleanup / Deleting CustomFormats {#cleanup-custom-formats}
 
 You can now enable the option to delete all custom formats which are not managed and used in the quality profiles.
@@ -302,15 +357,6 @@ sonarr:
 Notes:
 
 - **experimental**, available since `v1.12.0`
-
-## Custom Formats
-
-- since `v1.13.0` CustomFormats can now also be assigned to Quality Profiles which only exist on the server and are not configured in the config file or included. This means you can only define the custom format mapping and do not have to provide `quality_profiles` if they already exist on the server.
-
-  <details>
-    <summary>CustomFormats with unmanaged QualityProfiles</summary>
-    <CodeBlock language="yml" title="CustomFormats with unmanaged QualityProfiles">{ExampleUnamanagedCustomFormats}</CodeBlock>
-  </details>
 
 ## CustomFormatGroups {#custom-format-groups}
 
@@ -342,15 +388,6 @@ sonarr:
 Notes:
 
 - **experimental**, available since `v1.12.0`
-
-## Usage
-
-1. Create both `config.yml` and `secrets.yml` files
-2. Place them in your Configarr configuration directory
-3. For Docker installations, mount these files as volumes
-4. For Kubernetes deployments, create ConfigMaps/Secrets from these files
-
-Configarr will automatically load these configurations on startup and apply them to your Sonarr/Radarr instances.
 
 ## Experimental supported fields
 

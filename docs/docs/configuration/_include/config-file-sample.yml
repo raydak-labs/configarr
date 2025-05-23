@@ -146,8 +146,9 @@ radarr:
         upgrade:
           allowed: true
           until_quality: Remux-1080p
-          until_score: 10000
-        min_format_score: 100
+          until_score: 10000 # Upgrade until score
+          min_format_score: 100 # The minimum increment to trigger an upgrade
+        min_format_score: 100 # The most important custom format needed to download
         # Score set from TRaSH-Guide to use
         #score_set: anime-radarr
         # Sorting order of qualities in profile. Either top or bottom
