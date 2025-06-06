@@ -186,6 +186,9 @@ const config: Config = {
       darkTheme: prismThemes.dracula,
     },
   } satisfies Preset.ThemeConfig,
+
+  // use trailing slashes as github pages uses them, this also fixes the sitemap.xml
+  trailingSlash: true,
 };
 
 export default config;
