@@ -620,6 +620,7 @@ export const mergeConfigsAndTemplates = async (
 
   mergedTemplates.quality_profiles = Array.from(qualityProfilesMerged.values());
 
+  mergedTemplates.root_folders = instanceConfig.root_folders;
   const validatedConfig = validateConfig(mergedTemplates);
   logger.debug(`Merged config: '${JSON.stringify(validatedConfig)}'`);
 

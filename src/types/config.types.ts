@@ -85,6 +85,11 @@ export type InputConfigArrInstance = {
 
   // this is recyclarr specific: https://recyclarr.dev/wiki/yaml/config-reference/media-naming/
   media_naming?: MediaNamingType;
+
+  /**
+   * @experimental since v1.14.0
+   */
+  root_folders?: string[];
 } & Pick<InputConfigSchema, "customFormatDefinitions">;
 
 // HINT: Experimental
