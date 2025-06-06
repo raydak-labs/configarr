@@ -49,6 +49,10 @@ sonarr:
     #   ignore: # optional
     #     - some-cf
 
+    # experimental since v1.14.0. Optional
+    # root_folders:
+    #   - /mnt/media/series
+
     quality_definition:
       type: series # Quality definition type for Sonarr
 

@@ -388,6 +388,26 @@ Notes:
 
 - **experimental**, available since `v1.12.0`
 
+## RootFolders
+
+With Configarr you can configure the root folders directly.
+Just specify the list of your folders and Configarr will delete and create them as specified in the list.
+
+```yml
+# ...
+
+sonarr:
+  instance1:
+    # ...
+    # (experimental) since v1.14.0
+    root_folders:
+      - /mnt/media/series
+```
+
+Notes:
+
+- **experimental**, available since `v1.14.0`
+
 ## Experimental supported fields
 
 - Experimental support for `media_management` and `media_naming_api` (since v1.5.0)

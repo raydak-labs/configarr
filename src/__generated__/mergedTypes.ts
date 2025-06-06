@@ -5,6 +5,7 @@ import {
   ProfileFormatItemResource as RadarrProfileFormatItemResource,
   QualityProfileQualityItemResource as RadarrQualityProfileQualityItemResource,
   QualityProfileResource as RadarrQualityProfileResource,
+  RootFolderResource as RadarrRootFolderResource,
 } from "./radarr/data-contracts";
 import {
   QualityDefinitionResource as QDRSonarr,
@@ -13,6 +14,7 @@ import {
   ProfileFormatItemResource as SonarrProfileFormatItemResource,
   QualityProfileQualityItemResource as SonarrQualityProfileQualityItemResource,
   QualityProfileResource as SonarrQualityProfileResource,
+  RootFolderResource as SonarrRootFolderResource,
 } from "./sonarr/data-contracts";
 
 // Those types are only to make the API client unified usable.
@@ -54,3 +56,4 @@ export type MergedQualityProfileResource = OmitTyped<QPRMerged, "items"> &
   >;
 
 export type MergedCustomFormatSpecificationSchema = RadarrCustomFormatSpecificationSchema & SonarrCustomFormatSpecificationSchema;
+export type MergedRootFolderResource = SonarrRootFolderResource & RadarrRootFolderResource;

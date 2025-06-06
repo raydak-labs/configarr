@@ -233,6 +233,14 @@ const includeRecyclarrTemplate = (
     }
   }
 
+  if (template.root_folders) {
+    if (Array.isArray(template.root_folders)) {
+      mergedTemplates.root_folders = [...(mergedTemplates.root_folders || []), ...template.root_folders];
+    } else {
+      logger.warn(`Root folders in template must be an array. Ignoring.`);
+    }
+  }
+
   // TODO Ignore recursive include for now
   if (template.include) {
     logger.warn(`Recursive includes not supported at the moment. Ignoring.`);
@@ -619,6 +627,15 @@ export const mergeConfigsAndTemplates = async (
   }, new Map<string, ConfigQualityProfile>());
 
   mergedTemplates.quality_profiles = Array.from(qualityProfilesMerged.values());
+
+  if (instanceConfig.root_folders) {
+    mergedTemplates.root_folders = [...(mergedTemplates.root_folders || []), ...instanceConfig.root_folders];
+  }
+
+  if (mergedTemplates.root_folders) {
+    // cleanup duplicates
+    mergedTemplates.root_folders = [...new Set(mergedTemplates.root_folders)];
+  }
 
   const validatedConfig = validateConfig(mergedTemplates);
   logger.debug(`Merged config: '${JSON.stringify(validatedConfig)}'`);

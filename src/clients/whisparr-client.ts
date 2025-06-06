@@ -113,6 +113,18 @@ export class WhisparrClient
     return this.api.v3ConfigMediamanagementUpdate(id, data);
   }
 
+  async getRootfolders() {
+    return this.api.v3RootfolderList();
+  }
+
+  async addRootFolder(data: any) {
+    return this.api.v3RootfolderCreate(data);
+  }
+
+  async deleteRootFolder(id: string) {
+    return this.api.v3RootfolderDelete(+id);
+  }
+
   // System/Health Check
   getSystemStatus() {
     return this.api.v3SystemStatusList();

@@ -19,6 +19,7 @@ import { ArrType } from "./types/common.types";
 import { InputConfigArrInstance, InputConfigSchema } from "./types/config.types";
 import { TrashArrSupportedConst, TrashQualityDefinition, TrashQualityDefinitionQuality } from "./types/trashguide.types";
 import { isInConstArray } from "./util";
+import { calculateRootFolderDiff } from "./root-folder";
 
 const pipeline = async (globalConfig: InputConfigSchema, instanceConfig: InputConfigArrInstance, arrType: ArrType) => {
   const api = getUnifiedClient();
@@ -198,6 +199,26 @@ const pipeline = async (globalConfig: InputConfigSchema, instanceConfig: InputCo
     }
   } else if (create.length > 0 || changedQPs.length > 0) {
     logger.info("DryRun: Would create/update QualityProfiles.");
+  }
+
+  const rootFolderDiff = await calculateRootFolderDiff(config.root_folders || []);
+
+  if (rootFolderDiff) {
+    if (getEnvs().DRY_RUN) {
+      logger.info("DryRun: Would update RootFolders.");
+    } else {
+      for (const folder of rootFolderDiff.notAvailableAnymore) {
+        logger.info(`Deleting RootFolder not available anymore: ${folder.path}`);
+        await api.deleteRootFolder(`${folder.id}`);
+      }
+
+      for (const folder of rootFolderDiff.missingOnServer) {
+        logger.info(`Adding RootFolder missing on server: ${folder}`);
+        await api.addRootFolder({ path: folder });
+      }
+
+      logger.info(`Updated RootFolders`);
+    }
   }
 };
 
