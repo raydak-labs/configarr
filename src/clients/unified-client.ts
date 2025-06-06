@@ -122,6 +122,10 @@ export interface IArrClient<
   getMediamanagement(): Promise<any>;
   updateMediamanagement(id: string, data: any): Promise<any>;
 
+  getRootfolders(): Promise<any>;
+  addRootFolder(data: any): Promise<any>;
+  deleteRootFolder(id: string): Promise<any>;
+
   getLanguages(): Promise<L[]>;
 
   // System/Health Check
@@ -215,6 +219,18 @@ export class UnifiedClient implements IArrClient {
 
   async updateMediamanagement(id: string, data: any) {
     return this.api.updateMediamanagement(id, data);
+  }
+
+  async getRootfolders() {
+    return this.api.getRootfolders();
+  }
+
+  async addRootFolder(data: any) {
+    return this.api.addRootFolder(data);
+  }
+
+  async deleteRootFolder(id: string) {
+    return this.api.deleteRootFolder(id);
   }
 
   async getSystemStatus() {
