@@ -92,6 +92,8 @@ radarr:
     base_url: http://radarr:7878
     api_key: !secret RADARR_API_KEY
 
+    root_folders:
+      - "/app"
     # experimental
     media_management:
       recycleBin: "/tmp"

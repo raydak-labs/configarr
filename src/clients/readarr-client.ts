@@ -105,6 +105,18 @@ export class ReadarrClient
     return this.api.v1ConfigMediamanagementUpdate(id, data);
   }
 
+  async getRootfolders() {
+    return this.api.v1RootfolderList();
+  }
+
+  async addRootFolder(data: any) {
+    return this.api.v1RootfolderCreate(data);
+  }
+
+  async deleteRootFolder(id: string) {
+    return this.api.v1RootfolderDelete(+id);
+  }
+
   // System/Health Check
   getSystemStatus() {
     return this.api.v1SystemStatusList();
