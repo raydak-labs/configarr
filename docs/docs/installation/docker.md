@@ -80,7 +80,7 @@ See [Environment Variables](../configuration/environment-variables.md)
 
 ## Basic Configuration
 
-Create a configuration file at `/path/to/config/config.yaml` more information about the config file can be found [here](../configuration/config-file.md).
+Create a configuration file at `/path/to/config/config.yml` more information about the config file can be found [here](../configuration/config-file.md).
 You can also test everything with the [Full Example](../examples.md) locally.
 
 <details>
