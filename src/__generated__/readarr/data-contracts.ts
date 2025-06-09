@@ -1,5 +1,6 @@
 /* eslint-disable */
 /* tslint:disable */
+// @ts-nocheck
 /*
  * ---------------------------------------------------------------
  * ## THIS FILE WAS GENERATED VIA SWAGGER-TYPESCRIPT-API        ##
@@ -8,6 +9,247 @@
  * ## SOURCE: https://github.com/acacode/swagger-typescript-api ##
  * ---------------------------------------------------------------
  */
+
+export enum WriteBookTagsType {
+  NewFiles = "newFiles",
+  AllFiles = "allFiles",
+  Sync = "sync",
+}
+
+export enum WriteAudioTagsType {
+  No = "no",
+  NewFiles = "newFiles",
+  AllFiles = "allFiles",
+  Sync = "sync",
+}
+
+export enum UpdateMechanism {
+  BuiltIn = "builtIn",
+  Script = "script",
+  External = "external",
+  Apt = "apt",
+  Docker = "docker",
+}
+
+export enum TrackedDownloadStatus {
+  Ok = "ok",
+  Warning = "warning",
+  Error = "error",
+}
+
+export enum TrackedDownloadState {
+  Downloading = "downloading",
+  DownloadFailed = "downloadFailed",
+  DownloadFailedPending = "downloadFailedPending",
+  ImportPending = "importPending",
+  Importing = "importing",
+  ImportFailed = "importFailed",
+  Imported = "imported",
+  Ignored = "ignored",
+}
+
+export enum SortDirection {
+  Default = "default",
+  Ascending = "ascending",
+  Descending = "descending",
+}
+
+export enum RuntimeMode {
+  Console = "console",
+  Service = "service",
+  Tray = "tray",
+}
+
+export enum RescanAfterRefreshType {
+  Always = "always",
+  AfterManual = "afterManual",
+  Never = "never",
+}
+
+export enum RejectionType {
+  Permanent = "permanent",
+  Temporary = "temporary",
+}
+
+export enum ProxyType {
+  Http = "http",
+  Socks4 = "socks4",
+  Socks5 = "socks5",
+}
+
+export enum ProviderMessageType {
+  Info = "info",
+  Warning = "warning",
+  Error = "error",
+}
+
+export enum ProperDownloadTypes {
+  PreferAndUpgrade = "preferAndUpgrade",
+  DoNotUpgrade = "doNotUpgrade",
+  DoNotPrefer = "doNotPrefer",
+}
+
+export enum NewItemMonitorTypes {
+  All = "all",
+  None = "none",
+  New = "new",
+}
+
+export enum MonitorTypes {
+  All = "all",
+  Future = "future",
+  Missing = "missing",
+  Existing = "existing",
+  Latest = "latest",
+  First = "first",
+  None = "none",
+  Unknown = "unknown",
+}
+
+export enum MediaCoverTypes {
+  Unknown = "unknown",
+  Poster = "poster",
+  Banner = "banner",
+  Fanart = "fanart",
+  Screenshot = "screenshot",
+  Headshot = "headshot",
+  Cover = "cover",
+  Disc = "disc",
+  Logo = "logo",
+  Clearlogo = "clearlogo",
+}
+
+export enum IndexerFlags {
+  Freeleech = "freeleech",
+  Halfleech = "halfleech",
+  DoubleUpload = "doubleUpload",
+  Internal = "internal",
+  Scene = "scene",
+  Freeleech75 = "freeleech75",
+  Freeleech25 = "freeleech25",
+}
+
+export enum ImportListType {
+  Program = "program",
+  Goodreads = "goodreads",
+  Other = "other",
+}
+
+export enum ImportListMonitorType {
+  None = "none",
+  SpecificBook = "specificBook",
+  EntireAuthor = "entireAuthor",
+}
+
+export enum HealthCheckResult {
+  Ok = "ok",
+  Notice = "notice",
+  Warning = "warning",
+  Error = "error",
+}
+
+export enum FileDateType {
+  None = "none",
+  BookReleaseDate = "bookReleaseDate",
+}
+
+export enum EntityHistoryEventType {
+  Unknown = "unknown",
+  Grabbed = "grabbed",
+  BookFileImported = "bookFileImported",
+  DownloadFailed = "downloadFailed",
+  BookFileDeleted = "bookFileDeleted",
+  BookFileRenamed = "bookFileRenamed",
+  BookImportIncomplete = "bookImportIncomplete",
+  DownloadImported = "downloadImported",
+  BookFileRetagged = "bookFileRetagged",
+  DownloadIgnored = "downloadIgnored",
+}
+
+export enum DownloadProtocol {
+  Unknown = "unknown",
+  Usenet = "usenet",
+  Torrent = "torrent",
+}
+
+export enum DatabaseType {
+  SqLite = "sqLite",
+  PostgreSQL = "postgreSQL",
+}
+
+export enum CommandTrigger {
+  Unspecified = "unspecified",
+  Manual = "manual",
+  Scheduled = "scheduled",
+}
+
+export enum CommandStatus {
+  Queued = "queued",
+  Started = "started",
+  Completed = "completed",
+  Failed = "failed",
+  Aborted = "aborted",
+  Cancelled = "cancelled",
+  Orphaned = "orphaned",
+}
+
+export enum CommandResult {
+  Unknown = "unknown",
+  Successful = "successful",
+  Unsuccessful = "unsuccessful",
+}
+
+export enum CommandPriority {
+  Normal = "normal",
+  High = "high",
+  Low = "low",
+}
+
+export enum CertificateValidationType {
+  Enabled = "enabled",
+  DisabledForLocalAddresses = "disabledForLocalAddresses",
+  Disabled = "disabled",
+}
+
+export enum BookAddType {
+  Automatic = "automatic",
+  Manual = "manual",
+}
+
+export enum BackupType {
+  Scheduled = "scheduled",
+  Manual = "manual",
+  Update = "update",
+}
+
+export enum AuthorStatusType {
+  Continuing = "continuing",
+  Ended = "ended",
+}
+
+export enum AuthenticationType {
+  None = "none",
+  Basic = "basic",
+  Forms = "forms",
+  External = "external",
+}
+
+export enum AuthenticationRequiredType {
+  Enabled = "enabled",
+  DisabledForLocalAddresses = "disabledForLocalAddresses",
+}
+
+export enum ApplyTags {
+  Add = "add",
+  Remove = "remove",
+  Replace = "replace",
+}
+
+export enum AllowFingerprinting {
+  Never = "never",
+  NewFiles = "newFiles",
+  AllFiles = "allFiles",
+}
 
 export interface AddAuthorOptions {
   monitor?: MonitorTypes;
@@ -21,33 +263,9 @@ export interface AddBookOptions {
   searchForNewBook?: boolean;
 }
 
-export enum AllowFingerprinting {
-  Never = "never",
-  NewFiles = "newFiles",
-  AllFiles = "allFiles",
-}
-
 export interface ApiInfoResource {
   current?: string | null;
   deprecated?: string[] | null;
-}
-
-export enum ApplyTags {
-  Add = "add",
-  Remove = "remove",
-  Replace = "replace",
-}
-
-export enum AuthenticationRequiredType {
-  Enabled = "enabled",
-  DisabledForLocalAddresses = "disabledForLocalAddresses",
-}
-
-export enum AuthenticationType {
-  None = "none",
-  Basic = "basic",
-  Forms = "forms",
-  External = "external",
 }
 
 export interface Author {
@@ -156,6 +374,7 @@ export interface AuthorResource {
   monitored?: boolean;
   monitorNewItems?: NewItemMonitorTypes;
   rootFolderPath?: string | null;
+  folder?: string | null;
   genres?: string[] | null;
   cleanName?: string | null;
   sortName?: string | null;
@@ -184,11 +403,6 @@ export interface AuthorStatisticsResource {
   percentOfBooks?: number;
 }
 
-export enum AuthorStatusType {
-  Continuing = "continuing",
-  Ended = "ended",
-}
-
 export interface AuthorTitleInfo {
   title?: string | null;
   titleWithoutYear?: string | null;
@@ -206,12 +420,6 @@ export interface BackupResource {
   size?: number;
   /** @format date-time */
   time?: string;
-}
-
-export enum BackupType {
-  Scheduled = "scheduled",
-  Manual = "manual",
-  Update = "update",
 }
 
 export interface BlocklistBulkResource {
@@ -277,11 +485,6 @@ export interface Book {
   editions?: EditionListLazyLoaded;
   bookFiles?: BookFileListLazyLoaded;
   seriesLinks?: SeriesBookLinkListLazyLoaded;
-}
-
-export enum BookAddType {
-  Automatic = "automatic",
-  Manual = "manual",
 }
 
 export interface BookEditorResource {
@@ -390,6 +593,8 @@ export interface BookResource {
   added?: string | null;
   addOptions?: AddBookOptions;
   remoteCover?: string | null;
+  /** @format date-time */
+  lastSearchTime?: string | null;
   editions?: EditionResource[] | null;
 }
 
@@ -436,12 +641,6 @@ export interface BookshelfResource {
   monitorNewItems?: NewItemMonitorTypes;
 }
 
-export enum CertificateValidationType {
-  Enabled = "enabled",
-  DisabledForLocalAddresses = "disabledForLocalAddresses",
-  Disabled = "disabled",
-}
-
 export interface Command {
   sendUpdatesToClient?: boolean;
   updateScheduledTask?: boolean;
@@ -458,12 +657,6 @@ export interface Command {
   trigger?: CommandTrigger;
   suppressMessages?: boolean;
   clientUserAgent?: string | null;
-}
-
-export enum CommandPriority {
-  Normal = "normal",
-  High = "high",
-  Low = "low",
 }
 
 export interface CommandResource {
@@ -493,28 +686,6 @@ export interface CommandResource {
   updateScheduledTask?: boolean;
   /** @format date-time */
   lastExecutionTime?: string | null;
-}
-
-export enum CommandResult {
-  Unknown = "unknown",
-  Successful = "successful",
-  Unsuccessful = "unsuccessful",
-}
-
-export enum CommandStatus {
-  Queued = "queued",
-  Started = "started",
-  Completed = "completed",
-  Failed = "failed",
-  Aborted = "aborted",
-  Cancelled = "cancelled",
-  Orphaned = "orphaned",
-}
-
-export enum CommandTrigger {
-  Unspecified = "unspecified",
-  Manual = "manual",
-  Scheduled = "scheduled",
 }
 
 export interface CustomFilterResource {
@@ -552,11 +723,6 @@ export interface CustomFormatSpecificationSchema {
   required?: boolean;
   fields?: Field[] | null;
   presets?: CustomFormatSpecificationSchema[] | null;
-}
-
-export enum DatabaseType {
-  SqLite = "sqLite",
-  PostgreSQL = "postgreSQL",
 }
 
 export interface DelayProfileResource {
@@ -642,12 +808,6 @@ export interface DownloadClientResource {
   removeFailedDownloads?: boolean;
 }
 
-export enum DownloadProtocol {
-  Unknown = "unknown",
-  Usenet = "usenet",
-  Torrent = "torrent",
-}
-
 export interface Edition {
   /** @format int32 */
   id?: number;
@@ -715,19 +875,6 @@ export interface EditionResource {
   remoteCover?: string | null;
 }
 
-export enum EntityHistoryEventType {
-  Unknown = "unknown",
-  Grabbed = "grabbed",
-  BookFileImported = "bookFileImported",
-  DownloadFailed = "downloadFailed",
-  BookFileDeleted = "bookFileDeleted",
-  BookFileRenamed = "bookFileRenamed",
-  BookImportIncomplete = "bookImportIncomplete",
-  DownloadImported = "downloadImported",
-  BookFileRetagged = "bookFileRetagged",
-  DownloadIgnored = "downloadIgnored",
-}
-
 export interface Field {
   /** @format int32 */
   order?: number;
@@ -748,25 +895,13 @@ export interface Field {
   isFloat?: boolean;
 }
 
-export enum FileDateType {
-  None = "none",
-  BookReleaseDate = "bookReleaseDate",
-}
-
-export enum HealthCheckResult {
-  Ok = "ok",
-  Notice = "notice",
-  Warning = "warning",
-  Error = "error",
-}
-
 export interface HealthResource {
   /** @format int32 */
   id?: number;
   source?: string | null;
   type?: HealthCheckResult;
   message?: string | null;
-  wikiUrl?: HttpUri;
+  wikiUrl?: string | null;
 }
 
 export interface HistoryResource {
@@ -849,17 +984,6 @@ export interface HostConfigResource {
   trustCgnatIpAddresses?: boolean;
 }
 
-export interface HttpUri {
-  fullUri?: string | null;
-  scheme?: string | null;
-  host?: string | null;
-  /** @format int32 */
-  port?: number | null;
-  path?: string | null;
-  query?: string | null;
-  fragment?: string | null;
-}
-
 export interface ICustomFormatSpecification {
   /** @format int32 */
   order?: number;
@@ -887,12 +1011,6 @@ export interface ImportListExclusionResource {
   id?: number;
   foreignId?: string | null;
   authorName?: string | null;
-}
-
-export enum ImportListMonitorType {
-  None = "none",
-  SpecificBook = "specificBook",
-  EntireAuthor = "entireAuthor",
 }
 
 export interface ImportListResource {
@@ -925,12 +1043,6 @@ export interface ImportListResource {
   minRefreshInterval?: string;
 }
 
-export enum ImportListType {
-  Program = "program",
-  Goodreads = "goodreads",
-  Other = "other",
-}
-
 export interface IndexerBulkResource {
   ids?: number[] | null;
   tags?: number[] | null;
@@ -960,16 +1072,6 @@ export interface IndexerFlagResource {
   id?: number;
   name?: string | null;
   nameLower?: string | null;
-}
-
-export enum IndexerFlags {
-  Freeleech = "freeleech",
-  Halfleech = "halfleech",
-  DoubleUpload = "doubleUpload",
-  Internal = "internal",
-  Scene = "scene",
-  Freeleech75 = "freeleech75",
-  Freeleech25 = "freeleech25",
 }
 
 export interface IndexerResource {
@@ -1098,19 +1200,7 @@ export interface MediaCover {
   url?: string | null;
   coverType?: MediaCoverTypes;
   extension?: string | null;
-}
-
-export enum MediaCoverTypes {
-  Unknown = "unknown",
-  Poster = "poster",
-  Banner = "banner",
-  Fanart = "fanart",
-  Screenshot = "screenshot",
-  Headshot = "headshot",
-  Cover = "cover",
-  Disc = "disc",
-  Logo = "logo",
-  Clearlogo = "clearlogo",
+  remoteUrl?: string | null;
 }
 
 export interface MediaInfoModel {
@@ -1224,17 +1314,6 @@ export interface MetadataResource {
   enable?: boolean;
 }
 
-export enum MonitorTypes {
-  All = "all",
-  Future = "future",
-  Missing = "missing",
-  Existing = "existing",
-  Latest = "latest",
-  First = "first",
-  None = "none",
-  Unknown = "unknown",
-}
-
 export interface MonitoringOptions {
   monitor?: MonitorTypes;
   booksToMonitor?: string[] | null;
@@ -1256,12 +1335,6 @@ export interface NamingConfigResource {
   replaceSpaces?: boolean;
   separator?: string | null;
   numberStyle?: string | null;
-}
-
-export enum NewItemMonitorTypes {
-  All = "all",
-  None = "none",
-  New = "new",
 }
 
 export interface NotificationResource {
@@ -1394,27 +1467,9 @@ export interface ProfileFormatItemResource {
   score?: number;
 }
 
-export enum ProperDownloadTypes {
-  PreferAndUpgrade = "preferAndUpgrade",
-  DoNotUpgrade = "doNotUpgrade",
-  DoNotPrefer = "doNotPrefer",
-}
-
 export interface ProviderMessage {
   message?: string | null;
   type?: ProviderMessageType;
-}
-
-export enum ProviderMessageType {
-  Info = "info",
-  Warning = "warning",
-  Error = "error",
-}
-
-export enum ProxyType {
-  Http = "http",
-  Socks4 = "socks4",
-  Socks5 = "socks5",
 }
 
 export interface Quality {
@@ -1575,11 +1630,6 @@ export interface Rejection {
   type?: RejectionType;
 }
 
-export enum RejectionType {
-  Permanent = "permanent",
-  Temporary = "temporary",
-}
-
 export interface ReleaseProfileResource {
   /** @format int32 */
   id?: number;
@@ -1673,12 +1723,6 @@ export interface RenameBookResource {
   newPath?: string | null;
 }
 
-export enum RescanAfterRefreshType {
-  Always = "always",
-  AfterManual = "afterManual",
-  Never = "never",
-}
-
 export interface RetagBookResource {
   /** @format int32 */
   id?: number;
@@ -1730,12 +1774,6 @@ export interface RootFolderResource {
   freeSpace?: number | null;
   /** @format int64 */
   totalSpace?: number | null;
-}
-
-export enum RuntimeMode {
-  Console = "console",
-  Service = "service",
-  Tray = "tray",
 }
 
 export interface SelectOption {
@@ -1811,12 +1849,6 @@ export interface SeriesResource {
   title?: string | null;
   description?: string | null;
   links?: SeriesBookLinkResource[] | null;
-}
-
-export enum SortDirection {
-  Default = "default",
-  Ascending = "ascending",
-  Descending = "descending",
 }
 
 export interface SystemResource {
@@ -1898,23 +1930,6 @@ export interface TaskResource {
   lastDuration?: string;
 }
 
-export enum TrackedDownloadState {
-  Downloading = "downloading",
-  DownloadFailed = "downloadFailed",
-  DownloadFailedPending = "downloadFailedPending",
-  ImportPending = "importPending",
-  Importing = "importing",
-  ImportFailed = "importFailed",
-  Imported = "imported",
-  Ignored = "ignored",
-}
-
-export enum TrackedDownloadStatus {
-  Ok = "ok",
-  Warning = "warning",
-  Error = "error",
-}
-
 export interface TrackedDownloadStatusMessage {
   title?: string | null;
   messages?: string[] | null;
@@ -1941,14 +1956,6 @@ export interface UpdateChanges {
   fixed?: string[] | null;
 }
 
-export enum UpdateMechanism {
-  BuiltIn = "builtIn",
-  Script = "script",
-  External = "external",
-  Apt = "apt",
-  Docker = "docker",
-}
-
 export interface UpdateResource {
   /** @format int32 */
   id?: number;
@@ -1965,17 +1972,4 @@ export interface UpdateResource {
   latest?: boolean;
   changes?: UpdateChanges;
   hash?: string | null;
-}
-
-export enum WriteAudioTagsType {
-  No = "no",
-  NewFiles = "newFiles",
-  AllFiles = "allFiles",
-  Sync = "sync",
-}
-
-export enum WriteBookTagsType {
-  NewFiles = "newFiles",
-  AllFiles = "allFiles",
-  Sync = "sync",
 }
