@@ -1,5 +1,6 @@
 /* eslint-disable */
 /* tslint:disable */
+// @ts-nocheck
 /*
  * ---------------------------------------------------------------
  * ## THIS FILE WAS GENERATED VIA SWAGGER-TYPESCRIPT-API        ##
@@ -10,6 +11,7 @@
  */
 
 import { HttpClient, RequestParams } from "./../ky-client";
+import { CalendarReleaseType } from "./data-contracts";
 
 export class Feed<SecurityDataType = unknown> {
   http: HttpClient<SecurityDataType>;
@@ -42,6 +44,7 @@ export class Feed<SecurityDataType = unknown> {
       tags?: string;
       /** @default false */
       unmonitored?: boolean;
+      releaseTypes?: CalendarReleaseType[];
     },
     params: RequestParams = {},
   ) =>

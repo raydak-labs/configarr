@@ -1,5 +1,6 @@
 /* eslint-disable */
 /* tslint:disable */
+// @ts-nocheck
 /*
  * ---------------------------------------------------------------
  * ## THIS FILE WAS GENERATED VIA SWAGGER-TYPESCRIPT-API        ##
@@ -3956,11 +3957,11 @@ export class Api<SecurityDataType = unknown> {
    * No description
    *
    * @tags SeriesFolder
-   * @name V3SeriesFolderDetail
+   * @name V3SeriesFolderList
    * @request GET:/api/v3/series/{id}/folder
    * @secure
    */
-  v3SeriesFolderDetail = (id: number, params: RequestParams = {}) =>
+  v3SeriesFolderList = (id: number, params: RequestParams = {}) =>
     this.http.request<void, any>({
       path: `/api/v3/series/${id}/folder`,
       method: "GET",
