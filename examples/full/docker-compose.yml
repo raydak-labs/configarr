@@ -1,6 +1,6 @@
 services:
   sonarr:
-    image: lscr.io/linuxserver/sonarr:4.0.14
+    image: lscr.io/linuxserver/sonarr:4.0.15
     networks:
       - configarr-full
     environment:
@@ -15,7 +15,7 @@ services:
     restart: unless-stopped
 
   radarr:
-    image: lscr.io/linuxserver/radarr:5.25.0
+    image: lscr.io/linuxserver/radarr:5.26.2
     networks:
       - configarr-full
     environment:
@@ -64,7 +64,7 @@ services:
 
   # experimental
   lidarr:
-    image: lscr.io/linuxserver/lidarr:2.11.2
+    image: lscr.io/linuxserver/lidarr:2.12.4
     networks:
       - configarr-full
     environment:
