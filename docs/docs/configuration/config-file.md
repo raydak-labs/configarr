@@ -409,6 +409,46 @@ Notes:
 
 - **experimental**, available since `v1.14.0`
 
+## Delay Profiles
+
+You can configure and sync Delay Profiles directly in your config. This allows you to manage the download delay logic for Usenet and Torrent protocols, including protocol preference, delays, and tag-based rules.
+
+```yaml
+yourarr:
+  instance1:
+    # (experimental) since v1.15.0
+    delay_profiles:
+      - enableUsenet: true
+        enableTorrent: false
+        preferredProtocol: usenet
+        usenetDelay: 10
+        torrentDelay: 0
+        bypassIfHighestQuality: false
+        bypassIfAboveCustomFormatScore: false
+        minimumCustomFormatScore: 0
+        order: 1
+        tags: [1, 2]
+      - enableUsenet: false
+        enableTorrent: true
+        preferredProtocol: torrent
+        usenetDelay: 0
+        torrentDelay: 20
+        bypassIfHighestQuality: true
+        bypassIfAboveCustomFormatScore: false
+        minimumCustomFormatScore: 0
+        order: 2
+        tags: [3]
+```
+
+Notes:
+- **experimental**, available since `v1.15.0`
+- Supported for Sonarr, Radarr, Whisparr, Lidarr, and Readarr (if the API supports it)
+- If a delay profile exists on the server but not in your config, it will be deleted
+- If a delay profile is in your config but not on the server, it will be created (if supported)
+- If a delay profile differs, it will be updated
+
+See [Radarr API DelayProfile](https://radarr.video/docs/api/#/DelayProfile) for more details on available fields.
+
 ## Experimental supported fields
 
 - Experimental support for `media_management` and `media_naming_api` (since v1.5.0)

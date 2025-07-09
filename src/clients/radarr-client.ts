@@ -115,6 +115,19 @@ export class RadarrClient implements IArrClient<QualityProfileResource, QualityD
     return this.api.v3RootfolderDelete(+id);
   }
 
+  // Delay Profiles
+  async getDelayProfiles() {
+    return this.api.v3DelayprofileList();
+  }
+
+  async updateDelayProfile(id: string, data: any) {
+    return this.api.v3DelayprofileUpdate(id, data);
+  }
+
+  async deleteDelayProfile(id: string) {
+    return this.api.v3DelayprofileDelete(+id);
+  }
+
   // System/Health Check
   getSystemStatus() {
     return this.api.v3SystemStatusList();

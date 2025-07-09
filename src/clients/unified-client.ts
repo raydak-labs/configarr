@@ -128,6 +128,11 @@ export interface IArrClient<
 
   getLanguages(): Promise<L[]>;
 
+  // Delay Profiles
+  getDelayProfiles(): Promise<any>;
+  updateDelayProfile(id: string, data: any): Promise<any>;
+  deleteDelayProfile(id: string): Promise<any>;
+
   // System/Health Check
   getSystemStatus(): Promise<any>;
   testConnection(): Promise<boolean>;
@@ -231,6 +236,18 @@ export class UnifiedClient implements IArrClient {
 
   async deleteRootFolder(id: string) {
     return this.api.deleteRootFolder(id);
+  }
+
+  async getDelayProfiles() {
+    return this.api.getDelayProfiles();
+  }
+
+  async updateDelayProfile(id: string, data: any) {
+    return this.api.updateDelayProfile(id, data);
+  }
+
+  async deleteDelayProfile(id: string) {
+    return this.api.deleteDelayProfile(id);
   }
 
   async getSystemStatus() {

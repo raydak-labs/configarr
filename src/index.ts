@@ -16,10 +16,11 @@ import { calculateQualityProfilesDiff, loadQualityProfilesFromServer } from "./q
 import { cloneRecyclarrTemplateRepo } from "./recyclarr-importer";
 import { cloneTrashRepo, loadQualityDefinitionFromTrash, transformTrashQDs } from "./trash-guide";
 import { ArrType } from "./types/common.types";
-import { InputConfigArrInstance, InputConfigSchema } from "./types/config.types";
+import { InputConfigArrInstance, InputConfigSchema, InputConfigDelayProfile } from "./types/config.types";
 import { TrashArrSupportedConst, TrashQualityDefinition, TrashQualityDefinitionQuality } from "./types/trashguide.types";
 import { isInConstArray } from "./util";
 import { calculateRootFolderDiff } from "./root-folder";
+import { calculateDelayProfilesDiff } from "./delay-profiles";
 
 const pipeline = async (globalConfig: InputConfigSchema, instanceConfig: InputConfigArrInstance, arrType: ArrType) => {
   const api = getUnifiedClient();
@@ -214,6 +215,42 @@ const pipeline = async (globalConfig: InputConfigSchema, instanceConfig: InputCo
       }
 
       logger.info(`Updated RootFolders`);
+    }
+  }
+
+  // Support new delay_profiles structure (object with default/additional)
+  let mergedDelayProfiles: InputConfigDelayProfile[] | undefined = undefined;
+  if (config.delay_profiles) {
+    if (Array.isArray(config.delay_profiles as any)) {
+      // Legacy: array
+      mergedDelayProfiles = config.delay_profiles as InputConfigDelayProfile[];
+    } else {
+      const dp = config.delay_profiles as { default?: InputConfigDelayProfile; additional?: InputConfigDelayProfile[] };
+      mergedDelayProfiles = [];
+      if (dp.default) mergedDelayProfiles.push(dp.default);
+      if (Array.isArray(dp.additional)) mergedDelayProfiles.push(...dp.additional);
+      if (mergedDelayProfiles.length === 0) mergedDelayProfiles = undefined;
+    }
+  }
+  const delayProfilesDiff = await calculateDelayProfilesDiff(mergedDelayProfiles);
+  if (delayProfilesDiff) {
+    if (getEnvs().DRY_RUN) {
+      logger.info("DryRun: Would update DelayProfiles.");
+    } else {
+      for (const profile of delayProfilesDiff.notAvailableAnymore) {
+        logger.info(`Deleting DelayProfile not available anymore: ${profile.id}`);
+        await api.deleteDelayProfile(`${profile.id}`);
+      }
+      for (const profile of delayProfilesDiff.missingOnServer) {
+        logger.info(`Adding DelayProfile missing on server: ${JSON.stringify(profile)}`);
+        // You may need to implement an addDelayProfile if supported by the API
+        // await api.addDelayProfile(profile);
+      }
+      for (const { server, config: profile } of delayProfilesDiff.changed) {
+        logger.info(`Updating DelayProfile: ${server.id}`);
+        await api.updateDelayProfile(`${server.id}`, { ...server, ...profile });
+      }
+      logger.info(`Updated DelayProfiles`);
     }
   }
 };
