@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.13.6](https://github.com/raydak-labs/configarr/compare/v1.13.5...v1.13.6) (2025-07-09)
+
+### Bug Fixes
+
+- correctly lookup quality definition names from quality profiles fix [#281](https://github.com/raydak-labs/configarr/issues/281) ([728cbde](https://github.com/raydak-labs/configarr/commit/728cbde67f2da82805934286f0aa69ba9bbfd85b))
+- **deps:** update dependencies (non-major) ([dbe405a](https://github.com/raydak-labs/configarr/commit/dbe405a9773e0c199ab87dd18160b2c44456bdce))
+
 ## [1.13.5](https://github.com/raydak-labs/configarr/compare/v1.13.4...v1.13.5) (2025-05-03)
 
 ### Bug Fixes
