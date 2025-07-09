@@ -77,6 +77,7 @@ export type MappedTemplates = Partial<
     | "media_naming_api"
     | "delete_unmanaged_custom_formats"
     | "root_folders"
+    | "delay_profiles"
   >
 >;
 

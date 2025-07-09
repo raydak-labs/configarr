@@ -57,3 +57,5 @@ export type MergedQualityProfileResource = OmitTyped<QPRMerged, "items"> &
 
 export type MergedCustomFormatSpecificationSchema = RadarrCustomFormatSpecificationSchema & SonarrCustomFormatSpecificationSchema;
 export type MergedRootFolderResource = SonarrRootFolderResource & RadarrRootFolderResource;
+export type MergedDelayProfileResource = import("./sonarr/data-contracts").DelayProfileResource &
+  import("./radarr/data-contracts").DelayProfileResource;

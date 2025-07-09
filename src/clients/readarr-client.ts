@@ -117,6 +117,19 @@ export class ReadarrClient
     return this.api.v1RootfolderDelete(+id);
   }
 
+  // Delay Profiles
+  async getDelayProfiles() {
+    return this.api.v1DelayprofileList();
+  }
+
+  async updateDelayProfile(id: string, data: any) {
+    return this.api.v1DelayprofileUpdate(id, data);
+  }
+
+  async deleteDelayProfile(id: string) {
+    return this.api.v1DelayprofileDelete(+id);
+  }
+
   // System/Health Check
   getSystemStatus() {
     return this.api.v1SystemStatusList();
