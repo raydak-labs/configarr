@@ -355,7 +355,6 @@ You can find the full example at: [configarr/examples/full](https://github.com/r
    ```
 
    This will:
-
    - Create required networks
    - Launch \*Arr instances
    - Configure API keys using provided XML configs
@@ -396,7 +395,6 @@ You can run configarr in different environments and different toolings which do 
 - If you are running with kubernetes Jobs you can keep the last `x` Job logs and therefore keep the logs of the executions easily.
 - If you are running with the scheduler `ofelia` there the logs are also persistet in the ofelia job logs.
 - If you are running just from docker logs can get lost. So we provide some examples how you can store them in files:
-
   - `Cron`: If you are running with cron in theory all logs are stored somewhere in cron. But we can also redirect runs into files and keep them persistent:
 
     ```sh

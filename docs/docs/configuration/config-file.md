@@ -36,7 +36,6 @@ Additionally we implement new features which recyclarr does not support at all l
 Configarr supports two types of templates:
 
 1. **Recyclarr Templates**: Used to define reusable configuration blocks
-
    - In Recyclarr also named: `Pre-Built Configuration Files`
    - Documentation: [Recyclarr Templates Wiki](https://recyclarr.dev/wiki/guide-configs/)
    - Location: Place template files in the directory specified by `localConfigTemplatesPath`
@@ -398,7 +397,6 @@ Notes:
   Check following API documentation of available fields:
 
   Naming APIs:
-
   - https://radarr.video/docs/api/#/NamingConfig/get_api_v3_config_naming
   - https://sonarr.tv/docs/api/#/NamingConfig/get_api_v3_config_naming
   - https://whisparr.com/docs/api/#/NamingConfig/get_api_v3_config_naming
@@ -406,7 +404,6 @@ Notes:
   - https://lidarr.audio/docs/api/#/NamingConfig/get_api_v1_config_naming
 
   MediaManagement APIs:
-
   - https://radarr.video/docs/api/#/MediaManagementConfig/get_api_v3_config_mediamanagement
   - https://sonarr.tv/docs/api/#/MediaManagementConfig/get_api_v3_config_mediamanagement
   - https://whisparr.com/docs/api/#/MediaManagementConfig/get_api_v3_config_mediamanagement

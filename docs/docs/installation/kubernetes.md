@@ -132,12 +132,10 @@ kubectl apply -f configarr.yaml
 ### Volume Mounts
 
 1. **Repository Cache** (`/app/repos`):
-
    - Persists downloaded repositories to avoid repeated downloads
    - Requires a PersistentVolumeClaim
 
 2. **Configuration** (`/app/config/config.yml`):
-
    - Main configuration file mounted from ConfigMap
    - See [Configuration Guide](../configuration/config-file.md) for options
 
