@@ -30,7 +30,7 @@
     "@hyrious/esbuild-plugin-commonjs": "0.2.6",
     "@playwright/test": "1.52.0",
     "@release-it/conventional-changelog": "10.0.1",
-    "@types/node": "22.15.29",
+    "@types/node": "24.0.12",
     "@vitest/coverage-v8": "3.1.4",
     "esbuild": "0.25.5",
     "prettier": "3.5.3",
