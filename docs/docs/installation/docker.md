@@ -106,19 +106,16 @@ Increase the log level with the `LOG_LEVEL` environment variable to get more det
 ### Common Issues
 
 - **Permission Issues**
-
   - Ensure user matches your required user
   - Check folder permissions on the config directory
   - after changing the user, adjust the user in the git repos (TRaSH-Guides, recyclarr) to match
 
 - **Connection Issues**
-
   - Verify Sonarr/Radarr URLs are accessible from the container
   - Confirm API keys are correct
   - Check network connectivity between containers if using Docker networks
 
 - **Configuration Issues**
-
   - Validate your YAML syntax
   - Ensure all required fields are present in config.yaml
 
