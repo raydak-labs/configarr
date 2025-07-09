@@ -52,7 +52,7 @@ jobs:
           fi
 
           if [[ ${{ github.event_name }} == 'workflow_dispatch' || ${{ github.ref }} == refs/tags/* ]]; then
-            echo "platforms=linux/amd64,linux/arm64,linux/arm/v7" >> $GITHUB_OUTPUT
+            echo "platforms=linux/amd64,linux/arm64" >> $GITHUB_OUTPUT
             echo "push=true" >> $GITHUB_OUTPUT
           else
             echo "platforms=linux/amd64" >> $GITHUB_OUTPUT
