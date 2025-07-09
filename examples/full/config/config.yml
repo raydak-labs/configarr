@@ -92,8 +92,34 @@ radarr:
     base_url: http://radarr:7878
     api_key: !secret RADARR_API_KEY
 
+    # since v1.14.0. Optional
     root_folders:
       - "/app"
+
+    # since v1.14.0. Optional
+    delay_profiles:
+      default:
+        enableUsenet: true
+        enableTorrent: false
+        preferredProtocol: usenet
+        usenetDelay: 10
+        torrentDelay: 0
+        bypassIfHighestQuality: false
+        bypassIfAboveCustomFormatScore: false
+        minimumCustomFormatScore: 0
+      additional:
+        - enableUsenet: true
+          enableTorrent: false
+          preferredProtocol: usenet
+          usenetDelay: 10
+          torrentDelay: 0
+          bypassIfHighestQuality: false
+          bypassIfAboveCustomFormatScore: false
+          minimumCustomFormatScore: 0
+          order: 1
+          tags:
+            - delayprofiletest
+
     # experimental
     media_management:
       recycleBin: "/tmp"

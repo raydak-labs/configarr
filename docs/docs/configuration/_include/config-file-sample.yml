@@ -53,6 +53,30 @@ sonarr:
     # root_folders:
     #   - /mnt/media/series
 
+    # experimental since v1.14.0. Optional
+    # delay_profiles:
+    #   default:
+    #     enableUsenet: true
+    #     enableTorrent: false
+    #     preferredProtocol: usenet
+    #     usenetDelay: 10
+    #     torrentDelay: 0
+    #     bypassIfHighestQuality: false
+    #     bypassIfAboveCustomFormatScore: false
+    #     minimumCustomFormatScore: 0
+    #   additional:
+    #     - enableUsenet: true
+    #       enableTorrent: false
+    #       preferredProtocol: usenet
+    #       usenetDelay: 10
+    #       torrentDelay: 0
+    #       bypassIfHighestQuality: false
+    #       bypassIfAboveCustomFormatScore: false
+    #       minimumCustomFormatScore: 0
+    #       order: 1
+    #       tags:
+    #         - delayprofiletest
+
     quality_definition:
       type: series # Quality definition type for Sonarr
 

@@ -1,4 +1,9 @@
-import { MergedCustomFormatResource, MergedQualityDefinitionResource, MergedQualityProfileResource } from "./__generated__/mergedTypes";
+import {
+  MergedCustomFormatResource,
+  MergedQualityDefinitionResource,
+  MergedQualityProfileResource,
+  MergedTagResource,
+} from "./__generated__/mergedTypes";
 import { ArrClientLanguageResource } from "./clients/unified-client";
 import { logger } from "./logger";
 
@@ -7,6 +12,7 @@ export class ServerCache {
   private _qd: MergedQualityDefinitionResource[];
   private _qp: MergedQualityProfileResource[];
   private _cf: MergedCustomFormatResource[];
+  private _tags: MergedTagResource[] = [];
   private _languages: ArrClientLanguageResource[];
 
   constructor(
@@ -75,5 +81,15 @@ export class ServerCache {
       throw new Error("No Languages received from server.");
     }
     this._languages = newLanguages;
+  }
+
+  public get tags() {
+    return this._tags;
+  }
+  public set tags(newTags: MergedTagResource[]) {
+    if (newTags == null || newTags.length <= 0) {
+      logger.debug(`No Tags received from server.`);
+    }
+    this._tags = newTags;
   }
 }

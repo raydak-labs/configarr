@@ -128,6 +128,18 @@ export interface IArrClient<
 
   getLanguages(): Promise<L[]>;
 
+  // Delay Profiles
+  getDelayProfiles(): Promise<any>;
+  createDelayProfile(profile: any): Promise<any>;
+  updateDelayProfile(id: string, data: any): Promise<any>;
+  deleteDelayProfile(id: string): Promise<any>;
+
+  // Tags
+  getTags(): Promise<any>;
+  createTag(tag: any): Promise<any>;
+  // deleteTag(id: string): Promise<void>;
+  // updateTag(id: string, tag: any): Promise<any>;
+
   // System/Health Check
   getSystemStatus(): Promise<any>;
   testConnection(): Promise<boolean>;
@@ -231,6 +243,30 @@ export class UnifiedClient implements IArrClient {
 
   async deleteRootFolder(id: string) {
     return this.api.deleteRootFolder(id);
+  }
+
+  async getDelayProfiles() {
+    return this.api.getDelayProfiles();
+  }
+
+  async createDelayProfile(profile: any) {
+    return this.api.createDelayProfile(profile);
+  }
+
+  async updateDelayProfile(id: string, data: any) {
+    return this.api.updateDelayProfile(id, data);
+  }
+
+  async deleteDelayProfile(id: string) {
+    return this.api.deleteDelayProfile(id);
+  }
+
+  async getTags() {
+    return this.api.getTags();
+  }
+
+  async createTag(tag: any) {
+    return this.api.createTag(tag);
   }
 
   async getSystemStatus() {
