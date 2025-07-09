@@ -86,7 +86,15 @@ export const mapQualities = (qd_source: MergedQualityDefinitionResource[], value
   const qd = cloneWithJSON(qd_source);
   const value = cloneWithJSON(value_source);
 
-  const qdMap = new Map(qd.map((obj) => [obj.title, obj]));
+  const qdMap = new Map(qd.map((obj) => [obj.quality?.name, obj]));
+  const qdLookupWithTitle = new Map(qdMap);
+
+  // Add title names to map and overwrite existing ones if they exist. This acts as fallback if someone used the title we do not want to keep it user friendly.
+  qdLookupWithTitle.forEach((element) => {
+    if (element.title) {
+      qdLookupWithTitle.set(element.title, element);
+    }
+  });
 
   const allowedQualities = value.qualities.map<MergedQualityProfileQualityItemResource>((obj, i) => {
     if (obj.qualities?.length && obj.qualities.length > 0) {
@@ -97,7 +105,7 @@ export const mapQualities = (qd_source: MergedQualityDefinitionResource[], value
         items:
           obj.qualities
             ?.map<MergedQualityProfileQualityItemResource>((obj2) => {
-              const qd = qdMap.get(obj2);
+              const qd = qdLookupWithTitle.get(obj2);
 
               const returnObject: MergedQualityProfileQualityItemResource = {
                 quality: {
@@ -110,21 +118,21 @@ export const mapQualities = (qd_source: MergedQualityDefinitionResource[], value
                 items: [],
               };
 
-              qdMap.delete(obj2);
+              qdMap.delete(qd?.quality?.name);
 
               return returnObject;
             })
             .reverse() || [],
       };
     } else {
-      const serverQD = qdMap.get(obj.name);
+      const serverQD = qdLookupWithTitle.get(obj.name);
 
       if (serverQD == null) {
         logger.warn(`Unknown requested quality "${obj.name}" for quality profile ${value.name}`);
         throw new Error(`Please correct your config.`);
       }
 
-      qdMap.delete(obj.name);
+      qdMap.delete(serverQD.quality?.name);
 
       const item: MergedQualityProfileQualityItemResource = {
         allowed: obj.enabled ?? true,
