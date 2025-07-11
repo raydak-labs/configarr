@@ -1,5 +1,6 @@
 /* eslint-disable */
 /* tslint:disable */
+// @ts-nocheck
 /*
  * ---------------------------------------------------------------
  * ## THIS FILE WAS GENERATED VIA SWAGGER-TYPESCRIPT-API        ##
@@ -8,6 +9,242 @@
  * ## SOURCE: https://github.com/acacode/swagger-typescript-api ##
  * ---------------------------------------------------------------
  */
+
+export enum WriteAudioTagsType {
+  No = "no",
+  NewFiles = "newFiles",
+  AllFiles = "allFiles",
+  Sync = "sync",
+}
+
+export enum UpdateMechanism {
+  BuiltIn = "builtIn",
+  Script = "script",
+  External = "external",
+  Apt = "apt",
+  Docker = "docker",
+}
+
+export enum TrackedDownloadStatus {
+  Ok = "ok",
+  Warning = "warning",
+  Error = "error",
+}
+
+export enum TrackedDownloadState {
+  Downloading = "downloading",
+  DownloadFailed = "downloadFailed",
+  DownloadFailedPending = "downloadFailedPending",
+  ImportBlocked = "importBlocked",
+  ImportPending = "importPending",
+  Importing = "importing",
+  ImportFailed = "importFailed",
+  Imported = "imported",
+  Ignored = "ignored",
+}
+
+export enum SortDirection {
+  Default = "default",
+  Ascending = "ascending",
+  Descending = "descending",
+}
+
+export enum RuntimeMode {
+  Console = "console",
+  Service = "service",
+  Tray = "tray",
+}
+
+export enum RescanAfterRefreshType {
+  Always = "always",
+  AfterManual = "afterManual",
+  Never = "never",
+}
+
+export enum RejectionType {
+  Permanent = "permanent",
+  Temporary = "temporary",
+}
+
+export enum ProxyType {
+  Http = "http",
+  Socks4 = "socks4",
+  Socks5 = "socks5",
+}
+
+export enum ProviderMessageType {
+  Info = "info",
+  Warning = "warning",
+  Error = "error",
+}
+
+export enum ProperDownloadTypes {
+  PreferAndUpgrade = "preferAndUpgrade",
+  DoNotUpgrade = "doNotUpgrade",
+  DoNotPrefer = "doNotPrefer",
+}
+
+export enum PrivacyLevel {
+  Normal = "normal",
+  Password = "password",
+  ApiKey = "apiKey",
+  UserName = "userName",
+}
+
+export enum NewItemMonitorTypes {
+  All = "all",
+  None = "none",
+  New = "new",
+}
+
+export enum MonitorTypes {
+  All = "all",
+  Future = "future",
+  Missing = "missing",
+  Existing = "existing",
+  Latest = "latest",
+  First = "first",
+  None = "none",
+  Unknown = "unknown",
+}
+
+export enum MediaCoverTypes {
+  Unknown = "unknown",
+  Poster = "poster",
+  Banner = "banner",
+  Fanart = "fanart",
+  Screenshot = "screenshot",
+  Headshot = "headshot",
+  Cover = "cover",
+  Disc = "disc",
+  Logo = "logo",
+  Clearlogo = "clearlogo",
+}
+
+export enum ImportListType {
+  Program = "program",
+  Spotify = "spotify",
+  LastFm = "lastFm",
+  Other = "other",
+  Advanced = "advanced",
+}
+
+export enum ImportListMonitorType {
+  None = "none",
+  SpecificAlbum = "specificAlbum",
+  EntireArtist = "entireArtist",
+}
+
+export enum HealthCheckResult {
+  Ok = "ok",
+  Notice = "notice",
+  Warning = "warning",
+  Error = "error",
+}
+
+export enum FileDateType {
+  None = "none",
+  AlbumReleaseDate = "albumReleaseDate",
+}
+
+export enum EntityHistoryEventType {
+  Unknown = "unknown",
+  Grabbed = "grabbed",
+  ArtistFolderImported = "artistFolderImported",
+  TrackFileImported = "trackFileImported",
+  DownloadFailed = "downloadFailed",
+  TrackFileDeleted = "trackFileDeleted",
+  TrackFileRenamed = "trackFileRenamed",
+  AlbumImportIncomplete = "albumImportIncomplete",
+  DownloadImported = "downloadImported",
+  TrackFileRetagged = "trackFileRetagged",
+  DownloadIgnored = "downloadIgnored",
+}
+
+export enum DownloadProtocol {
+  Unknown = "unknown",
+  Usenet = "usenet",
+  Torrent = "torrent",
+}
+
+export enum DatabaseType {
+  SqLite = "sqLite",
+  PostgreSQL = "postgreSQL",
+}
+
+export enum CommandTrigger {
+  Unspecified = "unspecified",
+  Manual = "manual",
+  Scheduled = "scheduled",
+}
+
+export enum CommandStatus {
+  Queued = "queued",
+  Started = "started",
+  Completed = "completed",
+  Failed = "failed",
+  Aborted = "aborted",
+  Cancelled = "cancelled",
+  Orphaned = "orphaned",
+}
+
+export enum CommandResult {
+  Unknown = "unknown",
+  Successful = "successful",
+  Unsuccessful = "unsuccessful",
+}
+
+export enum CommandPriority {
+  Normal = "normal",
+  High = "high",
+  Low = "low",
+}
+
+export enum CertificateValidationType {
+  Enabled = "enabled",
+  DisabledForLocalAddresses = "disabledForLocalAddresses",
+  Disabled = "disabled",
+}
+
+export enum BackupType {
+  Scheduled = "scheduled",
+  Manual = "manual",
+  Update = "update",
+}
+
+export enum AuthenticationType {
+  None = "none",
+  Basic = "basic",
+  Forms = "forms",
+  External = "external",
+}
+
+export enum AuthenticationRequiredType {
+  Enabled = "enabled",
+  DisabledForLocalAddresses = "disabledForLocalAddresses",
+}
+
+export enum ArtistStatusType {
+  Continuing = "continuing",
+  Ended = "ended",
+}
+
+export enum ApplyTags {
+  Add = "add",
+  Remove = "remove",
+  Replace = "replace",
+}
+
+export enum AllowFingerprinting {
+  Never = "never",
+  NewFiles = "newFiles",
+  AllFiles = "allFiles",
+}
+
+export enum AlbumAddType {
+  Automatic = "automatic",
+  Manual = "manual",
+}
 
 export interface AddAlbumOptions {
   addType?: AlbumAddType;
@@ -19,11 +256,6 @@ export interface AddArtistOptions {
   albumsToMonitor?: string[] | null;
   monitored?: boolean;
   searchForMissingAlbums?: boolean;
-}
-
-export enum AlbumAddType {
-  Automatic = "automatic",
-  Manual = "manual",
 }
 
 export interface AlbumReleaseResource {
@@ -126,18 +358,6 @@ export interface AlbumsMonitoredResource {
   monitored?: boolean;
 }
 
-export enum AllowFingerprinting {
-  Never = "never",
-  NewFiles = "newFiles",
-  AllFiles = "allFiles",
-}
-
-export enum ApplyTags {
-  Add = "add",
-  Remove = "remove",
-  Replace = "replace",
-}
-
 export interface ArtistEditorResource {
   artistIds?: number[] | null;
   monitored?: boolean | null;
@@ -212,28 +432,11 @@ export interface ArtistStatisticsResource {
   percentOfTracks?: number;
 }
 
-export enum ArtistStatusType {
-  Continuing = "continuing",
-  Ended = "ended",
-}
-
 export interface ArtistTitleInfo {
   title?: string | null;
   titleWithoutYear?: string | null;
   /** @format int32 */
   year?: number;
-}
-
-export enum AuthenticationRequiredType {
-  Enabled = "enabled",
-  DisabledForLocalAddresses = "disabledForLocalAddresses",
-}
-
-export enum AuthenticationType {
-  None = "none",
-  Basic = "basic",
-  Forms = "forms",
-  External = "external",
 }
 
 export interface AutoTaggingResource {
@@ -269,12 +472,6 @@ export interface BackupResource {
   time?: string;
 }
 
-export enum BackupType {
-  Scheduled = "scheduled",
-  Manual = "manual",
-  Update = "update",
-}
-
 export interface BlocklistBulkResource {
   ids?: number[] | null;
 }
@@ -308,12 +505,6 @@ export interface BlocklistResourcePagingResource {
   records?: BlocklistResource[] | null;
 }
 
-export enum CertificateValidationType {
-  Enabled = "enabled",
-  DisabledForLocalAddresses = "disabledForLocalAddresses",
-  Disabled = "disabled",
-}
-
 export interface Command {
   sendUpdatesToClient?: boolean;
   updateScheduledTask?: boolean;
@@ -330,12 +521,6 @@ export interface Command {
   trigger?: CommandTrigger;
   suppressMessages?: boolean;
   clientUserAgent?: string | null;
-}
-
-export enum CommandPriority {
-  Normal = "normal",
-  High = "high",
-  Low = "low",
 }
 
 export interface CommandResource {
@@ -365,28 +550,6 @@ export interface CommandResource {
   updateScheduledTask?: boolean;
   /** @format date-time */
   lastExecutionTime?: string | null;
-}
-
-export enum CommandResult {
-  Unknown = "unknown",
-  Successful = "successful",
-  Unsuccessful = "unsuccessful",
-}
-
-export enum CommandStatus {
-  Queued = "queued",
-  Started = "started",
-  Completed = "completed",
-  Failed = "failed",
-  Aborted = "aborted",
-  Cancelled = "cancelled",
-  Orphaned = "orphaned",
-}
-
-export enum CommandTrigger {
-  Unspecified = "unspecified",
-  Manual = "manual",
-  Scheduled = "scheduled",
 }
 
 export interface CustomFilterResource {
@@ -422,11 +585,6 @@ export interface CustomFormatSpecificationSchema {
   required?: boolean;
   fields?: Field[] | null;
   presets?: CustomFormatSpecificationSchema[] | null;
-}
-
-export enum DatabaseType {
-  SqLite = "sqLite",
-  PostgreSQL = "postgreSQL",
 }
 
 export interface DelayProfileResource {
@@ -501,26 +659,6 @@ export interface DownloadClientResource {
   removeFailedDownloads?: boolean;
 }
 
-export enum DownloadProtocol {
-  Unknown = "unknown",
-  Usenet = "usenet",
-  Torrent = "torrent",
-}
-
-export enum EntityHistoryEventType {
-  Unknown = "unknown",
-  Grabbed = "grabbed",
-  ArtistFolderImported = "artistFolderImported",
-  TrackFileImported = "trackFileImported",
-  DownloadFailed = "downloadFailed",
-  TrackFileDeleted = "trackFileDeleted",
-  TrackFileRenamed = "trackFileRenamed",
-  AlbumImportIncomplete = "albumImportIncomplete",
-  DownloadImported = "downloadImported",
-  TrackFileRetagged = "trackFileRetagged",
-  DownloadIgnored = "downloadIgnored",
-}
-
 export interface Field {
   /** @format int32 */
   order?: number;
@@ -542,25 +680,13 @@ export interface Field {
   isFloat?: boolean;
 }
 
-export enum FileDateType {
-  None = "none",
-  AlbumReleaseDate = "albumReleaseDate",
-}
-
-export enum HealthCheckResult {
-  Ok = "ok",
-  Notice = "notice",
-  Warning = "warning",
-  Error = "error",
-}
-
 export interface HealthResource {
   /** @format int32 */
   id?: number;
   source?: string | null;
   type?: HealthCheckResult;
   message?: string | null;
-  wikiUrl?: HttpUri;
+  wikiUrl?: string | null;
 }
 
 export interface HistoryResource {
@@ -648,17 +774,6 @@ export interface HostConfigResource {
   trustCgnatIpAddresses?: boolean;
 }
 
-export interface HttpUri {
-  fullUri?: string | null;
-  scheme?: string | null;
-  host?: string | null;
-  /** @format int32 */
-  port?: number | null;
-  path?: string | null;
-  query?: string | null;
-  fragment?: string | null;
-}
-
 export interface ImportListBulkResource {
   ids?: number[] | null;
   tags?: number[] | null;
@@ -674,12 +789,6 @@ export interface ImportListExclusionResource {
   id?: number;
   foreignId?: string | null;
   artistName?: string | null;
-}
-
-export enum ImportListMonitorType {
-  None = "none",
-  SpecificAlbum = "specificAlbum",
-  EntireArtist = "entireArtist",
 }
 
 export interface ImportListResource {
@@ -710,14 +819,6 @@ export interface ImportListResource {
   listOrder?: number;
   /** @format date-span */
   minRefreshInterval?: string;
-}
-
-export enum ImportListType {
-  Program = "program",
-  Spotify = "spotify",
-  LastFm = "lastFm",
-  Other = "other",
-  Advanced = "advanced",
 }
 
 export interface IndexerBulkResource {
@@ -891,19 +992,6 @@ export interface MediaCover {
   remoteUrl?: string | null;
 }
 
-export enum MediaCoverTypes {
-  Unknown = "unknown",
-  Poster = "poster",
-  Banner = "banner",
-  Fanart = "fanart",
-  Screenshot = "screenshot",
-  Headshot = "headshot",
-  Cover = "cover",
-  Disc = "disc",
-  Logo = "logo",
-  Clearlogo = "clearlogo",
-}
-
 export interface MediaInfoModel {
   audioFormat?: string | null;
   /** @format int32 */
@@ -999,17 +1087,6 @@ export interface MetadataResource {
   enable?: boolean;
 }
 
-export enum MonitorTypes {
-  All = "all",
-  Future = "future",
-  Missing = "missing",
-  Existing = "existing",
-  Latest = "latest",
-  First = "first",
-  None = "none",
-  Unknown = "unknown",
-}
-
 export interface MonitoringOptions {
   monitor?: MonitorTypes;
   albumsToMonitor?: string[] | null;
@@ -1032,12 +1109,6 @@ export interface NamingConfigResource {
   replaceSpaces?: boolean;
   separator?: string | null;
   numberStyle?: string | null;
-}
-
-export enum NewItemMonitorTypes {
-  All = "all",
-  None = "none",
-  New = "new",
 }
 
 export interface NotificationResource {
@@ -1154,13 +1225,6 @@ export interface PrimaryAlbumType {
   name?: string | null;
 }
 
-export enum PrivacyLevel {
-  Normal = "normal",
-  Password = "password",
-  ApiKey = "apiKey",
-  UserName = "userName",
-}
-
 export interface ProfileFormatItemResource {
   /** @format int32 */
   id?: number;
@@ -1192,27 +1256,9 @@ export interface ProfileSecondaryAlbumTypeItemResource {
   allowed?: boolean;
 }
 
-export enum ProperDownloadTypes {
-  PreferAndUpgrade = "preferAndUpgrade",
-  DoNotUpgrade = "doNotUpgrade",
-  DoNotPrefer = "doNotPrefer",
-}
-
 export interface ProviderMessage {
   message?: string | null;
   type?: ProviderMessageType;
-}
-
-export enum ProviderMessageType {
-  Info = "info",
-  Warning = "warning",
-  Error = "error",
-}
-
-export enum ProxyType {
-  Http = "http",
-  Socks4 = "socks4",
-  Socks5 = "socks5",
 }
 
 export interface Quality {
@@ -1350,11 +1396,6 @@ export interface Rejection {
   type?: RejectionType;
 }
 
-export enum RejectionType {
-  Permanent = "permanent",
-  Temporary = "temporary",
-}
-
 export interface ReleaseProfileResource {
   /** @format int32 */
   id?: number;
@@ -1455,12 +1496,6 @@ export interface RenameTrackResource {
   newPath?: string | null;
 }
 
-export enum RescanAfterRefreshType {
-  Always = "always",
-  AfterManual = "afterManual",
-  Never = "never",
-}
-
 export interface RetagTrackResource {
   /** @format int32 */
   id?: number;
@@ -1503,12 +1538,6 @@ export interface RootFolderResource {
   totalSpace?: number | null;
 }
 
-export enum RuntimeMode {
-  Console = "console",
-  Service = "service",
-  Tray = "tray",
-}
-
 export interface SearchResource {
   /** @format int32 */
   id?: number;
@@ -1530,12 +1559,6 @@ export interface SelectOption {
   /** @format int32 */
   order?: number;
   hint?: string | null;
-}
-
-export enum SortDirection {
-  Default = "default",
-  Ascending = "ascending",
-  Descending = "descending",
 }
 
 export interface SystemResource {
@@ -1678,23 +1701,6 @@ export interface TrackResource {
   ratings?: Ratings;
 }
 
-export enum TrackedDownloadState {
-  Downloading = "downloading",
-  DownloadFailed = "downloadFailed",
-  DownloadFailedPending = "downloadFailedPending",
-  ImportPending = "importPending",
-  Importing = "importing",
-  ImportFailed = "importFailed",
-  Imported = "imported",
-  Ignored = "ignored",
-}
-
-export enum TrackedDownloadStatus {
-  Ok = "ok",
-  Warning = "warning",
-  Error = "error",
-}
-
 export interface TrackedDownloadStatusMessage {
   title?: string | null;
   messages?: string[] | null;
@@ -1726,14 +1732,6 @@ export interface UpdateChanges {
   fixed?: string[] | null;
 }
 
-export enum UpdateMechanism {
-  BuiltIn = "builtIn",
-  Script = "script",
-  External = "external",
-  Apt = "apt",
-  Docker = "docker",
-}
-
 export interface UpdateResource {
   /** @format int32 */
   id?: number;
@@ -1750,11 +1748,4 @@ export interface UpdateResource {
   latest?: boolean;
   changes?: UpdateChanges;
   hash?: string | null;
-}
-
-export enum WriteAudioTagsType {
-  No = "no",
-  NewFiles = "newFiles",
-  AllFiles = "allFiles",
-  Sync = "sync",
 }

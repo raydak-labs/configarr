@@ -30,6 +30,7 @@ import {
   InputConfigSchema,
   MediaNamingType,
   MergedConfigInstance,
+  InputConfigDelayProfile,
 } from "./types/config.types";
 import { TrashCFGroupMapping, TrashQP } from "./types/trashguide.types";
 import { cloneWithJSON } from "./util";
@@ -619,6 +620,36 @@ export const mergeConfigsAndTemplates = async (
   }, new Map<string, ConfigQualityProfile>());
 
   mergedTemplates.quality_profiles = Array.from(qualityProfilesMerged.values());
+
+  mergedTemplates.root_folders = instanceConfig.root_folders;
+
+  // Handle new delay_profiles config structure (keep default and additional separated)
+  logger.debug("instanceConfig.delay_profiles:", instanceConfig.delay_profiles);
+  if (instanceConfig.delay_profiles) {
+    const dp = instanceConfig.delay_profiles;
+    logger.debug("delay_profiles.default:", JSON.stringify(dp.default));
+    logger.debug("delay_profiles.additional:", JSON.stringify(dp.additional));
+    // Only set mergedTemplates.delay_profiles if at least one of default or additional is present
+    if (dp.default || (Array.isArray(dp.additional) && dp.additional.length > 0)) {
+      mergedTemplates.delay_profiles = {};
+      if (dp.default) {
+        if (dp.default.tags && dp.default.tags.length > 0) {
+          logger.warn("Default delay profile must not have tags. Ignoring tags for default profile.");
+          const { tags, ...rest } = dp.default;
+          mergedTemplates.delay_profiles.default = rest;
+        } else {
+          mergedTemplates.delay_profiles.default = dp.default;
+        }
+      }
+      if (Array.isArray(dp.additional) && dp.additional.length > 0) {
+        mergedTemplates.delay_profiles.additional = dp.additional;
+      }
+    } else {
+      mergedTemplates.delay_profiles = undefined;
+    }
+  } else {
+    mergedTemplates.delay_profiles = undefined;
+  }
 
   const validatedConfig = validateConfig(mergedTemplates);
   logger.debug(`Merged config: '${JSON.stringify(validatedConfig)}'`);

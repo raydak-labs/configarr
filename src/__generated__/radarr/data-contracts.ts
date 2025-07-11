@@ -1,5 +1,6 @@
 /* eslint-disable */
 /* tslint:disable */
+// @ts-nocheck
 /*
  * ---------------------------------------------------------------
  * ## THIS FILE WAS GENERATED VIA SWAGGER-TYPESCRIPT-API        ##
@@ -8,6 +9,299 @@
  * ## SOURCE: https://github.com/acacode/swagger-typescript-api ##
  * ---------------------------------------------------------------
  */
+
+export enum UpdateMechanism {
+  BuiltIn = "builtIn",
+  Script = "script",
+  External = "external",
+  Apt = "apt",
+  Docker = "docker",
+}
+
+export enum TrackedDownloadStatus {
+  Ok = "ok",
+  Warning = "warning",
+  Error = "error",
+}
+
+export enum TrackedDownloadState {
+  Downloading = "downloading",
+  ImportBlocked = "importBlocked",
+  ImportPending = "importPending",
+  Importing = "importing",
+  Imported = "imported",
+  FailedPending = "failedPending",
+  Failed = "failed",
+  Ignored = "ignored",
+}
+
+export enum TMDbCountryCode {
+  Au = "au",
+  Br = "br",
+  Ca = "ca",
+  Fr = "fr",
+  De = "de",
+  Gb = "gb",
+  In = "in",
+  Ie = "ie",
+  It = "it",
+  Nz = "nz",
+  Ro = "ro",
+  Es = "es",
+  Us = "us",
+}
+
+export enum SourceType {
+  Tmdb = "tmdb",
+  Mappings = "mappings",
+  User = "user",
+  Indexer = "indexer",
+}
+
+export enum SortDirection {
+  Default = "default",
+  Ascending = "ascending",
+  Descending = "descending",
+}
+
+export enum RuntimeMode {
+  Console = "console",
+  Service = "service",
+  Tray = "tray",
+}
+
+export enum RescanAfterRefreshType {
+  Always = "always",
+  AfterManual = "afterManual",
+  Never = "never",
+}
+
+export enum RejectionType {
+  Permanent = "permanent",
+  Temporary = "temporary",
+}
+
+export enum RatingType {
+  User = "user",
+  Critic = "critic",
+}
+
+export enum QueueStatus {
+  Unknown = "unknown",
+  Queued = "queued",
+  Paused = "paused",
+  Downloading = "downloading",
+  Completed = "completed",
+  Failed = "failed",
+  Warning = "warning",
+  Delay = "delay",
+  DownloadClientUnavailable = "downloadClientUnavailable",
+  Fallback = "fallback",
+}
+
+export enum QualitySource {
+  Unknown = "unknown",
+  Cam = "cam",
+  Telesync = "telesync",
+  Telecine = "telecine",
+  Workprint = "workprint",
+  Dvd = "dvd",
+  Tv = "tv",
+  Webdl = "webdl",
+  Webrip = "webrip",
+  Bluray = "bluray",
+}
+
+export enum ProxyType {
+  Http = "http",
+  Socks4 = "socks4",
+  Socks5 = "socks5",
+}
+
+export enum ProviderMessageType {
+  Info = "info",
+  Warning = "warning",
+  Error = "error",
+}
+
+export enum ProperDownloadTypes {
+  PreferAndUpgrade = "preferAndUpgrade",
+  DoNotUpgrade = "doNotUpgrade",
+  DoNotPrefer = "doNotPrefer",
+}
+
+export enum PrivacyLevel {
+  Normal = "normal",
+  Password = "password",
+  ApiKey = "apiKey",
+  UserName = "userName",
+}
+
+export enum MovieStatusType {
+  Tba = "tba",
+  Announced = "announced",
+  InCinemas = "inCinemas",
+  Released = "released",
+  Deleted = "deleted",
+}
+
+export enum MovieRuntimeFormatType {
+  HoursMinutes = "hoursMinutes",
+  Minutes = "minutes",
+}
+
+export enum MovieHistoryEventType {
+  Unknown = "unknown",
+  Grabbed = "grabbed",
+  DownloadFolderImported = "downloadFolderImported",
+  DownloadFailed = "downloadFailed",
+  MovieFileDeleted = "movieFileDeleted",
+  MovieFolderImported = "movieFolderImported",
+  MovieFileRenamed = "movieFileRenamed",
+  DownloadIgnored = "downloadIgnored",
+}
+
+export enum MonitorTypes {
+  MovieOnly = "movieOnly",
+  MovieAndCollection = "movieAndCollection",
+  None = "none",
+}
+
+export enum Modifier {
+  None = "none",
+  Regional = "regional",
+  Screener = "screener",
+  Rawhd = "rawhd",
+  Brdisk = "brdisk",
+  Remux = "remux",
+}
+
+export enum MediaCoverTypes {
+  Unknown = "unknown",
+  Poster = "poster",
+  Banner = "banner",
+  Fanart = "fanart",
+  Screenshot = "screenshot",
+  Headshot = "headshot",
+  Clearlogo = "clearlogo",
+}
+
+export enum ImportListType {
+  Program = "program",
+  Tmdb = "tmdb",
+  Trakt = "trakt",
+  Plex = "plex",
+  Simkl = "simkl",
+  Other = "other",
+  Advanced = "advanced",
+}
+
+export enum HealthCheckResult {
+  Ok = "ok",
+  Notice = "notice",
+  Warning = "warning",
+  Error = "error",
+}
+
+export enum FileDateType {
+  None = "none",
+  Cinemas = "cinemas",
+  Release = "release",
+}
+
+export enum ExtraFileType {
+  Subtitle = "subtitle",
+  Metadata = "metadata",
+  Other = "other",
+}
+
+export enum DownloadProtocol {
+  Unknown = "unknown",
+  Usenet = "usenet",
+  Torrent = "torrent",
+}
+
+export enum DatabaseType {
+  SqLite = "sqLite",
+  PostgreSQL = "postgreSQL",
+}
+
+export enum CreditType {
+  Cast = "cast",
+  Crew = "crew",
+}
+
+export enum CommandTrigger {
+  Unspecified = "unspecified",
+  Manual = "manual",
+  Scheduled = "scheduled",
+}
+
+export enum CommandStatus {
+  Queued = "queued",
+  Started = "started",
+  Completed = "completed",
+  Failed = "failed",
+  Aborted = "aborted",
+  Cancelled = "cancelled",
+  Orphaned = "orphaned",
+}
+
+export enum CommandResult {
+  Unknown = "unknown",
+  Successful = "successful",
+  Unsuccessful = "unsuccessful",
+}
+
+export enum CommandPriority {
+  Normal = "normal",
+  High = "high",
+  Low = "low",
+}
+
+export enum ColonReplacementFormat {
+  Delete = "delete",
+  Dash = "dash",
+  SpaceDash = "spaceDash",
+  SpaceDashSpace = "spaceDashSpace",
+  Smart = "smart",
+}
+
+export enum CertificateValidationType {
+  Enabled = "enabled",
+  DisabledForLocalAddresses = "disabledForLocalAddresses",
+  Disabled = "disabled",
+}
+
+export enum CalendarReleaseType {
+  CinemaRelease = "cinemaRelease",
+  DigitalRelease = "digitalRelease",
+  PhysicalRelease = "physicalRelease",
+}
+
+export enum BackupType {
+  Scheduled = "scheduled",
+  Manual = "manual",
+  Update = "update",
+}
+
+export enum AuthenticationType {
+  None = "none",
+  Basic = "basic",
+  Forms = "forms",
+  External = "external",
+}
+
+export enum AuthenticationRequiredType {
+  Enabled = "enabled",
+  DisabledForLocalAddresses = "disabledForLocalAddresses",
+}
+
+export enum ApplyTags {
+  Add = "add",
+  Remove = "remove",
+  Replace = "replace",
+}
 
 export enum AddMovieMethod {
   Manual = "manual",
@@ -36,24 +330,6 @@ export interface AlternativeTitleResource {
 export interface ApiInfoResource {
   current?: string | null;
   deprecated?: string[] | null;
-}
-
-export enum ApplyTags {
-  Add = "add",
-  Remove = "remove",
-  Replace = "replace",
-}
-
-export enum AuthenticationRequiredType {
-  Enabled = "enabled",
-  DisabledForLocalAddresses = "disabledForLocalAddresses",
-}
-
-export enum AuthenticationType {
-  None = "none",
-  Basic = "basic",
-  Forms = "forms",
-  External = "external",
 }
 
 export interface AutoTaggingResource {
@@ -89,12 +365,6 @@ export interface BackupResource {
   time?: string;
 }
 
-export enum BackupType {
-  Scheduled = "scheduled",
-  Manual = "manual",
-  Update = "update",
-}
-
 export interface BlocklistBulkResource {
   ids?: number[] | null;
 }
@@ -126,12 +396,6 @@ export interface BlocklistResourcePagingResource {
   /** @format int32 */
   totalRecords?: number;
   records?: BlocklistResource[] | null;
-}
-
-export enum CertificateValidationType {
-  Enabled = "enabled",
-  DisabledForLocalAddresses = "disabledForLocalAddresses",
-  Disabled = "disabled",
 }
 
 export interface CollectionMovieResource {
@@ -188,14 +452,6 @@ export interface CollectionUpdateResource {
   minimumAvailability?: MovieStatusType;
 }
 
-export enum ColonReplacementFormat {
-  Delete = "delete",
-  Dash = "dash",
-  SpaceDash = "spaceDash",
-  SpaceDashSpace = "spaceDashSpace",
-  Smart = "smart",
-}
-
 export interface Command {
   sendUpdatesToClient?: boolean;
   updateScheduledTask?: boolean;
@@ -212,12 +468,6 @@ export interface Command {
   trigger?: CommandTrigger;
   suppressMessages?: boolean;
   clientUserAgent?: string | null;
-}
-
-export enum CommandPriority {
-  Normal = "normal",
-  High = "high",
-  Low = "low",
 }
 
 export interface CommandResource {
@@ -249,28 +499,6 @@ export interface CommandResource {
   lastExecutionTime?: string | null;
 }
 
-export enum CommandResult {
-  Unknown = "unknown",
-  Successful = "successful",
-  Unsuccessful = "unsuccessful",
-}
-
-export enum CommandStatus {
-  Queued = "queued",
-  Started = "started",
-  Completed = "completed",
-  Failed = "failed",
-  Aborted = "aborted",
-  Cancelled = "cancelled",
-  Orphaned = "orphaned",
-}
-
-export enum CommandTrigger {
-  Unspecified = "unspecified",
-  Manual = "manual",
-  Scheduled = "scheduled",
-}
-
 export interface CreditResource {
   /** @format int32 */
   id?: number;
@@ -287,11 +515,6 @@ export interface CreditResource {
   /** @format int32 */
   order?: number;
   type?: CreditType;
-}
-
-export enum CreditType {
-  Cast = "cast",
-  Crew = "crew",
 }
 
 export interface CustomFilterResource {
@@ -327,11 +550,6 @@ export interface CustomFormatSpecificationSchema {
   required?: boolean;
   fields?: Field[] | null;
   presets?: CustomFormatSpecificationSchema[] | null;
-}
-
-export enum DatabaseType {
-  SqLite = "sqLite",
-  PostgreSQL = "postgreSQL",
 }
 
 export interface DelayProfileResource {
@@ -408,12 +626,6 @@ export interface DownloadClientResource {
   removeFailedDownloads?: boolean;
 }
 
-export enum DownloadProtocol {
-  Unknown = "unknown",
-  Usenet = "usenet",
-  Torrent = "torrent",
-}
-
 export interface ExtraFileResource {
   /** @format int32 */
   id?: number;
@@ -426,12 +638,6 @@ export interface ExtraFileResource {
   languageTags?: string[] | null;
   title?: string | null;
   type?: ExtraFileType;
-}
-
-export enum ExtraFileType {
-  Subtitle = "subtitle",
-  Metadata = "metadata",
-  Other = "other",
 }
 
 export interface Field {
@@ -455,26 +661,13 @@ export interface Field {
   isFloat?: boolean;
 }
 
-export enum FileDateType {
-  None = "none",
-  Cinemas = "cinemas",
-  Release = "release",
-}
-
-export enum HealthCheckResult {
-  Ok = "ok",
-  Notice = "notice",
-  Warning = "warning",
-  Error = "error",
-}
-
 export interface HealthResource {
   /** @format int32 */
   id?: number;
   source?: string | null;
   type?: HealthCheckResult;
   message?: string | null;
-  wikiUrl?: HttpUri;
+  wikiUrl?: string | null;
 }
 
 export interface HistoryResource {
@@ -555,17 +748,6 @@ export interface HostConfigResource {
   /** @format int32 */
   backupRetention?: number;
   trustCgnatIpAddresses?: boolean;
-}
-
-export interface HttpUri {
-  fullUri?: string | null;
-  scheme?: string | null;
-  host?: string | null;
-  /** @format int32 */
-  port?: number | null;
-  path?: string | null;
-  query?: string | null;
-  fragment?: string | null;
 }
 
 export interface ImportListBulkResource {
@@ -651,14 +833,9 @@ export interface ImportListResource {
   minRefreshInterval?: string;
 }
 
-export enum ImportListType {
-  Program = "program",
-  Tmdb = "tmdb",
-  Trakt = "trakt",
-  Plex = "plex",
-  Simkl = "simkl",
-  Other = "other",
-  Advanced = "advanced",
+export interface ImportRejectionResource {
+  reason?: string | null;
+  type?: RejectionType;
 }
 
 export interface IndexerBulkResource {
@@ -790,7 +967,7 @@ export interface ManualImportReprocessResource {
   customFormatScore?: number;
   /** @format int32 */
   indexerFlags?: number;
-  rejections?: Rejection[] | null;
+  rejections?: ImportRejectionResource[] | null;
 }
 
 export interface ManualImportResource {
@@ -803,9 +980,11 @@ export interface ManualImportResource {
   /** @format int64 */
   size?: number;
   movie?: MovieResource;
+  /** @format int32 */
+  movieFileId?: number | null;
+  releaseGroup?: string | null;
   quality?: QualityModel;
   languages?: Language[] | null;
-  releaseGroup?: string | null;
   /** @format int32 */
   qualityWeight?: number;
   downloadId?: string | null;
@@ -814,23 +993,13 @@ export interface ManualImportResource {
   customFormatScore?: number;
   /** @format int32 */
   indexerFlags?: number;
-  rejections?: Rejection[] | null;
+  rejections?: ImportRejectionResource[] | null;
 }
 
 export interface MediaCover {
   coverType?: MediaCoverTypes;
   url?: string | null;
   remoteUrl?: string | null;
-}
-
-export enum MediaCoverTypes {
-  Unknown = "unknown",
-  Poster = "poster",
-  Banner = "banner",
-  Fanart = "fanart",
-  Screenshot = "screenshot",
-  Headshot = "headshot",
-  Clearlogo = "clearlogo",
 }
 
 export interface MediaInfoResource {
@@ -909,21 +1078,6 @@ export interface MetadataResource {
   enable?: boolean;
 }
 
-export enum Modifier {
-  None = "none",
-  Regional = "regional",
-  Screener = "screener",
-  Rawhd = "rawhd",
-  Brdisk = "brdisk",
-  Remux = "remux",
-}
-
-export enum MonitorTypes {
-  MovieOnly = "movieOnly",
-  MovieAndCollection = "movieAndCollection",
-  None = "none",
-}
-
 export interface MovieCollectionResource {
   title?: string | null;
   /** @format int32 */
@@ -973,23 +1127,12 @@ export interface MovieFileResource {
   quality?: QualityModel;
   customFormats?: CustomFormatResource[] | null;
   /** @format int32 */
-  customFormatScore?: number;
+  customFormatScore?: number | null;
   /** @format int32 */
   indexerFlags?: number | null;
   mediaInfo?: MediaInfoResource;
   originalFilePath?: string | null;
   qualityCutoffNotMet?: boolean;
-}
-
-export enum MovieHistoryEventType {
-  Unknown = "unknown",
-  Grabbed = "grabbed",
-  DownloadFolderImported = "downloadFolderImported",
-  DownloadFailed = "downloadFailed",
-  MovieFileDeleted = "movieFileDeleted",
-  MovieFolderImported = "movieFolderImported",
-  MovieFileRenamed = "movieFileRenamed",
-  DownloadIgnored = "downloadIgnored",
 }
 
 export interface MovieResource {
@@ -1045,6 +1188,7 @@ export interface MovieResource {
   folder?: string | null;
   certification?: string | null;
   genres?: string[] | null;
+  keywords?: string[] | null;
   /** @uniqueItems true */
   tags?: number[] | null;
   /** @format date-time */
@@ -1072,25 +1216,12 @@ export interface MovieResourcePagingResource {
   records?: MovieResource[] | null;
 }
 
-export enum MovieRuntimeFormatType {
-  HoursMinutes = "hoursMinutes",
-  Minutes = "minutes",
-}
-
 export interface MovieStatisticsResource {
   /** @format int32 */
   movieFileCount?: number;
   /** @format int64 */
   sizeOnDisk?: number;
   releaseGroups?: string[] | null;
-}
-
-export enum MovieStatusType {
-  Tba = "tba",
-  Announced = "announced",
-  InCinemas = "inCinemas",
-  Released = "released",
-  Deleted = "deleted",
 }
 
 export interface NamingConfigResource {
@@ -1181,13 +1312,6 @@ export interface PingResource {
   status?: string | null;
 }
 
-export enum PrivacyLevel {
-  Normal = "normal",
-  Password = "password",
-  ApiKey = "apiKey",
-  UserName = "userName",
-}
-
 export interface ProfileFormatItemResource {
   /** @format int32 */
   id?: number;
@@ -1198,27 +1322,9 @@ export interface ProfileFormatItemResource {
   score?: number;
 }
 
-export enum ProperDownloadTypes {
-  PreferAndUpgrade = "preferAndUpgrade",
-  DoNotUpgrade = "doNotUpgrade",
-  DoNotPrefer = "doNotPrefer",
-}
-
 export interface ProviderMessage {
   message?: string | null;
   type?: ProviderMessageType;
-}
-
-export enum ProviderMessageType {
-  Info = "info",
-  Warning = "warning",
-  Error = "error",
-}
-
-export enum ProxyType {
-  Http = "http",
-  Socks4 = "socks4",
-  Socks5 = "socks5",
 }
 
 export interface Quality {
@@ -1229,6 +1335,13 @@ export interface Quality {
   /** @format int32 */
   resolution?: number;
   modifier?: Modifier;
+}
+
+export interface QualityDefinitionLimitsResource {
+  /** @format int32 */
+  min?: number;
+  /** @format int32 */
+  max?: number;
 }
 
 export interface QualityDefinitionResource {
@@ -1276,19 +1389,6 @@ export interface QualityProfileResource {
   minUpgradeFormatScore?: number;
   formatItems?: ProfileFormatItemResource[] | null;
   language?: Language;
-}
-
-export enum QualitySource {
-  Unknown = "unknown",
-  Cam = "cam",
-  Telesync = "telesync",
-  Telecine = "telecine",
-  Workprint = "workprint",
-  Dvd = "dvd",
-  Tv = "tv",
-  Webdl = "webdl",
-  Webrip = "webrip",
-  Bluray = "bluray",
 }
 
 export interface QueueBulkResource {
@@ -1348,19 +1448,6 @@ export interface QueueResourcePagingResource {
   records?: QueueResource[] | null;
 }
 
-export enum QueueStatus {
-  Unknown = "unknown",
-  Queued = "queued",
-  Paused = "paused",
-  Downloading = "downloading",
-  Completed = "completed",
-  Failed = "failed",
-  Warning = "warning",
-  Delay = "delay",
-  DownloadClientUnavailable = "downloadClientUnavailable",
-  Fallback = "fallback",
-}
-
 export interface QueueStatusResource {
   /** @format int32 */
   id?: number;
@@ -1384,27 +1471,12 @@ export interface RatingChild {
   type?: RatingType;
 }
 
-export enum RatingType {
-  User = "user",
-  Critic = "critic",
-}
-
 export interface Ratings {
   imdb?: RatingChild;
   tmdb?: RatingChild;
   metacritic?: RatingChild;
   rottenTomatoes?: RatingChild;
   trakt?: RatingChild;
-}
-
-export interface Rejection {
-  reason?: string | null;
-  type?: RejectionType;
-}
-
-export enum RejectionType {
-  Permanent = "permanent",
-  Temporary = "temporary",
 }
 
 export interface ReleaseProfileResource {
@@ -1463,6 +1535,7 @@ export interface ReleaseResource {
   commentUrl?: string | null;
   downloadUrl?: string | null;
   infoUrl?: string | null;
+  movieRequested?: boolean;
   downloadAllowed?: boolean;
   /** @format int32 */
   releaseWeight?: number;
@@ -1502,12 +1575,6 @@ export interface RenameMovieResource {
   newPath?: string | null;
 }
 
-export enum RescanAfterRefreshType {
-  Always = "always",
-  AfterManual = "afterManual",
-  Never = "never",
-}
-
 export interface Revision {
   /** @format int32 */
   version?: number;
@@ -1526,12 +1593,6 @@ export interface RootFolderResource {
   unmappedFolders?: UnmappedFolder[] | null;
 }
 
-export enum RuntimeMode {
-  Console = "console",
-  Service = "service",
-  Tray = "tray",
-}
-
 export interface SelectOption {
   /** @format int32 */
   value?: number;
@@ -1540,19 +1601,6 @@ export interface SelectOption {
   order?: number;
   hint?: string | null;
   dividerAfter?: boolean;
-}
-
-export enum SortDirection {
-  Default = "default",
-  Ascending = "ascending",
-  Descending = "descending",
-}
-
-export enum SourceType {
-  Tmdb = "tmdb",
-  Mappings = "mappings",
-  User = "user",
-  Indexer = "indexer",
 }
 
 export interface SystemResource {
@@ -1592,22 +1640,6 @@ export interface SystemResource {
   packageUpdateMechanismMessage?: string | null;
 }
 
-export enum TMDbCountryCode {
-  Au = "au",
-  Br = "br",
-  Ca = "ca",
-  Fr = "fr",
-  De = "de",
-  Gb = "gb",
-  In = "in",
-  Ie = "ie",
-  It = "it",
-  Nz = "nz",
-  Ro = "ro",
-  Es = "es",
-  Us = "us",
-}
-
 export interface TagDetailsResource {
   /** @format int32 */
   id?: number;
@@ -1645,23 +1677,6 @@ export interface TaskResource {
   lastDuration?: string;
 }
 
-export enum TrackedDownloadState {
-  Downloading = "downloading",
-  ImportBlocked = "importBlocked",
-  ImportPending = "importPending",
-  Importing = "importing",
-  Imported = "imported",
-  FailedPending = "failedPending",
-  Failed = "failed",
-  Ignored = "ignored",
-}
-
-export enum TrackedDownloadStatus {
-  Ok = "ok",
-  Warning = "warning",
-  Error = "error",
-}
-
 export interface TrackedDownloadStatusMessage {
   title?: string | null;
   messages?: string[] | null;
@@ -1695,14 +1710,6 @@ export interface UnmappedFolder {
 export interface UpdateChanges {
   new?: string[] | null;
   fixed?: string[] | null;
-}
-
-export enum UpdateMechanism {
-  BuiltIn = "builtIn",
-  Script = "script",
-  External = "external",
-  Apt = "apt",
-  Docker = "docker",
 }
 
 export interface UpdateResource {

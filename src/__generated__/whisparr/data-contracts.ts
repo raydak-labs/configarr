@@ -1,5 +1,6 @@
 /* eslint-disable */
 /* tslint:disable */
+// @ts-nocheck
 /*
  * ---------------------------------------------------------------
  * ## THIS FILE WAS GENERATED VIA SWAGGER-TYPESCRIPT-API        ##
@@ -8,6 +9,249 @@
  * ## SOURCE: https://github.com/acacode/swagger-typescript-api ##
  * ---------------------------------------------------------------
  */
+
+export enum UpdateMechanism {
+  BuiltIn = "builtIn",
+  Script = "script",
+  External = "external",
+  Apt = "apt",
+  Docker = "docker",
+}
+
+export enum TrackedDownloadStatus {
+  Ok = "ok",
+  Warning = "warning",
+  Error = "error",
+}
+
+export enum TrackedDownloadState {
+  Downloading = "downloading",
+  ImportPending = "importPending",
+  Importing = "importing",
+  Imported = "imported",
+  FailedPending = "failedPending",
+  Failed = "failed",
+  Ignored = "ignored",
+}
+
+export enum SortDirection {
+  Default = "default",
+  Ascending = "ascending",
+  Descending = "descending",
+}
+
+export enum SeriesStatusType {
+  Continuing = "continuing",
+  Ended = "ended",
+  Upcoming = "upcoming",
+  Deleted = "deleted",
+}
+
+export enum RuntimeMode {
+  Console = "console",
+  Service = "service",
+  Tray = "tray",
+}
+
+export enum RescanAfterRefreshType {
+  Always = "always",
+  AfterManual = "afterManual",
+  Never = "never",
+}
+
+export enum RejectionType {
+  Permanent = "permanent",
+  Temporary = "temporary",
+}
+
+export enum QualitySource {
+  Unknown = "unknown",
+  Television = "television",
+  TelevisionRaw = "televisionRaw",
+  Web = "web",
+  WebRip = "webRip",
+  Dvd = "dvd",
+  Bluray = "bluray",
+  Vr = "vr",
+  BlurayRaw = "blurayRaw",
+}
+
+export enum ProxyType {
+  Http = "http",
+  Socks4 = "socks4",
+  Socks5 = "socks5",
+}
+
+export enum ProviderMessageType {
+  Info = "info",
+  Warning = "warning",
+  Error = "error",
+}
+
+export enum ProperDownloadTypes {
+  PreferAndUpgrade = "preferAndUpgrade",
+  DoNotUpgrade = "doNotUpgrade",
+  DoNotPrefer = "doNotPrefer",
+}
+
+export enum PrivacyLevel {
+  Normal = "normal",
+  Password = "password",
+  ApiKey = "apiKey",
+  UserName = "userName",
+}
+
+export enum MonitorTypes {
+  Unknown = "unknown",
+  All = "all",
+  Future = "future",
+  Missing = "missing",
+  Existing = "existing",
+  FirstSeason = "firstSeason",
+  LatestSeason = "latestSeason",
+  None = "none",
+}
+
+export enum MediaCoverTypes {
+  Unknown = "unknown",
+  Logo = "logo",
+  Poster = "poster",
+  Banner = "banner",
+  Fanart = "fanart",
+  Screenshot = "screenshot",
+  Headshot = "headshot",
+  Clearlogo = "clearlogo",
+}
+
+export enum ImportListType {
+  Program = "program",
+  Plex = "plex",
+  Trakt = "trakt",
+  Simkl = "simkl",
+  Other = "other",
+  Advanced = "advanced",
+}
+
+export enum ImportListMonitorTypes {
+  None = "none",
+  SpecificEpisode = "specificEpisode",
+  EntireSite = "entireSite",
+}
+
+export enum HealthCheckResult {
+  Ok = "ok",
+  Notice = "notice",
+  Warning = "warning",
+  Error = "error",
+}
+
+export enum Gender {
+  Female = "female",
+  Male = "male",
+  Other = "other",
+}
+
+export enum FileDateType {
+  None = "none",
+  LocalAirDate = "localAirDate",
+  UtcAirDate = "utcAirDate",
+}
+
+export enum EpisodeTitleRequiredType {
+  Always = "always",
+  BulkSeasonReleases = "bulkSeasonReleases",
+  Never = "never",
+}
+
+export enum EpisodeHistoryEventType {
+  Unknown = "unknown",
+  Grabbed = "grabbed",
+  SeriesFolderImported = "seriesFolderImported",
+  DownloadFolderImported = "downloadFolderImported",
+  DownloadFailed = "downloadFailed",
+  EpisodeFileDeleted = "episodeFileDeleted",
+  EpisodeFileRenamed = "episodeFileRenamed",
+  DownloadIgnored = "downloadIgnored",
+}
+
+export enum DownloadProtocol {
+  Unknown = "unknown",
+  Usenet = "usenet",
+  Torrent = "torrent",
+}
+
+export enum DayOfWeek {
+  Sunday = "sunday",
+  Monday = "monday",
+  Tuesday = "tuesday",
+  Wednesday = "wednesday",
+  Thursday = "thursday",
+  Friday = "friday",
+  Saturday = "saturday",
+}
+
+export enum DatabaseType {
+  SqLite = "sqLite",
+  PostgreSQL = "postgreSQL",
+}
+
+export enum CommandTrigger {
+  Unspecified = "unspecified",
+  Manual = "manual",
+  Scheduled = "scheduled",
+}
+
+export enum CommandStatus {
+  Queued = "queued",
+  Started = "started",
+  Completed = "completed",
+  Failed = "failed",
+  Aborted = "aborted",
+  Cancelled = "cancelled",
+  Orphaned = "orphaned",
+}
+
+export enum CommandResult {
+  Unknown = "unknown",
+  Successful = "successful",
+  Unsuccessful = "unsuccessful",
+}
+
+export enum CommandPriority {
+  Normal = "normal",
+  High = "high",
+  Low = "low",
+}
+
+export enum CertificateValidationType {
+  Enabled = "enabled",
+  DisabledForLocalAddresses = "disabledForLocalAddresses",
+  Disabled = "disabled",
+}
+
+export enum BackupType {
+  Scheduled = "scheduled",
+  Manual = "manual",
+  Update = "update",
+}
+
+export enum AuthenticationType {
+  None = "none",
+  Basic = "basic",
+  Forms = "forms",
+  External = "external",
+}
+
+export enum AuthenticationRequiredType {
+  Enabled = "enabled",
+  DisabledForLocalAddresses = "disabledForLocalAddresses",
+}
+
+export enum ApplyTags {
+  Add = "add",
+  Remove = "remove",
+  Replace = "replace",
+}
 
 export interface Actor {
   /** @format int32 */
@@ -25,24 +269,6 @@ export interface AddSeriesOptions {
   monitor?: MonitorTypes;
   searchForMissingEpisodes?: boolean;
   searchForCutoffUnmetEpisodes?: boolean;
-}
-
-export enum ApplyTags {
-  Add = "add",
-  Remove = "remove",
-  Replace = "replace",
-}
-
-export enum AuthenticationRequiredType {
-  Enabled = "enabled",
-  DisabledForLocalAddresses = "disabledForLocalAddresses",
-}
-
-export enum AuthenticationType {
-  None = "none",
-  Basic = "basic",
-  Forms = "forms",
-  External = "external",
 }
 
 export interface AutoTaggingResource {
@@ -76,12 +302,6 @@ export interface BackupResource {
   size?: number;
   /** @format date-time */
   time?: string;
-}
-
-export enum BackupType {
-  Scheduled = "scheduled",
-  Manual = "manual",
-  Update = "update",
 }
 
 export interface BlocklistBulkResource {
@@ -118,12 +338,6 @@ export interface BlocklistResourcePagingResource {
   records?: BlocklistResource[] | null;
 }
 
-export enum CertificateValidationType {
-  Enabled = "enabled",
-  DisabledForLocalAddresses = "disabledForLocalAddresses",
-  Disabled = "disabled",
-}
-
 export interface Command {
   sendUpdatesToClient?: boolean;
   updateScheduledTask?: boolean;
@@ -139,12 +353,6 @@ export interface Command {
   trigger?: CommandTrigger;
   suppressMessages?: boolean;
   clientUserAgent?: string | null;
-}
-
-export enum CommandPriority {
-  Normal = "normal",
-  High = "high",
-  Low = "low",
 }
 
 export interface CommandResource {
@@ -173,28 +381,6 @@ export interface CommandResource {
   updateScheduledTask?: boolean;
   /** @format date-time */
   lastExecutionTime?: string | null;
-}
-
-export enum CommandResult {
-  Unknown = "unknown",
-  Successful = "successful",
-  Unsuccessful = "unsuccessful",
-}
-
-export enum CommandStatus {
-  Queued = "queued",
-  Started = "started",
-  Completed = "completed",
-  Failed = "failed",
-  Aborted = "aborted",
-  Cancelled = "cancelled",
-  Orphaned = "orphaned",
-}
-
-export enum CommandTrigger {
-  Unspecified = "unspecified",
-  Manual = "manual",
-  Scheduled = "scheduled",
 }
 
 export interface CustomFilterResource {
@@ -226,11 +412,6 @@ export interface CustomFormatSpecificationSchema {
   presets?: CustomFormatSpecificationSchema[] | null;
 }
 
-export enum DatabaseType {
-  SqLite = "sqLite",
-  PostgreSQL = "postgreSQL",
-}
-
 export interface DateOnly {
   /** @format int32 */
   year?: number;
@@ -243,16 +424,6 @@ export interface DateOnly {
   dayOfYear?: number;
   /** @format int32 */
   dayNumber?: number;
-}
-
-export enum DayOfWeek {
-  Sunday = "sunday",
-  Monday = "monday",
-  Tuesday = "tuesday",
-  Wednesday = "wednesday",
-  Thursday = "thursday",
-  Friday = "friday",
-  Saturday = "saturday",
 }
 
 export interface DelayProfileResource {
@@ -326,12 +497,6 @@ export interface DownloadClientResource {
   removeFailedDownloads?: boolean;
 }
 
-export enum DownloadProtocol {
-  Unknown = "unknown",
-  Usenet = "usenet",
-  Torrent = "torrent",
-}
-
 export interface EpisodeFileListResource {
   episodeFileIds?: number[] | null;
   languages?: Language[] | null;
@@ -362,17 +527,6 @@ export interface EpisodeFileResource {
   customFormatScore?: number;
   mediaInfo?: MediaInfoResource;
   qualityCutoffNotMet?: boolean;
-}
-
-export enum EpisodeHistoryEventType {
-  Unknown = "unknown",
-  Grabbed = "grabbed",
-  SeriesFolderImported = "seriesFolderImported",
-  DownloadFolderImported = "downloadFolderImported",
-  DownloadFailed = "downloadFailed",
-  EpisodeFileDeleted = "episodeFileDeleted",
-  EpisodeFileRenamed = "episodeFileRenamed",
-  DownloadIgnored = "downloadIgnored",
 }
 
 export interface EpisodeResource {
@@ -419,12 +573,6 @@ export interface EpisodeResourcePagingResource {
   records?: EpisodeResource[] | null;
 }
 
-export enum EpisodeTitleRequiredType {
-  Always = "always",
-  BulkSeasonReleases = "bulkSeasonReleases",
-  Never = "never",
-}
-
 export interface EpisodesMonitoredResource {
   episodeIds?: number[] | null;
   monitored?: boolean;
@@ -449,25 +597,6 @@ export interface Field {
   privacy?: PrivacyLevel;
   placeholder?: string | null;
   isFloat?: boolean;
-}
-
-export enum FileDateType {
-  None = "none",
-  LocalAirDate = "localAirDate",
-  UtcAirDate = "utcAirDate",
-}
-
-export enum Gender {
-  Female = "female",
-  Male = "male",
-  Other = "other",
-}
-
-export enum HealthCheckResult {
-  Ok = "ok",
-  Notice = "notice",
-  Warning = "warning",
-  Error = "error",
 }
 
 export interface HealthResource {
@@ -587,12 +716,6 @@ export interface ImportListExclusionResource {
   title?: string | null;
 }
 
-export enum ImportListMonitorTypes {
-  None = "none",
-  SpecificEpisode = "specificEpisode",
-  EntireSite = "entireSite",
-}
-
 export interface ImportListResource {
   /** @format int32 */
   id?: number;
@@ -616,15 +739,6 @@ export interface ImportListResource {
   /** @format int32 */
   listOrder?: number;
   minRefreshInterval?: TimeSpan;
-}
-
-export enum ImportListType {
-  Program = "program",
-  Plex = "plex",
-  Trakt = "trakt",
-  Simkl = "simkl",
-  Other = "other",
-  Advanced = "advanced",
 }
 
 export interface IndexerBulkResource {
@@ -805,17 +919,6 @@ export interface MediaCover {
   remoteUrl?: string | null;
 }
 
-export enum MediaCoverTypes {
-  Unknown = "unknown",
-  Logo = "logo",
-  Poster = "poster",
-  Banner = "banner",
-  Fanart = "fanart",
-  Screenshot = "screenshot",
-  Headshot = "headshot",
-  Clearlogo = "clearlogo",
-}
-
 export interface MediaInfoResource {
   /** @format int32 */
   id?: number;
@@ -883,17 +986,6 @@ export interface MetadataResource {
   tags?: number[] | null;
   presets?: MetadataResource[] | null;
   enable?: boolean;
-}
-
-export enum MonitorTypes {
-  Unknown = "unknown",
-  All = "all",
-  Future = "future",
-  Missing = "missing",
-  Existing = "existing",
-  FirstSeason = "firstSeason",
-  LatestSeason = "latestSeason",
-  None = "none",
 }
 
 export interface MonitoringOptions {
@@ -996,13 +1088,6 @@ export interface PingResource {
   status?: string | null;
 }
 
-export enum PrivacyLevel {
-  Normal = "normal",
-  Password = "password",
-  ApiKey = "apiKey",
-  UserName = "userName",
-}
-
 export interface ProfileFormatItemResource {
   /** @format int32 */
   id?: number;
@@ -1013,27 +1098,9 @@ export interface ProfileFormatItemResource {
   score?: number;
 }
 
-export enum ProperDownloadTypes {
-  PreferAndUpgrade = "preferAndUpgrade",
-  DoNotUpgrade = "doNotUpgrade",
-  DoNotPrefer = "doNotPrefer",
-}
-
 export interface ProviderMessage {
   message?: string | null;
   type?: ProviderMessageType;
-}
-
-export enum ProviderMessageType {
-  Info = "info",
-  Warning = "warning",
-  Error = "error",
-}
-
-export enum ProxyType {
-  Http = "http",
-  Socks4 = "socks4",
-  Socks5 = "socks5",
 }
 
 export interface Quality {
@@ -1089,18 +1156,6 @@ export interface QualityProfileResource {
   formatItems?: ProfileFormatItemResource[] | null;
 }
 
-export enum QualitySource {
-  Unknown = "unknown",
-  Television = "television",
-  TelevisionRaw = "televisionRaw",
-  Web = "web",
-  WebRip = "webRip",
-  Dvd = "dvd",
-  Bluray = "bluray",
-  Vr = "vr",
-  BlurayRaw = "blurayRaw",
-}
-
 export interface QueueBulkResource {
   ids?: number[] | null;
 }
@@ -1137,6 +1192,7 @@ export interface QueueResource {
   downloadId?: string | null;
   protocol?: DownloadProtocol;
   downloadClient?: string | null;
+  downloadClientHasPostImportCategory?: boolean;
   indexer?: string | null;
   outputPath?: string | null;
   episodeHasFile?: boolean;
@@ -1179,11 +1235,6 @@ export interface Ratings {
 export interface Rejection {
   reason?: string | null;
   type?: RejectionType;
-}
-
-export enum RejectionType {
-  Permanent = "permanent",
-  Temporary = "temporary",
 }
 
 export interface ReleaseEpisodeResource {
@@ -1300,12 +1351,6 @@ export interface RenameEpisodeResource {
   newPath?: string | null;
 }
 
-export enum RescanAfterRefreshType {
-  Always = "always",
-  AfterManual = "afterManual",
-  Never = "never",
-}
-
 export interface Revision {
   /** @format int32 */
   version?: number;
@@ -1322,12 +1367,6 @@ export interface RootFolderResource {
   /** @format int64 */
   freeSpace?: number | null;
   unmappedFolders?: UnmappedFolder[] | null;
-}
-
-export enum RuntimeMode {
-  Console = "console",
-  Service = "service",
-  Tray = "tray",
 }
 
 export interface SeasonPassResource {
@@ -1453,25 +1492,12 @@ export interface SeriesStatisticsResource {
   percentOfEpisodes?: number;
 }
 
-export enum SeriesStatusType {
-  Continuing = "continuing",
-  Ended = "ended",
-  Upcoming = "upcoming",
-  Deleted = "deleted",
-}
-
 export interface SeriesTitleInfo {
   title?: string | null;
   titleWithoutYear?: string | null;
   /** @format int32 */
   year?: number;
   allTitles?: string[] | null;
-}
-
-export enum SortDirection {
-  Default = "default",
-  Ascending = "ascending",
-  Descending = "descending",
 }
 
 export interface SystemResource {
@@ -1573,22 +1599,6 @@ export interface TimeSpan {
   totalSeconds?: number;
 }
 
-export enum TrackedDownloadState {
-  Downloading = "downloading",
-  ImportPending = "importPending",
-  Importing = "importing",
-  Imported = "imported",
-  FailedPending = "failedPending",
-  Failed = "failed",
-  Ignored = "ignored",
-}
-
-export enum TrackedDownloadStatus {
-  Ok = "ok",
-  Warning = "warning",
-  Error = "error",
-}
-
 export interface TrackedDownloadStatusMessage {
   title?: string | null;
   messages?: string[] | null;
@@ -1619,14 +1629,6 @@ export interface UnmappedFolder {
 export interface UpdateChanges {
   new?: string[] | null;
   fixed?: string[] | null;
-}
-
-export enum UpdateMechanism {
-  BuiltIn = "builtIn",
-  Script = "script",
-  External = "external",
-  Apt = "apt",
-  Docker = "docker",
 }
 
 export interface UpdateResource {
