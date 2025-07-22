@@ -70,14 +70,18 @@ const pipeline = async (globalConfig: InputConfigSchema, instanceConfig: InputCo
     const cfsToDelete = serverCache.cf.filter((e) => (e.name && mm.get(e.name)) !== true);
 
     if (cfsToDelete.length > 0) {
-      logger.info(`Deleting ${cfsToDelete.length} CustomFormats ...`);
-      logger.debug(
-        cfsToDelete.map((e) => e.name),
-        `This CustomFormats will be deleted:`,
-      );
+      if (getEnvs().DRY_RUN) {
+        logger.info(`DryRun: Would delete CF: ${cfsToDelete.map((e) => e.name).join(", ")}`);
+      } else {
+        logger.info(`Deleting ${cfsToDelete.length} CustomFormats ...`);
+        logger.debug(
+          cfsToDelete.map((e) => e.name),
+          `This CustomFormats will be deleted:`,
+        );
 
-      for (const element of cfsToDelete) {
-        await deleteCustomFormat(element);
+        for (const element of cfsToDelete) {
+          await deleteCustomFormat(element);
+        }
       }
     }
   }
