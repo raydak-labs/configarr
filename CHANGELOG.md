@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.13.7](https://github.com/raydak-labs/configarr/compare/v1.13.6...v1.13.7) (2025-07-22)
+
+### Bug Fixes
+
+- do not delete CFs when dry run enabled fixes [#290](https://github.com/raydak-labs/configarr/issues/290) ([cff234b](https://github.com/raydak-labs/configarr/commit/cff234be81fe5dc576ee0be1f21eb45442a5cf45))
+
 ## [1.13.6](https://github.com/raydak-labs/configarr/compare/v1.13.5...v1.13.6) (2025-07-09)
 
 ### Bug Fixes
