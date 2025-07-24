@@ -1,5 +1,6 @@
 /* eslint-disable */
 /* tslint:disable */
+// @ts-nocheck
 /*
  * ---------------------------------------------------------------
  * ## THIS FILE WAS GENERATED VIA SWAGGER-TYPESCRIPT-API        ##
@@ -65,6 +66,7 @@ import {
   NamingConfigResource,
   NotificationResource,
   ParseResource,
+  QualityDefinitionLimitsResource,
   QualityDefinitionResource,
   QualityProfileResource,
   QueueBulkResource,
@@ -2950,6 +2952,7 @@ export class Api<SecurityDataType = unknown> {
    * @tags MovieFile
    * @name V3MoviefileEditorUpdate
    * @request PUT:/api/v3/moviefile/editor
+   * @deprecated
    * @secure
    */
   v3MoviefileEditorUpdate = (data: MovieFileListResource, params: RequestParams = {}) =>
@@ -2976,6 +2979,38 @@ export class Api<SecurityDataType = unknown> {
       body: data,
       secure: true,
       type: ContentType.Json,
+      ...params,
+    });
+  /**
+   * No description
+   *
+   * @tags MovieFile
+   * @name V3MoviefileBulkUpdate
+   * @request PUT:/api/v3/moviefile/bulk
+   * @secure
+   */
+  v3MoviefileBulkUpdate = (data: MovieFileResource[], params: RequestParams = {}) =>
+    this.http.request<void, any>({
+      path: `/api/v3/moviefile/bulk`,
+      method: "PUT",
+      body: data,
+      secure: true,
+      type: ContentType.Json,
+      ...params,
+    });
+  /**
+   * No description
+   *
+   * @tags MovieFolder
+   * @name V3MovieFolderList
+   * @request GET:/api/v3/movie/{id}/folder
+   * @secure
+   */
+  v3MovieFolderList = (id: number, params: RequestParams = {}) =>
+    this.http.request<void, any>({
+      path: `/api/v3/movie/${id}/folder`,
+      method: "GET",
+      secure: true,
       ...params,
     });
   /**
@@ -3401,6 +3436,22 @@ export class Api<SecurityDataType = unknown> {
       body: data,
       secure: true,
       type: ContentType.Json,
+      ...params,
+    });
+  /**
+   * No description
+   *
+   * @tags QualityDefinition
+   * @name V3QualitydefinitionLimitsList
+   * @request GET:/api/v3/qualitydefinition/limits
+   * @secure
+   */
+  v3QualitydefinitionLimitsList = (params: RequestParams = {}) =>
+    this.http.request<QualityDefinitionLimitsResource, any>({
+      path: `/api/v3/qualitydefinition/limits`,
+      method: "GET",
+      secure: true,
+      format: "json",
       ...params,
     });
   /**
