@@ -1,5 +1,6 @@
 /* eslint-disable */
 /* tslint:disable */
+// @ts-nocheck
 /*
  * ---------------------------------------------------------------
  * ## THIS FILE WAS GENERATED VIA SWAGGER-TYPESCRIPT-API        ##
@@ -435,11 +436,11 @@ export class Api<SecurityDataType = unknown> {
    * No description
    *
    * @tags Book
-   * @name V1BookOverviewDetail
+   * @name V1BookOverviewList
    * @request GET:/api/v1/book/{id}/overview
    * @secure
    */
-  v1BookOverviewDetail = (id: number, params: RequestParams = {}) =>
+  v1BookOverviewList = (id: number, params: RequestParams = {}) =>
     this.http.request<void, any>({
       path: `/api/v1/book/${id}/overview`,
       method: "GET",

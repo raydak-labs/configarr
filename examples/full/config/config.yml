@@ -4,11 +4,11 @@ localCustomFormatsPath: /app/cfs
 localConfigTemplatesPath: /app/templates
 
 # You can enable or disable
-#sonarrEnabled: false
-#radarrEnabled: false
-#whisparrEnabled: false
-#readarrEnabled: false
-#lidarrEnabled: true
+sonarrEnabled: false
+radarrEnabled: true
+whisparrEnabled: false
+readarrEnabled: false
+lidarrEnabled: false
 
 customFormatDefinitions:
   - trash_id: example-in-config-cf
@@ -92,6 +92,21 @@ radarr:
     base_url: http://radarr:7878
     api_key: !secret RADARR_API_KEY
 
+    root_folders:
+      - "/app"
+
+    delay_profiles:
+      additional:
+        - enableUsenet: true
+          enableTorrent: false
+          preferredProtocol: usenet
+          usenetDelay: 10
+          torrentDelay: 0
+          bypassIfHighestQuality: false
+          bypassIfAboveCustomFormatScore: false
+          minimumCustomFormatScore: 0
+          order: 1
+          tags: [1, 2]
     # experimental
     media_management:
       recycleBin: "/tmp"
@@ -148,6 +163,11 @@ radarr:
             qualities:
               - WEBDL-1080p
               - WEBRip-1080p
+      - name: MinimumProfile
+        upgrade:
+          allowed: false
+        qualities:
+          - name: Remux-2160p
         # Replacing the language of a profile
         # - name: ExampleProfile
         #   language: Any
