@@ -24,7 +24,7 @@
     "simple-git": "3.28.0",
     "tsx": "4.20.3",
     "yaml": "2.8.0",
-    "zod": "3.25.76"
+    "zod": "4.0.14"
   },
   "devDependencies": {
     "@hyrious/esbuild-plugin-commonjs": "0.2.6",
