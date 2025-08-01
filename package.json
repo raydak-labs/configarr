@@ -28,15 +28,15 @@
   },
   "devDependencies": {
     "@hyrious/esbuild-plugin-commonjs": "0.2.6",
-    "@playwright/test": "1.53.2",
+    "@playwright/test": "1.54.2",
     "@release-it/conventional-changelog": "10.0.1",
-    "@types/node": "24.0.12",
+    "@types/node": "24.1.0",
     "@vitest/coverage-v8": "3.2.4",
-    "esbuild": "0.25.6",
+    "esbuild": "0.25.8",
     "prettier": "3.6.2",
-    "release-it": "19.0.3",
+    "release-it": "19.0.4",
     "swagger-typescript-api": "13.2.7",
-    "typescript": "5.8.3",
+    "typescript": "5.9.2",
     "vitest": "3.2.4"
   }
 }
