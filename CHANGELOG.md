@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.14.0](https://github.com/raydak-labs/configarr/compare/v1.13.7...v1.14.0) (2025-08-04)
+
+### Features
+
+- add support for root folders ([9e717ff](https://github.com/raydak-labs/configarr/commit/9e717ff25184bec830dbec5fad0faab346f73c21)), closes [#264](https://github.com/raydak-labs/configarr/issues/264)
+- implement delay profiles ([19c7bbe](https://github.com/raydak-labs/configarr/commit/19c7bbe5d65148393ddeaad37d33d21fd5010c0f))
+
+### Bug Fixes
+
+- **deps:** update dependencies (non-major) ([#292](https://github.com/raydak-labs/configarr/issues/292)) ([3c46cd7](https://github.com/raydak-labs/configarr/commit/3c46cd7166cafb85ef3019400f43851feadc52a6))
+
+### (internal) Refactorings
+
+- update generated api ([b188e8b](https://github.com/raydak-labs/configarr/commit/b188e8b1e307001795eab6610944e9ffd8f021e0))
+
 ## [1.13.7](https://github.com/raydak-labs/configarr/compare/v1.13.6...v1.13.7) (2025-07-22)
 
 ### Bug Fixes
