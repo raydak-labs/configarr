@@ -314,20 +314,34 @@ export const calculateQualityProfilesDiff = async (
         };
       });
 
-      const newProfile = Object.assign<MergedQualityProfileResource, MergedQualityProfileResource | null | undefined>(
-        {
-          name: value.name,
-          items: mappedQualities,
+      let newP: MergedQualityProfileResource = {
+        name: value.name,
+        items: mappedQualities,
+        minFormatScore: value.min_format_score,
+        formatItems: customFormatsMapped,
+      };
+
+      if (value.upgrade.allowed) {
+        Object.assign<MergedQualityProfileResource, MergedQualityProfileResource | null | undefined>(newP, {
           cutoff: qualityToId.get(value.upgrade.until_quality),
           cutoffFormatScore: value.upgrade.until_score,
-          minFormatScore: value.min_format_score,
-          upgradeAllowed: value.upgrade.allowed,
-          formatItems: customFormatsMapped,
-          // required since sonarr 4.0.10 (radarr also)
+          upgradeAllowed: true,
           minUpgradeFormatScore: value.upgrade.min_format_score ?? 1,
-        },
+        });
+      } else {
+        Object.assign<MergedQualityProfileResource, MergedQualityProfileResource | null | undefined>(newP, {
+          cutoff: qualityToId.get(mappedQualities.find((e) => e.allowed)?.quality?.name!),
+          cutoffFormatScore: 1,
+          minUpgradeFormatScore: 1,
+          upgradeAllowed: false,
+        });
+      }
+
+      Object.assign<MergedQualityProfileResource, MergedQualityProfileResource | null | undefined>(
+        newP,
         profileLanguage && { language: profileLanguage }, // TODO split out. Not exists for sonarr
       );
+      const newProfile = newP;
       createQPs.push(newProfile);
       continue;
     }
@@ -377,35 +391,38 @@ export const calculateQualityProfilesDiff = async (
         changeList.push(`UpgradeAllowed diff: server: ${serverMatch.upgradeAllowed} - expected: ${value.upgrade.allowed}`);
       }
 
-      const upgradeUntil = qualityToId.get(value.upgrade.until_quality);
+      // Further diffs only necessary if upgrade is allowed
+      if (value.upgrade.allowed) {
+        const upgradeUntil = qualityToId.get(value.upgrade.until_quality);
 
-      if (upgradeUntil == null) {
-        throw new Error(`Did not find expected Quality to upgrade until: ${value.upgrade.until_quality}`);
-      }
+        if (upgradeUntil == null) {
+          throw new Error(`Did not find expected Quality to upgrade until: ${value.upgrade.until_quality}`);
+        }
 
-      if (serverMatch.cutoff !== upgradeUntil) {
-        updatedServerObject.cutoff = upgradeUntil;
-        diffExist = true;
-        changeList.push(`Upgrade until quality diff: server: ${serverMatch.cutoff} - expected: ${upgradeUntil}`);
-      }
+        if (serverMatch.cutoff !== upgradeUntil) {
+          updatedServerObject.cutoff = upgradeUntil;
+          diffExist = true;
+          changeList.push(`Upgrade until quality diff: server: ${serverMatch.cutoff} - expected: ${upgradeUntil}`);
+        }
 
-      if (serverMatch.cutoffFormatScore !== value.upgrade.until_score) {
-        updatedServerObject.cutoffFormatScore = value.upgrade.until_score;
-        diffExist = true;
+        if (serverMatch.cutoffFormatScore !== value.upgrade.until_score) {
+          updatedServerObject.cutoffFormatScore = value.upgrade.until_score;
+          diffExist = true;
 
-        changeList.push(`Upgrade until score diff: server: ${serverMatch.cutoffFormatScore} - expected: ${value.upgrade.until_score}`);
-      }
+          changeList.push(`Upgrade until score diff: server: ${serverMatch.cutoffFormatScore} - expected: ${value.upgrade.until_score}`);
+        }
 
-      const configMinUpgradeFormatScore = value.upgrade.min_format_score ?? 1;
+        const configMinUpgradeFormatScore = value.upgrade.min_format_score ?? 1;
 
-      // if not configured ignore
-      if (value.upgrade.min_format_score != null && serverMatch.minUpgradeFormatScore !== configMinUpgradeFormatScore) {
-        updatedServerObject.minUpgradeFormatScore = configMinUpgradeFormatScore;
-        diffExist = true;
+        // if not configured ignore
+        if (value.upgrade.min_format_score != null && serverMatch.minUpgradeFormatScore !== configMinUpgradeFormatScore) {
+          updatedServerObject.minUpgradeFormatScore = configMinUpgradeFormatScore;
+          diffExist = true;
 
-        changeList.push(
-          `Min upgrade format score diff: server: ${serverMatch.cutoffFormatScore} - expected: ${configMinUpgradeFormatScore}`,
-        );
+          changeList.push(
+            `Min upgrade format score diff: server: ${serverMatch.cutoffFormatScore} - expected: ${configMinUpgradeFormatScore}`,
+          );
+        }
       }
     }
 

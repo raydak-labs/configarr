@@ -122,7 +122,23 @@ export interface IArrClient<
   getMediamanagement(): Promise<any>;
   updateMediamanagement(id: string, data: any): Promise<any>;
 
+  getRootfolders(): Promise<any>;
+  addRootFolder(data: any): Promise<any>;
+  deleteRootFolder(id: string): Promise<any>;
+
   getLanguages(): Promise<L[]>;
+
+  // Delay Profiles
+  getDelayProfiles(): Promise<any>;
+  createDelayProfile(profile: any): Promise<any>;
+  updateDelayProfile(id: string, data: any): Promise<any>;
+  deleteDelayProfile(id: string): Promise<any>;
+
+  // Tags
+  getTags(): Promise<any>;
+  createTag(tag: any): Promise<any>;
+  // deleteTag(id: string): Promise<void>;
+  // updateTag(id: string, tag: any): Promise<any>;
 
   // System/Health Check
   getSystemStatus(): Promise<any>;
@@ -215,6 +231,42 @@ export class UnifiedClient implements IArrClient {
 
   async updateMediamanagement(id: string, data: any) {
     return this.api.updateMediamanagement(id, data);
+  }
+
+  async getRootfolders() {
+    return this.api.getRootfolders();
+  }
+
+  async addRootFolder(data: any) {
+    return this.api.addRootFolder(data);
+  }
+
+  async deleteRootFolder(id: string) {
+    return this.api.deleteRootFolder(id);
+  }
+
+  async getDelayProfiles() {
+    return this.api.getDelayProfiles();
+  }
+
+  async createDelayProfile(profile: any) {
+    return this.api.createDelayProfile(profile);
+  }
+
+  async updateDelayProfile(id: string, data: any) {
+    return this.api.updateDelayProfile(id, data);
+  }
+
+  async deleteDelayProfile(id: string) {
+    return this.api.deleteDelayProfile(id);
+  }
+
+  async getTags() {
+    return this.api.getTags();
+  }
+
+  async createTag(tag: any) {
+    return this.api.createTag(tag);
   }
 
   async getSystemStatus() {

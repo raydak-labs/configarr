@@ -16,9 +16,12 @@ import { calculateQualityProfilesDiff, loadQualityProfilesFromServer } from "./q
 import { cloneRecyclarrTemplateRepo } from "./recyclarr-importer";
 import { cloneTrashRepo, loadQualityDefinitionFromTrash, transformTrashQDs } from "./trash-guide";
 import { ArrType } from "./types/common.types";
-import { InputConfigArrInstance, InputConfigSchema } from "./types/config.types";
+import { InputConfigArrInstance, InputConfigSchema, InputConfigDelayProfile } from "./types/config.types";
 import { TrashArrSupportedConst, TrashQualityDefinition, TrashQualityDefinitionQuality } from "./types/trashguide.types";
 import { isInConstArray } from "./util";
+import { calculateRootFolderDiff } from "./root-folder";
+import { calculateDelayProfilesDiff, deleteAdditionalDelayProfiles, mapToServerDelayProfile } from "./delay-profiles";
+import { loadServerTags } from "./tags";
 
 const pipeline = async (globalConfig: InputConfigSchema, instanceConfig: InputConfigArrInstance, arrType: ArrType) => {
   const api = getUnifiedClient();
@@ -87,6 +90,10 @@ const pipeline = async (globalConfig: InputConfigSchema, instanceConfig: InputCo
   }
 
   logger.info(`CustomFormats synchronized`);
+
+  // load tags
+  const serverTags = await loadServerTags();
+  serverCache.tags = serverTags;
 
   if (config.quality_definition != null) {
     const mergedQDs: TrashQualityDefinitionQuality[] = [];
@@ -198,6 +205,74 @@ const pipeline = async (globalConfig: InputConfigSchema, instanceConfig: InputCo
     }
   } else if (create.length > 0 || changedQPs.length > 0) {
     logger.info("DryRun: Would create/update QualityProfiles.");
+  }
+
+  const rootFolderDiff = await calculateRootFolderDiff(config.root_folders || []);
+
+  if (rootFolderDiff) {
+    if (getEnvs().DRY_RUN) {
+      logger.info("DryRun: Would update RootFolders.");
+    } else {
+      for (const folder of rootFolderDiff.notAvailableAnymore) {
+        logger.info(`Deleting RootFolder not available anymore: ${folder.path}`);
+        await api.deleteRootFolder(`${folder.id}`);
+      }
+
+      for (const folder of rootFolderDiff.missingOnServer) {
+        logger.info(`Adding RootFolder missing on server: ${folder}`);
+        await api.addRootFolder({ path: folder });
+      }
+
+      logger.info(`Updated RootFolders`);
+    }
+  }
+
+  // Handle delay profiles
+  if (
+    config.delay_profiles == null ||
+    (config.delay_profiles.default == null && (config.delay_profiles.additional == null || config.delay_profiles.additional.length === 0))
+  ) {
+    logger.debug(`Config 'delay_profiles' not specified. Ignoring.`);
+  } else {
+    const delayProfilesDiff = await calculateDelayProfilesDiff(config.delay_profiles, serverCache.tags);
+
+    if (delayProfilesDiff?.defaultProfileChanged || delayProfilesDiff?.additionalProfilesChanged) {
+      if (getEnvs().DRY_RUN) {
+        logger.info("DryRun: Would update DelayProfiles.");
+      } else {
+        if (delayProfilesDiff.defaultProfileChanged && delayProfilesDiff.defaultProfile) {
+          logger.info(`Updating default DelayProfile`);
+          const mappedDefaultDelayProfile = mapToServerDelayProfile(delayProfilesDiff.defaultProfile, serverCache.tags);
+          await api.updateDelayProfile("1", mappedDefaultDelayProfile);
+        }
+
+        if (delayProfilesDiff.missingTags.length > 0) {
+          logger.info(`Creating missing tags on server: ${delayProfilesDiff.missingTags.join(", ")}`);
+          try {
+            for (const tagName of delayProfilesDiff.missingTags) {
+              const newTag = await api.createTag({ label: tagName });
+              serverCache.tags.push(newTag);
+            }
+          } catch (err: any) {
+            logger.error(`Failed creating tags: ${err.message}`);
+            throw err;
+          }
+        }
+
+        if (delayProfilesDiff.additionalProfilesChanged && delayProfilesDiff.additionalProfiles) {
+          logger.info(`Updating additional DelayProfiles (deleting old ones and recreate all) ...`);
+
+          await deleteAdditionalDelayProfiles();
+
+          for (const profile of delayProfilesDiff.additionalProfiles) {
+            const mappedProfile = mapToServerDelayProfile(profile, serverCache.tags);
+            api.createDelayProfile(mappedProfile); // Create or update profile
+          }
+        }
+
+        logger.info(`Successfully synched delay profiles.`);
+      }
+    }
   }
 };
 

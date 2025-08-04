@@ -85,9 +85,33 @@ export type InputConfigArrInstance = {
 
   // this is recyclarr specific: https://recyclarr.dev/wiki/yaml/config-reference/media-naming/
   media_naming?: MediaNamingType;
+
+  /**
+   * @experimental since v1.14.0
+   */
+  root_folders?: string[];
+  /**
+   * @experimental since v1.14.0
+   */
+  delay_profiles?: {
+    default?: InputConfigDelayProfile;
+    additional?: InputConfigDelayProfile[];
+  };
 } & Pick<InputConfigSchema, "customFormatDefinitions">;
 
-// HINT: Experimental
+export type InputConfigDelayProfile = {
+  enableUsenet?: boolean;
+  enableTorrent?: boolean;
+  preferredProtocol?: string;
+  usenetDelay?: number;
+  torrentDelay?: number;
+  bypassIfHighestQuality?: boolean;
+  bypassIfAboveCustomFormatScore?: boolean;
+  minimumCustomFormatScore?: number;
+  order?: number;
+  tags?: string[];
+};
+
 export type MediaManagementType = {
   // APIs not consistent across different *arrs. Keeping empty or generic
 };

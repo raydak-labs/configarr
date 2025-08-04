@@ -30,6 +30,7 @@ import {
   InputConfigSchema,
   MediaNamingType,
   MergedConfigInstance,
+  InputConfigDelayProfile,
 } from "./types/config.types";
 import { TrashCFGroupMapping, TrashQP } from "./types/trashguide.types";
 import { cloneWithJSON } from "./util";
@@ -231,6 +232,18 @@ const includeRecyclarrTemplate = (
     } else {
       logger.warn(`CustomFormatDefinitions in template must be an array. Ignoring.`);
     }
+  }
+
+  if (template.root_folders) {
+    if (Array.isArray(template.root_folders)) {
+      mergedTemplates.root_folders = [...(mergedTemplates.root_folders || []), ...template.root_folders];
+    } else {
+      logger.warn(`Root folders in template must be an array. Ignoring.`);
+    }
+  }
+
+  if (template.delay_profiles) {
+    mergedTemplates.delay_profiles = template.delay_profiles;
   }
 
   // TODO Ignore recursive include for now
@@ -619,6 +632,20 @@ export const mergeConfigsAndTemplates = async (
   }, new Map<string, ConfigQualityProfile>());
 
   mergedTemplates.quality_profiles = Array.from(qualityProfilesMerged.values());
+
+  if (instanceConfig.root_folders) {
+    mergedTemplates.root_folders = [...(mergedTemplates.root_folders || []), ...instanceConfig.root_folders];
+  }
+
+  if (mergedTemplates.root_folders) {
+    // cleanup duplicates
+    mergedTemplates.root_folders = [...new Set(mergedTemplates.root_folders)];
+  }
+
+  // Overwrite delay_profiles if defined in instanceConfig
+  if (instanceConfig.delay_profiles) {
+    mergedTemplates.delay_profiles = instanceConfig.delay_profiles;
+  }
 
   const validatedConfig = validateConfig(mergedTemplates);
   logger.debug(`Merged config: '${JSON.stringify(validatedConfig)}'`);

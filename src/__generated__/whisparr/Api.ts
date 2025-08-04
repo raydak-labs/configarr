@@ -1,5 +1,6 @@
 /* eslint-disable */
 /* tslint:disable */
+// @ts-nocheck
 /*
  * ---------------------------------------------------------------
  * ## THIS FILE WAS GENERATED VIA SWAGGER-TYPESCRIPT-API        ##
@@ -3078,6 +3079,8 @@ export class Api<SecurityDataType = unknown> {
       blocklist?: boolean;
       /** @default false */
       skipRedownload?: boolean;
+      /** @default false */
+      changeCategory?: boolean;
     },
     params: RequestParams = {},
   ) =>
@@ -3105,6 +3108,8 @@ export class Api<SecurityDataType = unknown> {
       blocklist?: boolean;
       /** @default false */
       skipRedownload?: boolean;
+      /** @default false */
+      changeCategory?: boolean;
     },
     params: RequestParams = {},
   ) =>

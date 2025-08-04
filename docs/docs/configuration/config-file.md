@@ -388,6 +388,70 @@ Notes:
 
 - **experimental**, available since `v1.12.0`
 
+## RootFolders
+
+With Configarr you can configure the root folders directly.
+Just specify the list of your folders and Configarr will delete and create them as specified in the list.
+
+```yml
+# ...
+
+sonarr:
+  instance1:
+    # ...
+    # (experimental) since v1.14.0
+    root_folders:
+      - /mnt/media/series
+```
+
+Notes:
+
+- **experimental**, available since `v1.14.0`
+
+## Delay Profiles
+
+You can configure and sync Delay Profiles directly in your config. This allows you to manage the download delay logic for Usenet and Torrent protocols, including protocol preference, delays, and tag-based rules.
+
+A delay profile without any tags is considered the `default` profile. Any other profiles with tags are `additional` profiles.
+
+```yaml
+yourarr:
+  instance1:
+    # (experimental) since v1.14.0
+    delay_profiles:
+      default:
+        enableUsenet: true
+        enableTorrent: false
+        preferredProtocol: usenet
+        usenetDelay: 10
+        torrentDelay: 0
+        bypassIfHighestQuality: false
+        bypassIfAboveCustomFormatScore: false
+        minimumCustomFormatScore: 0
+      additional:
+        - enableUsenet: false
+          enableTorrent: true
+          preferredProtocol: torrent
+          usenetDelay: 0
+          torrentDelay: 20
+          bypassIfHighestQuality: true
+          bypassIfAboveCustomFormatScore: false
+          minimumCustomFormatScore: 0
+          order: 2
+          tags:
+            - mytag
+```
+
+Notes:
+
+- **experimental**, available since `v1.14.0`
+- Supported for Sonarr, Radarr, Whisparr, Lidarr, and Readarr (if the API supports it)
+- If a delay profile exists on the server but not in your config, it will be deleted
+- If a delay profile is in your config but not on the server, it will be created (if supported)
+- If a delay profile differs, it will be updated
+
+See example [Radarr API DelayProfile](https://radarr.video/docs/api/#/DelayProfile) for more details on available fields.
+
 ## Experimental supported fields
 
 - Experimental support for `media_management` and `media_naming_api` (since v1.5.0)

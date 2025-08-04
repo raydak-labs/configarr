@@ -113,6 +113,43 @@ export class WhisparrClient
     return this.api.v3ConfigMediamanagementUpdate(id, data);
   }
 
+  async getRootfolders() {
+    return this.api.v3RootfolderList();
+  }
+
+  async addRootFolder(data: any) {
+    return this.api.v3RootfolderCreate(data);
+  }
+
+  async deleteRootFolder(id: string) {
+    return this.api.v3RootfolderDelete(+id);
+  }
+
+  // Delay Profiles
+  async getDelayProfiles() {
+    return this.api.v3DelayprofileList();
+  }
+
+  async createDelayProfile(profile: any) {
+    return this.api.v3DelayprofileCreate(profile);
+  }
+
+  async updateDelayProfile(id: string, data: any) {
+    return this.api.v3DelayprofileUpdate(id, data);
+  }
+
+  async deleteDelayProfile(id: string) {
+    return this.api.v3DelayprofileDelete(+id);
+  }
+
+  async getTags() {
+    return this.api.v3TagList();
+  }
+
+  async createTag(tag: any) {
+    return this.api.v3TagCreate(tag);
+  }
+
   // System/Health Check
   getSystemStatus() {
     return this.api.v3SystemStatusList();
