@@ -5,7 +5,13 @@ import * as localImporter from "./local-importer";
 import * as reclarrImporter from "./recyclarr-importer";
 import * as trashGuide from "./trash-guide";
 import { MappedTemplates } from "./types/common.types";
-import { ConfigQualityProfile, ConfigQualityProfileItem, InputConfigArrInstance, InputConfigSchema } from "./types/config.types";
+import {
+  ConfigQualityProfile,
+  ConfigQualityProfileItem,
+  InputConfigArrInstance,
+  InputConfigCustomFormat,
+  InputConfigSchema,
+} from "./types/config.types";
 import { TrashQP } from "./types/trashguide.types";
 import { cloneWithJSON } from "./util";
 
@@ -160,7 +166,7 @@ describe("mergeConfigsAndTemplates", () => {
 
     const result = await mergeConfigsAndTemplates({}, inputConfig, "SONARR");
 
-    expect(result.config.custom_formats.length).toBe(3);
+    expect(result.config.custom_formats.length).toBe(2); // was 3, now 2 after deduplication
     expect(result.config.quality_profiles.length).toBe(3);
   });
 
@@ -294,5 +300,281 @@ describe("mergeConfigsAndTemplates", () => {
 
   test("should throw error for invalid input configuration", async () => {
     await expect(mergeConfigsAndTemplates({}, null as any, "SONARR")).rejects.toThrow();
+  });
+});
+
+const dummyProfile = {
+  name: "profile",
+  min_format_score: 0,
+  qualities: [],
+  quality_sort: "sort",
+  upgrade: { allowed: true, until_quality: "HDTV-1080p", until_score: 1000 },
+  score_set: "default" as keyof import("./types/trashguide.types").TrashScores,
+};
+
+describe("custom_formats ordering", () => {
+  beforeEach(() => {
+    vi.resetAllMocks();
+  });
+
+  test("should order: includes -> customFormatGroups (from include) -> customFormatGroups (from instance) -> direct custom_formats", async () => {
+    // Mock template with custom_formats and custom_format_groups
+    const templateCF = { trash_ids: ["cf-template"] };
+    const groupCF = { name: "cf-group", trash_id: "cf-group", required: true };
+    const groupCF2 = { name: "cf-group2", trash_id: "cf-group2", required: true };
+    const directCF = { trash_ids: ["cf-direct"] };
+
+    const templateWithGroup = {
+      custom_formats: [templateCF],
+      custom_format_groups: [{ trash_guide: [{ id: "group1" }], assign_scores_to: [{ name: "profile" }] }],
+    };
+
+    const recyclarrTemplates: Map<string, MappedTemplates> = new Map([["template1", templateWithGroup]]);
+    vi.spyOn(reclarrImporter, "loadRecyclarrTemplates").mockReturnValue(recyclarrTemplates);
+    vi.spyOn(localImporter, "loadLocalRecyclarrTemplate").mockReturnValue(new Map());
+    vi.spyOn(trashGuide, "loadQPFromTrash").mockReturnValue(Promise.resolve(new Map()));
+    vi.spyOn(trashGuide, "loadTrashCustomFormatGroups").mockReturnValue(
+      Promise.resolve(
+        new Map([
+          ["group1", { name: "group1", trash_id: "group1", custom_formats: [groupCF] }],
+          ["group2", { name: "group2", trash_id: "group2", custom_formats: [groupCF2] }],
+        ]),
+      ),
+    );
+
+    const inputConfig: InputConfigArrInstance = {
+      include: [{ template: "template1", source: "RECYCLARR" }],
+      custom_format_groups: [{ trash_guide: [{ id: "group2" }], assign_scores_to: [{ name: "profile" }] }],
+      custom_formats: [directCF],
+      quality_profiles: [dummyProfile],
+      api_key: "test",
+      base_url: "http://sonarr:8989",
+    };
+
+    const result = await mergeConfigsAndTemplates({}, inputConfig, "SONARR");
+    const ids = result.config.custom_formats.map((cf) => cf.trash_ids?.[0]).filter(Boolean);
+    expect(ids).toEqual(["cf-group", "cf-template", "cf-group2", "cf-direct"]); // updated order: group first
+  });
+
+  test("should handle empty customFormatGroups gracefully", async () => {
+    const templateCF = { trash_ids: ["cf-template"] };
+    const directCF = { trash_ids: ["cf-direct"] };
+    const templateWithNoGroup = { custom_formats: [templateCF] };
+    const recyclarrTemplates: Map<string, MappedTemplates> = new Map([["template1", templateWithNoGroup]]);
+    vi.spyOn(reclarrImporter, "loadRecyclarrTemplates").mockReturnValue(recyclarrTemplates);
+    vi.spyOn(localImporter, "loadLocalRecyclarrTemplate").mockReturnValue(new Map());
+    vi.spyOn(trashGuide, "loadQPFromTrash").mockReturnValue(Promise.resolve(new Map()));
+    vi.spyOn(trashGuide, "loadTrashCustomFormatGroups").mockReturnValue(Promise.resolve(new Map()));
+    const inputConfig: InputConfigArrInstance = {
+      include: [{ template: "template1", source: "RECYCLARR" }],
+      custom_format_groups: [],
+      custom_formats: [directCF],
+      quality_profiles: [dummyProfile],
+      api_key: "test",
+      base_url: "http://sonarr:8989",
+    };
+    const result = await mergeConfigsAndTemplates({}, inputConfig, "SONARR");
+    const ids = result.config.custom_formats.map((cf) => cf.trash_ids?.[0]).filter(Boolean);
+    expect(ids).toEqual(["cf-template", "cf-direct"]);
+  });
+
+  test("should handle only customFormatGroups", async () => {
+    const groupCF = { name: "cf-group", trash_id: "cf-group", required: true };
+    vi.spyOn(reclarrImporter, "loadRecyclarrTemplates").mockReturnValue(new Map());
+    vi.spyOn(localImporter, "loadLocalRecyclarrTemplate").mockReturnValue(new Map());
+    vi.spyOn(trashGuide, "loadQPFromTrash").mockReturnValue(Promise.resolve(new Map()));
+    vi.spyOn(trashGuide, "loadTrashCustomFormatGroups").mockReturnValue(
+      Promise.resolve(new Map([["group1", { name: "group1", trash_id: "group1", custom_formats: [groupCF] }]])),
+    );
+    const inputConfig: InputConfigArrInstance = {
+      include: [],
+      custom_format_groups: [{ trash_guide: [{ id: "group1" }], assign_scores_to: [{ name: "profile" }] }],
+      custom_formats: [],
+      quality_profiles: [dummyProfile],
+      api_key: "test",
+      base_url: "http://sonarr:8989",
+    };
+    const result = await mergeConfigsAndTemplates({}, inputConfig, "SONARR");
+    const ids = result.config.custom_formats.map((cf) => cf.trash_ids?.[0]).filter(Boolean);
+    expect(ids).toEqual(["cf-group"]);
+  });
+
+  test("should overwrite custom format scores in correct order (in template overwrite, group)", async () => {
+    const testCF1ProfileAssignment: NonNullable<InputConfigCustomFormat["assign_scores_to"]>[number] = {
+      name: "profile",
+      score: 1,
+    };
+    const testCF1: InputConfigCustomFormat = { trash_ids: ["test-cf"], assign_scores_to: [testCF1ProfileAssignment] };
+
+    const template1: MappedTemplates = {
+      custom_format_groups: [{ trash_guide: [{ id: "group1" }], assign_scores_to: [{ name: "profile" }] }],
+    };
+    const groupCF1 = { name: "test-cf", trash_id: "test-cf", required: true };
+    vi.spyOn(trashGuide, "loadTrashCustomFormatGroups").mockReturnValue(
+      Promise.resolve(new Map([["group1", { name: "group1", trash_id: "group1", custom_formats: [groupCF1] }]])),
+    );
+
+    const recyclarrTemplates: Map<string, MappedTemplates> = new Map([["template1", template1]]);
+    vi.spyOn(reclarrImporter, "loadRecyclarrTemplates").mockReturnValue(recyclarrTemplates);
+    vi.spyOn(localImporter, "loadLocalRecyclarrTemplate").mockReturnValue(new Map());
+    vi.spyOn(trashGuide, "loadQPFromTrash").mockReturnValue(Promise.resolve(new Map()));
+
+    let inputConfig: InputConfigArrInstance = {
+      include: [{ template: "template1", source: "RECYCLARR" }],
+      custom_format_groups: [],
+      custom_formats: [],
+      quality_profiles: [dummyProfile],
+      api_key: "test",
+      base_url: "http://sonarr:8989",
+    };
+
+    let result = await mergeConfigsAndTemplates({}, inputConfig, "SONARR");
+    let cf = result.config.custom_formats.find((cf) => cf.trash_ids?.includes("test-cf"));
+    expect(cf?.assign_scores_to?.[0]?.score).toBe(undefined); // should be 0 from template1
+
+    template1.custom_formats = [testCF1];
+    result = await mergeConfigsAndTemplates({}, inputConfig, "SONARR");
+    cf = result.config.custom_formats.find((cf) => cf.trash_ids?.includes("test-cf"));
+    expect(cf?.assign_scores_to?.[0]?.score).toBe(1); // should be 0 from template1
+  });
+
+  test("should overwrite custom format scores in correct order (in template overwrite)", async () => {
+    const testCF1ProfileAssignment: NonNullable<InputConfigCustomFormat["assign_scores_to"]>[number] = {
+      name: "profile",
+      score: undefined,
+    };
+    const testCF1: InputConfigCustomFormat = { trash_ids: ["test-cf"], assign_scores_to: [testCF1ProfileAssignment] };
+
+    const template1: MappedTemplates = {
+      custom_formats: [testCF1],
+      custom_format_groups: [{ trash_guide: [{ id: "group1" }], assign_scores_to: [{ name: "profile" }] }],
+    };
+    const groupCF1 = { name: "test-cf", trash_id: "test-cf", required: true };
+    vi.spyOn(trashGuide, "loadTrashCustomFormatGroups").mockReturnValue(
+      Promise.resolve(new Map([["group1", { name: "group1", trash_id: "group1", custom_formats: [groupCF1] }]])),
+    );
+
+    const recyclarrTemplates: Map<string, MappedTemplates> = new Map([["template1", template1]]);
+    vi.spyOn(reclarrImporter, "loadRecyclarrTemplates").mockReturnValue(recyclarrTemplates);
+    vi.spyOn(localImporter, "loadLocalRecyclarrTemplate").mockReturnValue(new Map());
+    vi.spyOn(trashGuide, "loadQPFromTrash").mockReturnValue(Promise.resolve(new Map()));
+
+    let inputConfig: InputConfigArrInstance = {
+      include: [{ template: "template1", source: "RECYCLARR" }],
+      custom_format_groups: [],
+      custom_formats: [],
+      quality_profiles: [dummyProfile],
+      api_key: "test",
+      base_url: "http://sonarr:8989",
+    };
+
+    let result = await mergeConfigsAndTemplates({}, inputConfig, "SONARR");
+    let cf = result.config.custom_formats.find((cf) => cf.trash_ids?.includes("test-cf"));
+    expect(cf?.assign_scores_to?.[0]?.score).toBe(undefined); // should be 0 from template1
+
+    testCF1ProfileAssignment.score = 1; // overwrite score to 1
+    result = await mergeConfigsAndTemplates({}, inputConfig, "SONARR");
+    cf = result.config.custom_formats.find((cf) => cf.trash_ids?.includes("test-cf"));
+    expect(cf?.assign_scores_to?.[0]?.score).toBe(1); // should be 0 from template1
+  });
+
+  test("should overwrite custom format scores in correct order (in template -> template overwrite) [not supported yet]", async () => {
+    const testCF1ProfileAssignment: NonNullable<InputConfigCustomFormat["assign_scores_to"]>[number] = {
+      name: "profile",
+      score: 2,
+    };
+    const testCF2ProfileAssignment: NonNullable<InputConfigCustomFormat["assign_scores_to"]>[number] = {
+      name: "profile",
+      score: 1,
+    };
+    const testCF1: InputConfigCustomFormat = { trash_ids: ["test-cf"], assign_scores_to: [testCF1ProfileAssignment] };
+    const testCF2: InputConfigCustomFormat = { trash_ids: ["test-cf"], assign_scores_to: [testCF2ProfileAssignment] };
+
+    const template1: MappedTemplates = { include: [{ template: "template2", source: "RECYCLARR" }] };
+    const template2: MappedTemplates = { custom_formats: [testCF2] };
+    const groupCF1 = { name: "test-cf", trash_id: "test-cf", required: true };
+
+    vi.spyOn(trashGuide, "loadTrashCustomFormatGroups").mockReturnValue(
+      Promise.resolve(new Map([["group1", { name: "group1", trash_id: "group1", custom_formats: [groupCF1] }]])),
+    );
+
+    const recyclarrTemplates: Map<string, MappedTemplates> = new Map([
+      ["template1", template1],
+      ["template2", template2],
+    ]);
+    vi.spyOn(reclarrImporter, "loadRecyclarrTemplates").mockReturnValue(recyclarrTemplates);
+    vi.spyOn(localImporter, "loadLocalRecyclarrTemplate").mockReturnValue(new Map());
+    vi.spyOn(trashGuide, "loadQPFromTrash").mockReturnValue(Promise.resolve(new Map()));
+
+    let inputConfig: InputConfigArrInstance = {
+      include: [{ template: "template1", source: "RECYCLARR" }],
+      custom_format_groups: [],
+      custom_formats: [],
+      quality_profiles: [dummyProfile],
+      api_key: "test",
+      base_url: "http://sonarr:8989",
+    };
+
+    let result = await mergeConfigsAndTemplates({}, inputConfig, "SONARR");
+    let cf = result.config.custom_formats.find((cf) => cf.trash_ids?.includes("test-cf"));
+    expect(cf?.assign_scores_to?.[0]?.score).toBe(undefined); // should be 1 if recursive implemented someday
+
+    template1.custom_formats = [testCF1];
+    result = await mergeConfigsAndTemplates({}, inputConfig, "SONARR");
+    cf = result.config.custom_formats.find((cf) => cf.trash_ids?.includes("test-cf"));
+    expect(cf?.assign_scores_to?.[0]?.score).toBe(2);
+  });
+
+  test("should overwrite custom format scores in correct order (instance over template)", async () => {
+    const testCF1ProfileAssignment: NonNullable<InputConfigCustomFormat["assign_scores_to"]>[number] = {
+      name: "profile",
+      score: 1,
+    };
+    const testCF2ProfileAssignment: NonNullable<InputConfigCustomFormat["assign_scores_to"]>[number] = {
+      name: "profile",
+      score: 2,
+    };
+    const testCF1: InputConfigCustomFormat = { trash_ids: ["test-cf"], assign_scores_to: [testCF1ProfileAssignment] };
+    const testCF2: InputConfigCustomFormat = { trash_ids: ["test-cf"], assign_scores_to: [testCF2ProfileAssignment] };
+
+    const template1: MappedTemplates = {
+      custom_formats: [testCF1],
+      custom_format_groups: [{ trash_guide: [{ id: "group1" }], assign_scores_to: [{ name: "profile" }] }],
+    };
+
+    const groupCF1 = { name: "test-cf", trash_id: "test-cf", required: true };
+
+    vi.spyOn(trashGuide, "loadTrashCustomFormatGroups").mockReturnValue(
+      Promise.resolve(new Map([["group1", { name: "group1", trash_id: "group1", custom_formats: [groupCF1] }]])),
+    );
+
+    const recyclarrTemplates: Map<string, MappedTemplates> = new Map([["template1", template1]]);
+    vi.spyOn(reclarrImporter, "loadRecyclarrTemplates").mockReturnValue(recyclarrTemplates);
+    vi.spyOn(localImporter, "loadLocalRecyclarrTemplate").mockReturnValue(new Map());
+    vi.spyOn(trashGuide, "loadQPFromTrash").mockReturnValue(Promise.resolve(new Map()));
+
+    let inputConfig: InputConfigArrInstance = {
+      include: [{ template: "template1", source: "RECYCLARR" }],
+      custom_format_groups: [],
+      custom_formats: [],
+      quality_profiles: [dummyProfile],
+      api_key: "test",
+      base_url: "http://sonarr:8989",
+    };
+
+    let result = await mergeConfigsAndTemplates({}, inputConfig, "SONARR");
+    let cf = result.config.custom_formats.find((cf) => cf.trash_ids?.includes("test-cf"));
+    expect(cf?.assign_scores_to?.[0]?.score).toBe(1);
+
+    // Group does not overwrite scores
+    inputConfig.custom_format_groups = [{ trash_guide: [{ id: "group1" }], assign_scores_to: [{ name: "profile" }] }];
+    result = await mergeConfigsAndTemplates({}, inputConfig, "SONARR");
+    cf = result.config.custom_formats.find((cf) => cf.trash_ids?.includes("test-cf"));
+    expect(cf?.assign_scores_to?.[0]?.score).toBe(1);
+
+    inputConfig.custom_formats = [testCF2]; // overwrite with instance config
+    result = await mergeConfigsAndTemplates({}, inputConfig, "SONARR");
+    cf = result.config.custom_formats.find((cf) => cf.trash_ids?.includes("test-cf"));
+    expect(cf?.assign_scores_to?.[0]?.score).toBe(2);
   });
 });
