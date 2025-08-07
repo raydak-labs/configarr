@@ -31,6 +31,7 @@ import {
   MediaNamingType,
   MergedConfigInstance,
   InputConfigDelayProfile,
+  InputConfigCustomFormat,
 } from "./types/config.types";
 import { TrashCFGroupMapping, TrashQP } from "./types/trashguide.types";
 import { cloneWithJSON } from "./util";
@@ -182,22 +183,36 @@ export const validateConfig = (input: InputConfigInstance): MergedConfigInstance
   };
 };
 
+const expandAndAppendCustomFormatGroups = (
+  customFormatGroups: InputConfigCustomFormatGroup[] | undefined,
+  trashCFGroupMapping: TrashCFGroupMapping,
+  mergedTemplates: MappedMergedTemplates,
+) => {
+  if (!customFormatGroups || customFormatGroups.length === 0) return;
+  const expanded = transformTrashCFGroups(trashCFGroupMapping, customFormatGroups);
+  if (expanded.length > 0) {
+    logger.debug(`Expanded and appended ${expanded.length} custom formats from customFormatGroups`);
+    mergedTemplates.custom_formats.push(...expanded);
+  }
+};
+
 const includeRecyclarrTemplate = (
   template: MappedTemplates,
   {
     mergedTemplates,
-    customFormatGroups,
+    trashCFGroupMapping,
   }: {
     mergedTemplates: MappedMergedTemplates;
-    customFormatGroups: InputConfigCustomFormatGroup[];
+    trashCFGroupMapping: TrashCFGroupMapping;
   },
 ) => {
-  if (template.custom_formats) {
-    mergedTemplates.custom_formats?.push(...template.custom_formats);
-  }
-
+  // First expand and append group custom formats
   if (template.custom_format_groups) {
-    customFormatGroups.push(...template.custom_format_groups);
+    expandAndAppendCustomFormatGroups(template.custom_format_groups, trashCFGroupMapping, mergedTemplates);
+  }
+  // Then push direct custom formats after, so they always win
+  if (template.custom_formats) {
+    mergedTemplates.custom_formats.push(...template.custom_formats);
   }
 
   if (template.quality_definition) {
@@ -257,6 +272,7 @@ const includeTrashTemplate = (
   template: TrashQP,
   {
     mergedTemplates,
+    customFormatGroups,
   }: {
     mergedTemplates: MappedMergedTemplates;
     customFormatGroups: InputConfigCustomFormatGroup[];
@@ -272,8 +288,14 @@ const includeTemplateOrderDefault = (
     recyclarr,
     local,
     trash,
-  }: { recyclarr: Map<string, MappedTemplates>; local: Map<string, MappedTemplates>; trash: Map<string, TrashQP> },
-  { customFormatGroups, mergedTemplates }: { mergedTemplates: MappedMergedTemplates; customFormatGroups: InputConfigCustomFormatGroup[] },
+    trashCFGroupMapping,
+  }: {
+    recyclarr: Map<string, MappedTemplates>;
+    local: Map<string, MappedTemplates>;
+    trash: Map<string, TrashQP>;
+    trashCFGroupMapping: TrashCFGroupMapping;
+  },
+  { mergedTemplates }: { mergedTemplates: MappedMergedTemplates },
 ) => {
   const mappedIncludes = include.reduce<{
     local: InputConfigIncludeItem[];
@@ -336,35 +358,69 @@ const includeTemplateOrderDefault = (
 
   mappedIncludes.trash.forEach((e) => {
     const resolvedTemplate = trash.get(e.template);
-
     if (resolvedTemplate == null) {
       logger.warn(`Unknown 'trash' template requested: '${e.template}'`);
       return;
     }
-
-    includeTrashTemplate(resolvedTemplate, { mergedTemplates, customFormatGroups });
+    includeTrashTemplate(resolvedTemplate, { mergedTemplates, customFormatGroups: [] });
   });
-
   mappedIncludes.recyclarr.forEach((e) => {
     const resolvedTemplate = recyclarr.get(e.template);
-
     if (resolvedTemplate == null) {
       logger.warn(`Unknown 'recyclarr' template requested: '${e.template}'`);
       return;
     }
-
-    includeRecyclarrTemplate(resolvedTemplate, { mergedTemplates, customFormatGroups });
+    includeRecyclarrTemplate(resolvedTemplate, { mergedTemplates, trashCFGroupMapping });
   });
-
   mappedIncludes.local.forEach((e) => {
     const resolvedTemplate = local.get(e.template);
-
     if (resolvedTemplate == null) {
       logger.warn(`Unknown 'local' template requested: '${e.template}'`);
       return;
     }
+    includeRecyclarrTemplate(resolvedTemplate, { mergedTemplates, trashCFGroupMapping });
+  });
+};
 
-    includeRecyclarrTemplate(resolvedTemplate, { mergedTemplates, customFormatGroups });
+const mergeAndReduceCustomFormats = (cfs: InputConfigCustomFormat[]) => {
+  const idToQualityProfileToScore = new Map<string, Map<string, number | undefined>>();
+
+  cfs.forEach((cf) => {
+    if (!cf.trash_ids || cf.trash_ids.length === 0) {
+      logger.warn(`Custom format entry does not have trash_ids defined. Skipping.`);
+      return;
+    }
+
+    cf.trash_ids.forEach((id) => {
+      if (!idToQualityProfileToScore.has(id)) {
+        idToQualityProfileToScore.set(id, new Map());
+      }
+
+      const existing = idToQualityProfileToScore.get(id)!;
+
+      [...(cf.quality_profiles || []), ...(cf.assign_scores_to || [])].forEach((qp) => {
+        if (!existing.has(qp.name)) {
+          existing.set(qp.name, qp.score);
+        } else {
+          const currentScore = existing.get(qp.name);
+
+          if (qp.score != null && qp.score != currentScore) {
+            existing.set(qp.name, qp.score);
+          }
+        }
+      });
+    });
+  });
+
+  return Array.from(idToQualityProfileToScore.entries()).map(([trashId, qualityProfiles]) => {
+    const assign_scores_to = Array.from(qualityProfiles.entries()).map(([name, score]) => ({ name, score }));
+
+    const result: InputConfigCustomFormat = {
+      trash_ids: [trashId],
+      assign_scores_to,
+    };
+
+    return result;
   });
 };
 
@@ -383,24 +439,19 @@ export const mergeConfigsAndTemplates = async (
   let recyclarrTemplateMap: Map<string, MappedTemplates> = new Map();
   let trashTemplates: Map<string, TrashQP> = new Map();
   let trashCFGroupMapping: TrashCFGroupMapping = new Map();
-  const customFormatGroups: InputConfigCustomFormatGroup[] = [];
-
   if (arrType === "RADARR" || arrType === "SONARR") {
     // TODO: separation maybe not the best. Maybe time to split up processing for each arrType
     recyclarrTemplateMap = loadRecyclarrTemplates(arrType);
     trashTemplates = await loadQPFromTrash(arrType);
     trashCFGroupMapping = await loadTrashCustomFormatGroups(arrType);
   }
-
   logger.debug(
     `Loaded ${recyclarrTemplateMap.size} Recyclarr templates, ${localTemplateMap.size} local templates and ${trashTemplates.size} trash templates.`,
   );
-
   const mergedTemplates: MappedMergedTemplates = {
     custom_formats: [],
     quality_profiles: [],
   };
-
   if (instanceConfig.include) {
     includeTemplateOrderDefault(
       instanceConfig.include,
@@ -408,25 +459,24 @@ export const mergeConfigsAndTemplates = async (
         recyclarr: recyclarrTemplateMap,
         local: localTemplateMap,
         trash: trashTemplates,
+        trashCFGroupMapping,
       },
       {
         mergedTemplates,
-        customFormatGroups,
       },
     );
   }
 
-  // Config values overwrite template values
+  // Now handle instanceConfig custom_format_groups before direct custom_formats
+  if (instanceConfig.custom_format_groups) {
+    expandAndAppendCustomFormatGroups(instanceConfig.custom_format_groups, trashCFGroupMapping, mergedTemplates);
+  }
   if (instanceConfig.custom_formats) {
     mergedTemplates.custom_formats.push(...instanceConfig.custom_formats);
   }
 
   if (instanceConfig.delete_unmanaged_custom_formats) {
     mergedTemplates.delete_unmanaged_custom_formats = instanceConfig.delete_unmanaged_custom_formats;
-  }
-
-  if (instanceConfig.custom_format_groups) {
-    customFormatGroups.push(...instanceConfig.custom_format_groups);
   }
 
   if (instanceConfig.quality_profiles) {
@@ -463,7 +513,7 @@ export const mergeConfigsAndTemplates = async (
         ...globalConfig.customFormatDefinitions,
       ];
     } else {
-      logger.warn(`CustomFormatDefinitions in config file must be an array. Ignoring.`);
+      logger.warn(`CustomFormatDefinitions in global config file must be an array. Ignoring.`);
     }
   }
 
@@ -477,11 +527,6 @@ export const mergeConfigsAndTemplates = async (
       logger.warn(`CustomFormatDefinitions in instance config file must be an array. Ignoring.`);
     }
   }
-
-  // Transform CF Groups into CustomFormat mappings
-  const trashCfGroups = transformTrashCFGroups(trashCFGroupMapping, customFormatGroups);
-  trashCfGroups.length > 0 && logger.debug(`Loaded CustomFormats with TrashCF Groups.`);
-  mergedTemplates.custom_formats.push(...trashCfGroups);
 
   // Rename quality profiles
   if (instanceConfig.renameQualityProfiles && instanceConfig.renameQualityProfiles.length > 0) {
@@ -645,6 +690,11 @@ export const mergeConfigsAndTemplates = async (
   // Overwrite delay_profiles if defined in instanceConfig
   if (instanceConfig.delay_profiles) {
     mergedTemplates.delay_profiles = instanceConfig.delay_profiles;
+  }
+
+  if (mergedTemplates.custom_formats && mergedTemplates.custom_formats.length > 0) {
+    // Merge custom formats with same trash_ids
+    mergedTemplates.custom_formats = mergeAndReduceCustomFormats(mergedTemplates.custom_formats);
   }
 
   const validatedConfig = validateConfig(mergedTemplates);

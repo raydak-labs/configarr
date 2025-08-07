@@ -10,7 +10,8 @@
     "lint": "prettier --log-level error --check .",
     "lint:fix": "prettier --list-different --write --log-level error .",
     "start": "tsx src/index.ts",
-    "test": "vitest",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "release": "release-it"
   },
