@@ -26,6 +26,9 @@ import { loadServerTags } from "./tags";
 const pipeline = async (globalConfig: InputConfigSchema, instanceConfig: InputConfigArrInstance, arrType: ArrType) => {
   const api = getUnifiedClient();
 
+  const system = await api.getSystemStatus();
+  logger.info(`System status: ${JSON.stringify(system)}`);
+
   const serverCFs = await loadServerCustomFormats();
   const serverQD = await loadQualityDefinitionFromServer();
   const languages = await api.getLanguages();
