@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.14.1](https://github.com/raydak-labs/configarr/compare/v1.14.0...v1.14.1) (2025-08-13)
+
+### Bug Fixes
+
+- correctly handle group cfs in mix with cfs ([8974eac](https://github.com/raydak-labs/configarr/commit/8974eac26b213c5ea3a1a437765b92fb2831bedc)), closes [#289](https://github.com/raydak-labs/configarr/issues/289)
+
 ## [1.14.0](https://github.com/raydak-labs/configarr/compare/v1.13.7...v1.14.0) (2025-08-04)
 
 ### Features
