@@ -59,3 +59,30 @@ services:
 ```
 
 > **Note:** Using `network_mode: host` is generally safe for Configarr, as it does not expose ports by default. However, be aware of your environment's security requirements.
+
+## DNS Resolution Problems (Could not resolve host: github.com)
+
+If you encounter errors like:
+
+```
+GitError: Cloning into '/app/repos/trash-guides'...
+fatal: unable to access 'https://github.com/TRaSH-Guides/Guides/': Could not resolve host: github.com
+```
+
+This is usually caused by DNS issues inside the Docker container. Even if DNS works on your host and inside the container when tested manually, the error may still occur intermittently for git operations.
+
+### Troubleshooting Steps
+
+- Test DNS resolution inside the container:
+  ```sh
+  docker run --rm -it busybox nslookup github.com
+  ```
+- Try changing your DNS server to a public DNS (e.g., 1.1.1.1 or 8.8.8.8) on your host or in your Docker configuration.
+- Avoid using ISP DNS servers, as they may cause intermittent failures.
+- Restart the container after changing DNS settings.
+- If you use custom Docker networks, test with the default bridge or host network.
+
+Reference issues:
+
+- https://github.com/raydak-labs/configarr/issues/266
+- https://github.com/raydak-labs/configarr/issues/188
