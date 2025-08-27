@@ -319,6 +319,40 @@ export const transformTrashQPCFs = (data: TrashQP): ConfigCustomFormat => {
   return { assign_scores_to: [{ name: data.name }], trash_ids: Object.values(data.formatItems) };
 };
 
+export const transformTrashQPCFGroups = (template: TrashQP, trashCFGroupMapping: TrashCFGroupMapping): ConfigCustomFormat[] => {
+  const profileName = template.name;
+  const results: ConfigCustomFormat[] = [];
+
+  // Traverse each CF group and check for default=true
+  for (const [_, cfGroup] of trashCFGroupMapping) {
+    // Check if the default prop is truthy (string "true")
+    if (cfGroup.default === "true") {
+      // Check if template is excluded via exclude field
+      const isExcluded = cfGroup.quality_profiles?.exclude?.[profileName] != null;
+
+      if (!isExcluded) {
+        // Include all required and default CFs from this group
+        const cfsToInclude = cfGroup.custom_formats.filter((cf) => cf.required || cf.default === true);
+
+        if (cfsToInclude.length > 0) {
+          logger.debug(
+            `Including ${cfsToInclude.length} [${cfsToInclude.map((cf) => cf.name).join(", ")}] CFs from default group '${cfGroup.name}' for TrashGuide profile '${profileName}'`,
+          );
+
+          results.push({
+            trash_ids: cfsToInclude.map((cf) => cf.trash_id),
+            assign_scores_to: [{ name: profileName }],
+          });
+        }
+      } else {
+        logger.debug(`Excluding default CF group '${cfGroup.name}' for TrashGuide profile '${profileName}' due to exclude field`);
+      }
+    }
+  }
+
+  return results;
+};
+
 export const transformTrashQDs = (data: TrashQualityDefinition, ratio: number | undefined): TrashQualityDefinitionQuality[] => {
   if (ratio == null || ratio < 0 || ratio > 1) {
     return data.qualities;
