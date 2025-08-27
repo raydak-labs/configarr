@@ -14,6 +14,7 @@ import {
   loadTrashCustomFormatGroups,
   transformTrashCFGroups,
   transformTrashQPCFs,
+  transformTrashQPCFGroups,
   transformTrashQPToTemplate,
 } from "./trash-guide";
 import { ArrType, MappedMergedTemplates, MappedTemplates } from "./types/common.types";
@@ -272,14 +273,28 @@ const includeTrashTemplate = (
   template: TrashQP,
   {
     mergedTemplates,
+    trashCFGroupMapping,
     customFormatGroups,
   }: {
     mergedTemplates: MappedMergedTemplates;
+    trashCFGroupMapping: TrashCFGroupMapping;
     customFormatGroups: InputConfigCustomFormatGroup[];
   },
 ) => {
   mergedTemplates.quality_profiles.push(transformTrashQPToTemplate(template));
   mergedTemplates.custom_formats.push(transformTrashQPCFs(template));
+
+  // For TrashGuide profiles, check and include default CF groups
+  const requiredCFsFromCFGroups = transformTrashQPCFGroups(template, trashCFGroupMapping);
+
+  const numberOfCfsLoaded = requiredCFsFromCFGroups.reduce((p, c) => {
+    (c.trash_ids || []).forEach((id) => p.add(id));
+    return p;
+  }, new Set<string>());
+
+  // Log how many CFs were loaded from groups
+  logger.info(`Loaded ${numberOfCfsLoaded.size} default CFs from CF-Groups for TRaSH-Guide profile '${template.name}'`);
+  mergedTemplates.custom_formats.push(...requiredCFsFromCFGroups);
 };
 
 const includeTemplateOrderDefault = (
@@ -362,7 +377,7 @@ const includeTemplateOrderDefault = (
       logger.warn(`Unknown 'trash' template requested: '${e.template}'`);
       return;
     }
-    includeTrashTemplate(resolvedTemplate, { mergedTemplates, customFormatGroups: [] });
+    includeTrashTemplate(resolvedTemplate, { mergedTemplates, trashCFGroupMapping, customFormatGroups: [] });
   });
   mappedIncludes.recyclarr.forEach((e) => {
     const resolvedTemplate = recyclarr.get(e.template);

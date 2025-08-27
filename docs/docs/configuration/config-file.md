@@ -45,6 +45,11 @@ Configarr supports two types of templates:
    - `language` field support added with `1.7.0`
    - Can be overridden using `trashGuideUrl` in config.yml
    - See [TRaSH-Guides Radarr](https://github.com/TRaSH-Guides/Guides/tree/master/docs/json/radarr/quality-profiles) and [TRaSH-Guides Sonarr](https://github.com/TRaSH-Guides/Guides/tree/master/docs/json/sonarr/quality-profiles) for more information
+   - You must also check all CF-Groups because they will be also included automatically (this is desired by the TRaSH-Guide)
+     - [TRaSH-Guides Radarr CF Groups](https://github.com/TRaSH-Guides/Guides/tree/master/docs/json/radarr/cf-groups)
+     - [TRaSH-Guides Sonarr CF Groups](https://github.com/TRaSH-Guides/Guides/tree/master/docs/json/sonarr/cf-groups)
+     - [Github PR/Explanation](https://github.com/TRaSH-Guides/Guides/pull/2455#discussion_r2297832409)
+     - [Discord Discussion/Explanation](https://discord.com/channels/492590071455940612/1409911784386596894)
 
 ## Configuration Files Reference
 

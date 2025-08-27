@@ -119,15 +119,31 @@ export type TrashCache = {
 type TrashCFGItem = {
   name: string;
   trash_id: string;
+  /**
+   * Required CFs for the profile. Will be added
+   */
   required: boolean;
+  /**
+   * Selection if should be added even if required is false
+   */
+  default?: boolean;
 };
 
 export type TrashCustomFormatGroups = {
   name: string;
   trash_id: string;
+  trash_description?: string;
+  /**
+   * If this group should be added in always for TRaSH-Guide profiles
+   * Should also be an boolean in theory but is an string in the guide
+   */
+  default?: string;
   custom_formats: TrashCFGItem[];
   quality_profiles?: {
-    exclude: Record<string, string>;
+    /**
+     * Exclude profiles for which this group should not be applied if enabled in default.
+     */
+    exclude: Record<string, string>; // name to id like: "HD Bluray + WEB": "d1d67249d3890e49bc12e275d989a7e9"
   };
 };
 
