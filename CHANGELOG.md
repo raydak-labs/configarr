@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.15.0](https://github.com/raydak-labs/configarr/compare/v1.14.1...v1.15.0) (2025-08-27)
+
+### Features
+
+- include all relevant CF-Groups (and marked CFs) for TRaSH-Guide profiles automatically ([065de47](https://github.com/raydak-labs/configarr/commit/065de471e4d2feecd198dcc33753933e216b9284)), closes [/github.com/TRaSH-Guides/Guides/pull/2455#discussion_r2297832409](https://github.com/raydak-labs//github.com/TRaSH-Guides/Guides/pull/2455/issues/discussion_r2297832409)
+
 ## [1.14.1](https://github.com/raydak-labs/configarr/compare/v1.14.0...v1.14.1) (2025-08-13)
 
 ### Bug Fixes
