@@ -1,6 +1,6 @@
 # Configarr
 
-[![Documentation](https://img.shields.io/badge/Documentation-blue)](https://configarr.raydak.de)
+[![Documentation](https://img.shields.io/badge/Documentation-blue)](https://configarr.de)
 [![GitHub License](https://img.shields.io/github/license/raydak-labs/configarr)](https://github.com/raydak-labs/configarr/blob/main/LICENSE)
 [![GitHub Release](https://img.shields.io/github/v/release/raydak-labs/configarr?logo=github)](https://github.com/raydak-labs/configarr/releases/)
 [![Docker](https://img.shields.io/docker/v/configarr/configarr?sort=semver&label=DockerHub)](https://hub.docker.com/r/configarr/configarr)
@@ -51,7 +51,7 @@ Images are available via Github Container Registry (ghcr) and dockerhub with tag
 
 ## Configuration
 
-Full documentation can be found here: [Documentation](https://configarr.raydak.de)
+Full documentation can be found here: [Documentation](https://configarr.de)
 
 - `config.yml`
   - Check the template file [template](./config.yml.template) or check the examples.
@@ -92,7 +92,7 @@ Some examples for configuration are provided [Examples](./examples/)
 
 ## Related projects
 
-You can compare features here: [Feature Comparison](https://configarr.raydak.de/docs/comparison)
+You can compare features here: [Feature Comparison](https://configarr.de/docs/comparison)
 
 - https://github.com/recyclarr/recyclarr
 - https://notifiarr.wiki/

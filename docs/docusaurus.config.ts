@@ -10,7 +10,7 @@ const config: Config = {
   favicon: "img/favicon.ico",
 
   // Set the production url of your site here
-  url: "https://configarr.raydak.de",
+  url: "https://configarr.de",
   // Set the /<baseUrl>/ pathname under which your site is served
   // For GitHub pages deployment, it is often '/<projectName>/'
   baseUrl: "/",
@@ -69,7 +69,7 @@ const config: Config = {
       injectHtmlTags() {
         return {
           headTags: [
-            `<script defer data-domain="configarr.raydak.de" src="https://plausible.raydak.de/js/script.file-downloads.hash.outbound-links.tagged-events.js"></script>
+            `<script defer data-domain="configarr.de" src="https://plausible.raydak.de/js/script.file-downloads.hash.outbound-links.tagged-events.js"></script>
 <script>window.plausible = window.plausible || function() { (window.plausible.q = window.plausible.q || []).push(arguments) }</script>
 `,
           ],
