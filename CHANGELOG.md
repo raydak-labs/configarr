@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.15.1](https://github.com/raydak-labs/configarr/compare/v1.15.0...v1.15.1) (2025-09-04)
+
+### Bug Fixes
+
+- recursively load all recyclarr templates and not only first level of directory ([374b767](https://github.com/raydak-labs/configarr/commit/374b767a470530b91561725e272a22fd15b3ff15)), closes [#305](https://github.com/raydak-labs/configarr/issues/305)
+
 ## [1.15.0](https://github.com/raydak-labs/configarr/compare/v1.14.1...v1.15.0) (2025-08-27)
 
 ### Features
