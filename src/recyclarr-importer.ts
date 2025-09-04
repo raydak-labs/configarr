@@ -25,9 +25,15 @@ export const loadRecyclarrTemplates = (arrType: RecyclarrArrSupported): Map<stri
   const map = new Map<string, RecyclarrTemplates>();
 
   const fillMap = (path: string) => {
-    const files = fs.readdirSync(`${path}`).filter((fn) => fn.endsWith("yaml") || fn.endsWith("yml"));
+    const files = fs
+      .readdirSync(`${path}`, { recursive: true, encoding: "utf8" })
+      .filter((fn) => fn.endsWith("yaml") || fn.endsWith("yml"));
 
-    files.forEach((f) => map.set(f.substring(0, f.lastIndexOf(".")), yaml.parse(fs.readFileSync(`${path}/${f}`, "utf8"))));
+    // recyclarr config templates can have sub folders
+    files.forEach((f) => {
+      const filename = f.substring(f.lastIndexOf("/") + 1, f.lastIndexOf("."));
+      map.set(filename, yaml.parse(fs.readFileSync(`${path}/${f}`, "utf8")));
+    });
   };
 
   if (arrType === "RADARR") {
