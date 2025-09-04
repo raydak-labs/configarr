@@ -354,7 +354,7 @@ const includeTemplateOrderDefault = (
           } else if (localFound === true) {
             previous.local.push(current);
           } else {
-            logger.warn(`No matching 'RECYCLARR' or 'LOCAL' template for '${current.template}.`);
+            logger.warn(`No matching 'RECYCLARR' or 'LOCAL' template for '${current.template}'`);
           }
 
           break;
@@ -402,7 +402,9 @@ const mergeAndReduceCustomFormats = (cfs: InputConfigCustomFormat[]) => {
 
   cfs.forEach((cf) => {
     if (!cf.trash_ids || cf.trash_ids.length === 0) {
-      logger.warn(`Custom format entry does not have trash_ids defined. Skipping.`);
+      logger.info(
+        `Custom format entry does not have trash_ids defined (empty trash_ids or not defined at all. Cleanup your config to remove this log). Entry: ${JSON.stringify(cf)}`,
+      );
       return;
     }
 
