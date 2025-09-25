@@ -12,6 +12,11 @@ export type InputConfigSchema = {
   localConfigTemplatesPath?: string;
   // @experimental since v1.12.0
   enableFullGitClone?: boolean;
+  /**
+   * Enable anonymous telemetry tracking of feature usage
+   * @default false
+   */
+  telemetry?: boolean;
   customFormatDefinitions?: CustomFormatDefinitions;
 
   sonarr?: Record<string, InputConfigArrInstance>;

@@ -45,6 +45,12 @@ const schema = z.object({
     .transform((x) => x === "true")
     .pipe(z.boolean())
     .default("false"),
+  TELEMETRY_ENABLED: z
+    .string()
+    .toLowerCase()
+    .transform((x) => x === "true")
+    .pipe(z.boolean())
+    .optional(),
 });
 
 // declare global {

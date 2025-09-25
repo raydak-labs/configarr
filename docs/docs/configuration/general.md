@@ -9,10 +9,6 @@ keywords: [general, concept, merge, order, basic]
 
 Here we try to explain how things are handled and done in configarr so you understand how and when things happen.
 
-:::tip
-Page under development.
-:::
-
 ## Merge strategies and orderings
 
 Because we are working with multiple files, orders, includes and more merging needs to be handled.
