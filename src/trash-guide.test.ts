@@ -134,6 +134,32 @@ describe("TrashGuide", async () => {
     expect(result).toHaveLength(0);
   });
 
+  test("transformTrashCFGroups - include score when specified", async ({}) => {
+    const mapping: TrashCFGroupMapping = new Map();
+    mapping.set("id1", {
+      name: "name1",
+      trash_id: "id1",
+      custom_formats: [
+        { name: "cf1", trash_id: "cf1", required: true },
+        { name: "cf2", trash_id: "cf2", required: false },
+      ],
+    });
+
+    const groups: InputConfigCustomFormatGroup[] = [
+      {
+        trash_guide: [{ id: "id1" }],
+        assign_scores_to: [{ name: "qp1", score: 0 }],
+      },
+    ];
+
+    const result = transformTrashCFGroups(mapping, groups);
+    expect(result).toHaveLength(1);
+    expect(result[0]!.trash_ids!).toHaveLength(1);
+    expect(result[0]!.trash_ids![0]).toBe("cf1");
+    expect(result[0]!.assign_scores_to[0]?.name).toBe("qp1");
+    expect(result[0]!.assign_scores_to[0]?.score).toBe(0);
+  });
+
   describe("transformTrashQPCFGroups", () => {
     const mockTrashQP: TrashQP = {
       trash_id: "profile123",

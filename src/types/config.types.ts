@@ -41,7 +41,7 @@ export type InputConfigCustomFormat = {
 
 export type InputConfigCustomFormatGroup = {
   trash_guide?: { id: string; include_unrequired?: boolean }[];
-  assign_scores_to?: { name: string }[];
+  assign_scores_to?: { name: string; score?: number }[];
 };
 
 export type InputConfigArrInstance = {

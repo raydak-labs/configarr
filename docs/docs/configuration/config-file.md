@@ -387,6 +387,8 @@ sonarr:
             #include_unrequired: true # if you want to load all set this to true
         assign_scores_to:
           - name: MyProfile
+            # (experimental) since v1.16.0
+            #score: 0 # optional score to assign to all custom formats in this group. You can still override custom format scores via custom_formats
 ```
 
 Notes:

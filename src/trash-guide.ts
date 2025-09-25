@@ -380,7 +380,10 @@ export const transformTrashCFGroups = (trashCFGroupMapping: TrashCFGroupMapping,
       } else {
         const groupCfs = mapping.custom_formats.filter((e) => e.required || include_unrequired === true).map((e) => e.trash_id);
 
-        const customFormatEntry = { trash_ids: groupCfs, assign_scores_to: c.assign_scores_to?.map((v) => ({ name: v.name })) || [] };
+        const customFormatEntry = {
+          trash_ids: groupCfs,
+          assign_scores_to: c.assign_scores_to?.map((v) => ({ name: v.name, score: v.score })) || [],
+        };
 
         if (customFormatEntry.assign_scores_to.length <= 0) {
           logger.warn(`TRaSH CustomFormatGroup mapping ${trashId} would not be applied to any profile. Ignoring.`);
