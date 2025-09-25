@@ -337,6 +337,7 @@ const runArrType = async (
 };
 
 const run = async () => {
+  logger.info(`Support the project: https://ko-fi.com/blackdark93 - Star on Github! https://github.com/raydak-labs/configarr`);
   logger.info(`Configarr Version: ${getEnvs().CONFIGARR_VERSION}`);
 
   if (getEnvs().DRY_RUN) {
