@@ -2,13 +2,14 @@
 #recyclarrConfigUrl: https://github.com/BlackDark/fork-recyclarr-configs
 localCustomFormatsPath: /app/cfs
 localConfigTemplatesPath: /app/templates
+# telemetry: true # since v1.16.0
 
 # You can enable or disable
-#sonarrEnabled: false
-#radarrEnabled: false
-#whisparrEnabled: false
-#readarrEnabled: false
-#lidarrEnabled: true
+# sonarrEnabled: false
+# radarrEnabled: false
+# whisparrEnabled: false
+# readarrEnabled: false
+# lidarrEnabled: false
 
 customFormatDefinitions:
   - trash_id: example-in-config-cf

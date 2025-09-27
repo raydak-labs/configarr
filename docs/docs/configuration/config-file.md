@@ -93,6 +93,18 @@ sonarr:
     enabled: false
 ```
 
+### Telemetry <span className="theme-doc-version-badge badge badge--secondary configarr-badge">1.16.0</span> {#telemetry}
+
+Configarr can optionally collect anonymous telemetry data to help improve the application. This includes information about which features are being used, but no personal data, API keys, or configuration details are collected.
+
+To enable telemetry, add the following to your `config.yml`:
+
+```yaml
+telemetry: true
+```
+
+**Note:** Telemetry is disabled by default and is completely opt-in. See [Telemetry](./telemetry.md)
+
 ## Quality Definition / Size
 
 Support has been added to allow configuring quality definitions manually if required.

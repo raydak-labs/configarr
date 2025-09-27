@@ -22,6 +22,7 @@ import { isInConstArray } from "./util";
 import { calculateRootFolderDiff } from "./root-folder";
 import { calculateDelayProfilesDiff, deleteAdditionalDelayProfiles, mapToServerDelayProfile } from "./delay-profiles";
 import { loadServerTags } from "./tags";
+import { getTelemetryInstance, Telemetry } from "./telemetry";
 
 const pipeline = async (globalConfig: InputConfigSchema, instanceConfig: InputConfigArrInstance, arrType: ArrType) => {
   const api = getUnifiedClient();
@@ -38,6 +39,10 @@ const pipeline = async (globalConfig: InputConfigSchema, instanceConfig: InputCo
   logger.info(`Server objects: CustomFormats ${serverCFs.length}`);
 
   const { config } = await mergeConfigsAndTemplates(globalConfig, instanceConfig, arrType);
+
+  if (Telemetry.isEnabled()) {
+    getTelemetryInstance().trackInstanceConfig(config, arrType);
+  }
 
   const idsToManage = calculateCFsToManage(config);
   logger.debug(Array.from(idsToManage), `CustomFormats to manage`);
@@ -332,6 +337,7 @@ const runArrType = async (
 };
 
 const run = async () => {
+  logger.info(`Support the project: https://ko-fi.com/blackdark93 - Star on Github! https://github.com/raydak-labs/configarr`);
   logger.info(`Configarr Version: ${getEnvs().CONFIGARR_VERSION}`);
 
   if (getEnvs().DRY_RUN) {
@@ -355,6 +361,21 @@ const run = async () => {
     { type: "LIDARR", enabled: globalConfig.lidarrEnabled, config: globalConfig.lidarr },
   ];
 
+  // Initialize telemetry
+  if (Telemetry.isEnabled({ enabled: globalConfig.telemetry })) {
+    // Collect all instances for telemetry
+    const allInstances: Record<string, InputConfigArrInstance[]> = {};
+    for (const { type, config } of arrTypes) {
+      if (config) {
+        allInstances[type] = Object.values(config);
+      } else {
+        allInstances[type] = [];
+      }
+    }
+
+    getTelemetryInstance().trackFeatureUsage(globalConfig, allInstances);
+  }
+
   for (const { type, enabled, config } of arrTypes) {
     if (enabled == null || enabled) {
       const result = await runArrType(type as ArrType, globalConfig, config);
@@ -370,6 +391,10 @@ const run = async () => {
     logger.info(`Disabled Arrs: ${disabledArrs.join(", ")}`);
   }
   logger.info(`Execution Summary (success/failure/skipped) instances: ${totalStatus.join(" - ")}`);
+
+  if (Telemetry.isEnabled()) {
+    await getTelemetryInstance().finalizeTracking();
+  }
 };
 
 run();

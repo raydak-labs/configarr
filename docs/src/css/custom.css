@@ -71,3 +71,14 @@
   height: 20px; /* var(--docusaurus-announcement-bar-height); */
   width: 90px;
 }
+
+.configarr-badge {
+  background-color: var(--ifm-color-primary);
+  border-color: var(--ifm-color-primary);
+  font-size: 50%;
+}
+
+.table-of-contents .configarr-badge {
+  font-size: 75%;
+  padding: 2px 4px;
+}
