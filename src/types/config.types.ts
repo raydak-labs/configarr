@@ -178,7 +178,7 @@ export type InputConfigIncludeItem = {
 
 export type ConfigSchema = InputConfigSchema;
 
-export type ConfigCustomFormat = Pick<InputConfigCustomFormat, "trash_ids"> & Required<Pick<InputConfigCustomFormat, "assign_scores_to">>;
+export type ConfigCustomFormat = Pick<InputConfigCustomFormat, "trash_ids"> & Pick<InputConfigCustomFormat, "assign_scores_to">;
 
 export type ConfigCustomFormatList = Pick<ConfigArrInstance, "custom_formats">;
 

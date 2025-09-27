@@ -22,7 +22,7 @@ export const mapQualityProfiles = ({ carrIdMapping }: CFProcessing, { custom_for
   const defaultScoringMap = new Map(quality_profiles.map((obj) => [obj.name, obj]));
 
   for (const { trash_ids, assign_scores_to } of custom_formats) {
-    if (!trash_ids) {
+    if (!trash_ids || !assign_scores_to) {
       continue;
     }
 
