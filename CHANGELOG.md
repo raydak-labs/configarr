@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.16.0](https://github.com/raydak-labs/configarr/compare/v1.15.1...v1.16.0) (2025-09-27)
+
+### Features
+
+- add possibity to add custom formats without assign to profile ([88b78ca](https://github.com/raydak-labs/configarr/commit/88b78ca1c1dddeb604a6348d4589491475b72b12)), closes [#279](https://github.com/raydak-labs/configarr/issues/279)
+- add telemetry - default disabled ([a0fc6d0](https://github.com/raydak-labs/configarr/commit/a0fc6d08b97b147ab168e77ade8f9a4375c0f12c))
+- implement score for custom format groups closes [#196](https://github.com/raydak-labs/configarr/issues/196) ([2933d0f](https://github.com/raydak-labs/configarr/commit/2933d0f011ff12eb8b8f15952e8df7824110913f))
+
 ## [1.15.1](https://github.com/raydak-labs/configarr/compare/v1.15.0...v1.15.1) (2025-09-04)
 
 ### Bug Fixes
