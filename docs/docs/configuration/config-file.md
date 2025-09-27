@@ -351,6 +351,9 @@ customFormatDefinitions:
     <CodeBlock language="yml" title="CustomFormats with unmanaged QualityProfiles">{ExampleUnamanagedCustomFormats}</CodeBlock>
   </details>
 
+- <span className="theme-doc-version-badge badge badge--secondary configarr-badge">1.16.0</span> CustomFormats and CustomFormatGroups do not have to be assigned to a quality profile.
+  If not assigned to a profile they will still be created on the \*arr instance.
+
 ## Cleanup / Deleting CustomFormats {#cleanup-custom-formats}
 
 You can now enable the option to delete all custom formats which are not managed and used in the quality profiles.

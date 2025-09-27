@@ -82,7 +82,9 @@ describe("TrashGuide", async () => {
     expect(result).toHaveLength(1);
     expect(result[0]!.trash_ids!).toHaveLength(1);
     expect(result[0]!.trash_ids![0]).toBe("cf1");
-    expect(result[0]!.assign_scores_to[0]?.name).toBe("qp1");
+    expect(result[0]!.assign_scores_to).toBeDefined();
+    expect(result[0]!.assign_scores_to!).toHaveLength(1);
+    expect(result[0]!.assign_scores_to![0]?.name).toBe("qp1");
   });
 
   test("transformTrashCFGroups - include all if attribute set", async ({}) => {
@@ -107,8 +109,9 @@ describe("TrashGuide", async () => {
 
     expect(result).toHaveLength(1);
     expect(result[0]!.trash_ids!).toHaveLength(2);
+    expect(result[0]!.assign_scores_to).toBeDefined();
     expect(result[0]!.assign_scores_to!).toHaveLength(1);
-    expect(result[0]!.assign_scores_to[0]?.name).toBe("qp1");
+    expect(result[0]!.assign_scores_to![0]?.name).toBe("qp1");
   });
 
   test("transformTrashCFGroups - ignore if mapping missing", async ({}) => {
@@ -156,8 +159,9 @@ describe("TrashGuide", async () => {
     expect(result).toHaveLength(1);
     expect(result[0]!.trash_ids!).toHaveLength(1);
     expect(result[0]!.trash_ids![0]).toBe("cf1");
-    expect(result[0]!.assign_scores_to[0]?.name).toBe("qp1");
-    expect(result[0]!.assign_scores_to[0]?.score).toBe(0);
+    expect(result[0]!.assign_scores_to).toBeDefined();
+    expect(result[0]!.assign_scores_to![0]?.name).toBe("qp1");
+    expect(result[0]!.assign_scores_to![0]?.score).toBe(0);
   });
 
   describe("transformTrashQPCFGroups", () => {

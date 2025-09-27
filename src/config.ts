@@ -31,7 +31,6 @@ import {
   InputConfigSchema,
   MediaNamingType,
   MergedConfigInstance,
-  InputConfigDelayProfile,
   InputConfigCustomFormat,
 } from "./types/config.types";
 import { TrashCFGroupMapping, TrashQP } from "./types/trashguide.types";
@@ -135,9 +134,7 @@ export const transformConfig = (input: InputConfigSchema): ConfigSchema => {
           const mapped_assign_scores = quality_profiles ?? assign_scores_to;
 
           if (!mapped_assign_scores) {
-            throw new Error(
-              `Mapping failed for profile ${key} -> custom format mapping (assign_scores_to or quality_profiles is missing. Use assign_scores_to)`,
-            );
+            logger.debug(`No assign_scores_to or quality_profiles defined for CF entry '${cf.trash_ids}' in instance '${key}'`);
           }
 
           return { ...rest, assign_scores_to: mapped_assign_scores };
