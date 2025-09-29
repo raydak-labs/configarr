@@ -1,0 +1,142 @@
+name: CLI Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      baseline:
+        description: "Enable baseline builds for older CPU architectures"
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  build-cli:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - target: bun-linux-x64
+            platform: linux-x64
+          - target: bun-linux-arm64
+            platform: linux-arm64
+          - target: bun-darwin-x64
+            platform: darwin-x64
+          - target: bun-darwin-arm64
+            platform: darwin-arm64
+          - target: bun-windows-x64
+            platform: windows-x64
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Inject enhanced GitHub environment variables
+        uses: rlespinasse/github-slug-action@v5
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: latest
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: lts/*
+          cache: pnpm
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Install deps
+        run: |
+          pnpm i
+
+      - name: Set build variables
+        id: vars
+        run: |
+          # Set version based on tag or branch
+          VERSION="${{ env.GITHUB_REF_SLUG }}"
+
+          # Set build timestamp
+          BUILD_TIME="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "build_time=$BUILD_TIME" >> $GITHUB_OUTPUT
+          echo "run_id=${{ github.run_id }}" >> $GITHUB_OUTPUT
+          echo "repo=${{ github.repository }}" >> $GITHUB_OUTPUT
+          echo "sha=${{ github.sha }}" >> $GITHUB_OUTPUT
+
+      - name: Build CLI
+        run: |
+          # Set Windows-specific flags if building for Windows
+          if [[ "${{ matrix.platform }}" == windows-* ]]; then
+            # those flags are currently only supported when build in windows
+            #WINDOWS_FLAGS="--windows-title \"Configarr\" --windows-publisher \"BlackDark\" --windows-version \"${{ steps.vars.outputs.version }}\" --windows-description \"A powerful configuration management tool for *Arr applications\" --windows-copyright \"© 2025 BlackDark\""
+            WINDOWS_FLAGS=""
+          else
+            WINDOWS_FLAGS=""
+          fi
+
+          # Set baseline target if requested
+          if [[ "${{ github.event.inputs.baseline }}" == "true" ]]; then
+            BASELINE_FLAGS="--target=bun"
+          else
+            BASELINE_FLAGS=""
+          fi
+
+          bun build src/index.ts \
+            --compile --minify --sourcemap src/index.ts \
+            --outfile configarr \
+            --define CONFIGARR_VERSION=\"${{ steps.vars.outputs.version }}\" \
+            --define BUILD_TIME=\"${{ steps.vars.outputs.build_time }}\" \
+            --define GITHUB_RUN_ID=\"${{ steps.vars.outputs.run_id }}\" \
+            --define GITHUB_REPO=\"${{ steps.vars.outputs.repo }}\" \
+            --define GITHUB_SHA=\"${{ steps.vars.outputs.sha }}\" \
+            --define BUILD_PLATFORM=\"${{ matrix.platform }}\" \
+            --bytecode \
+            --target=${{ matrix.target }} \
+            $WINDOWS_FLAGS \
+            $BASELINE_FLAGS
+
+      - name: Compress CLI
+        run: tar -cJf configarr-${{ matrix.platform }}.tar.xz configarr*
+
+      - name: Upload CLI artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: configarr-${{ matrix.platform }}.tar.xz
+          path: configarr-${{ matrix.platform }}.tar.xz
+          retention-days: 1
+
+  release:
+    needs: build-cli
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download CLI artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Extract tar.gz files
+        run: |
+          find artifacts -name "*.tar.gz" -type f -exec sh -c '
+            dir=$(dirname "$1")
+            base=$(basename "$1" .tar.gz)
+            mkdir -p "$dir/extracted"
+            tar -xzf "$1" -C "$dir/extracted"
+            mv "$dir/extracted"/* "$dir/" 2>/dev/null || true
+            rmdir "$dir/extracted" 2>/dev/null || true
+          ' _ {} \;
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          files: artifacts/**/configarr-*.tar.xz
+          generate_release_notes: false

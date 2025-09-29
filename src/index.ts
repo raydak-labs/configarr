@@ -1,6 +1,6 @@
 // those must be run first!
 import "dotenv/config";
-import { getEnvs, initEnvs } from "./env";
+import { getEnvs, initEnvs, getBuildInfo } from "./env";
 initEnvs();
 
 import fs from "node:fs";
@@ -339,6 +339,9 @@ const runArrType = async (
 const run = async () => {
   logger.info(`Support the project: https://ko-fi.com/blackdark93 - Star on Github! https://github.com/raydak-labs/configarr`);
   logger.info(`Configarr Version: ${getEnvs().CONFIGARR_VERSION}`);
+
+  const buildInfo = getBuildInfo();
+  logger.debug(`Build Info: ${buildInfo.buildPlatform} | ${buildInfo.buildTime} | ${buildInfo.githubSha.slice(0, 7)}`);
 
   if (getEnvs().DRY_RUN) {
     logger.info("DryRun: Running in dry-run mode!");
