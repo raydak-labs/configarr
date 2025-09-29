@@ -161,3 +161,7 @@ dockerrepos
 .DS_Store
 
 bundle.cjs
+
+*.bun-build
+cli-bun
+cli-deno
