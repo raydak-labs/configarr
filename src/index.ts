@@ -138,7 +138,7 @@ const pipeline = async (globalConfig: InputConfigSchema, instanceConfig: InputCo
       if (getEnvs().DRY_RUN) {
         logger.info("DryRun: Would update QualityDefinitions.");
       } else {
-        logger.info(`Diffs in quality definitions found`, changeMap.values());
+        logger.info(`Diffs in quality definitions found ${changeMap.values()}`);
         await api.updateQualityDefinitions(restData);
         // refresh QDs
         serverCache.qd = await loadQualityDefinitionFromServer();
