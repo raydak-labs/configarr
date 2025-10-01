@@ -7,7 +7,7 @@
     ":prConcurrentLimitNone",
     ":prHourlyLimitNone",
     ":pinVersions",
-    "group:docusaurusMonorepo,
+    "group:docusaurusMonorepo",
   ],
   ignorePaths: [
     "**/node_modules/**",
