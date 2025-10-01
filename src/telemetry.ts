@@ -170,7 +170,7 @@ export class Telemetry {
     try {
       await this.track("feature_usage", this.telemetryData as TelemetryData);
     } catch (error) {
-      logger.debug("Telemetry finalization failed:", error);
+      logger.debug(`Telemetry finalization failed: ${error}`);
     }
     this.hasTracked = true;
   }
