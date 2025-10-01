@@ -7,7 +7,6 @@
     ":prConcurrentLimitNone",
     ":prHourlyLimitNone",
     ":pinVersions",
-    "group:docusaurusMonorepo",
   ],
   ignorePaths: [
     "**/node_modules/**",
@@ -38,6 +37,11 @@
       groupName: "dependencies (non-major)",
       matchDepTypes: ["dependencies"],
       matchUpdateTypes: ["patch", "minor"],
+    },
+    {
+      extends: ["monorepo:docusaurus"],
+      groupName: "docusaurus monorepo",
+      matchUpdateTypes: ["digest", "patch", "minor", "major"],
     },
     {
       matchDatasources: ["docker"],
