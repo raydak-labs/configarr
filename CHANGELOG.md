@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.17.0](https://github.com/raydak-labs/configarr/compare/v1.16.0...v1.17.0) (2025-10-09)
+
+### Features
+
+- add configarr binary ([bd8819b](https://github.com/raydak-labs/configarr/commit/bd8819b54d41778a5b52323edfc476719657d009)), closes [#272](https://github.com/raydak-labs/configarr/issues/272)
+
+### Bug Fixes
+
+- **deps:** update dependencies (non-major) ([#314](https://github.com/raydak-labs/configarr/issues/314)) ([5afcd36](https://github.com/raydak-labs/configarr/commit/5afcd36c3ce5091fc10d078bb05a982008f580ab))
+- **deps:** update docusaurus monorepo to v3.9.1 ([1b0a4b2](https://github.com/raydak-labs/configarr/commit/1b0a4b2fa2c7e9b5651af2e0931ba9fec360ed2b))
+
 ## [1.16.0](https://github.com/raydak-labs/configarr/compare/v1.15.1...v1.16.0) (2025-09-27)
 
 ### Features
