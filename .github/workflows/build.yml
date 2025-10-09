@@ -42,6 +42,21 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       # We push and build all types of images only when required
+      - name: Set build variables
+        id: vars
+        run: |
+          # Set version based on tag or branch
+          VERSION="${{ env.GITHUB_REF_SLUG }}"
+
+          # Set build timestamp
+          BUILD_TIME="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "build_time=$BUILD_TIME" >> $GITHUB_OUTPUT
+          echo "run_id=${{ github.run_id }}" >> $GITHUB_OUTPUT
+          echo "repo=${{ github.repository }}" >> $GITHUB_OUTPUT
+          echo "sha=${{ github.sha }}" >> $GITHUB_OUTPUT
+
       - name: Set build platforms
         id: set_platforms
         run: |
@@ -105,7 +120,11 @@ jobs:
           labels: ${{ steps.meta_pms.outputs.labels }}
           target: prod
           build-args: |
-            CONFIGARR_VERSION=${{ env.GITHUB_REF_SLUG }}
+            CONFIGARR_VERSION=${{ steps.vars.outputs.version }}
+            BUILD_TIME=${{ steps.vars.outputs.build_time }}
+            GITHUB_RUN_ID=${{ steps.vars.outputs.run_id }}
+            GITHUB_REPO=${{ steps.vars.outputs.repo }}
+            GITHUB_SHA=${{ steps.vars.outputs.sha }}
 
       # - name: Docker Hub Description
       #   if: github.event_name != 'pull_request'
