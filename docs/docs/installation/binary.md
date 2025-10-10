@@ -25,3 +25,9 @@ The files are probably compressed and need to be extracted.
 Afterwards you can run the executable as any other program or tool.
 
 Need more help? [open an issue](https://github.com/raydak-labs/configarr/issues).
+
+## FAQ
+
+- `On MacOS if I download files the file is corrupt`: If downloaded via browser or something the resulting executable can be quarantined.
+  - To check attributes: `xattr ./configarr -l`
+  - To remove quarantine: `xattr -dr com.apple.quarantine ./configarr`
