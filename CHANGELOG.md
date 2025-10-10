@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.17.1](https://github.com/raydak-labs/configarr/compare/v1.17.0...v1.17.1) (2025-10-10)
+
+### Bug Fixes
+
+- binary variables ([a35408c](https://github.com/raydak-labs/configarr/commit/a35408c9b96c9cd6c7b863ef2c156a8aacbc9dc1))
+
 ## [1.17.0](https://github.com/raydak-labs/configarr/compare/v1.16.0...v1.17.0) (2025-10-09)
 
 ### Features
