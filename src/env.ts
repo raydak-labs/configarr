@@ -5,16 +5,15 @@ const DEFAULT_ROOT_PATH = path.resolve(process.cwd());
 
 // Build-time constants (defined by Bun at compile time)
 // These will be replaced at build time with actual values
-const BUILD_CONFIGARR_VERSION = "dev"; // Will be replaced by --define
-const BUILD_TIME = ""; // Will be replaced by --define
-const GITHUB_RUN_ID = ""; // Will be replaced by --define
-const GITHUB_REPO = ""; // Will be replaced by --define
-const GITHUB_SHA = ""; // Will be replaced by --define
-const BUILD_PLATFORM = ""; // Will be replaced by --define
+const CONFIGARR_VERSION = process.env.CONFIGARR_VERSION ?? "dev"; // Will be replaced by --define
+const BUILD_TIME = process.env.BUILD_TIME ?? ""; // Will be replaced by --define
+const GITHUB_RUN_ID = process.env.GITHUB_RUN_ID ?? ""; // Will be replaced by --define
+const GITHUB_REPO = process.env.GITHUB_REPO ?? ""; // Will be replaced by --define
+const GITHUB_SHA = process.env.GITHUB_SHA ?? ""; // Will be replaced by --define
 
 const schema = z.object({
   // NODE_ENV: z.enum(["production", "development", "test"] as const),
-  CONFIGARR_VERSION: z.string().optional().default(BUILD_CONFIGARR_VERSION),
+  CONFIGARR_VERSION: z.string().optional().default(CONFIGARR_VERSION),
   LOG_LEVEL: z
     .enum(["trace", "debug", "info", "warn", "error", "fatal"] as const)
     .optional()
@@ -100,10 +99,9 @@ export const getHelpers = () => ({
 });
 
 export const getBuildInfo = () => ({
-  version: BUILD_CONFIGARR_VERSION,
+  version: getEnvs().CONFIGARR_VERSION,
   buildTime: BUILD_TIME,
   githubRunId: GITHUB_RUN_ID,
   githubRepo: GITHUB_REPO,
   githubSha: GITHUB_SHA,
-  buildPlatform: BUILD_PLATFORM,
 });

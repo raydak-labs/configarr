@@ -92,12 +92,12 @@ jobs:
           bun build src/index.ts \
             --compile --minify --sourcemap src/index.ts \
             --outfile configarr \
-            --define CONFIGARR_VERSION=\"${{ steps.vars.outputs.version }}\" \
-            --define BUILD_TIME=\"${{ steps.vars.outputs.build_time }}\" \
-            --define GITHUB_RUN_ID=\"${{ steps.vars.outputs.run_id }}\" \
-            --define GITHUB_REPO=\"${{ steps.vars.outputs.repo }}\" \
-            --define GITHUB_SHA=\"${{ steps.vars.outputs.sha }}\" \
-            --define BUILD_PLATFORM=\"${{ matrix.platform }}\" \
+            --define 'process.env.CONFIGARR_VERSION="${{ steps.vars.outputs.version }}"' \
+            --define 'process.env.BUILD_TIME="${{ steps.vars.outputs.build_time }}"' \
+            --define 'process.env.GITHUB_RUN_ID="${{ steps.vars.outputs.run_id }}"' \
+            --define 'process.env.GITHUB_REPO="${{ steps.vars.outputs.repo }}"' \
+            --define 'process.env.GITHUB_SHA="${{ steps.vars.outputs.sha }}"' \
+            --define 'process.env.BUILD_PLATFORM="${{ matrix.platform }}"' \
             --bytecode \
             --target=${{ matrix.target }} \
             $WINDOWS_FLAGS \

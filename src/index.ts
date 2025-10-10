@@ -341,7 +341,7 @@ const run = async () => {
   logger.info(`Configarr Version: ${getEnvs().CONFIGARR_VERSION}`);
 
   const buildInfo = getBuildInfo();
-  logger.debug(`Build Info: ${buildInfo.buildPlatform} | ${buildInfo.buildTime} | ${buildInfo.githubSha.slice(0, 7)}`);
+  logger.debug(`Build Info: ${buildInfo.buildTime} | ${buildInfo.githubSha.slice(0, 7)} | (run id) ${buildInfo.githubRunId}`);
 
   if (getEnvs().DRY_RUN) {
     logger.info("DryRun: Running in dry-run mode!");
