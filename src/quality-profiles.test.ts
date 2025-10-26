@@ -1,5 +1,7 @@
 import path from "path";
-import { describe, expect, test } from "vitest";
+import { beforeEach, afterEach, describe, expect, test, vi } from "vitest";
+import * as uclient from "./clients/unified-client";
+import * as log from "./logger";
 import {
   MergedCustomFormatResource,
   MergedQualityDefinitionResource,
@@ -7,7 +9,14 @@ import {
   MergedQualityProfileResource,
 } from "./__generated__/mergedTypes";
 import { ServerCache } from "./cache";
-import { calculateQualityProfilesDiff, isOrderOfQualitiesEqual, isOrderOfConfigQualitiesEqual, mapQualities } from "./quality-profiles";
+import {
+  calculateQualityProfilesDiff,
+  deleteAllQualityProfiles,
+  deleteQualityProfile,
+  isOrderOfQualitiesEqual,
+  isOrderOfConfigQualitiesEqual,
+  mapQualities,
+} from "./quality-profiles";
 import { CFProcessing } from "./types/common.types";
 import { ConfigQualityProfile, ConfigQualityProfileItem, MergedConfigInstance } from "./types/config.types";
 import { cloneWithJSON, loadJsonFile } from "./util";
@@ -475,6 +484,105 @@ describe("QualityProfiles", async () => {
     expect(diff.changedQPs.length).toBe(0);
     expect(diff.create.length).toBe(0);
     expect(diff.noChanges.length).toBe(1);
+  });
+
+  describe("delete Quality Profiles tests", () => {
+    beforeEach(() => {
+      vi.restoreAllMocks();
+      vi.clearAllMocks();
+    });
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    test("deleteAllQualityProfiles() deletes every quality profile returned by server", async () => {
+      // Arrange
+      const qp1 = cloneWithJSON(sampleQualityProfile);
+      qp1.id = "1001";
+      qp1.name = "QP-1";
+      const qp2 = cloneWithJSON(sampleQualityProfile);
+      qp2.id = "1002";
+      qp2.name = "QP-2";
+      const qp3 = cloneWithJSON(sampleQualityProfile);
+      qp3.id = "1003";
+      qp3.name = "QP-3";
+
+      const deleteFn = vi.fn().mockResolvedValue(undefined);
+      const getFn = vi.fn().mockResolvedValue([qp1, qp2, qp3]);
+
+      vi.spyOn(uclient, "getUnifiedClient").mockReturnValue({
+        getQualityProfiles: getFn,
+        deleteQualityProfile: deleteFn,
+      } as any);
+
+      const logSpy = vi.spyOn(log.logger, "info").mockImplementation(() => {});
+
+      // Act
+      await deleteAllQualityProfiles();
+
+      // Assert
+      expect(deleteFn).toHaveBeenCalledTimes(3);
+      expect(deleteFn).toHaveBeenNthCalledWith(1, "1001");
+      expect(deleteFn).toHaveBeenNthCalledWith(2, "1002");
+      expect(deleteFn).toHaveBeenNthCalledWith(3, "1003");
+
+      expect(logSpy).toHaveBeenCalledWith("Deleted QP: 'QP-1'");
+      expect(logSpy).toHaveBeenCalledWith("Deleted QP: 'QP-2'");
+      expect(logSpy).toHaveBeenCalledWith("Deleted QP: 'QP-3'");
+    });
+
+    test("when no profiles then no deletions by deleteAllQualityProfiles", async () => {
+      // Arrange
+      const deleteFn = vi.fn();
+      const getFn = vi.fn().mockResolvedValue([] as any[]);
+
+      vi.spyOn(uclient, "getUnifiedClient").mockReturnValue({
+        getQualityProfiles: getFn,
+        deleteQualityProfile: deleteFn,
+      } as any);
+
+      // Act
+      await deleteAllQualityProfiles();
+
+      // Assert
+      expect(getFn).toHaveBeenCalledTimes(1);
+      expect(deleteFn).not.toHaveBeenCalled();
+    });
+
+    test("deleteQualityProfile() deletes only the given quality profile id", async () => {
+      // Arrange
+      const qp1 = cloneWithJSON(sampleQualityProfile);
+      qp1.id = "1001";
+      qp1.name = "QP-1";
+      const qp2 = cloneWithJSON(sampleQualityProfile);
+      qp2.id = "1002";
+      qp2.name = "QP-2";
+      const qp3 = cloneWithJSON(sampleQualityProfile);
+      qp3.id = "1003";
+      qp3.name = "QP-3";
+
+      const deleteFn = vi.fn().mockResolvedValue(undefined);
+
+      vi.spyOn(uclient, "getUnifiedClient").mockReturnValue({
+        deleteQualityProfile: deleteFn,
+      } as any);
+
+      const logSpy = vi.spyOn(log.logger, "info").mockImplementation(() => {});
+
+      // Act
+      await deleteQualityProfile(qp1);
+
+      // Assert
+      expect(deleteFn).toHaveBeenCalledTimes(1);
+      expect(deleteFn).toHaveBeenNthCalledWith(1, "1001");
+      expect(deleteFn).not.toHaveBeenCalledWith("1002");
+      expect(deleteFn).not.toHaveBeenCalledWith("1003");
+
+      expect(logSpy).toHaveBeenCalledWith("Deleted QP: 'QP-1'");
+      expect(logSpy).not.toHaveBeenCalledWith("Deleted QP: 'QP-2'");
+      expect(logSpy).not.toHaveBeenCalledWith("Deleted QP: 'QP-3'");
+    });
   });
 
   describe("isOrderOfQualitiesEqual", async () => {

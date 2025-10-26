@@ -80,6 +80,10 @@ export class WhisparrClient
     return this.api.v3QualityprofileUpdate(id, profile);
   }
 
+  deleteQualityProfile(id: string): Promise<void> {
+    return this.api.v3QualityprofileDelete(id);
+  }
+
   // Custom Formats
   getCustomFormats() {
     return this.api.v3CustomformatList();

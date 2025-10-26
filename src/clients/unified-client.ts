@@ -109,6 +109,7 @@ export interface IArrClient<
   getQualityProfiles(): Promise<QP[]>;
   createQualityProfile(profile: QP): Promise<QP>;
   updateQualityProfile(id: string, profile: QP): Promise<QP>;
+  deleteQualityProfile(id: string): Promise<void>;
 
   // Custom Formats
   getCustomFormats(): Promise<CF[]>;
@@ -199,6 +200,10 @@ export class UnifiedClient implements IArrClient {
 
   async updateQualityProfile(id: string, profile: MergedQualityProfileResource) {
     return await this.api.updateQualityProfile(id, profile);
+  }
+
+  async deleteQualityProfile(id: string) {
+    return await this.api.deleteQualityProfile(id);
   }
 
   async getCustomFormats() {
