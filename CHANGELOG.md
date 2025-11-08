@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.17.2](https://github.com/raydak-labs/configarr/compare/v1.17.1...v1.17.2) (2025-11-08)
+
+### Bug Fixes
+
+- **deps:** update dependencies (non-major) ([#332](https://github.com/raydak-labs/configarr/issues/332)) ([7cbf309](https://github.com/raydak-labs/configarr/commit/7cbf309d951cc3fbb18e0f8b8c0548d1f8a9cd46))
+- **deps:** update dependency pino to v10 ([2c2c84c](https://github.com/raydak-labs/configarr/commit/2c2c84c09bba48ef58e2e531d4a72d7f9a59915e))
+- **deps:** update dependency zod to v4 ([73be722](https://github.com/raydak-labs/configarr/commit/73be722186fd42c014561c99de312b486f94e229))
+- **deps:** update docusaurus monorepo to v3.9.2 ([#329](https://github.com/raydak-labs/configarr/issues/329)) ([d7a1276](https://github.com/raydak-labs/configarr/commit/d7a1276e87f3d0a2c6ccd5623b7cc422545cd36c))
+- root folder for lidarr sync ([6c67999](https://github.com/raydak-labs/configarr/commit/6c67999b54cdd32c4bd119f5818cf227fcaa7eb3))
+- windows binary builds ([dfc2982](https://github.com/raydak-labs/configarr/commit/dfc2982af10111d6e167bfeb3c6bb680148854d4))
+
+### (internal) Refactorings
+
+- restructure rootFolder code ([2f5b83d](https://github.com/raydak-labs/configarr/commit/2f5b83dd11e14ff85868b0c964d368212990a82a))
+
 ## [1.17.1](https://github.com/raydak-labs/configarr/compare/v1.17.0...v1.17.1) (2025-10-10)
 
 ### Bug Fixes
