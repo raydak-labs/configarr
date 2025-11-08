@@ -109,7 +109,7 @@ jobs:
         run: tar -cJf configarr-${{ matrix.platform }}.tar.xz configarr*
 
       - name: Upload CLI artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: configarr-${{ matrix.platform }}.tar.xz
           path: configarr-${{ matrix.platform }}.tar.xz
@@ -121,7 +121,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Download CLI artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           path: artifacts
 
