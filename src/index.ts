@@ -1,6 +1,6 @@
 // those must be run first!
 import "dotenv/config";
-import { getEnvs, initEnvs, getBuildInfo } from "./env";
+import { getBuildInfo, getEnvs, initEnvs } from "./env";
 initEnvs();
 
 import fs from "node:fs";
@@ -9,20 +9,20 @@ import { ServerCache } from "./cache";
 import { configureApi, getUnifiedClient, unsetApi } from "./clients/unified-client";
 import { getConfig, mergeConfigsAndTemplates } from "./config";
 import { calculateCFsToManage, deleteCustomFormat, loadCustomFormatDefinitions, loadServerCustomFormats, manageCf } from "./custom-formats";
-import { logHeading, logInstanceHeading, logger } from "./logger";
+import { calculateDelayProfilesDiff, deleteAdditionalDelayProfiles, mapToServerDelayProfile } from "./delay-profiles";
+import { logger, logHeading, logInstanceHeading } from "./logger";
 import { calculateMediamanagementDiff, calculateNamingDiff } from "./media-management";
 import { calculateQualityDefinitionDiff, loadQualityDefinitionFromServer } from "./quality-definitions";
 import { calculateQualityProfilesDiff, loadQualityProfilesFromServer } from "./quality-profiles";
 import { cloneRecyclarrTemplateRepo } from "./recyclarr-importer";
-import { cloneTrashRepo, loadQualityDefinitionFromTrash, transformTrashQDs } from "./trash-guide";
-import { ArrType } from "./types/common.types";
-import { InputConfigArrInstance, InputConfigSchema, InputConfigDelayProfile } from "./types/config.types";
-import { TrashArrSupportedConst, TrashQualityDefinition, TrashQualityDefinitionQuality } from "./types/trashguide.types";
-import { isInConstArray } from "./util";
-import { calculateRootFolderDiff, resolveRootFolderConfig } from "./root-folder";
-import { calculateDelayProfilesDiff, deleteAdditionalDelayProfiles, mapToServerDelayProfile } from "./delay-profiles";
 import { loadServerTags } from "./tags";
 import { getTelemetryInstance, Telemetry } from "./telemetry";
+import { cloneTrashRepo, loadQualityDefinitionFromTrash, transformTrashQDs } from "./trash-guide";
+import { ArrType } from "./types/common.types";
+import { InputConfigArrInstance, InputConfigSchema } from "./types/config.types";
+import { TrashArrSupportedConst, TrashQualityDefinition, TrashQualityDefinitionQuality } from "./types/trashguide.types";
+import { isInConstArray } from "./util";
+import { syncRootFolders } from "./rootFolder/rootFolderSyncer";
 
 const pipeline = async (globalConfig: InputConfigSchema, instanceConfig: InputConfigArrInstance, arrType: ArrType) => {
   const api = getUnifiedClient();
@@ -215,32 +215,7 @@ const pipeline = async (globalConfig: InputConfigSchema, instanceConfig: InputCo
     logger.info("DryRun: Would create/update QualityProfiles.");
   }
 
-  const rootFolderDiff = await calculateRootFolderDiff(config.root_folders || [], arrType, serverCache);
-
-  if (rootFolderDiff) {
-    if (getEnvs().DRY_RUN) {
-      logger.info("DryRun: Would update RootFolders.");
-    } else {
-      for (const folder of rootFolderDiff.notAvailableAnymore) {
-        logger.info(`Deleting RootFolder not available anymore: ${folder.path}`);
-        await api.deleteRootFolder(`${folder.id}`);
-      }
-
-      for (const folder of rootFolderDiff.missingOnServer) {
-        logger.info(`Adding RootFolder missing on server: ${typeof folder === "string" ? folder : folder.path}`);
-        const resolvedConfig = await resolveRootFolderConfig(folder, arrType, serverCache);
-        await api.addRootFolder(resolvedConfig);
-      }
-
-      for (const { config, server } of rootFolderDiff.changed || []) {
-        logger.info(`Updating RootFolder: ${typeof config === "string" ? config : config.path}`);
-        const resolvedConfig = await resolveRootFolderConfig(config, arrType, serverCache);
-        await api.updateRootFolder(`${server.id}`, resolvedConfig);
-      }
-
-      logger.info(`Updated RootFolders`);
-    }
-  }
+  await syncRootFolders(arrType, config.root_folders, serverCache);
 
   // Handle delay profiles
   if (

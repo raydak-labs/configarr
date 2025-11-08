@@ -59,7 +59,9 @@ export type InputConfigRootFolderLidarr = {
   tags?: string[];
 };
 
-export type InputConfigRootFolder = string | InputConfigRootFolderLidarr;
+export type InputConfigRootFolderGeneric = string;
+
+export type InputConfigRootFolder = InputConfigRootFolderGeneric | InputConfigRootFolderLidarr;
 
 export type InputConfigArrInstance = {
   base_url: string;
