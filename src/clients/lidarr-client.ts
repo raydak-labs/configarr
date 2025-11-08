@@ -58,7 +58,7 @@ export class LidarrClient implements IArrClient<QualityProfileResource, QualityD
   }
 
   deleteQualityProfile(id: string): Promise<void> {
-    return this.api.v1QualityprofileDelete(id);
+    return this.api.v1QualityprofileDelete(Number(id));
   }
 
   // Custom Formats

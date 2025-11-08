@@ -81,7 +81,7 @@ export class WhisparrClient
   }
 
   deleteQualityProfile(id: string): Promise<void> {
-    return this.api.v3QualityprofileDelete(id);
+    return this.api.v3QualityprofileDelete(Number(id));
   }
 
   // Custom Formats

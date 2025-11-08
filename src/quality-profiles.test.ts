@@ -499,13 +499,13 @@ describe("QualityProfiles", async () => {
     test("deleteAllQualityProfiles() deletes every quality profile returned by server", async () => {
       // Arrange
       const qp1 = cloneWithJSON(sampleQualityProfile);
-      qp1.id = "1001";
+      qp1.id = 1001;
       qp1.name = "QP-1";
       const qp2 = cloneWithJSON(sampleQualityProfile);
-      qp2.id = "1002";
+      qp2.id = 1002;
       qp2.name = "QP-2";
       const qp3 = cloneWithJSON(sampleQualityProfile);
-      qp3.id = "1003";
+      qp3.id = 1003;
       qp3.name = "QP-3";
 
       const deleteFn = vi.fn().mockResolvedValue(undefined);
@@ -553,13 +553,13 @@ describe("QualityProfiles", async () => {
     test("deleteQualityProfile() deletes only the given quality profile id", async () => {
       // Arrange
       const qp1 = cloneWithJSON(sampleQualityProfile);
-      qp1.id = "1001";
+      qp1.id = 1001;
       qp1.name = "QP-1";
       const qp2 = cloneWithJSON(sampleQualityProfile);
-      qp2.id = "1002";
+      qp2.id = 1002;
       qp2.name = "QP-2";
       const qp3 = cloneWithJSON(sampleQualityProfile);
-      qp3.id = "1003";
+      qp3.id = 1003;
       qp3.name = "QP-3";
 
       const deleteFn = vi.fn().mockResolvedValue(undefined);

@@ -24,11 +24,11 @@ export const deleteAllQualityProfiles = async () => {
   }
 };
 
-export const deleteQualityProfile = async (qualityProfile: MergedQualityDefinitionResource) => {
+export const deleteQualityProfile = async (qualityProfile: MergedQualityProfileResource) => {
   const api = getUnifiedClient();
 
   await api.deleteQualityProfile(qualityProfile.id + "");
-  logger.info(`Deleted QP: '${qualityProfile.name}'`);
+  logger.info(`Deleted QP: '${qualityProfile.name || qualityProfile.id}'`);
 };
 
 // merge CFs of templates and custom CFs into one mapping of QualityProfile -> CFs + Score
