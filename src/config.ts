@@ -697,8 +697,16 @@ export const mergeConfigsAndTemplates = async (
   }
 
   if (mergedTemplates.root_folders) {
-    // cleanup duplicates
-    mergedTemplates.root_folders = [...new Set(mergedTemplates.root_folders)];
+    // cleanup duplicates by path
+    const seenPaths = new Set<string>();
+    mergedTemplates.root_folders = mergedTemplates.root_folders.filter((folder) => {
+      const path = typeof folder === "string" ? folder : folder.path;
+      if (seenPaths.has(path)) {
+        return false;
+      }
+      seenPaths.add(path);
+      return true;
+    });
   }
 
   // Overwrite delay_profiles if defined in instanceConfig

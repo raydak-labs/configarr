@@ -107,6 +107,10 @@ export class SonarrClient implements IArrClient<QualityProfileResource, QualityD
     return this.api.v3RootfolderCreate(data);
   }
 
+  async updateRootFolder(id: string, data: any) {
+    throw new Error("Sonarr does not support updating root folders");
+  }
+
   async deleteRootFolder(id: string) {
     return this.api.v3RootfolderDelete(+id);
   }
