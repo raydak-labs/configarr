@@ -73,21 +73,25 @@ jobs:
 
       - name: Build CLI
         run: |
+          FLAGS=""
+
           # Set Windows-specific flags if building for Windows
           if [[ "${{ matrix.platform }}" == windows-* ]]; then
             # those flags are currently only supported when build in windows
-            #WINDOWS_FLAGS="--windows-title \"Configarr\" --windows-publisher \"BlackDark\" --windows-version \"${{ steps.vars.outputs.version }}\" --windows-description \"A powerful configuration management tool for *Arr applications\" --windows-copyright \"© 2025 BlackDark\""
-            WINDOWS_FLAGS=""
+            #FLAGS="${FLAGS} --windows-title \"Configarr\" --windows-publisher \"BlackDark\" --windows-version \"${{ steps.vars.outputs.version }}\" --windows-description \"A powerful configuration management tool for *Arr applications\" --windows-copyright \"© 2025 BlackDark\""
+            echo "No custom flags for windows"
           else
-            WINDOWS_FLAGS=""
+            FLAGS="${FLAGS} --bytecode"
           fi
 
           # Set baseline target if requested
           if [[ "${{ github.event.inputs.baseline }}" == "true" ]]; then
-            BASELINE_FLAGS="--target=bun"
+            FLAGS="${FLAGS} --target=bun"
           else
-            BASELINE_FLAGS=""
+            echo "Non baseline build"
           fi
+
+          echo "Using additional build flags: $FLAGS"
 
           bun build src/index.ts \
             --compile --minify --sourcemap src/index.ts \
@@ -98,10 +102,8 @@ jobs:
             --define 'process.env.GITHUB_REPO="${{ steps.vars.outputs.repo }}"' \
             --define 'process.env.GITHUB_SHA="${{ steps.vars.outputs.sha }}"' \
             --define 'process.env.BUILD_PLATFORM="${{ matrix.platform }}"' \
-            --bytecode \
             --target=${{ matrix.target }} \
-            $WINDOWS_FLAGS \
-            $BASELINE_FLAGS
+            $FLAGS
 
       - name: Compress CLI
         run: tar -cJf configarr-${{ matrix.platform }}.tar.xz configarr*
