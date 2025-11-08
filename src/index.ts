@@ -19,7 +19,7 @@ import { ArrType } from "./types/common.types";
 import { InputConfigArrInstance, InputConfigSchema, InputConfigDelayProfile } from "./types/config.types";
 import { TrashArrSupportedConst, TrashQualityDefinition, TrashQualityDefinitionQuality } from "./types/trashguide.types";
 import { isInConstArray } from "./util";
-import { calculateRootFolderDiff } from "./root-folder";
+import { calculateRootFolderDiff, resolveRootFolderConfig } from "./root-folder";
 import { calculateDelayProfilesDiff, deleteAdditionalDelayProfiles, mapToServerDelayProfile } from "./delay-profiles";
 import { loadServerTags } from "./tags";
 import { getTelemetryInstance, Telemetry } from "./telemetry";
@@ -215,7 +215,7 @@ const pipeline = async (globalConfig: InputConfigSchema, instanceConfig: InputCo
     logger.info("DryRun: Would create/update QualityProfiles.");
   }
 
-  const rootFolderDiff = await calculateRootFolderDiff(config.root_folders || []);
+  const rootFolderDiff = await calculateRootFolderDiff(config.root_folders || [], arrType, serverCache);
 
   if (rootFolderDiff) {
     if (getEnvs().DRY_RUN) {
@@ -227,8 +227,15 @@ const pipeline = async (globalConfig: InputConfigSchema, instanceConfig: InputCo
       }
 
       for (const folder of rootFolderDiff.missingOnServer) {
-        logger.info(`Adding RootFolder missing on server: ${folder}`);
-        await api.addRootFolder({ path: folder });
+        logger.info(`Adding RootFolder missing on server: ${typeof folder === "string" ? folder : folder.path}`);
+        const resolvedConfig = await resolveRootFolderConfig(folder, arrType, serverCache);
+        await api.addRootFolder(resolvedConfig);
+      }
+
+      for (const { config, server } of rootFolderDiff.changed || []) {
+        logger.info(`Updating RootFolder: ${typeof config === "string" ? config : config.path}`);
+        const resolvedConfig = await resolveRootFolderConfig(config, arrType, serverCache);
+        await api.updateRootFolder(`${server.id}`, resolvedConfig);
       }
 
       logger.info(`Updated RootFolders`);

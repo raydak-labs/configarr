@@ -111,6 +111,9 @@ export interface IArrClient<
   updateQualityProfile(id: string, profile: QP): Promise<QP>;
   deleteQualityProfile(id: string): Promise<void>;
 
+  // Metadata Profiles (Lidarr only)
+  getMetadataProfiles?(): Promise<any[]>;
+
   // Custom Formats
   getCustomFormats(): Promise<CF[]>;
   createCustomFormat(format: CF): Promise<CF>;
@@ -125,6 +128,7 @@ export interface IArrClient<
 
   getRootfolders(): Promise<any>;
   addRootFolder(data: any): Promise<any>;
+  updateRootFolder(id: string, data: any): Promise<any>;
   deleteRootFolder(id: string): Promise<any>;
 
   getLanguages(): Promise<L[]>;
@@ -206,6 +210,13 @@ export class UnifiedClient implements IArrClient {
     return await this.api.deleteQualityProfile(id);
   }
 
+  async getMetadataProfiles() {
+    if (this.type === "LIDARR") {
+      return await (this.api as any).getMetadataProfiles();
+    }
+    throw new Error(`Metadata profiles are not supported for ${this.type}`);
+  }
+
   async getCustomFormats() {
     return await this.api.getCustomFormats();
   }
@@ -244,6 +255,10 @@ export class UnifiedClient implements IArrClient {
 
   async addRootFolder(data: any) {
     return this.api.addRootFolder(data);
+  }
+
+  async updateRootFolder(id: string, data: any) {
+    return this.api.updateRootFolder(id, data);
   }
 
   async deleteRootFolder(id: string) {

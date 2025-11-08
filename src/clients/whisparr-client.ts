@@ -125,6 +125,10 @@ export class WhisparrClient
     return this.api.v3RootfolderCreate(data);
   }
 
+  async updateRootFolder(id: string, data: any) {
+    throw new Error("Whisparr does not support updating root folders");
+  }
+
   async deleteRootFolder(id: string) {
     return this.api.v3RootfolderDelete(+id);
   }

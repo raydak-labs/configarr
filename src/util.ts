@@ -123,7 +123,7 @@ export function compareMediamanagement(serverObject: any, localObject: any): Ret
   return compareObjectsCarr(serverObject, localObject);
 }
 
-function compareObjectsCarr(serverObject: any, localObject: any, parent?: string): { equal: boolean; changes: string[] } {
+export function compareObjectsCarr(serverObject: any, localObject: any, parent?: string): { equal: boolean; changes: string[] } {
   const changes: string[] = [];
 
   for (const key in localObject) {

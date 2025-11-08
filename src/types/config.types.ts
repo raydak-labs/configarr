@@ -49,6 +49,18 @@ export type InputConfigCustomFormatGroup = {
   assign_scores_to?: { name: string; score?: number }[];
 };
 
+export type InputConfigRootFolderLidarr = {
+  path: string;
+  name: string;
+  metadata_profile: string;
+  quality_profile: string;
+  monitor?: "all" | "future" | "missing" | "existing" | "latest" | "first" | "none" | "unknown";
+  monitor_new_album?: "all" | "none" | "new";
+  tags?: string[];
+};
+
+export type InputConfigRootFolder = string | InputConfigRootFolderLidarr;
+
 export type InputConfigArrInstance = {
   base_url: string;
   api_key: string;
@@ -94,7 +106,7 @@ export type InputConfigArrInstance = {
   /**
    * @experimental since v1.14.0
    */
-  root_folders?: string[];
+  root_folders?: InputConfigRootFolder[];
   /**
    * @experimental since v1.14.0
    */

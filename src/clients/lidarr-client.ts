@@ -115,6 +115,10 @@ export class LidarrClient implements IArrClient<QualityProfileResource, QualityD
     return this.api.v1RootfolderCreate(data);
   }
 
+  async updateRootFolder(id: string, data: any) {
+    return this.api.v1RootfolderUpdate(id, data);
+  }
+
   async deleteRootFolder(id: string) {
     return this.api.v1RootfolderDelete(+id);
   }
