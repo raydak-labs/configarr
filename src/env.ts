@@ -28,31 +28,31 @@ const schema = z.object({
     .toLowerCase()
     .transform((x) => x === "true")
     .pipe(z.boolean())
-    .default("false"),
+    .default(false),
   LOAD_LOCAL_SAMPLES: z
     .string()
     .toLowerCase()
     .transform((x) => x === "true")
     .pipe(z.boolean())
-    .default("false"),
+    .default(false),
   DEBUG_CREATE_FILES: z
     .string()
     .toLowerCase()
     .transform((x) => x === "true")
     .pipe(z.boolean())
-    .default("false"),
+    .default(false),
   STOP_ON_ERROR: z
     .string()
     .toLowerCase()
     .transform((x) => x === "true")
     .pipe(z.boolean())
-    .default("false"),
+    .default(false),
   LOG_STACKTRACE: z
     .string()
     .toLowerCase()
     .transform((x) => x === "true")
     .pipe(z.boolean())
-    .default("false"),
+    .default(false),
   TELEMETRY_ENABLED: z
     .string()
     .toLowerCase()
