@@ -62,6 +62,10 @@ export class SonarrClient implements IArrClient<QualityProfileResource, QualityD
     return this.api.v3QualityprofileUpdate(id, profile);
   }
 
+  deleteQualityProfile(id: string): Promise<void> {
+    return this.api.v3QualityprofileDelete(Number(id));
+  }
+
   // Custom Formats
   getCustomFormats() {
     return this.api.v3CustomformatList();

@@ -14,6 +14,23 @@ import { ArrType, CFProcessing } from "./types/common.types";
 import { ConfigQualityProfile, ConfigQualityProfileItem, MergedConfigInstance } from "./types/config.types";
 import { cloneWithJSON, loadJsonFile, notEmpty, zip } from "./util";
 
+export const deleteAllQualityProfiles = async () => {
+  const api = getUnifiedClient();
+  const qualityProfilesOnServer = await api.getQualityProfiles();
+
+  for (const qualityProfile of qualityProfilesOnServer) {
+    await api.deleteQualityProfile(qualityProfile.id + "");
+    logger.info(`Deleted QP: '${qualityProfile.name}'`);
+  }
+};
+
+export const deleteQualityProfile = async (qualityProfile: MergedQualityProfileResource) => {
+  const api = getUnifiedClient();
+
+  await api.deleteQualityProfile(qualityProfile.id + "");
+  logger.info(`Deleted QP: '${qualityProfile.name || qualityProfile.id}'`);
+};
+
 // merge CFs of templates and custom CFs into one mapping of QualityProfile -> CFs + Score
 export const mapQualityProfiles = ({ carrIdMapping }: CFProcessing, { custom_formats, quality_profiles }: MergedConfigInstance) => {
   // QualityProfile -> (CF Name -> Scoring)
