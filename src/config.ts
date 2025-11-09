@@ -493,6 +493,10 @@ export const mergeConfigsAndTemplates = async (
     mergedTemplates.delete_unmanaged_custom_formats = instanceConfig.delete_unmanaged_custom_formats;
   }
 
+  if (instanceConfig.delete_unmanaged_quality_profiles) {
+    mergedTemplates.delete_unmanaged_quality_profiles = instanceConfig.delete_unmanaged_quality_profiles;
+  }
+
   if (instanceConfig.quality_profiles) {
     mergedTemplates.quality_profiles.push(...instanceConfig.quality_profiles);
   }

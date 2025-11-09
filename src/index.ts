@@ -4,7 +4,7 @@ import { getBuildInfo, getEnvs, initEnvs } from "./env";
 initEnvs();
 
 import fs from "node:fs";
-import { MergedCustomFormatResource } from "./__generated__/mergedTypes";
+import { MergedCustomFormatResource, MergedQualityProfileResource } from "./__generated__/mergedTypes";
 import { ServerCache } from "./cache";
 import { configureApi, getUnifiedClient, unsetApi } from "./clients/unified-client";
 import { getConfig, mergeConfigsAndTemplates } from "./config";
@@ -13,7 +13,12 @@ import { calculateDelayProfilesDiff, deleteAdditionalDelayProfiles, mapToServerD
 import { logger, logHeading, logInstanceHeading } from "./logger";
 import { calculateMediamanagementDiff, calculateNamingDiff } from "./media-management";
 import { calculateQualityDefinitionDiff, loadQualityDefinitionFromServer } from "./quality-definitions";
-import { calculateQualityProfilesDiff, loadQualityProfilesFromServer } from "./quality-profiles";
+import {
+  calculateQualityProfilesDiff,
+  deleteQualityProfile,
+  getUnmanagedQualityProfiles,
+  loadQualityProfilesFromServer,
+} from "./quality-profiles";
 import { cloneRecyclarrTemplateRepo } from "./recyclarr-importer";
 import { loadServerTags } from "./tags";
 import { getTelemetryInstance, Telemetry } from "./telemetry";
@@ -213,6 +218,29 @@ const pipeline = async (globalConfig: InputConfigSchema, instanceConfig: InputCo
     }
   } else if (create.length > 0 || changedQPs.length > 0) {
     logger.info("DryRun: Would create/update QualityProfiles.");
+  }
+
+  if (config.delete_unmanaged_quality_profiles?.enabled) {
+    const unmanagedQPs: MergedQualityProfileResource[] = getUnmanagedQualityProfiles(serverCache.qp, config.quality_profiles);
+
+    const ignoreSet = new Set(config.delete_unmanaged_quality_profiles.ignore ?? []);
+
+    const qpsToDelete: MergedQualityProfileResource[] = unmanagedQPs.filter((qp) => qp.name && !ignoreSet.has(qp.name));
+
+    if (qpsToDelete.length > 0) {
+      if (getEnvs().DRY_RUN) {
+        logger.info(`DryRun: Would delete QP: ${qpsToDelete.map((e) => e.name).join(", ")}`);
+      } else {
+        logger.info(`Deleting ${qpsToDelete.length} QualityProfiles ...`);
+        logger.debug(
+          qpsToDelete.map((e) => e.name),
+          "This QualityProfile will be deleted:",
+        );
+        for (const element of qpsToDelete) {
+          await deleteQualityProfile(element);
+        }
+      }
+    }
   }
 
   await syncRootFolders(arrType, config.root_folders, serverCache);
