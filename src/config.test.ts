@@ -312,7 +312,7 @@ describe("mergeConfigsAndTemplates", () => {
     await expect(mergeConfigsAndTemplates({}, null as any, "SONARR")).rejects.toThrow();
   });
 
-  test("should load template from URL", async () => {
+  test("should integrate URL templates with config merging", async () => {
     const fromConfig: ConfigQualityProfileItem[] = [{ name: "HDTV-1080p", enabled: false }];
 
     const profile: ConfigQualityProfile = {
@@ -355,32 +355,21 @@ describe("mergeConfigsAndTemplates", () => {
     expect(result.config.quality_profiles[0]!.name).toBe("url-profile");
   });
 
-  test("should handle URL template loading failure gracefully", async () => {
-    mockKyGet.mockRejectedValue(new Error("Network error"));
-
-    vi.spyOn(reclarrImporter, "loadRecyclarrTemplates").mockReturnValue(new Map());
-    vi.spyOn(localImporter, "loadLocalRecyclarrTemplate").mockReturnValue(new Map());
-    vi.spyOn(trashGuide, "loadQPFromTrash").mockReturnValue(Promise.resolve(new Map()));
-    vi.spyOn(trashGuide, "loadTrashCustomFormatGroups").mockReturnValue(Promise.resolve(new Map()));
-
-    const inputConfig: InputConfigArrInstance = {
-      include: [{ template: "https://example.com/nonexistent.yml" }],
-      custom_formats: [],
-      quality_profiles: [],
-      api_key: "test",
-      base_url: "http://sonarr:8989",
+  test("should integrate TRASH URL templates with config merging", async () => {
+    const trashTemplate: TrashQP = {
+      trash_id: "test-trash-id",
+      name: "TRASH Profile",
+      trash_score_set: "default",
+      upgradeAllowed: true,
+      cutoff: "HDTV-1080p",
+      minFormatScore: 0,
+      cutoffFormatScore: 1000,
+      items: [{ name: "HDTV-1080p", allowed: true }],
+      formatItems: {},
     };
 
-    const result = await mergeConfigsAndTemplates({}, inputConfig, "SONARR");
-
-    expect(mockKyGet).toHaveBeenCalled();
-    expect(result.config.custom_formats.length).toBe(0);
-    expect(result.config.quality_profiles.length).toBe(0);
-  });
-
-  test("should handle empty URL template content gracefully", async () => {
     mockKyGet.mockResolvedValue({
-      text: async () => "",
+      text: async () => JSON.stringify(trashTemplate),
     });
 
     vi.spyOn(reclarrImporter, "loadRecyclarrTemplates").mockReturnValue(new Map());
@@ -389,7 +378,7 @@ describe("mergeConfigsAndTemplates", () => {
     vi.spyOn(trashGuide, "loadTrashCustomFormatGroups").mockReturnValue(Promise.resolve(new Map()));
 
     const inputConfig: InputConfigArrInstance = {
-      include: [{ template: "https://example.com/empty.yml" }],
+      include: [{ template: "https://example.com/trash-template.json", source: "TRASH" }],
       custom_formats: [],
       quality_profiles: [],
       api_key: "test",
@@ -398,9 +387,9 @@ describe("mergeConfigsAndTemplates", () => {
 
     const result = await mergeConfigsAndTemplates({}, inputConfig, "SONARR");
 
-    expect(mockKyGet).toHaveBeenCalled();
-    expect(result.config.custom_formats.length).toBe(0);
-    expect(result.config.quality_profiles.length).toBe(0);
+    expect(mockKyGet).toHaveBeenCalledWith("https://example.com/trash-template.json", { timeout: 30000 });
+    expect(result.config.quality_profiles.length).toBe(1);
+    expect(result.config.quality_profiles[0]!.name).toBe("TRASH Profile");
   });
 });
 

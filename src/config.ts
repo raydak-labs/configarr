@@ -317,7 +317,7 @@ const includeTemplateOrderDefault = async (
     url: InputConfigIncludeItem[];
   }>(
     (previous, current) => {
-      // Check if template is a URL
+      // Check if template is a URL - all URLs go to url array, source is passed to loader
       if (isUrl(current.template)) {
         previous.url.push(current);
         return previous;
@@ -376,14 +376,20 @@ const includeTemplateOrderDefault = async (
     `Found ${include.length} templates to include. Mapped to [recyclarr]=${mappedIncludes.recyclarr.length}, [local]=${mappedIncludes.local.length}, [trash]=${mappedIncludes.trash.length}, [url]=${mappedIncludes.url.length} ...`,
   );
 
-  // Process URL templates first
+  // Process URL templates
   for (const e of mappedIncludes.url) {
-    const resolvedTemplate = await loadTemplateFromUrl(e.template);
+    const resolvedTemplate = await loadTemplateFromUrl(e.template, e.source);
     if (resolvedTemplate == null) {
       logger.warn(`Failed to load template from URL: '${e.template}'`);
       continue;
     }
-    includeRecyclarrTemplate(resolvedTemplate, { mergedTemplates, trashCFGroupMapping });
+
+    // Route to appropriate handler based on source
+    if (e.source === "TRASH") {
+      includeTrashTemplate(resolvedTemplate as TrashQP, { mergedTemplates, trashCFGroupMapping, customFormatGroups: [] });
+    } else {
+      includeRecyclarrTemplate(resolvedTemplate as MappedTemplates, { mergedTemplates, trashCFGroupMapping });
+    }
   }
 
   mappedIncludes.trash.forEach((e) => {

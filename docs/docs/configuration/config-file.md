@@ -53,9 +53,11 @@ Configarr supports multiple types of templates:
 
 3. **URL Templates** <span className="theme-doc-version-badge badge badge--secondary configarr-badge">1.18.0</span> <span className="badge badge--warning">Experimental</span>: Load templates directly from HTTP/HTTPS URLs
    - Allows sharing configurations without copying files or forking repositories
-   - Simply provide a URL to a YAML template file in the `include` section
+   - Supports both Recyclarr format (YAML) and TRaSH-Guides format (JSON) templates
+   - Simply provide a URL to a template file in the `include` section
    - The URL must be accessible via HTTP GET request
-   - Templates are fetched and parsed as YAML, following the same format as Recyclarr templates
+
+**Recyclarr Format (YAML):**
 
 ```yaml title="config.yml"
 sonarr:
@@ -67,12 +69,27 @@ sonarr:
       - template: local-template-name # Still works with local/recyclarr templates
 ```
 
+**TRaSH-Guides Format (JSON):**
+
+```yaml title="config.yml"
+sonarr:
+  instance1:
+    # ...
+    include:
+      - template: https://gist.githubusercontent.com/user/abc123/raw/trash-template.json
+        source: TRASH
+      - template: https://example.com/path/to/trash-profile.json
+        source: TRASH
+```
+
 **Notes:**
 
 - **Experimental**, available since `v1.18.0`
 - URL templates are processed first, before local and Recyclarr templates
 - Failed URL fetches are logged as warnings and skipped gracefully
-- URL templates must be valid YAML files following the Recyclarr template format
+- Recyclarr format templates must be valid YAML files following the Recyclarr template format
+- TRaSH-Guides format templates must be valid JSON files following the TRaSH-Guides quality profile format (must include `trash_id` field)
+- When loading TRaSH-Guides templates from URLs, specify `source: TRASH` in the include entry
 - Network requests have a 30-second timeout
 
 ## Configuration Files Reference

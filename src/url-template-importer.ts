@@ -2,6 +2,7 @@ import ky from "ky";
 import yaml from "yaml";
 import { logger } from "./logger";
 import { MappedTemplates } from "./types/common.types";
+import { TrashQP } from "./types/trashguide.types";
 
 export const isUrl = (str: string): boolean => {
   try {
@@ -12,7 +13,32 @@ export const isUrl = (str: string): boolean => {
   }
 };
 
-export const loadTemplateFromUrl = async (url: string): Promise<MappedTemplates | null> => {
+const loadTrashTemplateFromUrl = async (url: string): Promise<TrashQP | null> => {
+  try {
+    logger.debug(`Loading TRASH template from URL: ${url}`);
+    const response = await ky.get(url, { timeout: 30000 });
+    const content = await response.text();
+    const parsed = JSON.parse(content) as TrashQP;
+
+    if (parsed == null) {
+      logger.warn(`TRASH template content from URL '${url}' is empty. Ignoring.`);
+      return null;
+    }
+
+    if (!parsed.trash_id) {
+      logger.warn(`TRASH template from URL '${url}' does not have a trash_id. Ignoring.`);
+      return null;
+    }
+
+    logger.debug(`Successfully loaded TRASH template from URL: ${url}`);
+    return parsed;
+  } catch (error) {
+    logger.error(`Failed to load TRASH template from URL '${url}': ${error instanceof Error ? error.message : String(error)}`);
+    return null;
+  }
+};
+
+const loadRecyclarrTemplateFromUrl = async (url: string): Promise<MappedTemplates | null> => {
   try {
     logger.debug(`Loading template from URL: ${url}`);
     const response = await ky.get(url, { timeout: 30000 });
@@ -46,4 +72,11 @@ export const loadTemplateFromUrl = async (url: string): Promise<MappedTemplates 
     logger.error(`Failed to load template from URL '${url}': ${error instanceof Error ? error.message : String(error)}`);
     return null;
   }
+};
+
+export const loadTemplateFromUrl = async (url: string, source?: "TRASH" | "RECYCLARR"): Promise<MappedTemplates | TrashQP | null> => {
+  if (source === "TRASH") {
+    return loadTrashTemplateFromUrl(url);
+  }
+  return loadRecyclarrTemplateFromUrl(url);
 };
