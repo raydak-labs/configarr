@@ -53,6 +53,12 @@ sonarr:
     #   ignore: # optional
     #     - some-cf
 
+    # since v1.18.0. Optional
+    # delete_unmanaged_quality_profiles:
+    #   enabled: true
+    #   ignore: # optional
+    #     - some-qp
+
     # experimental since v1.14.0. Optional
     # root_folders:
     #   - /mnt/media/series

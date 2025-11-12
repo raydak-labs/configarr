@@ -377,6 +377,27 @@ Notes:
 
 - **experimental**, available since `v1.12.0`
 
+## Cleanup / Deleting QualityProfiles {#cleanup-quality-profiles}
+
+You can now enable the option to delete all quality profiles which are not managed by configarr.
+Additionally you can provide exceptions on which quality profile(s) should be ignored from deletion.
+
+```yml
+# ...
+sonarr:
+  instance1:
+    # ...
+    # (experimental) since v1.18.0. Optional
+    delete_unmanaged_quality_profiles:
+      enabled: true
+      ignore: # optional
+        - some-qp
+```
+
+Notes:
+
+- **experimental**, available since `v1.18.0`
+
 ## CustomFormatGroups {#custom-format-groups}
 
 Support has been added to allow using the TRaSH-Guide custom format groups: [see here](https://github.com/TRaSH-Guides/Guides/tree/master/docs/json/sonarr/cf-groups).

@@ -40,6 +40,7 @@ export interface TelemetryData {
   quality_definition: boolean;
   rename_quality_profiles: boolean;
   clone_quality_profiles: boolean;
+  delete_unmanaged_quality_profiles: boolean;
 
   // Media management features
   media_management: boolean;
@@ -220,6 +221,10 @@ export class Telemetry {
       this.telemetryData.clone_quality_profiles = true;
     }
 
+    if (!this.telemetryData.delete_unmanaged_quality_profiles && instanceConfig.delete_unmanaged_quality_profiles?.enabled) {
+      this.telemetryData.delete_unmanaged_quality_profiles = true;
+    }
+
     // Media management features
     if (!this.telemetryData.media_management && instanceConfig.media_management) {
       this.telemetryData.media_management = true;
@@ -307,6 +312,7 @@ export class Telemetry {
       quality_definition: allInstances.some((i) => i.quality_definition !== undefined),
       rename_quality_profiles: allInstances.some((i) => i.renameQualityProfiles && i.renameQualityProfiles.length > 0),
       clone_quality_profiles: allInstances.some((i) => i.cloneQualityProfiles && i.cloneQualityProfiles.length > 0),
+      delete_unmanaged_quality_profiles: allInstances.some((i) => i.delete_unmanaged_quality_profiles?.enabled),
 
       media_management: allInstances.some((i) => i.media_management !== undefined),
       media_naming: allInstances.some((i) => i.media_naming !== undefined),
