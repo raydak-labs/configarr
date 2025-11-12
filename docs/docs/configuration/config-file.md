@@ -33,7 +33,7 @@ Additionally we implement new features which recyclarr does not support at all l
 
 ### Templates
 
-Configarr supports two types of templates:
+Configarr supports multiple types of templates:
 
 1. **Recyclarr Templates**: Used to define reusable configuration blocks
    - In Recyclarr also named: `Pre-Built Configuration Files`
@@ -50,6 +50,30 @@ Configarr supports two types of templates:
      - [TRaSH-Guides Sonarr CF Groups](https://github.com/TRaSH-Guides/Guides/tree/master/docs/json/sonarr/cf-groups)
      - [Github PR/Explanation](https://github.com/TRaSH-Guides/Guides/pull/2455#discussion_r2297832409)
      - [Discord Discussion/Explanation](https://discord.com/channels/492590071455940612/1409911784386596894)
+
+3. **URL Templates** <span className="theme-doc-version-badge badge badge--secondary configarr-badge">1.18.0</span> <span className="badge badge--warning">Experimental</span>: Load templates directly from HTTP/HTTPS URLs
+   - Allows sharing configurations without copying files or forking repositories
+   - Simply provide a URL to a YAML template file in the `include` section
+   - The URL must be accessible via HTTP GET request
+   - Templates are fetched and parsed as YAML, following the same format as Recyclarr templates
+
+```yaml title="config.yml"
+sonarr:
+  instance1:
+    # ...
+    include:
+      - template: https://gist.githubusercontent.com/user/abc123/raw/template.yml
+      - template: https://example.com/path/to/template.yml
+      - template: local-template-name # Still works with local/recyclarr templates
+```
+
+**Notes:**
+
+- **Experimental**, available since `v1.18.0`
+- URL templates are processed first, before local and Recyclarr templates
+- Failed URL fetches are logged as warnings and skipped gracefully
+- URL templates must be valid YAML files following the Recyclarr template format
+- Network requests have a 30-second timeout
 
 ## Configuration Files Reference
 

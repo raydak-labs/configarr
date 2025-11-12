@@ -15,6 +15,16 @@ import {
 import { TrashQP } from "./types/trashguide.types";
 import { cloneWithJSON } from "./util";
 
+// Mock ky for URL template tests
+const mockKyGet = vi.hoisted(() => vi.fn());
+vi.mock("ky", () => {
+  const mockKy = vi.fn() as any;
+  mockKy.get = mockKyGet;
+  return {
+    default: mockKy,
+  };
+});
+
 describe("transformConfig", async () => {
   const config: InputConfigSchema = yaml.parse(`
 sonarr:
@@ -300,6 +310,97 @@ describe("mergeConfigsAndTemplates", () => {
 
   test("should throw error for invalid input configuration", async () => {
     await expect(mergeConfigsAndTemplates({}, null as any, "SONARR")).rejects.toThrow();
+  });
+
+  test("should load template from URL", async () => {
+    const fromConfig: ConfigQualityProfileItem[] = [{ name: "HDTV-1080p", enabled: false }];
+
+    const profile: ConfigQualityProfile = {
+      name: "url-profile",
+      min_format_score: 2,
+      qualities: fromConfig,
+      quality_sort: "sort",
+      upgrade: { allowed: true, until_quality: "HDTV-1080p", until_score: 1000 },
+      score_set: "default",
+    };
+
+    const urlTemplate: MappedTemplates = {
+      custom_formats: [{ trash_ids: ["cf-url"], assign_scores_to: [{ name: "url-profile" }] }],
+      quality_profiles: [profile],
+    };
+
+    mockKyGet.mockResolvedValue({
+      text: async () => yaml.stringify(urlTemplate),
+    });
+
+    vi.spyOn(reclarrImporter, "loadRecyclarrTemplates").mockReturnValue(new Map());
+    vi.spyOn(localImporter, "loadLocalRecyclarrTemplate").mockReturnValue(new Map());
+    vi.spyOn(trashGuide, "loadQPFromTrash").mockReturnValue(Promise.resolve(new Map()));
+    vi.spyOn(trashGuide, "loadTrashCustomFormatGroups").mockReturnValue(Promise.resolve(new Map()));
+
+    const inputConfig: InputConfigArrInstance = {
+      include: [{ template: "https://example.com/template.yml" }],
+      custom_formats: [],
+      quality_profiles: [],
+      api_key: "test",
+      base_url: "http://sonarr:8989",
+    };
+
+    const result = await mergeConfigsAndTemplates({}, inputConfig, "SONARR");
+
+    expect(mockKyGet).toHaveBeenCalledWith("https://example.com/template.yml", { timeout: 30000 });
+    expect(result.config.custom_formats.length).toBe(1);
+    expect(result.config.custom_formats[0]!.trash_ids).toEqual(["cf-url"]);
+    expect(result.config.quality_profiles.length).toBe(1);
+    expect(result.config.quality_profiles[0]!.name).toBe("url-profile");
+  });
+
+  test("should handle URL template loading failure gracefully", async () => {
+    mockKyGet.mockRejectedValue(new Error("Network error"));
+
+    vi.spyOn(reclarrImporter, "loadRecyclarrTemplates").mockReturnValue(new Map());
+    vi.spyOn(localImporter, "loadLocalRecyclarrTemplate").mockReturnValue(new Map());
+    vi.spyOn(trashGuide, "loadQPFromTrash").mockReturnValue(Promise.resolve(new Map()));
+    vi.spyOn(trashGuide, "loadTrashCustomFormatGroups").mockReturnValue(Promise.resolve(new Map()));
+
+    const inputConfig: InputConfigArrInstance = {
+      include: [{ template: "https://example.com/nonexistent.yml" }],
+      custom_formats: [],
+      quality_profiles: [],
+      api_key: "test",
+      base_url: "http://sonarr:8989",
+    };
+
+    const result = await mergeConfigsAndTemplates({}, inputConfig, "SONARR");
+
+    expect(mockKyGet).toHaveBeenCalled();
+    expect(result.config.custom_formats.length).toBe(0);
+    expect(result.config.quality_profiles.length).toBe(0);
+  });
+
+  test("should handle empty URL template content gracefully", async () => {
+    mockKyGet.mockResolvedValue({
+      text: async () => "",
+    });
+
+    vi.spyOn(reclarrImporter, "loadRecyclarrTemplates").mockReturnValue(new Map());
+    vi.spyOn(localImporter, "loadLocalRecyclarrTemplate").mockReturnValue(new Map());
+    vi.spyOn(trashGuide, "loadQPFromTrash").mockReturnValue(Promise.resolve(new Map()));
+    vi.spyOn(trashGuide, "loadTrashCustomFormatGroups").mockReturnValue(Promise.resolve(new Map()));
+
+    const inputConfig: InputConfigArrInstance = {
+      include: [{ template: "https://example.com/empty.yml" }],
+      custom_formats: [],
+      quality_profiles: [],
+      api_key: "test",
+      base_url: "http://sonarr:8989",
+    };
+
+    const result = await mergeConfigsAndTemplates({}, inputConfig, "SONARR");
+
+    expect(mockKyGet).toHaveBeenCalled();
+    expect(result.config.custom_formats.length).toBe(0);
+    expect(result.config.quality_profiles.length).toBe(0);
   });
 });
 

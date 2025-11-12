@@ -13,8 +13,8 @@ import {
   loadQPFromTrash,
   loadTrashCustomFormatGroups,
   transformTrashCFGroups,
-  transformTrashQPCFs,
   transformTrashQPCFGroups,
+  transformTrashQPCFs,
   transformTrashQPToTemplate,
 } from "./trash-guide";
 import { ArrType, MappedMergedTemplates, MappedTemplates } from "./types/common.types";
@@ -25,15 +25,16 @@ import {
   ConfigQualityProfile,
   ConfigSchema,
   InputConfigArrInstance,
+  InputConfigCustomFormat,
   InputConfigCustomFormatGroup,
   InputConfigIncludeItem,
   InputConfigInstance,
   InputConfigSchema,
   MediaNamingType,
   MergedConfigInstance,
-  InputConfigCustomFormat,
 } from "./types/config.types";
 import { TrashCFGroupMapping, TrashQP } from "./types/trashguide.types";
+import { isUrl, loadTemplateFromUrl } from "./url-template-importer";
 import { cloneWithJSON } from "./util";
 
 let config: ConfigSchema;
@@ -294,7 +295,7 @@ const includeTrashTemplate = (
   mergedTemplates.custom_formats.push(...requiredCFsFromCFGroups);
 };
 
-const includeTemplateOrderDefault = (
+const includeTemplateOrderDefault = async (
   include: InputConfigIncludeItem[],
   {
     recyclarr,
@@ -313,8 +314,15 @@ const includeTemplateOrderDefault = (
     local: InputConfigIncludeItem[];
     recyclarr: InputConfigIncludeItem[];
     trash: InputConfigIncludeItem[];
+    url: InputConfigIncludeItem[];
   }>(
     (previous, current) => {
+      // Check if template is a URL
+      if (isUrl(current.template)) {
+        previous.url.push(current);
+        return previous;
+      }
+
       switch (current.source) {
         case "TRASH":
           if (trash.has(current.template)) {
@@ -361,12 +369,22 @@ const includeTemplateOrderDefault = (
 
       return previous;
     },
-    { recyclarr: [], trash: [], local: [] },
+    { recyclarr: [], trash: [], local: [], url: [] },
   );
 
   logger.info(
-    `Found ${include.length} templates to include. Mapped to [recyclarr]=${mappedIncludes.recyclarr.length}, [local]=${mappedIncludes.local.length}, [trash]=${mappedIncludes.trash.length} ...`,
+    `Found ${include.length} templates to include. Mapped to [recyclarr]=${mappedIncludes.recyclarr.length}, [local]=${mappedIncludes.local.length}, [trash]=${mappedIncludes.trash.length}, [url]=${mappedIncludes.url.length} ...`,
   );
+
+  // Process URL templates first
+  for (const e of mappedIncludes.url) {
+    const resolvedTemplate = await loadTemplateFromUrl(e.template);
+    if (resolvedTemplate == null) {
+      logger.warn(`Failed to load template from URL: '${e.template}'`);
+      continue;
+    }
+    includeRecyclarrTemplate(resolvedTemplate, { mergedTemplates, trashCFGroupMapping });
+  }
 
   mappedIncludes.trash.forEach((e) => {
     const resolvedTemplate = trash.get(e.template);
@@ -467,7 +485,7 @@ export const mergeConfigsAndTemplates = async (
     quality_profiles: [],
   };
   if (instanceConfig.include) {
-    includeTemplateOrderDefault(
+    await includeTemplateOrderDefault(
       instanceConfig.include,
       {
         recyclarr: recyclarrTemplateMap,
