@@ -387,7 +387,7 @@ Additionally you can provide exceptions on which quality profile(s) should be ig
 sonarr:
   instance1:
     # ...
-    # (experimental) since v<>. Optional
+    # (experimental) since v1.18.0. Optional
     delete_unmanaged_quality_profiles:
       enabled: true
       ignore: # optional
@@ -396,7 +396,7 @@ sonarr:
 
 Notes:
 
-- **experimental**, available since `v<>`
+- **experimental**, available since `v1.18.0`
 
 ## CustomFormatGroups {#custom-format-groups}
 

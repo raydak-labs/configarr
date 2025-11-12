@@ -53,7 +53,7 @@ sonarr:
     #   ignore:
     #     - CustomFormatToKeep
 
-    # since v<>. Optional
+    # since v1.18.0. Optional
     # delete_unmanaged_quality_profiles:
     #   enabled: true
     #   ignore:

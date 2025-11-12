@@ -82,7 +82,7 @@ export type InputConfigArrInstance = {
     ignore?: string[];
   };
   /**
-   * since v<>
+   * since v1.18.0
    * Deletes all unmanaged Quality Profile
    */
   delete_unmanaged_quality_profiles?: {
