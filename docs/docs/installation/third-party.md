@@ -112,3 +112,68 @@ docker run -d --name=configarr -e TZ=Europe/Amsterdam -v /volume1/docker/configa
 ```
 
 After clicking "OK" it will ask for your password, given that you created a scheduled script with root permissions. After you're done you can perform a run manually to check if everything works by selecting the task and press "Run".
+
+## NixOS Module <span className="theme-doc-version-badge badge badge--secondary configarr-badge">1.18.0</span> {#nixos}
+
+:::warning Experimental Feature
+NixOS module support is experimental and available from version 1.18.0 onwards.
+:::
+
+Configarr can be run as a systemd service on NixOS using the included NixOS module.
+
+### Setup
+
+Include the configarr input in your flake:
+
+```nix
+inputs.configarr.url = "github:raydak-labs/configarr";
+```
+
+Then import the module and configure the service:
+
+```nix
+{
+  config,
+  inputs,
+  ...
+}: {
+  imports = [
+    inputs.configarr.nixosModules.default
+  ];
+
+  services.configarr = {
+    config =
+      # yaml
+      ''
+        radarr:
+          radarr_instance:
+            api_key: !env RADARR_API_KEY
+            base_url: http://localhost:${toString config.services.radarr.settings.server.port}
+            media_naming:
+              folder: default
+            root_folders:
+              - /mnt/movies/English
+      '';
+    enable = true;
+    environmentFile = "${config.sops.templates.configarr-ev.path}";
+  };
+
+  sops = {
+    secrets = {
+      radarr-api-key.sopsFile = ./secrets/radarr-api-key;
+    };
+    templates.configarr-ev = {
+      content = ''
+        LOG_LEVEL=debug
+        LOG_STACKTRACE=true
+        RADARR_API_KEY=${config.sops.placeholder.radarr-api-key}
+      '';
+      inherit (config.services.configarr) group;
+      owner = config.services.configarr.user;
+    };
+  };
+}
+```
+
+This configuration sets up configarr as a systemd service with proper secret management using sops-nix.
+
