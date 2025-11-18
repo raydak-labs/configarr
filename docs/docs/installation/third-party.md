@@ -112,3 +112,85 @@ docker run -d --name=configarr -e TZ=Europe/Amsterdam -v /volume1/docker/configa
 ```
 
 After clicking "OK" it will ask for your password, given that you created a scheduled script with root permissions. After you're done you can perform a run manually to check if everything works by selecting the task and press "Run".
+
+## NixOS Module <span className="theme-doc-version-badge badge badge--secondary configarr-badge">1.18.0</span> {#nixos}
+
+:::warning Experimental Feature
+NixOS module support is experimental and available from version 1.18.0 onwards.
+:::
+
+Configarr can be run as a systemd service on NixOS using the included NixOS module.
+
+### Setup
+
+Include the configarr input in your flake:
+
+```nix
+inputs.configarr.url = "github:raydak-labs/configarr";
+```
+
+Then import the module and configure the service:
+
+```nix
+{
+  config,
+  inputs,
+  ...
+}: {
+  imports = [
+    inputs.configarr.nixosModules.default
+  ];
+
+  services.configarr = {
+    config =
+      # yaml
+      ''
+        radarr:
+          radarr_instance:
+            api_key: !env RADARR_API_KEY
+            base_url: http://localhost:${toString config.services.radarr.settings.server.port}
+            media_naming:
+              folder: default
+            root_folders:
+              - /mnt/movies/English
+      '';
+    enable = true;
+    environmentFile = "${config.sops.templates.configarr-ev.path}";
+  };
+
+  sops = {
+    secrets = {
+      radarr-api-key.sopsFile = ./secrets/radarr-api-key;
+    };
+    templates.configarr-ev = {
+      content = ''
+        LOG_LEVEL=debug
+        LOG_STACKTRACE=true
+        RADARR_API_KEY=${config.sops.placeholder.radarr-api-key}
+      '';
+      inherit (config.services.configarr) group;
+      owner = config.services.configarr.user;
+    };
+  };
+}
+```
+
+This configuration sets up configarr as a systemd service with proper secret management using sops-nix.
+
+### Updating to a New Version
+
+To update configarr to a new version, you need to update both the version number and the corresponding hashes in the nix package file.
+
+1. Edit `nix/package.nix` and update the `version` field to the desired release (e.g., `"1.18.0"`)
+2. Update the `rev` field in `fetchFromGitHub` to match: `"v1.18.0"`
+3. Set both hash fields to empty strings (`hash = "";`)
+4. Run `nix build` - it will fail and provide you with the correct hashes
+5. Copy the hash from the error message for `fetchFromGitHub` and update the `src.hash` field
+6. Run `nix build` again - it will fail again for the pnpm dependencies
+7. Copy the hash from this error message and update the `pnpmDeps.hash` field
+8. Run `nix build` once more - it should now succeed
+
+Alternatively, you can find the source hash directly on GitHub:
+
+- Go to `https://github.com/raydak-labs/configarr/releases/tag/v[VERSION]`
+- Download the source tarball and calculate its hash using `nix hash file [downloaded-file]`
