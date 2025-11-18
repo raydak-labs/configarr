@@ -191,6 +191,6 @@ To update configarr to a new version, you need to update both the version number
 8. Run `nix build` once more - it should now succeed
 
 Alternatively, you can find the source hash directly on GitHub:
+
 - Go to `https://github.com/raydak-labs/configarr/releases/tag/v[VERSION]`
 - Download the source tarball and calculate its hash using `nix hash file [downloaded-file]`
-
