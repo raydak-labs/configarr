@@ -1,6 +1,7 @@
 {
   lib,
   pkgs,
+  fetchFromGitHub,
   ...
 }:
 pkgs.stdenvNoCC.mkDerivation (finalAttrs: {
@@ -50,7 +51,12 @@ pkgs.stdenvNoCC.mkDerivation (finalAttrs: {
     inherit (finalAttrs) pname src version;
   };
 
-  src = ../.;
+  src = fetchFromGitHub {
+    owner = "raydak-labs";
+    repo = "configarr";
+    rev = "v${finalAttrs.version}";
+    hash = "sha256-fgv6wiK5wh0jAczJWy3Iqs3OK81ckNr3bOZD32bTCQQ=";
+  };
 
   version = "1.17.2";
 })
