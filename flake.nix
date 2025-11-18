@@ -21,13 +21,13 @@
       ];
 
       flake = {
-        nixosModules.default = ./nix/module;
+        nixosModules.default = ./pkgs/nix/module;
       };
 
       perSystem = {system, ...}: let
         pkgs = nixpkgs.legacyPackages.${system};
       in {
-        packages.default = import ./nix/package.nix {
+        packages.default = import ./pkgs/nix/package.nix {
           inherit pkgs;
           inherit (pkgs) lib;
         };
