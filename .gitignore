@@ -165,3 +165,5 @@ bundle.cjs
 *.bun-build
 cli-bun
 cli-deno
+
+result
