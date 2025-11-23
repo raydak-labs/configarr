@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.18.0](https://github.com/raydak-labs/configarr/compare/v1.17.2...v1.18.0) (2025-11-23)
+
+### Features
+
+- add nixos module ([#341](https://github.com/raydak-labs/configarr/issues/341)) ([eabd7a2](https://github.com/raydak-labs/configarr/commit/eabd7a2c2de0151c86edaa76df41de9dce368e19))
+- add support for deleting unmanaged quality profiles ([#340](https://github.com/raydak-labs/configarr/issues/340)) ([60bc77d](https://github.com/raydak-labs/configarr/commit/60bc77d00c0c79fbe82f6351ef4a2c01562e631c))
+- add support for loading remote templates ([#342](https://github.com/raydak-labs/configarr/issues/342)) ([46ddfc8](https://github.com/raydak-labs/configarr/commit/46ddfc86b9b29c0cdc01ddebc2655aad40fb4ecf)), closes [#301](https://github.com/raydak-labs/configarr/issues/301)
+
 ## [1.17.2](https://github.com/raydak-labs/configarr/compare/v1.17.1...v1.17.2) (2025-11-08)
 
 ### Bug Fixes
