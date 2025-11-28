@@ -1,4 +1,4 @@
-import { MergedCustomFormatResource, MergedQualityDefinitionResource, MergedQualityProfileResource } from "../__generated__/mergedTypes";
+import { MergedCustomFormatResource, MergedQualityDefinitionResource, MergedQualityProfileResource, MergedMetadataProfileResource } from "../__generated__/mergedTypes";
 import { logger } from "../logger";
 import { ArrType } from "../types/common.types";
 import { LidarrClient } from "./lidarr-client";
@@ -111,8 +111,11 @@ export interface IArrClient<
   updateQualityProfile(id: string, profile: QP): Promise<QP>;
   deleteQualityProfile(id: string): Promise<void>;
 
-  // Metadata Profiles (Lidarr only)
-  getMetadataProfiles?(): Promise<any[]>;
+  // Metadata Profiles (Lidarr/Readarr only)
+  getMetadataProfiles?(): Promise<MergedMetadataProfileResource[]>;
+  createMetadataProfile?(profile: MergedMetadataProfileResource): Promise<MergedMetadataProfileResource>;
+  updateMetadataProfile?(id: string, profile: MergedMetadataProfileResource): Promise<MergedMetadataProfileResource>;
+  deleteMetadataProfile?(id: string): Promise<void>;
 
   // Custom Formats
   getCustomFormats(): Promise<CF[]>;
@@ -289,6 +292,35 @@ export class UnifiedClient implements IArrClient {
     return this.api.createTag(tag);
   }
 
+  
+  async getMetadataProfiles() {
+    if (!this.api.getMetadataProfiles) {
+      throw new Error(`Metadata profiles are not supported for ${this.type}`);
+    }
+    return this.api.getMetadataProfiles();
+  }
+
+  async createMetadataProfile(profile: MergedMetadataProfileResource) {
+    if (!this.api.createMetadataProfile) {
+      throw new Error(`Metadata profiles are not supported for ${this.type}`);
+    }
+    return this.api.createMetadataProfile(profile);
+  }
+
+  async updateMetadataProfile(id: string, profile: MergedMetadataProfileResource) {
+    if (!this.api.updateMetadataProfile) {
+      throw new Error(`Metadata profiles are not supported for ${this.type}`);
+    }
+    return this.api.updateMetadataProfile(id, profile);
+  }
+
+  async deleteMetadataProfile(id: string) {
+    if (!this.api.deleteMetadataProfile) {
+      throw new Error(`Metadata profiles are not supported for ${this.type}`);
+    }
+    return this.api.deleteMetadataProfile(id);
+  }
+
   async getSystemStatus() {
     return await this.api.getSystemStatus();
   }
@@ -301,7 +333,7 @@ export class UnifiedClient implements IArrClient {
   supportsFeature(feature: "metadataProfiles" | "qualityProfiles" | "qualityDefinitions"): boolean {
     switch (feature) {
       case "metadataProfiles":
-        return this.type === "READARR";
+        return this.type === "READARR" || this.type === "LIDARR";
       case "qualityProfiles":
       case "qualityDefinitions":
         return true; // Supported by all types

@@ -86,6 +86,8 @@ whisparr:
 
 Experimental support for Readarr was added with [v1.4.0](https://github.com/raydak-labs/configarr/releases/tag/v1.4.0).
 
+Metadata profiles support was added with [v1.18.0](https://github.com/raydak-labs/configarr/releases/tag/v1.18.0).
+
 Configuration is mostly equal to the Sonarr or Radarr.
 
 Following things are currently not supported or tested:
@@ -95,7 +97,6 @@ Following things are currently not supported or tested:
   quality_definition:
     type: movie # not checked yet
   ```
-- metadata profiles are not supported. This is a specific thing to readarr and requires custom implementation and breaking out of some abstraction layer we have in the code
 - no available presets because nothings provided in TRaSH-Guides or recyclarr -> needs to be done manually with local templates and custom formats
 
 ### Configuration File
@@ -145,11 +146,34 @@ readarr:
       - name: ExampleProfile
         upgrade:
           until_score: 200
+
+    # Metadata Profiles (since v1.18.0)
+    metadata_profiles:
+      - name: Standard
+        min_popularity: 10
+        skip_missing_date: true
+        skip_missing_isbn: false
+        skip_parts_and_sets: false
+        skip_secondary_series: false
+        allowed_languages:
+          - english
+          - null
+        min_pages: 50
+        must_not_contain:
+          - "Abridged"
+
+    # Delete unmanaged metadata profiles (since v1.18.0)
+    delete_unmanaged_metadata_profiles:
+      enabled: true
+      ignore:
+        - Default
 ```
 
 ## Lidarr v2
 
 Experimental support for Lidarr was added with [v1.8.0](https://github.com/raydak-labs/configarr/releases/tag/v1.8.0).
+
+Metadata profiles support was added with [v1.18.0](https://github.com/raydak-labs/configarr/releases/tag/v1.18.0).
 
 Configuration is mostly equal to the Sonarr or Radarr.
 
@@ -160,7 +184,6 @@ Following things are currently not supported or tested:
   quality_definition:
     type: movie # not checked yet
   ```
-- metadata profiles are not supported. This is a specific thing to lidarr and requires custom implementation and breaking out of some abstraction layer we have in the code
 - no available presets because nothings provided in TRaSH-Guides or recyclarr -> needs to be done manually with local templates and custom formats
 
 ### Configuration File
@@ -214,4 +237,31 @@ lidarr:
           until_score: 200
           # Not supported
           #min_format_score: 200
+
+    # Metadata Profiles (since v1.18.0)
+    metadata_profiles:
+      - name: Standard
+        primary_types:
+          - name: Album
+            enabled: true
+          - name: EP
+            enabled: true
+          - name: Single
+            enabled: false
+        secondary_types:
+          - name: Studio
+            enabled: true
+          - name: Live
+            enabled: false
+        release_statuses:
+          - name: Official
+            enabled: true
+          - name: Bootleg
+            enabled: false
+
+    # Delete unmanaged metadata profiles (since v1.18.0)
+    delete_unmanaged_metadata_profiles:
+      enabled: true
+      ignore:
+        - None
 ```

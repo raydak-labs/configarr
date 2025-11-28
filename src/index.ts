@@ -4,7 +4,7 @@ import { getBuildInfo, getEnvs, initEnvs } from "./env";
 initEnvs();
 
 import fs from "node:fs";
-import { MergedCustomFormatResource, MergedQualityProfileResource } from "./__generated__/mergedTypes";
+import { MergedCustomFormatResource, MergedQualityProfileResource, MergedMetadataProfileResource } from "./__generated__/mergedTypes";
 import { ServerCache } from "./cache";
 import { configureApi, getUnifiedClient, unsetApi } from "./clients/unified-client";
 import { getConfig, mergeConfigsAndTemplates } from "./config";
@@ -19,6 +19,7 @@ import {
   getUnmanagedQualityProfiles,
   loadQualityProfilesFromServer,
 } from "./quality-profiles";
+import { calculateMetadataProfilesDiff, deleteMetadataProfile, getUnmanagedMetadataProfiles, loadMetadataProfilesFromServer } from "./metadata-profiles";
 import { cloneRecyclarrTemplateRepo } from "./recyclarr-importer";
 import { loadServerTags } from "./tags";
 import { getTelemetryInstance, Telemetry } from "./telemetry";
@@ -241,6 +242,127 @@ const pipeline = async (globalConfig: InputConfigSchema, instanceConfig: InputCo
         }
       }
     }
+  }
+
+
+  // Handle metadata profiles (Lidarr / Readarr)
+  if (api.supportsFeature("metadataProfiles")) {
+    const serverMetadataProfiles: MergedMetadataProfileResource[] = await loadMetadataProfilesFromServer();
+
+    logger.info(`Server objects: MetadataProfiles ${serverMetadataProfiles.length}`);
+
+    const { create: mpCreate, update: mpUpdate, noChanges: mpNoChanges } = await calculateMetadataProfilesDiff(
+      arrType,
+      config,
+      serverMetadataProfiles,
+    );
+
+    logger.info(
+      `MetadataProfiles diff result: Create: ${mpCreate.length}, Update: ${mpUpdate.length}, Unchanged: ${mpNoChanges.length}`,
+    );
+
+    if (!getEnvs().DRY_RUN) {
+      for (const profile of mpCreate) {
+        try {
+          const newProfile = await api.createMetadataProfile!(profile);
+          logger.info(`Created MetadataProfile: ${newProfile.name}`);
+        } catch (error: any) {
+          logger.error(
+            `Failed creating MetadataProfile (${profile.name}). Please check your configuration and Arr logs for details.`,
+          );
+          throw error;
+        }
+      }
+
+      for (const profile of mpUpdate) {
+        try {
+          const updated = await api.updateMetadataProfile!(String(profile.id), profile);
+          logger.info(`Updated MetadataProfile: ${updated.name}`);
+        } catch (error: any) {
+          logger.error(
+            `Failed updating MetadataProfile (${profile.name}). Please check your configuration and Arr logs for details.`,
+          );
+          throw error;
+        }
+      }
+    } else if (mpCreate.length > 0 || mpUpdate.length > 0) {
+      logger.info("DryRun: Would create/update MetadataProfiles.");
+    }
+
+    // Debug: Log the delete_unmanaged_metadata_profiles config
+    logger.debug(
+      `Config delete_unmanaged_metadata_profiles: ${JSON.stringify(config.delete_unmanaged_metadata_profiles ?? null)}`
+    );
+
+    if (config.delete_unmanaged_metadata_profiles?.enabled) {
+      const unmanaged = getUnmanagedMetadataProfiles(serverMetadataProfiles, config.metadata_profiles);
+      const ignoreSet = new Set(config.delete_unmanaged_metadata_profiles.ignore ?? []);
+      // Always ignore the built-in 'None' metadata profile by default (e.g. Readarr, Lidarr).
+      ignoreSet.add('None');
+
+      logger.debug(
+        `Delete unmanaged metadata profiles: enabled=true, ` +
+        `total_server=${serverMetadataProfiles.length}, ` +
+        `total_config=${config.metadata_profiles?.length ?? 0}, ` +
+        `unmanaged=${unmanaged.length}, ` +
+        `ignore_list=[${Array.from(ignoreSet).join(', ')}]`
+      );
+      
+      if (unmanaged.length > 0) {
+        logger.debug(
+          `Unmanaged profiles found: ${unmanaged.map(p => p.name).join(', ')}`
+        );
+      }
+
+      const toDelete = unmanaged.filter((p) => p.name && !ignoreSet.has(p.name));
+      
+      if (toDelete.length > 0) {
+        logger.debug(
+          `Profiles to delete after filtering: ${toDelete.map(p => p.name).join(', ')}`
+        );
+      }
+
+      if (toDelete.length > 0) {
+        if (getEnvs().DRY_RUN) {
+          logger.info(`DryRun: Would delete MetadataProfiles: ${toDelete.map((e) => e.name).join(", ")}`);
+        } else {
+          logger.info(`Deleting ${toDelete.length} MetadataProfiles ...`);
+          logger.debug(
+            toDelete.map((e) => e.name),
+            "These MetadataProfiles will be deleted:",
+          );
+
+          for (const element of toDelete) {
+            try {
+              await deleteMetadataProfile(element);
+            } catch (err: any) {
+              // Check if profile is in use
+              const errorMessage = err?.message || err?.toString() || '';
+              const isInUse = errorMessage.toLowerCase().includes('in use') || 
+                             errorMessage.toLowerCase().includes('being used');
+              
+              if (isInUse) {
+                logger.info(
+                  `Metadata profile "${element.name ?? element.id}" is in use and could not be deleted.`
+                );
+              } else {
+                logger.error(
+                  `Failed deleting MetadataProfile (${element.name ?? element.id}). ` +
+                    "This profile will be left in place; check your Arr logs if you expected it to be removable.",
+                );
+                logger.debug(err, "Error while deleting MetadataProfile");
+              }
+              // Continue with other profiles; deleting unmanaged metadata profiles is best-effort.
+              continue;
+            }
+          }
+        }
+      }
+    }
+  } else if (config.metadata_profiles && config.metadata_profiles.length > 0) {
+    logger.warn(
+      `Metadata profiles are configured but not supported for ${arrType}. They will be ignored for this instance.`,
+    );
   }
 
   await syncRootFolders(arrType, config.root_folders, serverCache);

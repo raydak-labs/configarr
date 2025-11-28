@@ -252,6 +252,28 @@ readarr:
           # Not supported in whisparr
           #min_format_score: 200
 
+    metadata_profiles:
+      - name: "Default"
+        min_popularity: 10
+        skip_missing_date: true
+        skip_missing_isbn: false
+        skip_parts_and_sets: false
+        skip_secondary_series: false
+        allowed_languages: 
+          - english
+          - german
+        min_pages: 50
+        must_not_contain:
+          - "Text in title"
+    delete_unmanaged_metadata_profiles:
+      enabled: true
+      ignore:
+        - Standard
+        - None
+
+    delete_unmanaged_profiles:
+      enabled: true
+
 lidarr:
   instance1:
     # Set the URL/API Key to your actual instance
@@ -280,3 +302,49 @@ lidarr:
           until_score: 200
           # Not supported in whisparr
           #min_format_score: 200
+    
+    metadata_profiles:
+      - name: Default
+        primary_types:
+          - name: Album
+            enabled: true
+          - name: Broadcast
+            enabled: false
+          - name: EP
+            enabled: true
+          - name: Other
+            enabled: false
+          - name: Single
+            enabled: true
+        secondary_types:
+          - name: Studio
+            enabled: true
+          - name: Spokenword
+            enabled: false
+          - name: Soundtrack
+            enabled: true
+          - name: Remix
+            enabled: true
+          - name: Mixtape/Street
+            enabled: false
+          - name: Live
+            enabled: false
+          - name: Interview
+            enabled: false
+          - name: DJ-mix
+            enabled: true
+          - name: Demo
+            enabled: false
+          - name: Compilation
+            enabled: true
+          - name: Audio drama
+            enabled: false
+        release_statuses: 
+          - name: Pseudo-Release
+            enabled: false
+          - name: Promotion
+            enabled: false
+          - name: Official
+            enabled: true
+          - name: Bootleg
+            enabled: false

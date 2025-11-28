@@ -117,6 +117,29 @@ export type InputConfigArrInstance = {
   media_naming?: MediaNamingType;
 
   /**
+   * Optional metadata profiles (Lidarr / Readarr only).
+   * Kept close to each Arr application's native MetadataProfileResource.
+   */
+  metadata_profiles?: InputConfigMetadataProfile[];
+
+  /**
+   * Deletes all metadata profiles that are present on the server but not defined
+   * in this configuration. Can be further narrowed using the ignore list.
+   * 
+   * Supports both boolean and object forms:
+   * - boolean: delete_unmanaged_metadata_profiles: true
+   * - object: delete_unmanaged_metadata_profiles: { enabled: true, ignore: [...] }
+   */
+  delete_unmanaged_metadata_profiles?: boolean | {
+    enabled: boolean;
+    /**
+     * Names of metadata profiles that should never be deleted automatically.
+     * Can be specified as an array of strings.
+     */
+    ignore?: string[];
+  };
+
+  /**
    * @experimental since v1.14.0
    */
   root_folders?: InputConfigRootFolder[];
@@ -195,6 +218,87 @@ export type InputConfigQualityProfileItem = {
   enabled?: boolean;
 };
 
+export type InputConfigMetadataProfile = {
+  /**
+   * Name of the metadata profile. Must be unique per instance.
+   */
+  name: string;
+
+  /**
+   * Lidarr-specific fields
+   * Configuration names are intentionally user-friendly and diverge slightly from the API.
+   * Only used when Arr type is LIDARR.
+   *
+   * Configuration names:
+   *   primary_types[].name       -> MetadataProfileResource.primaryAlbumTypes[].albumType
+   *   primary_types[].enabled    -> MetadataProfileResource.primaryAlbumTypes[].allowed
+   *   secondary_types[].name     -> MetadataProfileResource.secondaryAlbumTypes[].albumType
+   *   secondary_types[].enabled  -> MetadataProfileResource.secondaryAlbumTypes[].allowed
+   *   release_statuses[].name    -> MetadataProfileResource.releaseStatuses[].releaseStatus
+   *   release_statuses[].enabled -> MetadataProfileResource.releaseStatuses[].allowed
+   */
+  primary_types?: {
+    /**
+     * Optional database identifier. If omitted for new entries, an index will be assigned by Lidarr.
+     */
+    id?: number;
+    /**
+     * Album type as configured in YAML. Can be a string name (e.g. "Album") or an object coming from the API.
+     */
+    name?: unknown;
+    /**
+     * Whether this album type is enabled.
+     */
+    enabled?: boolean;
+  }[];
+
+  secondary_types?: {
+    id?: number;
+    name?: unknown;
+    enabled?: boolean;
+  }[];
+
+  release_statuses?: {
+    id?: number;
+    name?: unknown;
+    enabled?: boolean;
+  }[];
+
+  /**
+   * Readarr-specific fields
+   * Only used when Arr type is READARR.
+   * 
+   * Configuration names (both camelCase and snake_case supported):
+   *   min_popularity / minPopularity           -> MetadataProfileResource.minPopularity
+   *   skip_missing_date / skipMissingDate      -> MetadataProfileResource.skipMissingDate
+   *   skip_missing_isbn / skipMissingIsbn      -> MetadataProfileResource.skipMissingIsbn
+   *   skip_parts_and_sets / skipPartsAndSets   -> MetadataProfileResource.skipPartsAndSets
+   *   skip_secondary_series / skipSeriesSecondary -> MetadataProfileResource.skipSeriesSecondary
+   *   allowed_languages / allowedLanguages     -> MetadataProfileResource.allowedLanguages
+   *   min_pages / minPages                     -> MetadataProfileResource.minPages
+   *   must_not_contain / ignored               -> MetadataProfileResource.ignored
+   */
+  // snake_case (preferred)
+  min_popularity?: number;
+  skip_missing_date?: boolean;
+  skip_missing_isbn?: boolean;
+  skip_parts_and_sets?: boolean;
+  skip_secondary_series?: boolean;
+  allowed_languages?: string | string[] | null;
+  min_pages?: number | null;
+  must_not_contain?: string[];
+  
+  // camelCase (legacy support)
+  minPopularity?: number;
+  skipMissingDate?: boolean;
+  skipMissingIsbn?: boolean;
+  skipPartsAndSets?: boolean;
+  skipSeriesSecondary?: boolean;
+  allowedLanguages?: string | string[] | null;
+  minPages?: number | null;
+  ignored?: string[];
+};
+
 export type InputConfigIncludeItem = {
   // depends on source what this actually is. Can be the filename -> recyclarr or id in the files -> trash
   template: string;
@@ -207,10 +311,18 @@ export type ConfigCustomFormat = Pick<InputConfigCustomFormat, "trash_ids"> & Pi
 
 export type ConfigCustomFormatList = Pick<ConfigArrInstance, "custom_formats">;
 
-export type ConfigArrInstance = OmitTyped<InputConfigArrInstance, "custom_formats" | "include" | "quality_profiles"> & {
+export type ConfigArrInstance = OmitTyped<
+  InputConfigArrInstance,
+  "custom_formats" | "include" | "quality_profiles"
+> & {
   include?: ConfigIncludeItem[];
   custom_formats: ConfigCustomFormat[];
   quality_profiles: ConfigQualityProfile[];
+  /**
+   * Metadata profiles are kept in configuration shape; they are translated to
+   * the concrete Arr application's MetadataProfileResource in the feature layer.
+   */
+  metadata_profiles?: InputConfigMetadataProfile[];
 };
 
 export type ConfigQualityProfile = OmitTyped<Required<InputConfigQualityProfile>, "qualities" | "reset_unmatched_scores" | "language"> & {

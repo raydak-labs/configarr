@@ -29,6 +29,7 @@ import {
   InputConfigCustomFormatGroup,
   InputConfigIncludeItem,
   InputConfigInstance,
+  InputConfigMetadataProfile,
   InputConfigSchema,
   MediaNamingType,
   MergedConfigInstance,
@@ -227,6 +228,29 @@ const includeRecyclarrTemplate = (
       mergedTemplates.quality_profiles.push(qp);
     }
   }
+
+  if (template.metadata_profiles) {
+    // Append template metadata profiles so that instance-level configuration
+    // can still override them if desired but templates on their own work.
+    mergedTemplates.metadata_profiles = [
+      ...(mergedTemplates.metadata_profiles || []),
+      ...template.metadata_profiles,
+    ];
+  }
+
+  if (template.delete_unmanaged_metadata_profiles !== undefined) {
+    // Template can set delete_unmanaged_metadata_profiles
+    // Instance config will override this later if it defines the setting
+    // Support both boolean and object forms
+    if (typeof template.delete_unmanaged_metadata_profiles === "boolean") {
+      mergedTemplates.delete_unmanaged_metadata_profiles = {
+        enabled: template.delete_unmanaged_metadata_profiles,
+      };
+    } else {
+      mergedTemplates.delete_unmanaged_metadata_profiles = template.delete_unmanaged_metadata_profiles;
+    }
+  }
+
 
   if (template.media_management) {
     mergedTemplates.media_management = { ...mergedTemplates.media_management, ...template.media_management };
@@ -719,6 +743,46 @@ export const mergeConfigsAndTemplates = async (
   }, new Map<string, ConfigQualityProfile>());
 
   mergedTemplates.quality_profiles = Array.from(qualityProfilesMerged.values());
+
+  // Merge metadata profiles similar to quality profiles
+  // Template metadata profiles are already in mergedTemplates.metadata_profiles
+  if (instanceConfig.metadata_profiles) {
+    // Append instance-level metadata profiles to template ones
+    mergedTemplates.metadata_profiles = [
+      ...(mergedTemplates.metadata_profiles || []),
+      ...instanceConfig.metadata_profiles,
+    ];
+    
+    // Merge by name: if a profile with the same name exists in both template and instance,
+    // instance config takes precedence (overwrites)
+    const metadataProfilesByName = new Map<string, InputConfigMetadataProfile>();
+    
+    for (const profile of mergedTemplates.metadata_profiles) {
+      metadataProfilesByName.set(profile.name, profile);
+    }
+    
+    mergedTemplates.metadata_profiles = Array.from(metadataProfilesByName.values());
+  }
+
+
+  if (instanceConfig.delete_unmanaged_metadata_profiles !== undefined) {
+    if (typeof instanceConfig.delete_unmanaged_metadata_profiles === "boolean") {
+      mergedTemplates.delete_unmanaged_metadata_profiles = {
+        enabled: instanceConfig.delete_unmanaged_metadata_profiles,
+        ignore: mergedTemplates.delete_unmanaged_metadata_profiles?.ignore,
+      };
+    } else {
+      // Merge ignore lists from template and instance
+      const templateIgnore = mergedTemplates.delete_unmanaged_metadata_profiles?.ignore ?? [];
+      const instanceIgnore = instanceConfig.delete_unmanaged_metadata_profiles.ignore ?? [];
+      const mergedIgnore = [...new Set([...templateIgnore, ...instanceIgnore])];
+      
+      mergedTemplates.delete_unmanaged_metadata_profiles = {
+        enabled: instanceConfig.delete_unmanaged_metadata_profiles.enabled,
+        ignore: mergedIgnore.length > 0 ? mergedIgnore : undefined,
+      };
+    }
+  }
 
   if (instanceConfig.root_folders) {
     mergedTemplates.root_folders = [...(mergedTemplates.root_folders || []), ...instanceConfig.root_folders];

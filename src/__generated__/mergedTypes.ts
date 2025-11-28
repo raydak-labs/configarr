@@ -17,6 +17,8 @@ import {
   QualityProfileResource as SonarrQualityProfileResource,
   RootFolderResource as SonarrRootFolderResource,
 } from "./sonarr/data-contracts";
+import { MetadataProfileResource as LidarrMetadataProfileResource } from "./lidarr/data-contracts";
+import { MetadataProfileResource as ReadarrMetadataProfileResource } from "./readarr/data-contracts";
 
 // Those types are only to make the API client unified usable.
 // Sonarr and Radarr slightly differ in API fields and therefore at the moment we can ignore those changes.
@@ -60,5 +62,7 @@ export type MergedCustomFormatSpecificationSchema = RadarrCustomFormatSpecificat
 export type MergedRootFolderResource = SonarrRootFolderResource & RadarrRootFolderResource;
 export type MergedDelayProfileResource = import("./sonarr/data-contracts").DelayProfileResource &
   import("./radarr/data-contracts").DelayProfileResource;
+
+export type MergedMetadataProfileResource = LidarrMetadataProfileResource & ReadarrMetadataProfileResource;
 
 export type MergedTagResource = RadarrTagResource;
