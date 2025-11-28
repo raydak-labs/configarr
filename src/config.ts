@@ -29,6 +29,7 @@ import {
   InputConfigCustomFormatGroup,
   InputConfigIncludeItem,
   InputConfigInstance,
+  InputConfigMetadataProfile,
   InputConfigSchema,
   MediaNamingType,
   MergedConfigInstance,
@@ -226,6 +227,14 @@ const includeRecyclarrTemplate = (
     for (const qp of template.quality_profiles) {
       mergedTemplates.quality_profiles.push(qp);
     }
+  }
+
+  if (template.metadata_profiles) {
+    mergedTemplates.metadata_profiles = [...(mergedTemplates.metadata_profiles || []), ...template.metadata_profiles];
+  }
+
+  if (template.delete_unmanaged_metadata_profiles) {
+    mergedTemplates.delete_unmanaged_metadata_profiles = template.delete_unmanaged_metadata_profiles;
   }
 
   if (template.media_management) {
@@ -719,6 +728,31 @@ export const mergeConfigsAndTemplates = async (
   }, new Map<string, ConfigQualityProfile>());
 
   mergedTemplates.quality_profiles = Array.from(qualityProfilesMerged.values());
+
+  if (instanceConfig.metadata_profiles) {
+    mergedTemplates.metadata_profiles = [...(mergedTemplates.metadata_profiles || []), ...instanceConfig.metadata_profiles];
+
+    // Merge by name: if a profile with the same name exists in both template and instance,
+    // instance config takes precedence (overwrites)
+    const metadataProfilesByName = new Map<string, InputConfigMetadataProfile>();
+
+    for (const profile of mergedTemplates.metadata_profiles) {
+      metadataProfilesByName.set(profile.name, profile);
+    }
+
+    mergedTemplates.metadata_profiles = Array.from(metadataProfilesByName.values());
+  }
+
+  if (instanceConfig.delete_unmanaged_metadata_profiles) {
+    const templateIgnore = mergedTemplates.delete_unmanaged_metadata_profiles?.ignore ?? [];
+    const instanceIgnore = instanceConfig.delete_unmanaged_metadata_profiles.ignore ?? [];
+    const mergedIgnore = [...new Set([...templateIgnore, ...instanceIgnore])];
+
+    mergedTemplates.delete_unmanaged_metadata_profiles = {
+      enabled: instanceConfig.delete_unmanaged_metadata_profiles.enabled,
+      ignore: mergedIgnore,
+    };
+  }
 
   if (instanceConfig.root_folders) {
     mergedTemplates.root_folders = [...(mergedTemplates.root_folders || []), ...instanceConfig.root_folders];

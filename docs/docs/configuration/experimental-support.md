@@ -86,6 +86,8 @@ whisparr:
 
 Experimental support for Readarr was added with [v1.4.0](https://github.com/raydak-labs/configarr/releases/tag/v1.4.0).
 
+Metadata profiles support was added with [v1.19.0](https://github.com/raydak-labs/configarr/releases/tag/v1.19.0).
+
 Configuration is mostly equal to the Sonarr or Radarr.
 
 Following things are currently not supported or tested:
@@ -95,7 +97,6 @@ Following things are currently not supported or tested:
   quality_definition:
     type: movie # not checked yet
   ```
-- metadata profiles are not supported. This is a specific thing to readarr and requires custom implementation and breaking out of some abstraction layer we have in the code
 - no available presets because nothings provided in TRaSH-Guides or recyclarr -> needs to be done manually with local templates and custom formats
 
 ### Configuration File
@@ -145,7 +146,34 @@ readarr:
       - name: ExampleProfile
         upgrade:
           until_score: 200
+
+    # Metadata Profiles (since v1.19.0)
+    metadata_profiles:
+      - name: Standard
+        min_popularity: 10
+        skip_missing_date: true
+        skip_missing_isbn: false
+        skip_parts_and_sets: false
+        skip_secondary_series: false
+        allowed_languages:
+          - eng # ISO 639-3 language codes
+          - deu
+          - null # Allow books with no language
+        min_pages: 50
+        must_not_contain:
+          - "Abridged"
+          - "Large Print"
+
+    # Delete unmanaged metadata profiles (since v1.19.0)
+    delete_unmanaged_metadata_profiles:
+      enabled: true
+      ignore:
+        - Default
 ```
+
+:::tip Language Codes
+Readarr metadata profiles use **ISO 639-3** language codes (3-letter codes like `eng`, `deu`, `fra`).
+:::
 
 ## Lidarr v2
 
@@ -160,7 +188,6 @@ Following things are currently not supported or tested:
   quality_definition:
     type: movie # not checked yet
   ```
-- metadata profiles are not supported. This is a specific thing to lidarr and requires custom implementation and breaking out of some abstraction layer we have in the code
 - no available presets because nothings provided in TRaSH-Guides or recyclarr -> needs to be done manually with local templates and custom formats
 
 ### Configuration File
@@ -214,4 +241,130 @@ lidarr:
           until_score: 200
           # Not supported
           #min_format_score: 200
+
+    # Metadata Profiles (since v1.19.0)
+    metadata_profiles:
+      - name: Standard
+        # at least one required
+        primary_types:
+          - Album
+          - EP
+          - Single
+        # at least one required
+        secondary_types:
+          - Studio
+          - Compilation
+          - Soundtrack
+        # at least one required
+        release_statuses:
+          - Official
+
+    # Delete unmanaged metadata profiles (since v1.19.0)
+    delete_unmanaged_metadata_profiles:
+      enabled: true
+      ignore:
+        - SomeProfile
 ```
+
+### Lidarr Metadata Profile Fields
+
+| Field              | Type         | Description                                                                           |
+| ------------------ | ------------ | ------------------------------------------------------------------------------------- |
+| `name`             | string       | **Required.** Profile name (must be unique)                                           |
+| `primary_types`    | string array | **Required.** List of enabled primary album types (Album, EP, Single, Broadcast)      |
+| `secondary_types`  | string array | **Required.** List of enabled secondary album types (Studio, Live, Compilation, etc.) |
+| `release_statuses` | string array | **Required.** List of enabled release statuses (Official, Promotion, Bootleg, etc.)   |
+
+**How it works:**
+
+- Only types/statuses listed in the arrays will be **enabled** (allowed)
+- All other types/statuses will be **disabled**
+
+**Example:**
+
+```yaml
+metadata_profiles:
+  - name: Standard
+    primary_types: [Album, EP] # Only Album and EP enabled
+    secondary_types: [Studio, Compilation] # Only Studio and Compilation enabled
+    release_statuses: [Official] # Only Official enabled
+```
+
+## Metadata Profiles - Common Configuration
+
+Both Readarr and Lidarr support metadata profiles to control what content is accepted.
+
+### Delete Unmanaged Profiles
+
+You can automatically delete metadata profiles that exist on the server but are not defined in your configuration.
+
+**Simple form:**
+
+```yaml
+delete_unmanaged_metadata_profiles: true
+```
+
+**Full form with ignore list:**
+
+```yaml
+delete_unmanaged_metadata_profiles:
+  enabled: true
+  ignore:
+    - LegacyProfile
+    - CustomProfile
+```
+
+:::warning Built-in Protection
+The `None` profile (Lidarr/Readarr) is **always** protected from deletion, even if not in the ignore list.
+:::
+
+### Templates and Metadata Profiles
+
+Metadata profiles can be defined in templates and merged with instance configurations.
+
+**Template:**
+
+```yaml title="templates/readarr.yml"
+metadata_profiles:
+  - name: Standard
+    min_popularity: 10
+
+delete_unmanaged_metadata_profiles:
+  enabled: true
+  ignore: []
+```
+
+**Instance:**
+
+```yaml title="config.yml"
+readarr:
+  instance1:
+    include:
+      - template: readarr
+    metadata_profiles:
+      - name: Audiobooks
+        min_popularity: 5
+```
+
+**Result:** Instance has both "Standard" (from template) and "Audiobooks" (from instance).
+
+### Best Practices
+
+1. **Test with dry run first:**
+
+   ```bash
+   DRY_RUN=true npm start
+   ```
+
+2. **Use ISO 639-3 language codes** for Readarr (e.g., `eng`, `deu`, not `en`, `de`)
+
+3. **Be explicit about deletion** - always specify ignore list:
+
+   ```yaml
+   delete_unmanaged_metadata_profiles:
+     enabled: true
+     ignore:
+       - Legacy
+   ```
+
+4. **Use templates** for shared profiles across instances
