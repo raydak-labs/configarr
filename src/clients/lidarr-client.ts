@@ -10,21 +10,36 @@ import {
 import { logger } from "../logger";
 import { IArrClient, logConnectionError, validateClientParams } from "./unified-client";
 
-// Schema cache - populated dynamically from the server
-let schemaCache: {
-  primaryAlbumTypes?: Array<{ id: number; name: string }>;
-  secondaryAlbumTypes?: Array<{ id: number; name: string }>;
-  releaseStatuses?: Array<{ id: number; name: string }>;
-} | null = null;
+/**
+ * Schema cache type for Lidarr metadata profiles.
+ * Stores the authoritative list of album types and release statuses
+ * supported by a specific Lidarr server instance.
+ */
+type LidarrSchemaCache = {
+  primaryAlbumTypes: Array<{ id: number; name: string }>;
+  secondaryAlbumTypes: Array<{ id: number; name: string }>;
+  releaseStatuses: Array<{ id: number; name: string }>;
+};
+
+/**
+ * Map of base URLs to their schema caches.
+ * This allows multiple Lidarr instances with different versions/schemas
+ * to coexist in the same process without cache pollution.
+ */
+const schemaCacheByUrl = new Map<string, LidarrSchemaCache>();
 
 /**
  * Fetch metadata profile schema from Lidarr server.
  * This provides the authoritative list of album types and release statuses
  * supported by this specific Lidarr version.
+ * 
+ * The cache is scoped by base URL to support multiple Lidarr instances
+ * with potentially different schemas in the same process.
  */
-async function fetchMetadataProfileSchema(api: Api<unknown>): Promise<void> {
-  if (schemaCache) {
-    return; // Already cached
+async function fetchMetadataProfileSchema(api: Api<unknown>, baseUrl: string): Promise<LidarrSchemaCache> {
+  const cached = schemaCacheByUrl.get(baseUrl);
+  if (cached) {
+    return cached; // Already cached for this instance
   }
 
   try {
@@ -32,7 +47,7 @@ async function fetchMetadataProfileSchema(api: Api<unknown>): Promise<void> {
     
     // Extract the enum-like values from the schema
     // The schema returns a template profile with all possible values
-    const extractTypes = (items: any[] | undefined): Array<{ id: number; name: string }> => {
+    const extractTypes = (items: any[] | null | undefined): Array<{ id: number; name: string }> => {
       if (!items || !Array.isArray(items)) {
         return [];
       }
@@ -58,25 +73,31 @@ async function fetchMetadataProfileSchema(api: Api<unknown>): Promise<void> {
       }).filter(item => item.id != null && item.name != null);
     };
 
-    schemaCache = {
-      primaryAlbumTypes: extractTypes(schema.primaryAlbumTypes),
-      secondaryAlbumTypes: extractTypes(schema.secondaryAlbumTypes),
-      releaseStatuses: extractTypes(schema.releaseStatuses),
+    const schemaCache: LidarrSchemaCache = {
+      primaryAlbumTypes: extractTypes(schema.primaryAlbumTypes ?? undefined),
+      secondaryAlbumTypes: extractTypes(schema.secondaryAlbumTypes ?? undefined),
+      releaseStatuses: extractTypes(schema.releaseStatuses ?? undefined),
     };
 
+    schemaCacheByUrl.set(baseUrl, schemaCache);
+
     logger.debug(
-      `Loaded Lidarr metadata profile schema: ` +
-      `${schemaCache.primaryAlbumTypes?.length ?? 0} primary types, ` +
-      `${schemaCache.secondaryAlbumTypes?.length ?? 0} secondary types, ` +
-      `${schemaCache.releaseStatuses?.length ?? 0} release statuses`
+      `Loaded Lidarr metadata profile schema for ${baseUrl}: ` +
+      `${schemaCache.primaryAlbumTypes.length} primary types, ` +
+      `${schemaCache.secondaryAlbumTypes.length} secondary types, ` +
+      `${schemaCache.releaseStatuses.length} release statuses`
     );
+    
+    return schemaCache;
   } catch (error) {
-    logger.warn('Failed to fetch metadata profile schema from server, using empty schema');
-    schemaCache = {
+    logger.warn(`Failed to fetch metadata profile schema from ${baseUrl}, using empty schema`);
+    const emptySchema: LidarrSchemaCache = {
       primaryAlbumTypes: [],
       secondaryAlbumTypes: [],
       releaseStatuses: [],
     };
+    schemaCacheByUrl.set(baseUrl, emptySchema);
+    return emptySchema;
   }
 }
 
@@ -133,13 +154,11 @@ function resolveEnumLikeValue(
   return undefined;
 }
 
-function normalizeMetadataProfileForLidarr(profile: MetadataProfileResource): MetadataProfileResource {
+function normalizeMetadataProfileForLidarr(
+  profile: MetadataProfileResource,
+  schema: LidarrSchemaCache
+): MetadataProfileResource {
   if (!profile) {
-    return profile;
-  }
-  
-  if (!schemaCache) {
-    logger.warn('Metadata profile schema not loaded, normalization may fail');
     return profile;
   }
 
@@ -156,14 +175,14 @@ function normalizeMetadataProfileForLidarr(profile: MetadataProfileResource): Me
       const anyItem: any = item;
       const resolvedAlbumType = resolveEnumLikeValue(
         anyItem.albumType,
-        schemaCache!.primaryAlbumTypes || [],
+        schema.primaryAlbumTypes,
       );
 
       if (!resolvedAlbumType && anyItem.albumType != null) {
         logger.warn(
           `Unknown Lidarr primary albumType '${JSON.stringify(
             anyItem.albumType,
-          )}' in metadata profile '${profile.name ?? ""}'. Available types: ${(schemaCache!.primaryAlbumTypes || []).map(t => t.name).join(', ')}`,
+          )}' in metadata profile '${profile.name ?? ""}'. Available types: ${schema.primaryAlbumTypes.map(t => t.name).join(', ')}`,
         );
       }
 
@@ -184,14 +203,14 @@ function normalizeMetadataProfileForLidarr(profile: MetadataProfileResource): Me
       const anyItem: any = item;
       const resolvedAlbumType = resolveEnumLikeValue(
         anyItem.albumType,
-        schemaCache!.secondaryAlbumTypes || [],
+        schema.secondaryAlbumTypes,
       );
 
       if (!resolvedAlbumType && anyItem.albumType != null) {
         logger.warn(
           `Unknown Lidarr secondary albumType '${JSON.stringify(
             anyItem.albumType,
-          )}' in metadata profile '${profile.name ?? ""}'. Available types: ${(schemaCache!.secondaryAlbumTypes || []).map(t => t.name).join(', ')}`,
+          )}' in metadata profile '${profile.name ?? ""}'. Available types: ${schema.secondaryAlbumTypes.map(t => t.name).join(', ')}`,
         );
       }
 
@@ -212,14 +231,14 @@ function normalizeMetadataProfileForLidarr(profile: MetadataProfileResource): Me
       const anyItem: any = item;
       const resolvedReleaseStatus = resolveEnumLikeValue(
         anyItem.releaseStatus,
-        schemaCache!.releaseStatuses || [],
+        schema.releaseStatuses,
       );
 
       if (!resolvedReleaseStatus && anyItem.releaseStatus != null) {
         logger.warn(
           `Unknown Lidarr releaseStatus '${JSON.stringify(
             anyItem.releaseStatus,
-          )}' in metadata profile '${profile.name ?? ""}'. Available statuses: ${(schemaCache!.releaseStatuses || []).map(t => t.name).join(', ')}`,
+          )}' in metadata profile '${profile.name ?? ""}'. Available statuses: ${schema.releaseStatuses.map(t => t.name).join(', ')}`,
         );
       }
 
@@ -236,6 +255,7 @@ function normalizeMetadataProfileForLidarr(profile: MetadataProfileResource): Me
 
 export class LidarrClient implements IArrClient<QualityProfileResource, QualityDefinitionResource, CustomFormatResource, LanguageResource> {
   private api!: Api<unknown>;
+  private baseUrl!: string;
 
   constructor(baseUrl: string, apiKey: string) {
     this.initialize(baseUrl, apiKey);
@@ -243,6 +263,8 @@ export class LidarrClient implements IArrClient<QualityProfileResource, QualityD
 
   private initialize(baseUrl: string, apiKey: string) {
     validateClientParams(baseUrl, apiKey, "LIDARR");
+
+    this.baseUrl = baseUrl;
 
     const httpClient = new KyHttpClient({
       headers: {
@@ -304,24 +326,24 @@ export class LidarrClient implements IArrClient<QualityProfileResource, QualityD
 
   // Metadata Profiles
   async getMetadataProfiles() {
-    await fetchMetadataProfileSchema(this.api);
+    await fetchMetadataProfileSchema(this.api, this.baseUrl);
     return this.api.v1MetadataprofileList();
   }
 
   async createMetadataProfile(profile: MetadataProfileResource) {
-    await fetchMetadataProfileSchema(this.api);
-    const payload = normalizeMetadataProfileForLidarr(profile);
+    const schema = await fetchMetadataProfileSchema(this.api, this.baseUrl);
+    const payload = normalizeMetadataProfileForLidarr(profile, schema);
     return this.api.v1MetadataprofileCreate(payload);
   }
 
   async updateMetadataProfile(id: string, profile: MetadataProfileResource) {
-    await fetchMetadataProfileSchema(this.api);
-    const payload = normalizeMetadataProfileForLidarr(profile);
+    const schema = await fetchMetadataProfileSchema(this.api, this.baseUrl);
+    const payload = normalizeMetadataProfileForLidarr(profile, schema);
     return this.api.v1MetadataprofileUpdate(id, payload);
   }
 
   async deleteMetadataProfile(id: string) {
-    return this.api.v1MetadataprofileDelete(id);
+    return this.api.v1MetadataprofileDelete(Number(id));
   }
 
   async getNaming() {
