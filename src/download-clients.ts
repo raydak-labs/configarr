@@ -3,40 +3,8 @@ import { getUnifiedClient } from "./clients/unified-client";
 import { logger } from "./logger";
 import { ArrType } from "./types/common.types";
 import { InputConfigDownloadClient, MergedConfigInstance } from "./types/config.types";
+import type { DownloadClientResource, Field as DownloadClientField, TagResource as DownloadClientTagResource } from "./__generated__/radarr/data-contracts";
 import { cloneWithJSON } from "./util";
-
-export interface DownloadClientResource {
-  id?: number;
-  enable?: boolean;
-  protocol?: string;
-  priority?: number;
-  removeCompletedDownloads?: boolean;
-  removeFailedDownloads?: boolean;
-  name?: string | null;
-  fields?: DownloadClientField[];
-  implementationName?: string;
-  implementation?: string;
-  configContract?: string;
-  infoLink?: string;
-  tags?: number[];
-}
-
-export interface DownloadClientField {
-  order?: number;
-  name?: string;
-  label?: string;
-  value?: any;
-  type?: string;
-  advanced?: boolean;
-  helpText?: string;
-  selectOptions?: { value: any; name: string; order: number; hint?: string }[];
-  isFloat?: boolean;
-}
-
-export interface TagResource {
-  id?: number;
-  label?: string;
-}
 
 export interface ValidationResult {
   valid: boolean;
@@ -62,7 +30,7 @@ type DownloadClientDiff = {
  */
 const resolveTagNamesToIds = (
   tagNames: (string | number)[],
-  serverTags: TagResource[],
+  serverTags: DownloadClientTagResource[],
 ): { ids: number[]; missingTags: string[] } => {
   const ids: number[] = [];
   const missingTags: string[] = [];
@@ -143,22 +111,50 @@ const testDownloadClientConnection = async (
     await api.testDownloadClient(clientPayload);
     return { success: true, message: "Connection successful" };
   } catch (error: any) {
-    const errorMessage = error.message || String(error);
-    
-    // Parse common error types
-    if (errorMessage.includes("connection refused") || errorMessage.includes("ECONNREFUSED")) {
-      return { success: false, error: "Connection refused - check host and port" };
-    } else if (errorMessage.includes("timeout") || errorMessage.includes("ETIMEDOUT")) {
-      return { success: false, error: "Connection timeout - check network connectivity" };
-    } else if (errorMessage.includes("unauthorized") || errorMessage.includes("401")) {
-      return { success: false, error: "Authentication failed - check username/password/API key" };
-    } else if (errorMessage.includes("not found") || errorMessage.includes("404")) {
-      return { success: false, error: "Endpoint not found - check URL base path" };
-    } else {
-      return { success: false, error: errorMessage };
+    const errorMessage = error?.message || String(error);
+
+    // Extract structured details from HTTP responses when available
+    const status = error?.response?.status;
+    const data = error?.response?.data;
+
+    let structuredDetail: string | undefined;
+
+    if (data) {
+      if (typeof data === "string") {
+        structuredDetail = data;
+      } else if (typeof data === "object") {
+        const message = (data as any).message ?? (data as any).error;
+        const errors = Array.isArray((data as any).errors)
+          ? (data as any).errors
+              .map((e: any) => e.errorMessage ?? e.message ?? String(e))
+              .join("; ")
+          : undefined;
+
+        structuredDetail = [message, errors].filter(Boolean).join(" - ") || undefined;
+      }
     }
-  }
-};
+
+    const statusPrefix = status ? `HTTP ${status}` : "Connection test failed";
+    const structuredMessage = structuredDetail ? `${statusPrefix}: ${structuredDetail}` : statusPrefix;
+
+    // Parse common low-level error types
+    let friendly: string | undefined;
+    if (errorMessage.includes("connection refused") || errorMessage.includes("ECONNREFUSED")) {
+      friendly = "Connection refused - check host and port";
+    } else if (errorMessage.includes("timeout") || errorMessage.includes("ETIMEDOUT")) {
+      friendly = "Connection timeout - check network connectivity";
+    } else if (errorMessage.includes("unauthorized") || errorMessage.includes("401")) {
+      friendly = "Authentication failed - check username/password/API key";
+    } else if (errorMessage.includes("not found") || errorMessage.includes("404")) {
+      friendly = "Endpoint not found - check URL base path";
+    }
+
+    const parts = [friendly, structuredMessage, errorMessage].filter(
+      (part, index, self) => part && self.indexOf(part) === index,
+    ) as string[];
+
+    return { success: false, error: parts.join(" | ") };
+  }};
 
 /**
  * Get download client schema from server
@@ -187,13 +183,13 @@ const snakeToCamel = (str: string): string => {
  */
 const getCategoryFieldName = (arrType: ArrType): string => {
   switch (arrType) {
-    case "sonarr":
-    case "lidarr":
+    case "SONARR":
+    case "LIDARR":
       return "musicCategory";
-    case "radarr":
-    case "whisparr":
+    case "RADARR":
+    case "WHISPARR":
       return "movieCategory";
-    case "readarr":
+    case "READARR":
       return "bookCategory";
     default:
       return "musicCategory"; // Default fallback
@@ -352,7 +348,7 @@ const createDownloadClientFromConfig = async (
  * Check if two download clients are equal (ignoring ID)
  * Returns true if equal, false if different
  */
-const isDownloadClientEqual = (
+export const isDownloadClientEqual = (
   config: InputConfigDownloadClient,
   server: DownloadClientResource,
   cache: ServerCache,
@@ -360,10 +356,23 @@ const isDownloadClientEqual = (
 ): boolean => {
   // Compare basic properties
   if (config.name !== server.name) return false;
-  if ((config.enable ?? true) !== server.enable) return false;
-  if ((config.priority ?? 1) !== server.priority) return false;
-  if ((config.remove_completed_downloads ?? true) !== server.removeCompletedDownloads) return false;
-  if ((config.remove_failed_downloads ?? true) !== server.removeFailedDownloads) return false;
+
+  // Only compare top-level properties when they are explicitly specified in the config.
+  // When omitted in the config, they are treated as "do not manage" and do not affect equality.
+  if (config.enable !== undefined && config.enable !== server.enable) return false;
+  if (config.priority !== undefined && config.priority !== server.priority) return false;
+  if (
+    config.remove_completed_downloads !== undefined &&
+    config.remove_completed_downloads !== server.removeCompletedDownloads
+  ) {
+    return false;
+  }
+  if (
+    config.remove_failed_downloads !== undefined &&
+    config.remove_failed_downloads !== server.removeFailedDownloads
+  ) {
+    return false;
+  }
 
   // Compare implementation
   if (config.type.toLowerCase() !== server.implementation?.toLowerCase()) return false;
@@ -388,12 +397,28 @@ const isDownloadClientEqual = (
     }
   }
 
+  const serverFieldNames = new Set(
+    serverFields
+      .map((f) => f.name)
+      .filter((name): name is string => typeof name === "string" && name.length > 0),
+  );
+
+  for (const key of Object.keys(configFields)) {
+    if (!serverFieldNames.has(key) && configFields[key] !== undefined) {
+      // Config references a field that does not exist on the server; treat as different
+      return false;
+    }
+  }
+
   // Compare tags (resolve names to IDs first)
   const configTags = config.tags ?? [];
   const { ids: resolvedTagIds } = resolveTagNamesToIds(configTags, cache.tags);
   const serverTags = server.tags ?? [];
-  
-  if (JSON.stringify(resolvedTagIds.sort()) !== JSON.stringify(serverTags.sort())) {
+
+  const sortedConfigTagIds = [...resolvedTagIds].sort();
+  const sortedServerTags = [...serverTags].sort();
+
+  if (JSON.stringify(sortedConfigTagIds) !== JSON.stringify(sortedServerTags)) {
     return false;
   }
 
@@ -403,18 +428,26 @@ const isDownloadClientEqual = (
 /**
  * Determine if update should be partial (only specified fields) or full
  */
-const shouldUsePartialUpdate = (config: InputConfigDownloadClient): boolean => {
-  // If only some properties are specified, use partial update
-  const specifiedProps = [
+export const shouldUsePartialUpdate = (config: InputConfigDownloadClient): boolean => {
+  const hasFieldOverrides = !!(config.fields && Object.keys(config.fields).length > 0);
+
+  // When field overrides are present, default to full updates so that the config is authoritative
+  if (hasFieldOverrides) {
+    return false;
+  }
+
+  const hasTags = Array.isArray(config.tags) && config.tags.length > 0;
+
+  const specifiedTopLevelProps = [
     config.enable !== undefined,
     config.priority !== undefined,
     config.remove_completed_downloads !== undefined,
     config.remove_failed_downloads !== undefined,
-    config.fields && Object.keys(config.fields).length > 0,
+    hasTags,
   ].filter(Boolean).length;
 
-  // If less than 3 properties specified, assume partial update intent
-  return specifiedProps < 3;
+  // Only treat it as a partial update when the user is toggling a small subset of top-level properties
+  return specifiedTopLevelProps > 0 && specifiedTopLevelProps <= 2;
 };
 
 /**
@@ -454,24 +487,34 @@ const calculateDownloadClientDiff = (
 /**
  * Filter unmanaged download clients based on delete configuration
  */
-const filterUnmanagedClients = (
+export const filterUnmanagedClients = (
   serverClients: DownloadClientResource[],
   configClients: InputConfigDownloadClient[],
   deleteConfig: MergedConfigInstance["delete_unmanaged_download_clients"],
 ): DownloadClientResource[] => {
   const enabled = typeof deleteConfig === "boolean" ? deleteConfig : deleteConfig?.enabled ?? false;
-  
+
   if (!enabled) {
     return [];
   }
 
-  const ignore = typeof deleteConfig === "boolean" ? [] : deleteConfig?.ignore ?? [];
-  const configNames = new Set(configClients.map((c) => c.name));
+  const ignoreNames = typeof deleteConfig === "boolean" ? [] : deleteConfig?.ignore ?? [];
+
+  // Identify managed clients by a composite key of name + implementation
+  const configKeys = new Set(
+    configClients
+      .filter((c) => !!c.name && !!c.type)
+      .map((c) => `${c.name}::${c.type.toLowerCase()}`),
+  );
 
   return serverClients.filter((server) => {
     const name = server.name || "";
-    const isUnmanaged = !configNames.has(name);
-    const isIgnored = ignore.includes(name);
+    const implementation = server.implementation?.toLowerCase() ?? "";
+    const key = `${name}::${implementation}`;
+
+    const isUnmanaged = !configKeys.has(key);
+    const isIgnored = ignoreNames.includes(name);
+
     return isUnmanaged && !isIgnored;
   });
 };
@@ -505,26 +548,51 @@ export const syncDownloadClients = async (
   // Validate all configurations before making changes
   logger.debug("Validating download client configurations...");
   let hasValidationErrors = false;
-  
+
+  // Enforce unique names across all configured download clients
+  const nameCounts = new Map<string, number>();
+  for (const config of configClients) {
+    if (config.name) {
+      const current = nameCounts.get(config.name) ?? 0;
+      nameCounts.set(config.name, current + 1);
+    }
+  }
+
+  const validConfigClients: InputConfigDownloadClient[] = [];
+
   for (const config of configClients) {
     const validation = validateDownloadClient(config, schema);
-    
+    const duplicateCount = config.name ? nameCounts.get(config.name) ?? 0 : 0;
+    const isDuplicateName = !!config.name && duplicateCount > 1;
+
     if (!validation.valid) {
       logger.error(`Validation failed for download client '${config.name}': ${validation.errors.join(", ")}`);
       hasValidationErrors = true;
     }
-    
+
+    if (isDuplicateName) {
+      logger.error(
+        `Validation failed for download client '${config.name}': name must be unique (appears ${duplicateCount} times in configuration)`,
+      );
+      hasValidationErrors = true;
+    }
+
     if (validation.warnings.length > 0) {
       logger.warn(`Validation warnings for download client '${config.name}': ${validation.warnings.join(", ")}`);
+    }
+
+    if (validation.valid && !isDuplicateName) {
+      validConfigClients.push(config);
     }
   }
 
   if (hasValidationErrors) {
-    throw new Error("Download client configuration validation failed. Please fix errors and try again.");
+    logger.warn(
+      "One or more download client configurations are invalid and will be skipped. Valid clients will still be processed.",
+    );
   }
-
-  // Calculate diff
-  const diff = calculateDownloadClientDiff(configClients, serverClients, schema, cache, arrType);
+// Calculate diff (only using valid client configurations)
+  const diff = calculateDownloadClientDiff(validConfigClients, serverClients, schema, cache, arrType);
 
   logger.info(
     `Download clients diff - Create: ${diff.create.length}, Update: ${diff.update.length}, Unchanged: ${diff.unchanged.length}`,
