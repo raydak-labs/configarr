@@ -1,6 +1,15 @@
 {
   "permissions": {
-    "allow": ["Bash(pnpm test:*)"],
+    "allow": [
+      "Bash(pnpm test:*)",
+      "Skill(using-superpowers)",
+      "Skill(brainstorming)",
+      "Bash(pnpm typecheck)",
+      "Bash(git stash:*)",
+      "Bash(pnpm build:*)",
+      "Skill(superpowers:using-superpowers)",
+      "Skill(superpowers:verification-before-completion)"
+    ],
     "deny": [],
     "ask": []
   }

@@ -8,6 +8,7 @@ import {
   QualityProfileResource,
 } from "../__generated__/readarr/data-contracts";
 import { logger } from "../logger";
+import type { DownloadClientResource } from "../types/download-client.types";
 import { IArrClient, logConnectionError, validateClientParams } from "./unified-client";
 
 export class ReadarrClient
@@ -152,6 +153,32 @@ export class ReadarrClient
 
   async createTag(tag: any) {
     return this.api.v1TagCreate(tag);
+  }
+
+  // Download Clients
+  async getDownloadClientSchema(): Promise<DownloadClientResource[]> {
+    return this.api.v1DownloadclientSchemaList();
+  }
+
+  async getDownloadClients(): Promise<DownloadClientResource[]> {
+    return this.api.v1DownloadclientList();
+  }
+
+  async createDownloadClient(client: DownloadClientResource): Promise<DownloadClientResource> {
+    return this.api.v1DownloadclientCreate(client);
+  }
+
+  // Note: Readarr's v1 API expects string for update but number for delete
+  async updateDownloadClient(id: string, client: DownloadClientResource): Promise<DownloadClientResource> {
+    return this.api.v1DownloadclientUpdate(id, client);
+  }
+
+  async deleteDownloadClient(id: string): Promise<void> {
+    return this.api.v1DownloadclientDelete(+id);
+  }
+
+  async testDownloadClient(client: DownloadClientResource): Promise<any> {
+    return this.api.v1DownloadclientTestCreate(client);
   }
 
   // System/Health Check

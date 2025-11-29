@@ -94,6 +94,32 @@ sonarr:
     #   - from: RenamedExampleProfile
     #     to: ClonedProfile
 
+    # (experimental) Manage Sonarr download clients
+    #download_clients:
+    #  - name: "qBit 4K"
+    #    type: qbittorrent
+    #    enable: true
+    #    priority: 1
+    #    remove_completed_downloads: true
+    #    remove_failed_downloads: true
+    #    tags:
+    #      - "4K"
+    #      - "Anime"
+    #    fields:
+    #      host: qbittorrent
+    #      port: 8080
+    #      use_ssl: false
+    #      url_base: /
+    #      username: sonarr
+    #      password: changeme
+    #      category: series-4k
+
+    # (experimental) Delete unmanaged download clients
+    #delete_unmanaged_download_clients:
+    #  enabled: true
+    #  ignore:
+    #    - "Manual Test Client"
+
 radarr:
   instance1:
     # Set the URL/API Key to your actual instance
