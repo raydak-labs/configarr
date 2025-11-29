@@ -3,7 +3,7 @@ import { getUnifiedClient } from "./clients/unified-client";
 import { logger } from "./logger";
 import { ArrType } from "./types/common.types";
 import { InputConfigDownloadClient, MergedConfigInstance } from "./types/config.types";
-import type { DownloadClientResource, Field as DownloadClientField, TagResource as DownloadClientTagResource } from "./__generated__/radarr/data-contracts";
+import type { DownloadClientResource, DownloadClientField, DownloadClientTagResource } from "./types/download-client.types";
 import { cloneWithJSON } from "./util";
 
 export interface ValidationResult {
@@ -48,7 +48,10 @@ const resolveTagNamesToIds = (
     }
   }
 
-  return { ids, missingTags };
+  const uniqueIds = Array.from(new Set(ids));
+  const uniqueMissingTags = Array.from(new Set(missingTags));
+
+  return { ids: uniqueIds, missingTags: uniqueMissingTags };
 };
 
 /**
@@ -184,15 +187,17 @@ const snakeToCamel = (str: string): string => {
 const getCategoryFieldName = (arrType: ArrType): string => {
   switch (arrType) {
     case "SONARR":
-    case "LIDARR":
-      return "musicCategory";
+      return "tvCategory";
     case "RADARR":
     case "WHISPARR":
       return "movieCategory";
+    case "LIDARR":
+      return "musicCategory";
     case "READARR":
       return "bookCategory";
     default:
-      return "musicCategory"; // Default fallback
+      // tvCategory is a safer default for historical reasons
+      return "tvCategory";
   }
 };
 
@@ -688,4 +693,3 @@ export const syncDownloadClients = async (
 
   logger.info("✓ Download client synchronization complete");
 };
-

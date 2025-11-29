@@ -4,7 +4,7 @@ import {
   filterUnmanagedClients,
   isDownloadClientEqual,
 } from "./download-clients";
-import type { DownloadClientResource } from "./__generated__/radarr/data-contracts";
+import type { DownloadClientResource } from "./types/download-client.types";
 import type { InputConfigDownloadClient } from "./types/config.types";
 import type { ArrClientLanguageResource } from "./clients/unified-client";
 
@@ -144,4 +144,39 @@ describe("download-clients – equality & omission semantics", () => {
 
     expect(equal).toBe(false);
   });
+
+test("generic 'category' field is mapped to tvCategory for Sonarr", () => {
+  const cache = makeCache();
+
+  const server: DownloadClientResource = {
+    id: 1,
+    enable: true,
+    protocol: "torrent",
+    name: "client-1",
+    implementation: "qBittorrent",
+    priority: 1,
+    tags: [],
+    removeCompletedDownloads: true,
+    removeFailedDownloads: true,
+    configContract: "",
+    fields: [
+      {
+        name: "tvCategory",
+        value: "tv",
+      },
+    ],
+  };
+
+  const config: InputConfigDownloadClient = {
+    name: "client-1",
+    type: "qBittorrent",
+    fields: {
+      category: "tv",
+    },
+  };
+
+  const equal = isDownloadClientEqual(config, server, cache, "SONARR");
+
+  expect(equal).toBe(true);
+});
 });
