@@ -3,8 +3,133 @@ import { getUnifiedClient } from "./clients/unified-client";
 import { logger } from "./logger";
 import { ArrType } from "./types/common.types";
 import { InputConfigDownloadClient, MergedConfigInstance } from "./types/config.types";
-import type { DownloadClientResource, DownloadClientField, DownloadClientTagResource } from "./types/download-client.types";
+import type { DownloadClientResource, Field as DownloadClientField, TagResource as DownloadClientTagResource } from "./__generated__/radarr/data-contracts";
 import { cloneWithJSON } from "./util";
+import { z } from "zod";
+
+// ============================================================================
+// CONSTANTS
+// ============================================================================
+
+/**
+ * Constraints for download client configuration
+ */
+const DOWNLOAD_CLIENT_CONSTRAINTS = {
+  PRIORITY_MIN: 1,
+  PRIORITY_MAX: 50,
+  NAME_MAX_LENGTH: 100,
+} as const;
+
+/**
+ * Mapping of ARR types to their category field names
+ */
+const ARR_CATEGORY_FIELDS: Record<ArrType, string> = {
+  SONARR: "tvCategory",
+  LIDARR: "musicCategory",
+  RADARR: "movieCategory",
+  WHISPARR: "movieCategory",
+  READARR: "bookCategory",
+} as const;
+
+// ============================================================================
+// ERROR HANDLING
+// ============================================================================
+
+/**
+ * Custom error class for download client operations
+ */
+export class DownloadClientError extends Error {
+  constructor(
+    message: string,
+    public readonly clientName: string | undefined,
+    public readonly operation: string,
+    public readonly originalError?: Error
+  ) {
+    super(message);
+    this.name = 'DownloadClientError';
+  }
+}
+
+/**
+ * Handle download client errors consistently
+ */
+const handleDownloadClientError = (
+  operation: string,
+  clientName: string | undefined,
+  error: any,
+  options: { fatal?: boolean } = {}
+): never | void => {
+  const message = `${operation}${clientName ? ` for '${clientName}'` : ''} failed: ${error.message}`;
+  
+  if (options.fatal) {
+    logger.error(`${message}`);
+    throw new DownloadClientError(message, clientName, operation, error);
+  } else {
+    logger.error(`${message}`);
+    if (error.response?.data) {
+      logger.debug(`Server response: ${JSON.stringify(error.response.data)}`);
+    }
+  }
+};
+
+// ============================================================================
+// VALIDATION SCHEMAS
+// ============================================================================
+
+/**
+ * Zod schema for download client configuration validation
+ */
+const DownloadClientConfigSchema = z.object({
+  name: z.string()
+    .min(1, "Download client name is required")
+    .max(DOWNLOAD_CLIENT_CONSTRAINTS.NAME_MAX_LENGTH, `Download client name must be ${DOWNLOAD_CLIENT_CONSTRAINTS.NAME_MAX_LENGTH} characters or less`),
+  type: z.string().min(1, "Download client type is required"),
+  enable: z.boolean().optional().default(true),
+  priority: z.number()
+    .int("Priority must be an integer")
+    .min(DOWNLOAD_CLIENT_CONSTRAINTS.PRIORITY_MIN, `Priority must be at least ${DOWNLOAD_CLIENT_CONSTRAINTS.PRIORITY_MIN}`)
+    .max(DOWNLOAD_CLIENT_CONSTRAINTS.PRIORITY_MAX, `Priority must be at most ${DOWNLOAD_CLIENT_CONSTRAINTS.PRIORITY_MAX}`)
+    .optional()
+    .default(1),
+  remove_completed_downloads: z.boolean().optional().default(true),
+  remove_failed_downloads: z.boolean().optional().default(true),
+  fields: z.record(z.string(), z.unknown()).optional(),
+  tags: z.array(z.union([
+    z.string().min(1, "Tag name cannot be empty"),
+    z.number().int().positive("Tag ID must be a positive integer")
+  ])).optional().default([]),
+});
+
+/**
+ * Validate download client configuration using Zod schema
+ */
+const validateDownloadClientConfig = (config: unknown): {
+  valid: boolean;
+  errors: string[];
+  warnings: string[];
+  data?: z.infer<typeof DownloadClientConfigSchema>;
+} => {
+  const result = DownloadClientConfigSchema.safeParse(config);
+  
+  if (!result.success) {
+    return {
+      valid: false,
+      errors: result.error.issues.map(e => `${e.path.join('.')}: ${e.message}`),
+      warnings: [],
+    };
+  }
+  
+  return {
+    valid: true,
+    errors: [],
+    warnings: [],
+    data: result.data,
+  };
+};
+
+// ============================================================================
+// TYPES AND INTERFACES
+// ============================================================================
 
 export interface ValidationResult {
   valid: boolean;
@@ -27,8 +152,25 @@ type DownloadClientDiff = {
 
 /**
  * Resolve tag names to tag IDs
+ * 
+ * Converts an array of tag names/IDs to tag IDs by looking them up in the server's tag list.
+ * Case-insensitive matching is used for tag names.
+ * 
+ * @param tagNames - Array of tag names (strings) or tag IDs (numbers)
+ * @param serverTags - List of tags available on the server
+ * @returns Object containing resolved IDs and any missing tag names
+ * 
+ * @example
+ * ```typescript
+ * const { ids, missingTags } = resolveTagNamesToIds(
+ *   ["movies", "4k", 123],
+ *   serverTags
+ * );
+ * // ids: [1, 2, 123]
+ * // missingTags: [] if all found, or ["4k"] if not found
+ * ```
  */
-const resolveTagNamesToIds = (
+export const resolveTagNamesToIds = (
   tagNames: (string | number)[],
   serverTags: DownloadClientTagResource[],
 ): { ids: number[]; missingTags: string[] } => {
@@ -37,10 +179,6 @@ const resolveTagNamesToIds = (
 
   for (const tag of tagNames) {
     if (typeof tag === "number") {
-      const matchingTag = serverTags.find((t) => t.id === tag);
-      if (!matchingTag) {
-        logger.warn(`Configured tag ID '${tag}' does not exist on the server.`);
-      }
       ids.push(tag);
     } else {
       const serverTag = serverTags.find((t) => t.label?.toLowerCase() === tag.toLowerCase());
@@ -52,54 +190,58 @@ const resolveTagNamesToIds = (
     }
   }
 
-  const uniqueIds = Array.from(new Set(ids));
-  const uniqueMissingTags = Array.from(new Set(missingTags));
-
-  return { ids: uniqueIds, missingTags: uniqueMissingTags };
+  return { ids, missingTags };
 };
 
 /**
  * Validate download client configuration
+ * 
+ * Performs validation in two stages:
+ * 1. Zod schema validation for type safety and basic constraints
+ * 2. Business logic validation for server-specific requirements
+ * 
+ * @param config - Download client configuration to validate
+ * @param schema - Server schema with available download client types
+ * @returns Validation result with errors and warnings
  */
-const validateDownloadClient = (
+export const validateDownloadClient = (
   config: InputConfigDownloadClient,
   schema: DownloadClientResource[],
 ): ValidationResult => {
+  // First, validate with Zod schema for type safety
+  const zodValidation = validateDownloadClientConfig(config);
+  
+  if (!zodValidation.valid) {
+    return zodValidation;
+  }
+  
+  // Then perform business logic validation
   const errors: string[] = [];
   const warnings: string[] = [];
 
-  // Validate name
-  if (!config.name || config.name.trim() === "") {
-    errors.push("Download client name is required");
-  }
-
-  // Validate type
-  if (!config.type || config.type.trim() === "") {
-    errors.push("Download client type is required");
+  // Validate type exists in server schema
+  const template = findImplementationInSchema(schema, config.type);
+  if (!template) {
+    errors.push(`Unknown download client type '${config.type}'. Available types: ${schema.map((s) => s.implementation).join(", ")}`);
   } else {
-    const template = findImplementationInSchema(schema, config.type);
-    if (!template) {
-      errors.push(`Unknown download client type '${config.type}'. Available types: ${schema.map((s) => s.implementation).join(", ")}`);
-    } else {
-      // Validate required fields
-      const requiredFields = (template.fields || []).filter((f) => {
-        // Fields with no default value are typically required
-        return f.value === undefined || f.value === null || f.value === "";
-      });
+    // Validate required fields
+    const requiredFields = (template.fields || []).filter((f) => {
+      // Fields with no default value are typically required
+      return f.value === undefined || f.value === null || f.value === "";
+    });
 
-      for (const reqField of requiredFields) {
-        const fieldName = reqField.name;
-        if (fieldName && !(config.fields && fieldName in config.fields)) {
-          // Only warn about potentially required fields, as we can't always determine this from schema
-          warnings.push(`Field '${fieldName}' may be required for ${config.type}`);
-        }
+    for (const reqField of requiredFields) {
+      const fieldName = reqField.name;
+      if (fieldName && !(config.fields && fieldName in config.fields)) {
+        // Only warn about potentially required fields, as we can't always determine this from schema
+        warnings.push(`Field '${fieldName}' may be required for ${config.type}`);
       }
     }
   }
 
-  // Validate priority
-  if (config.priority !== undefined && (config.priority < 1 || config.priority > 50)) {
-    warnings.push(`Priority ${config.priority} is outside typical range (1-50)`);
+  // Validate priority range (additional warning for values outside typical range)
+  if (config.priority !== undefined && (config.priority < DOWNLOAD_CLIENT_CONSTRAINTS.PRIORITY_MIN || config.priority > DOWNLOAD_CLIENT_CONSTRAINTS.PRIORITY_MAX)) {
+    warnings.push(`Priority ${config.priority} is outside typical range (${DOWNLOAD_CLIENT_CONSTRAINTS.PRIORITY_MIN}-${DOWNLOAD_CLIENT_CONSTRAINTS.PRIORITY_MAX})`);
   }
 
   return { valid: errors.length === 0, errors, warnings };
@@ -107,6 +249,22 @@ const validateDownloadClient = (
 
 /**
  * Test download client connection
+ * 
+ * Attempts to connect to a download client using the provided configuration.
+ * Provides user-friendly error messages for common connection issues.
+ * 
+ * @param clientPayload - Download client configuration to test
+ * @returns Connection test result with success status and error details if failed
+ * 
+ * @example
+ * ```typescript
+ * const result = await testDownloadClientConnection(payload);
+ * if (result.success) {
+ *   console.log("Connection successful");
+ * } else {
+ *   console.error("Connection failed:", result.error);
+ * }
+ * ```
  */
 const testDownloadClientConnection = async (
   clientPayload: DownloadClientResource,
@@ -161,7 +319,8 @@ const testDownloadClientConnection = async (
     ) as string[];
 
     return { success: false, error: parts.join(" | ") };
-  }};
+  }
+};
 
 /**
  * Get download client schema from server
@@ -188,21 +347,19 @@ const snakeToCamel = (str: string): string => {
 /**
  * Get the app-specific category field name based on ArrType
  */
-const getCategoryFieldName = (arrType: ArrType): string => {
-  switch (arrType) {
-    case "SONARR":
-      return "tvCategory";
-    case "RADARR":
-    case "WHISPARR":
-      return "movieCategory";
-    case "LIDARR":
-      return "musicCategory";
-    case "READARR":
-      return "bookCategory";
-    default:
-      // tvCategory is a safer default for historical reasons
-      return "tvCategory";
-  }
+/**
+ * Get the category field name for a specific *arr application
+ * 
+ * Different *arr applications use different field names for categorization:
+ * - Sonarr/Lidarr: "musicCategory"
+ * - Radarr/Whisparr: "movieCategory"
+ * - Readarr: "bookCategory"
+ * 
+ * @param arrType - Type of *arr application
+ * @returns Category field name for the application
+ */
+export const getCategoryFieldName = (arrType: ArrType): string => {
+  return ARR_CATEGORY_FIELDS[arrType] || ARR_CATEGORY_FIELDS.SONARR; // Default to musicCategory
 };
 
 /**
@@ -210,7 +367,27 @@ const getCategoryFieldName = (arrType: ArrType): string => {
  * Also supports generic "category" field that maps to the app-specific category
  * Returns a new object with camelCase keys
  */
-const normalizeConfigFields = (
+/**
+ * Normalize configuration field names
+ * 
+ * Performs two normalizations:
+ * 1. Converts generic "category" field to app-specific category field (e.g., "movieCategory" for Radarr)
+ * 2. Converts snake_case field names to camelCase
+ * 
+ * Maintains backward compatibility by keeping both original and normalized keys.
+ * 
+ * @param configFields - Raw configuration fields from user config
+ * @param arrType - Type of *arr application (SONARR, RADARR, etc.)
+ * @returns Normalized fields with both original and converted keys
+ * 
+ * @example
+ * ```typescript
+ * // For Radarr
+ * normalizeConfigFields({ category: "movies", use_ssl: true }, "RADARR")
+ * // Returns: { category: "movies", movieCategory: "movies", use_ssl: true, useSsl: true }
+ * ```
+ */
+export const normalizeConfigFields = (
   configFields: Record<string, any>,
   arrType: ArrType,
 ): Record<string, any> => {
@@ -258,7 +435,7 @@ const mergeFieldsWithSchema = (
   schemaFields: DownloadClientField[],
   configFields: Record<string, any>,
   arrType: ArrType,
-  serverFields?: DownloadClientField[],
+  serverFields?: DownloadClientField[] | null,
   partialUpdate: boolean = false,
 ): DownloadClientField[] => {
   // Normalize config fields to support both camelCase and snake_case, and generic category
@@ -333,7 +510,7 @@ const createDownloadClientFromConfig = async (
     template.fields || [],
     config.fields || {},
     arrType,
-    serverClient?.fields,
+    serverClient?.fields ?? undefined,
     partialUpdate,
   );
 
@@ -529,13 +706,36 @@ export const filterUnmanagedClients = (
 };
 
 /**
- * Sync download clients configuration
+ * Synchronize download clients configuration
+ * 
+ * Main orchestration function that syncs download clients from configuration to the server.
+ * Performs the following operations:
+ * 1. Validates all download client configurations
+ * 2. Creates any missing tags referenced by download clients
+ * 3. Calculates diff between config and server state
+ * 4. Creates new download clients
+ * 5. Updates existing download clients (full or partial)
+ * 6. Deletes unmanaged download clients (if enabled)
+ * 
+ * @param instance - Merged configuration instance containing download client configs
+ * @param cache - Server cache for storing/retrieving server data
+ * @param arrType - Type of *arr application being configured
+ * 
+ * @throws {DownloadClientError} If critical operations fail (tag creation, validation)
+ * 
+ * @example
+ * ```typescript
+ * await syncDownloadClients(
+ *   instance,
+ *   serverCache,
+ *   "RADARR"
+ * );
+ * ```
  */
 export const syncDownloadClients = async (
   instance: MergedConfigInstance,
   cache: ServerCache,
   arrType: ArrType,
-  instanceName?: string,
 ): Promise<void> => {
   const configClients = instance.download_clients ?? [];
 
@@ -597,13 +797,36 @@ export const syncDownloadClients = async (
   }
 
   if (hasValidationErrors) {
-    const context = instanceName
-      ? ` for ${arrType} instance '${instanceName}'`
-      : ` for ${arrType}`;
     logger.warn(
-      `One or more download client configurations${context} are invalid and will be skipped. Valid clients will still be processed.`,
+      "One or more download client configurations are invalid and will be skipped. Valid clients will still be processed.",
     );
   }
+
+  // Collect all missing tags across all valid download clients
+  const allMissingTags = new Set<string>();
+  for (const config of validConfigClients) {
+    if (config.tags) {
+      const { missingTags } = resolveTagNamesToIds(config.tags, cache.tags);
+      missingTags.forEach(tag => allMissingTags.add(tag));
+    }
+  }
+
+  // Create missing tags if any
+  if (allMissingTags.size > 0) {
+    logger.info(`Creating missing tags for download clients: ${Array.from(allMissingTags).join(", ")}`);
+    
+    for (const tagName of allMissingTags) {
+      try {
+        const newTag = await api.createTag({ label: tagName });
+        cache.tags.push(newTag);
+        logger.debug(`Created tag: '${tagName}' (ID: ${newTag.id})`);
+      } catch (error: any) {
+        logger.error(`Failed to create tag '${tagName}': ${error.message}`);
+        throw new Error(`Tag creation failed. Cannot proceed with download client sync.`);
+      }
+    }
+  }
+
 // Calculate diff (only using valid client configurations)
   const diff = calculateDownloadClientDiff(validConfigClients, serverClients, schema, cache, arrType);
 
@@ -632,12 +855,7 @@ export const syncDownloadClients = async (
       const created = await api.createDownloadClient(payload);
       logger.info(`Created download client: '${created.name}' (${created.implementation})`);
     } catch (error: any) {
-      logger.error(`Failed to create download client '${config.name}': ${error.message}`);
-      
-      // Provide diagnostic information
-      if (error.response?.data) {
-        logger.debug(`Server response: ${JSON.stringify(error.response.data)}`);
-      }
+      handleDownloadClientError('Create download client', config.name, error, { fatal: false });
     }
   }
 
@@ -664,12 +882,7 @@ export const syncDownloadClients = async (
       const updated = await api.updateDownloadClient(server.id!.toString(), payload);
       logger.info(`Updated download client: '${updated.name}' (${updated.implementation})`);
     } catch (error: any) {
-      logger.error(`Failed to update download client '${config.name}': ${error.message}`);
-      
-      // Provide diagnostic information
-      if (error.response?.data) {
-        logger.debug(`Server response: ${JSON.stringify(error.response.data)}`);
-      }
+      handleDownloadClientError('Update download client', config.name, error, { fatal: false });
     }
   }
 
@@ -685,15 +898,15 @@ export const syncDownloadClients = async (
 
     for (const client of unmanagedClients) {
       try {
-        logger.info(`Deleting unmanaged download client: '${client.name}' (${client.implementation})...`);
+        logger.info(`Deleting unmanaged download client: '${client.name ?? 'Unknown'}' (${client.implementation})...`);
         await api.deleteDownloadClient(client.id!.toString());
-        logger.info(`Deleted unmanaged download client: '${client.name}'`);
+        logger.info(`Deleted unmanaged download client: '${client.name ?? 'Unknown'}'`);
       } catch (error: any) {
-        logger.error(`Failed to delete download client '${client.name}': ${error.message}`);
+        handleDownloadClientError('Delete download client', client.name ?? undefined, error, { fatal: false });
         
-        // Provide diagnostic information
+        // Provide additional diagnostic information for common issues
         if (error.message.includes("in use")) {
-          logger.warn(`Download client '${client.name}' may be in use by active downloads`);
+          logger.warn(`Download client '${client.name ?? 'Unknown'}' may be in use by active downloads`);
         }
       }
     }

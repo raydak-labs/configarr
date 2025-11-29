@@ -30,12 +30,7 @@ import { TrashArrSupportedConst, TrashQualityDefinition, TrashQualityDefinitionQ
 import { isInConstArray } from "./util";
 import { syncRootFolders } from "./rootFolder/rootFolderSyncer";
 
-const pipeline = async (
-  globalConfig: InputConfigSchema,
-  instanceConfig: InputConfigArrInstance,
-  arrType: ArrType,
-  instanceName: string,
-) => {
+const pipeline = async (globalConfig: InputConfigSchema, instanceConfig: InputConfigArrInstance, arrType: ArrType) => {
   const api = getUnifiedClient();
 
   const system = await api.getSystemStatus();
@@ -290,7 +285,7 @@ const pipeline = async (
 
           for (const profile of delayProfilesDiff.additionalProfiles) {
             const mappedProfile = mapToServerDelayProfile(profile, serverCache.tags);
-            api.createDelayProfile(mappedProfile); // Create or update profile
+            await api.createDelayProfile(mappedProfile); // Create or update profile
           }
         }
 
@@ -302,12 +297,12 @@ const pipeline = async (
   // Download Clients
   if (config.download_clients || config.delete_unmanaged_download_clients) {
     if (getEnvs().DRY_RUN) {
-      logger.info(`DryRun: Would sync download clients for ${arrType} instance '${instanceName}'.`);
+      logger.info("DryRun: Would sync download clients.");
     } else {
       try {
-        await syncDownloadClients(config, serverCache, arrType, instanceName);
+        await syncDownloadClients(config, serverCache, arrType);
       } catch (err: any) {
-        logger.error(`Failed to sync download clients for ${arrType} instance '${instanceName}': ${err.message}`);
+        logger.error(`Failed to sync download clients: ${err.message}`);
       }
     }
   }
@@ -342,7 +337,7 @@ const runArrType = async (
 
     try {
       await configureApi(arrType, instance.base_url, instance.api_key);
-      await pipeline(globalConfig, instance, arrType, instanceName);
+      await pipeline(globalConfig, instance, arrType);
       status.success++;
     } catch (err: any) {
       logger.error(
