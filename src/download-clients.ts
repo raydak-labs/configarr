@@ -626,13 +626,13 @@ export const syncDownloadClients = async (
         logger.warn(`Connection test failed for '${config.name}': ${testResult.error}`);
         logger.warn(`Creating anyway - you may need to fix connection settings`);
       } else {
-        logger.debug(`✓ Connection test passed for '${config.name}'`);
+        logger.debug(`Connection test passed for '${config.name}'`);
       }
       
       const created = await api.createDownloadClient(payload);
-      logger.info(`✓ Created download client: '${created.name}' (${created.implementation})`);
+      logger.info(`Created download client: '${created.name}' (${created.implementation})`);
     } catch (error: any) {
-      logger.error(`✗ Failed to create download client '${config.name}': ${error.message}`);
+      logger.error(`Failed to create download client '${config.name}': ${error.message}`);
       
       // Provide diagnostic information
       if (error.response?.data) {
@@ -658,13 +658,13 @@ export const syncDownloadClients = async (
         logger.warn(`Connection test failed for '${config.name}': ${testResult.error}`);
         logger.warn(`Updating anyway - you may need to fix connection settings`);
       } else {
-        logger.debug(`✓ Connection test passed for '${config.name}'`);
+        logger.debug(`Connection test passed for '${config.name}'`);
       }
       
       const updated = await api.updateDownloadClient(server.id!.toString(), payload);
-      logger.info(`✓ Updated download client: '${updated.name}' (${updated.implementation})`);
+      logger.info(`Updated download client: '${updated.name}' (${updated.implementation})`);
     } catch (error: any) {
-      logger.error(`✗ Failed to update download client '${config.name}': ${error.message}`);
+      logger.error(`Failed to update download client '${config.name}': ${error.message}`);
       
       // Provide diagnostic information
       if (error.response?.data) {
@@ -687,9 +687,9 @@ export const syncDownloadClients = async (
       try {
         logger.info(`Deleting unmanaged download client: '${client.name}' (${client.implementation})...`);
         await api.deleteDownloadClient(client.id!.toString());
-        logger.info(`✓ Deleted unmanaged download client: '${client.name}'`);
+        logger.info(`Deleted unmanaged download client: '${client.name}'`);
       } catch (error: any) {
-        logger.error(`✗ Failed to delete download client '${client.name}': ${error.message}`);
+        logger.error(`Failed to delete download client '${client.name}': ${error.message}`);
         
         // Provide diagnostic information
         if (error.message.includes("in use")) {
@@ -699,5 +699,5 @@ export const syncDownloadClients = async (
     }
   }
 
-  logger.info("✓ Download client synchronization complete");
+  logger.info("Download client synchronization complete");
 };
