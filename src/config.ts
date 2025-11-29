@@ -742,6 +742,16 @@ export const mergeConfigsAndTemplates = async (
     mergedTemplates.delay_profiles = instanceConfig.delay_profiles;
   }
 
+  // Merge download_clients if defined in instanceConfig
+  if (instanceConfig.download_clients) {
+    mergedTemplates.download_clients = [...(mergedTemplates.download_clients || []), ...instanceConfig.download_clients];
+  }
+
+  // Merge delete_unmanaged_download_clients if defined in instanceConfig
+  if (instanceConfig.delete_unmanaged_download_clients !== undefined) {
+    mergedTemplates.delete_unmanaged_download_clients = instanceConfig.delete_unmanaged_download_clients;
+  }
+
   if (mergedTemplates.custom_formats && mergedTemplates.custom_formats.length > 0) {
     // Merge custom formats with same trash_ids
     mergedTemplates.custom_formats = mergeAndReduceCustomFormats(mergedTemplates.custom_formats);

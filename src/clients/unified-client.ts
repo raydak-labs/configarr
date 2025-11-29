@@ -145,6 +145,14 @@ export interface IArrClient<
   // deleteTag(id: string): Promise<void>;
   // updateTag(id: string, tag: any): Promise<any>;
 
+  // Download Clients
+  getDownloadClientSchema(): Promise<any[]>;
+  getDownloadClients(): Promise<any[]>;
+  createDownloadClient(client: any): Promise<any>;
+  updateDownloadClient(id: string, client: any): Promise<any>;
+  deleteDownloadClient(id: string): Promise<void>;
+  testDownloadClient(client: any): Promise<any>;
+
   // System/Health Check
   getSystemStatus(): Promise<any>;
   testConnection(): Promise<boolean>;
@@ -287,6 +295,30 @@ export class UnifiedClient implements IArrClient {
 
   async createTag(tag: any) {
     return this.api.createTag(tag);
+  }
+
+  async getDownloadClientSchema() {
+    return this.api.getDownloadClientSchema();
+  }
+
+  async getDownloadClients() {
+    return this.api.getDownloadClients();
+  }
+
+  async createDownloadClient(client: any) {
+    return this.api.createDownloadClient(client);
+  }
+
+  async updateDownloadClient(id: string, client: any) {
+    return this.api.updateDownloadClient(id, client);
+  }
+
+  async deleteDownloadClient(id: string) {
+    return this.api.deleteDownloadClient(id);
+  }
+
+  async testDownloadClient(client: any) {
+    return this.api.testDownloadClient(client);
   }
 
   async getSystemStatus() {

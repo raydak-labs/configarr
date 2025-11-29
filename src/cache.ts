@@ -14,6 +14,7 @@ export class ServerCache {
   private _cf: MergedCustomFormatResource[];
   private _tags: MergedTagResource[] = [];
   private _languages: ArrClientLanguageResource[];
+  private _downloadClientSchema: any[] | null = null;
 
   constructor(
     qd: MergedQualityDefinitionResource[],
@@ -91,5 +92,13 @@ export class ServerCache {
       logger.debug(`No Tags received from server.`);
     }
     this._tags = newTags;
+  }
+
+  public getDownloadClientSchema(): any[] | null {
+    return this._downloadClientSchema;
+  }
+
+  public setDownloadClientSchema(schema: any[]): void {
+    this._downloadClientSchema = schema;
   }
 }

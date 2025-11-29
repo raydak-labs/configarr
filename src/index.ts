@@ -10,6 +10,7 @@ import { configureApi, getUnifiedClient, unsetApi } from "./clients/unified-clie
 import { getConfig, mergeConfigsAndTemplates } from "./config";
 import { calculateCFsToManage, deleteCustomFormat, loadCustomFormatDefinitions, loadServerCustomFormats, manageCf } from "./custom-formats";
 import { calculateDelayProfilesDiff, deleteAdditionalDelayProfiles, mapToServerDelayProfile } from "./delay-profiles";
+import { syncDownloadClients } from "./download-clients";
 import { logger, logHeading, logInstanceHeading } from "./logger";
 import { calculateMediamanagementDiff, calculateNamingDiff } from "./media-management";
 import { calculateQualityDefinitionDiff, loadQualityDefinitionFromServer } from "./quality-definitions";
@@ -289,6 +290,19 @@ const pipeline = async (globalConfig: InputConfigSchema, instanceConfig: InputCo
         }
 
         logger.info(`Successfully synched delay profiles.`);
+      }
+    }
+  }
+
+  // Download Clients
+  if (config.download_clients || config.delete_unmanaged_download_clients) {
+    if (getEnvs().DRY_RUN) {
+      logger.info("DryRun: Would sync download clients.");
+    } else {
+      try {
+        await syncDownloadClients(config, serverCache, arrType);
+      } catch (err: any) {
+        logger.error(`Failed to sync download clients: ${err.message}`);
       }
     }
   }

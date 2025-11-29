@@ -140,6 +140,31 @@ export class SonarrClient implements IArrClient<QualityProfileResource, QualityD
     return this.api.v3TagCreate(tag);
   }
 
+  // Download Clients
+  async getDownloadClientSchema() {
+    return this.api.v3DownloadclientSchemaList();
+  }
+
+  async getDownloadClients() {
+    return this.api.v3DownloadclientList();
+  }
+
+  async createDownloadClient(client: any) {
+    return this.api.v3DownloadclientCreate(client);
+  }
+
+  async updateDownloadClient(id: string, client: any) {
+    return this.api.v3DownloadclientUpdate(id, client);
+  }
+
+  async deleteDownloadClient(id: string) {
+    return this.api.v3DownloadclientDelete(+id);
+  }
+
+  async testDownloadClient(client: any) {
+    return this.api.v3DownloadclientTestCreate(client);
+  }
+
   // System/Health Check
   getSystemStatus() {
     return this.api.v3SystemStatusList();

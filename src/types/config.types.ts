@@ -127,6 +127,24 @@ export type InputConfigArrInstance = {
     default?: InputConfigDelayProfile;
     additional?: InputConfigDelayProfile[];
   };
+  /**
+   * @experimental
+   * Download clients configuration
+   */
+  download_clients?: InputConfigDownloadClient[];
+  /**
+   * @experimental
+   * Delete unmanaged download clients
+   */
+  delete_unmanaged_download_clients?:
+    | boolean
+    | {
+        enabled: boolean;
+        /**
+         * Names of download clients to ignore deleting
+         */
+        ignore?: string[];
+      };
 } & Pick<InputConfigSchema, "customFormatDefinitions">;
 
 export type InputConfigDelayProfile = {
@@ -140,6 +158,46 @@ export type InputConfigDelayProfile = {
   minimumCustomFormatScore?: number;
   order?: number;
   tags?: string[];
+};
+
+export type InputConfigDownloadClient = {
+  /**
+   * Download client name (must be unique)
+   */
+  name: string;
+  /**
+   * Download client type/implementation (e.g., "qbittorrent", "transmission", "sabnzbd")
+   */
+  type: string;
+  /**
+   * Whether the download client is enabled
+   * @default true
+   */
+  enable?: boolean;
+  /**
+   * Download client priority
+   * @default 1
+   */
+  priority?: number;
+  /**
+   * Remove completed downloads
+   * @default true
+   */
+  remove_completed_downloads?: boolean;
+  /**
+   * Remove failed downloads
+   * @default true
+   */
+  remove_failed_downloads?: boolean;
+  /**
+   * Field configuration (host, port, username, password, etc.)
+   */
+  fields?: Record<string, any>;
+  /**
+   * Tags to apply to this download client (can be tag names or IDs)
+   * Tag names will be automatically resolved to IDs, creating new tags if needed
+   */
+  tags?: (string | number)[];
 };
 
 export type MediaManagementType = {

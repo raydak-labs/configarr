@@ -150,6 +150,31 @@ export class ReadarrClient
     return this.api.v1TagCreate(tag);
   }
 
+  // Download Clients
+  async getDownloadClientSchema() {
+    return this.api.v1DownloadclientSchemaList();
+  }
+
+  async getDownloadClients() {
+    return this.api.v1DownloadclientList();
+  }
+
+  async createDownloadClient(client: any) {
+    return this.api.v1DownloadclientCreate(client);
+  }
+
+  async updateDownloadClient(id: string, client: any) {
+    return this.api.v1DownloadclientUpdate(id, client);
+  }
+
+  async deleteDownloadClient(id: string) {
+    return this.api.v1DownloadclientDelete(+id);
+  }
+
+  async testDownloadClient(client: any) {
+    return this.api.v1DownloadclientTestCreate(client);
+  }
+
   // System/Health Check
   getSystemStatus() {
     return this.api.v1SystemStatusList();
