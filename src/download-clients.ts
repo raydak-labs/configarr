@@ -158,6 +158,14 @@ type DownloadClientDiff = {
 };
 
 /**
+ * Generic tag type for tag resolution operations.
+ * 
+ * This type represents the minimal tag structure needed for tag name/ID resolution,
+ * compatible with both DownloadClientTagResource and MergedTagResource.
+ */
+export type TagLike = { id?: number; label?: string | null };
+
+/**
  * Resolve tag names to tag IDs
  * 
  * Converts an array of tag names/IDs to tag IDs by looking them up in the server's tag list.
@@ -179,7 +187,7 @@ type DownloadClientDiff = {
  */
 export const resolveTagNamesToIds = (
   tagNames: (string | number)[],
-  serverTags: DownloadClientTagResource[],
+  serverTags: TagLike[],
 ): { ids: number[]; missingTags: string[] } => {
   const ids: number[] = [];
   const missingTags: string[] = [];
@@ -188,7 +196,7 @@ export const resolveTagNamesToIds = (
     if (typeof tag === "number") {
       ids.push(tag);
     } else {
-      const serverTag = serverTags.find((t: DownloadClientTagResource) => t.label?.toLowerCase() === tag.toLowerCase());
+      const serverTag = serverTags.find((t: TagLike) => t.label?.toLowerCase() === tag.toLowerCase());
       if (serverTag && serverTag.id) {
         ids.push(serverTag.id);
       } else {
@@ -490,26 +498,17 @@ const createDownloadClientFromConfig = async (
     throw new Error(`Download client implementation '${config.type}' not found in schema`);
   }
 
-  // Resolve tag names to IDs
+  // Resolve tag names to IDs (all tags should exist by this point due to batch creation in syncDownloadClients)
   let tagIds: number[] = [];
   if (config.tags && config.tags.length > 0) {
     const { ids, missingTags } = resolveTagNamesToIds(config.tags, cache.tags);
     
     if (missingTags.length > 0) {
-      logger.info(`Creating missing tags for download client '${config.name}': ${missingTags.join(", ")}`);
-      const api = getUnifiedClient();
-      
-      for (const tagName of missingTags) {
-        try {
-          const newTag = await api.createTag({ label: tagName });
-          cache.tags.push(newTag);
-          if (newTag.id) {
-            ids.push(newTag.id);
-          }
-        } catch (error: any) {
-          logger.warn(`Failed to create tag '${tagName}': ${error.message}`);
-        }
-      }
+      // This should not happen as tags are created in batch before this function is called
+      logger.warn(
+        `Missing tags for download client '${config.name}': ${missingTags.join(", ")}. ` +
+        `These should have been created during batch tag creation.`
+      );
     }
     
     tagIds = ids;
@@ -651,7 +650,6 @@ export const shouldUsePartialUpdate = (config: InputConfigDownloadClient): boole
 const calculateDownloadClientDiff = (
   configClients: InputConfigDownloadClient[],
   serverClients: DownloadClientResource[],
-  schema: DownloadClientResource[],
   cache: ServerCache,
   arrType: ArrType,
 ): DownloadClientDiff => {
@@ -837,7 +835,7 @@ export const syncDownloadClients = async (
   }
 
 // Calculate diff (only using valid client configurations)
-  const diff = calculateDownloadClientDiff(validConfigClients, serverClients, schema, cache, arrType);
+  const diff = calculateDownloadClientDiff(validConfigClients, serverClients, cache, arrType);
 
   logger.info(
     `Download clients diff - Create: ${diff.create.length}, Update: ${diff.update.length}, Unchanged: ${diff.unchanged.length}`,

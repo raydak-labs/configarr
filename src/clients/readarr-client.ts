@@ -164,6 +164,7 @@ export class ReadarrClient
     return this.api.v1DownloadclientCreate(client);
   }
 
+  // Note: Readarr's v1 API expects string for update but number for delete
   async updateDownloadClient(id: string, client: DownloadClientResource): Promise<DownloadClientResource> {
     return this.api.v1DownloadclientUpdate(id, client);
   }

@@ -172,6 +172,7 @@ export class WhisparrClient
     return this.api.v3DownloadclientCreate(client);
   }
 
+  // Note: Whisparr's v3 API expects string for update but number for delete
   async updateDownloadClient(id: string, client: DownloadClientResource): Promise<DownloadClientResource> {
     return this.api.v3DownloadclientUpdate(id, client);
   }

@@ -608,7 +608,7 @@ applications (for example qBittorrent, Transmission, SABnzbd, etc.).
 
 This allows you to **declare** all download clients in `config.yml`. Configarr will:
 
-- Create download clients that exist in config but not in the *Arr instance
+- Create download clients that exist in the config but not in the *Arr instance
 - Update existing download clients (matched by **name + type/implementation**)
 - Optionally delete unmanaged download clients
 
