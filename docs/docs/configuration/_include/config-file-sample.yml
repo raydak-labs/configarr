@@ -112,6 +112,32 @@ sonarr:
 
     # naming from recyclarr: https://recyclarr.dev/wiki/yaml/config-reference/media-naming/
     #media_naming: {}
+    # (experimental) Manage download clients
+    #download_clients:
+    #  - name: "Primary qBittorrent"
+    #    type: qbittorrent
+    #    enable: true
+    #    priority: 1
+    #    remove_completed_downloads: true
+    #    remove_failed_downloads: true
+    #    tags:
+    #      - "4K"
+    #      - "High Quality"
+    #    fields:
+    #      host: qbittorrent
+    #      port: 8080
+    #      use_ssl: false
+    #      url_base: /
+    #      username: sonarr
+    #      password: changeme
+    #      category: series-4k
+
+    # (experimental) Delete unmanaged download clients
+    #delete_unmanaged_download_clients:
+    #  enabled: true
+    #  ignore:
+    #    - "Manual Test Client"
+
 
     # (experimental) since v1.12.0
     # allows using the cf-groups from TRaSH-Guide.

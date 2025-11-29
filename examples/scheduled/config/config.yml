@@ -18,3 +18,28 @@ radarr:
       - template: radarr-custom-formats-hd-bluray-web
 
     custom_formats: []
+    # (experimental) Manage Radarr download clients
+    #download_clients:
+    #  - name: "qBit Movies"
+    #    type: qbittorrent
+    #    enable: true
+    #    priority: 1
+    #    remove_completed_downloads: true
+    #    remove_failed_downloads: true
+    #    tags:
+    #      - "Movies"
+    #    fields:
+    #      host: qbittorrent
+    #      port: 8080
+    #      use_ssl: false
+    #      url_base: /
+    #      username: radarr
+    #      password: changeme
+    #      category: movies
+
+    # (experimental) Delete unmanaged download clients
+    #delete_unmanaged_download_clients:
+    #  enabled: true
+    #  ignore:
+    #    - "Manual Test Client"
+

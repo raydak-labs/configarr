@@ -536,6 +536,65 @@ Notes:
 
 See example [Radarr API DelayProfile](https://radarr.video/docs/api/#/DelayProfile) for more details on available fields.
 
+
+## Download Clients
+
+Configarr can (experimentally) manage the **Download Clients** configured in your *Arr
+applications (for example qBittorrent, Transmission, SABnzbd, etc.).
+
+This allows you to **declare** all download clients in `config.yml`. Configarr will:
+
+- Create download clients that exist in config but not in the *Arr instance
+- Update existing download clients (matched by **name + type/implementation**)
+- Optionally delete unmanaged download clients
+
+```yaml title="config.yml"
+sonarr:
+  instance1:
+    base_url: http://sonarr:8989
+    api_key: !secret SONARR_API_KEY
+
+    # (experimental) Manage Sonarr download clients
+    download_clients:
+      - name: "qBit 4K"
+        type: qbittorrent
+        enable: true
+        priority: 1
+        remove_completed_downloads: true
+        remove_failed_downloads: true
+        tags:
+          - "4K"        # Tag name (auto-resolved to ID)
+          - 5           # Tag ID (still supported)
+        fields:
+          host: qbittorrent
+          port: 8080
+          use_ssl: false          # snake_case is supported
+          url_base: /
+          username: sonarr
+          password: changeme
+          category: series-4k     # Generic category (mapped per app)
+
+    # (experimental) Delete unmanaged download clients
+    delete_unmanaged_download_clients:
+      enabled: true
+      ignore:
+        - "Manual Test Client"
+```
+
+Notes:
+
+- **Experimental**; enable it explicitly in the config if you want Configarr to manage download
+  clients.
+- Matching uses **both** `name` and `type` (implementation) when comparing with existing download
+  clients.
+- Only fields present in your YAML are managed. Missing fields are **left unchanged** in the *Arr
+  instance.
+- `tags` can be either numeric IDs or tag names. Tag names are automatically resolved to IDs and
+  created if needed.
+- In `fields` both `snake_case` (recommended for YAML) and `camelCase` field names are supported.
+- Generic `category` fields (for example `category: series-4k`) are mapped automatically to the
+  correct app-specific field (`tvCategory`, `movieCategory`, `bookCategory`, `musicCategory`, …).
+
 ## Experimental supported fields
 
 - Experimental support for `media_management` and `media_naming_api` (since v1.5.0)
