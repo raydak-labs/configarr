@@ -3,6 +3,7 @@ import { ServerCache } from "./cache";
 import {
   filterUnmanagedClients,
   isDownloadClientEqual,
+  shouldUsePartialUpdate,
 } from "./download-clients";
 import type { DownloadClientResource } from "./types/download-client.types";
 import type { InputConfigDownloadClient } from "./types/config.types";
@@ -56,6 +57,51 @@ describe("download-clients – deletion logic", () => {
     // appear in the configuration should be considered unmanaged.
     expect(result.map((c) => c.id)).toEqual([2]);
   });
+
+test("filterUnmanagedClients respects ignore list", () => {
+  const serverClients: DownloadClientResource[] = [
+    {
+      id: 1,
+      enable: true,
+      protocol: "torrent",
+      name: "qb-download",
+      implementation: "qBittorrent",
+      priority: 1,
+      tags: [],
+      removeCompletedDownloads: true,
+      removeFailedDownloads: true,
+      configContract: "",
+      fields: [],
+    },
+    {
+      id: 2,
+      enable: true,
+      protocol: "usenet",
+      name: "nzb-download",
+      implementation: "SABnzbd",
+      priority: 1,
+      tags: [],
+      removeCompletedDownloads: true,
+      removeFailedDownloads: true,
+      configContract: "",
+      fields: [],
+    },
+  ];
+
+  const configClients: InputConfigDownloadClient[] = [
+    {
+      name: "qb-download",
+      type: "qBittorrent",
+    },
+  ];
+
+  const result = filterUnmanagedClients(serverClients, configClients, {
+    enabled: true,
+    ignore: ["nzb-download"],
+  });
+
+  expect(result).toEqual([]);
+});
 
   test("filterUnmanagedClients respects delete_unmanaged=false", () => {
     const serverClients: DownloadClientResource[] = [
@@ -179,4 +225,79 @@ test("generic 'category' field is mapped to tvCategory for Sonarr", () => {
 
   expect(equal).toBe(true);
 });
+});
+
+
+describe("download-clients – partial update heuristic", () => {
+  test("shouldUsePartialUpdate treats single-top-level changes as partial", () => {
+    const config: InputConfigDownloadClient = {
+      name: "client-1",
+      type: "qBittorrent",
+      enable: false,
+    };
+
+    expect(shouldUsePartialUpdate(config)).toBe(true);
+  });
+
+  test("shouldUsePartialUpdate treats field overrides as full updates", () => {
+    const config: InputConfigDownloadClient = {
+      name: "client-1",
+      type: "qBittorrent",
+      fields: {
+        host: "qbittorrent",
+      },
+    };
+
+    expect(shouldUsePartialUpdate(config)).toBe(false);
+  });
+
+  test("shouldUsePartialUpdate treats many top-level changes as full updates", () => {
+    const config: InputConfigDownloadClient = {
+      name: "client-1",
+      type: "qBittorrent",
+      enable: false,
+      priority: 5,
+      remove_completed_downloads: false,
+    };
+
+    expect(shouldUsePartialUpdate(config)).toBe(false);
+  });
+});
+
+
+test("isDownloadClientEqual treats unknown config fields as differences", () => {
+  const emptyLanguages: ArrClientLanguageResource[] = [];
+  const cache = new ServerCache([], [], [], emptyLanguages);
+
+  const server: DownloadClientResource = {
+    id: 1,
+    enable: true,
+    protocol: "torrent",
+    name: "client-1",
+    implementation: "qBittorrent",
+    priority: 1,
+    tags: [],
+    removeCompletedDownloads: true,
+    removeFailedDownloads: true,
+    configContract: "",
+    fields: [
+      {
+        name: "host",
+        value: "qbittorrent",
+      },
+    ],
+  };
+
+  const config: InputConfigDownloadClient = {
+    name: "client-1",
+    type: "qBittorrent",
+    fields: {
+      host: "qbittorrent",
+      some_unknown_field: "value",
+    },
+  };
+
+  const equal = isDownloadClientEqual(config, server, cache, "RADARR");
+
+  expect(equal).toBe(false);
 });

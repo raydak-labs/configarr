@@ -177,6 +177,14 @@ quality_definition:
 
 Notes:
 
+- Small tweaks that only change one or two top-level properties (like `enable` or
+  `priority`) may be applied as **partial updates**: Configarr only changes those
+  specific properties and leaves other download client settings untouched.
+- When you provide field overrides (the `fields` block) or change several top-level
+  properties at once, Configarr will treat your configuration as authoritative and
+  perform a **full update** based on the download client schema.
+
+
 - `preferredRatio` only applies to TRaSH/Recyclarr imported templates
 - works also with template and `include`
 - merged order is like: TRaSH/Recyclarr templates -> local templates -> config file
@@ -301,6 +309,14 @@ sonarr:
 
 Notes:
 
+- Small tweaks that only change one or two top-level properties (like `enable` or
+  `priority`) may be applied as **partial updates**: Configarr only changes those
+  specific properties and leaves other download client settings untouched.
+- When you provide field overrides (the `fields` block) or change several top-level
+  properties at once, Configarr will treat your configuration as authoritative and
+  perform a **full update** based on the download client schema.
+
+
 - not supported in templates and will therefore not be merged!
 - rename order will be displayed in `DEBUG` log like: `DEBUG [16:37:09.377]: Will rename quality profiles in this order: 'ExampleProfile' -> 'RenamedExampleProfile','[German] HD Bluray + WEB' -> 'RenamedProfile'`
 - **experimental**, available since `v1.10.0`
@@ -330,6 +346,14 @@ sonarr:
 ```
 
 Notes:
+
+- Small tweaks that only change one or two top-level properties (like `enable` or
+  `priority`) may be applied as **partial updates**: Configarr only changes those
+  specific properties and leaves other download client settings untouched.
+- When you provide field overrides (the `fields` block) or change several top-level
+  properties at once, Configarr will treat your configuration as authoritative and
+  perform a **full update** based on the download client schema.
+
 
 - not supported in templates and will therefore not be merged!
 - clone order will be displayed in `DEBUG` log
@@ -416,6 +440,14 @@ sonarr:
 
 Notes:
 
+- Small tweaks that only change one or two top-level properties (like `enable` or
+  `priority`) may be applied as **partial updates**: Configarr only changes those
+  specific properties and leaves other download client settings untouched.
+- When you provide field overrides (the `fields` block) or change several top-level
+  properties at once, Configarr will treat your configuration as authoritative and
+  perform a **full update** based on the download client schema.
+
+
 - **experimental**, available since `v1.12.0`
 
 ## Cleanup / Deleting QualityProfiles {#cleanup-quality-profiles}
@@ -436,6 +468,14 @@ sonarr:
 ```
 
 Notes:
+
+- Small tweaks that only change one or two top-level properties (like `enable` or
+  `priority`) may be applied as **partial updates**: Configarr only changes those
+  specific properties and leaves other download client settings untouched.
+- When you provide field overrides (the `fields` block) or change several top-level
+  properties at once, Configarr will treat your configuration as authoritative and
+  perform a **full update** based on the download client schema.
+
 
 - **experimental**, available since `v1.18.0`
 
@@ -470,6 +510,14 @@ sonarr:
 
 Notes:
 
+- Small tweaks that only change one or two top-level properties (like `enable` or
+  `priority`) may be applied as **partial updates**: Configarr only changes those
+  specific properties and leaves other download client settings untouched.
+- When you provide field overrides (the `fields` block) or change several top-level
+  properties at once, Configarr will treat your configuration as authoritative and
+  perform a **full update** based on the download client schema.
+
+
 - **experimental**, available since `v1.12.0`
 
 ## RootFolders
@@ -489,6 +537,14 @@ sonarr:
 ```
 
 Notes:
+
+- Small tweaks that only change one or two top-level properties (like `enable` or
+  `priority`) may be applied as **partial updates**: Configarr only changes those
+  specific properties and leaves other download client settings untouched.
+- When you provide field overrides (the `fields` block) or change several top-level
+  properties at once, Configarr will treat your configuration as authoritative and
+  perform a **full update** based on the download client schema.
+
 
 - **experimental**, available since `v1.14.0`
 
@@ -527,6 +583,14 @@ yourarr:
 ```
 
 Notes:
+
+- Small tweaks that only change one or two top-level properties (like `enable` or
+  `priority`) may be applied as **partial updates**: Configarr only changes those
+  specific properties and leaves other download client settings untouched.
+- When you provide field overrides (the `fields` block) or change several top-level
+  properties at once, Configarr will treat your configuration as authoritative and
+  perform a **full update** based on the download client schema.
+
 
 - **experimental**, available since `v1.14.0`
 - Supported for Sonarr, Radarr, Whisparr, Lidarr, and Readarr (if the API supports it)
@@ -582,6 +646,14 @@ sonarr:
 ```
 
 Notes:
+
+- Small tweaks that only change one or two top-level properties (like `enable` or
+  `priority`) may be applied as **partial updates**: Configarr only changes those
+  specific properties and leaves other download client settings untouched.
+- When you provide field overrides (the `fields` block) or change several top-level
+  properties at once, Configarr will treat your configuration as authoritative and
+  perform a **full update** based on the download client schema.
+
 
 - **Experimental**; enable it explicitly in the config if you want Configarr to manage download
   clients.

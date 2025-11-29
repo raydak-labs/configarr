@@ -37,6 +37,10 @@ const resolveTagNamesToIds = (
 
   for (const tag of tagNames) {
     if (typeof tag === "number") {
+      const matchingTag = serverTags.find((t) => t.id === tag);
+      if (!matchingTag) {
+        logger.warn(`Configured tag ID '${tag}' does not exist on the server.`);
+      }
       ids.push(tag);
     } else {
       const serverTag = serverTags.find((t) => t.label?.toLowerCase() === tag.toLowerCase());
@@ -531,6 +535,7 @@ export const syncDownloadClients = async (
   instance: MergedConfigInstance,
   cache: ServerCache,
   arrType: ArrType,
+  instanceName?: string,
 ): Promise<void> => {
   const configClients = instance.download_clients ?? [];
 
@@ -592,8 +597,11 @@ export const syncDownloadClients = async (
   }
 
   if (hasValidationErrors) {
+    const context = instanceName
+      ? ` for ${arrType} instance '${instanceName}'`
+      : ` for ${arrType}`;
     logger.warn(
-      "One or more download client configurations are invalid and will be skipped. Valid clients will still be processed.",
+      `One or more download client configurations${context} are invalid and will be skipped. Valid clients will still be processed.`,
     );
   }
 // Calculate diff (only using valid client configurations)

@@ -1,6 +1,7 @@
 import { MergedCustomFormatResource, MergedQualityDefinitionResource, MergedQualityProfileResource } from "../__generated__/mergedTypes";
 import { logger } from "../logger";
 import { ArrType } from "../types/common.types";
+import type { DownloadClientResource } from "../types/download-client.types";
 import { LidarrClient } from "./lidarr-client";
 import { RadarrClient } from "./radarr-client";
 import { ReadarrClient } from "./readarr-client";
@@ -146,12 +147,12 @@ export interface IArrClient<
   // updateTag(id: string, tag: any): Promise<any>;
 
   // Download Clients
-  getDownloadClientSchema(): Promise<any[]>;
-  getDownloadClients(): Promise<any[]>;
-  createDownloadClient(client: any): Promise<any>;
-  updateDownloadClient(id: string, client: any): Promise<any>;
+  getDownloadClientSchema(): Promise<DownloadClientResource[]>;
+  getDownloadClients(): Promise<DownloadClientResource[]>;
+  createDownloadClient(client: DownloadClientResource): Promise<DownloadClientResource>;
+  updateDownloadClient(id: string, client: DownloadClientResource): Promise<DownloadClientResource>;
   deleteDownloadClient(id: string): Promise<void>;
-  testDownloadClient(client: any): Promise<any>;
+  testDownloadClient(client: DownloadClientResource): Promise<any>;
 
   // System/Health Check
   getSystemStatus(): Promise<any>;

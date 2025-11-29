@@ -297,12 +297,12 @@ const pipeline = async (globalConfig: InputConfigSchema, instanceConfig: InputCo
   // Download Clients
   if (config.download_clients || config.delete_unmanaged_download_clients) {
     if (getEnvs().DRY_RUN) {
-      logger.info("DryRun: Would sync download clients.");
+      logger.info(`DryRun: Would sync download clients for ${arrType} instance '${instanceName}'.`);
     } else {
       try {
-        await syncDownloadClients(config, serverCache, arrType);
+        await syncDownloadClients(config, serverCache, arrType, instanceName);
       } catch (err: any) {
-        logger.error(`Failed to sync download clients: ${err.message}`);
+        logger.error(`Failed to sync download clients for ${arrType} instance '${instanceName}': ${err.message}`);
       }
     }
   }
