@@ -306,19 +306,19 @@ export class UnifiedClient implements IArrClient {
     return this.api.getDownloadClients();
   }
 
-  async createDownloadClient(client: any) {
+  async createDownloadClient(client: DownloadClientResource): Promise<DownloadClientResource> {
     return this.api.createDownloadClient(client);
   }
 
-  async updateDownloadClient(id: string, client: any) {
+  async updateDownloadClient(id: string, client: DownloadClientResource): Promise<DownloadClientResource> {
     return this.api.updateDownloadClient(id, client);
   }
 
-  async deleteDownloadClient(id: string) {
+  async deleteDownloadClient(id: string): Promise<void> {
     return this.api.deleteDownloadClient(id);
   }
 
-  async testDownloadClient(client: any) {
+  async testDownloadClient(client: DownloadClientResource): Promise<any> {
     return this.api.testDownloadClient(client);
   }
 

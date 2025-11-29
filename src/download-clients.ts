@@ -3,7 +3,7 @@ import { getUnifiedClient } from "./clients/unified-client";
 import { logger } from "./logger";
 import { ArrType } from "./types/common.types";
 import { InputConfigDownloadClient, MergedConfigInstance } from "./types/config.types";
-import type { DownloadClientResource, Field as DownloadClientField, TagResource as DownloadClientTagResource } from "./__generated__/radarr/data-contracts";
+import type { DownloadClientResource, DownloadClientField, DownloadClientTagResource } from "./types/download-client.types";
 import { cloneWithJSON } from "./util";
 import { z } from "zod";
 
@@ -22,6 +22,13 @@ const DOWNLOAD_CLIENT_CONSTRAINTS = {
 
 /**
  * Mapping of ARR types to their category field names
+ * 
+ * Each *arr application uses a different field name for download client categories:
+ * - SONARR uses "tvCategory" for TV show downloads
+ * - LIDARR uses "musicCategory" for music downloads
+ * - RADARR uses "movieCategory" for movie downloads
+ * - WHISPARR uses "movieCategory" for adult content downloads
+ * - READARR uses "bookCategory" for book/audiobook downloads
  */
 const ARR_CATEGORY_FIELDS: Record<ArrType, string> = {
   SONARR: "tvCategory",
@@ -114,7 +121,7 @@ const validateDownloadClientConfig = (config: unknown): {
   if (!result.success) {
     return {
       valid: false,
-      errors: result.error.issues.map(e => `${e.path.join('.')}: ${e.message}`),
+      errors: result.error.issues.map((e: z.ZodIssue) => `${e.path.join('.')}: ${e.message}`),
       warnings: [],
     };
   }
@@ -181,7 +188,7 @@ export const resolveTagNamesToIds = (
     if (typeof tag === "number") {
       ids.push(tag);
     } else {
-      const serverTag = serverTags.find((t) => t.label?.toLowerCase() === tag.toLowerCase());
+      const serverTag = serverTags.find((t: DownloadClientTagResource) => t.label?.toLowerCase() === tag.toLowerCase());
       if (serverTag && serverTag.id) {
         ids.push(serverTag.id);
       } else {
@@ -222,10 +229,10 @@ export const validateDownloadClient = (
   // Validate type exists in server schema
   const template = findImplementationInSchema(schema, config.type);
   if (!template) {
-    errors.push(`Unknown download client type '${config.type}'. Available types: ${schema.map((s) => s.implementation).join(", ")}`);
+    errors.push(`Unknown download client type '${config.type}'. Available types: ${schema.map((s: DownloadClientResource) => s.implementation).join(", ")}`);
   } else {
     // Validate required fields
-    const requiredFields = (template.fields || []).filter((f) => {
+    const requiredFields = (template.fields || []).filter((f: DownloadClientField) => {
       // Fields with no default value are typically required
       return f.value === undefined || f.value === null || f.value === "";
     });
@@ -351,15 +358,17 @@ const snakeToCamel = (str: string): string => {
  * Get the category field name for a specific *arr application
  * 
  * Different *arr applications use different field names for categorization:
- * - Sonarr/Lidarr: "musicCategory"
- * - Radarr/Whisparr: "movieCategory"
+ * - Sonarr: "tvCategory"
+ * - Lidarr: "musicCategory"
+ * - Radarr: "movieCategory"
+ * - Whisparr: "movieCategory"
  * - Readarr: "bookCategory"
  * 
  * @param arrType - Type of *arr application
  * @returns Category field name for the application
  */
 export const getCategoryFieldName = (arrType: ArrType): string => {
-  return ARR_CATEGORY_FIELDS[arrType] || ARR_CATEGORY_FIELDS.SONARR; // Default to musicCategory
+  return ARR_CATEGORY_FIELDS[arrType] || ARR_CATEGORY_FIELDS.SONARR; // Default to tvCategory
 };
 
 /**
@@ -423,7 +432,7 @@ const findImplementationInSchema = (
   schema: DownloadClientResource[],
   implementation: string,
 ): DownloadClientResource | undefined => {
-  return schema.find((s) => s.implementation?.toLowerCase() === implementation.toLowerCase());
+  return schema.find((s: DownloadClientResource) => s.implementation?.toLowerCase() === implementation.toLowerCase());
 };
 
 /**
@@ -443,7 +452,7 @@ const mergeFieldsWithSchema = (
   
   if (partialUpdate && serverFields) {
     // For partial updates, start with server fields and only update specified config fields
-    return serverFields.map((field) => {
+    return serverFields.map((field: DownloadClientField) => {
       const fieldName = field.name || "";
       const configValue = normalizedFields[fieldName];
       if (configValue !== undefined) {
@@ -453,7 +462,7 @@ const mergeFieldsWithSchema = (
     });
   } else {
     // Full update: use schema fields with config overrides
-    return schemaFields.map((field) => {
+    return schemaFields.map((field: DownloadClientField) => {
       const fieldName = field.name || "";
       const configValue = normalizedFields[fieldName];
       if (configValue !== undefined) {
@@ -585,7 +594,7 @@ export const isDownloadClientEqual = (
 
   const serverFieldNames = new Set(
     serverFields
-      .map((f) => f.name)
+      .map((f: DownloadClientField) => f.name)
       .filter((name): name is string => typeof name === "string" && name.length > 0),
   );
 
@@ -651,7 +660,7 @@ const calculateDownloadClientDiff = (
   const unchanged: { config: InputConfigDownloadClient; server: DownloadClientResource }[] = [];
 
   for (const config of configClients) {
-    const serverClient = serverClients.find((s) => s.name === config.name);
+    const serverClient = serverClients.find((s: DownloadClientResource) => s.name === config.name);
 
     if (!serverClient) {
       create.push(config);
@@ -664,8 +673,8 @@ const calculateDownloadClientDiff = (
   }
 
   // Find clients to delete (on server but not in config)
-  const configNames = new Set(configClients.map((c) => c.name));
-  const deleted = serverClients.filter((s) => !configNames.has(s.name || ""));
+  const configNames = new Set(configClients.map((c: InputConfigDownloadClient) => c.name));
+  const deleted = serverClients.filter((s: DownloadClientResource) => !configNames.has(s.name || ""));
 
   return { create, update, unchanged, deleted };
 };
@@ -689,11 +698,11 @@ export const filterUnmanagedClients = (
   // Identify managed clients by a composite key of name + implementation
   const configKeys = new Set(
     configClients
-      .filter((c) => !!c.name && !!c.type)
-      .map((c) => `${c.name}::${c.type.toLowerCase()}`),
+      .filter((c: InputConfigDownloadClient) => !!c.name && !!c.type)
+      .map((c: InputConfigDownloadClient) => `${c.name}::${c.type.toLowerCase()}`),
   );
 
-  return serverClients.filter((server) => {
+  return serverClients.filter((server: DownloadClientResource) => {
     const name = server.name || "";
     const implementation = server.implementation?.toLowerCase() ?? "";
     const key = `${name}::${implementation}`;
@@ -807,7 +816,7 @@ export const syncDownloadClients = async (
   for (const config of validConfigClients) {
     if (config.tags) {
       const { missingTags } = resolveTagNamesToIds(config.tags, cache.tags);
-      missingTags.forEach(tag => allMissingTags.add(tag));
+      missingTags.forEach((tag: string) => allMissingTags.add(tag));
     }
   }
 

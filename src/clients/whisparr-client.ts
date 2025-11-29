@@ -7,6 +7,7 @@ import {
   QualityProfileResource,
 } from "../__generated__/whisparr/data-contracts";
 import { logger } from "../logger";
+import type { DownloadClientResource } from "../types/download-client.types";
 import { cloneWithJSON } from "../util";
 import { IArrClient, logConnectionError, validateClientParams } from "./unified-client";
 
@@ -159,27 +160,27 @@ export class WhisparrClient
   }
 
   // Download Clients
-  async getDownloadClientSchema() {
+  async getDownloadClientSchema(): Promise<DownloadClientResource[]> {
     return this.api.v3DownloadclientSchemaList();
   }
 
-  async getDownloadClients() {
+  async getDownloadClients(): Promise<DownloadClientResource[]> {
     return this.api.v3DownloadclientList();
   }
 
-  async createDownloadClient(client: any) {
+  async createDownloadClient(client: DownloadClientResource): Promise<DownloadClientResource> {
     return this.api.v3DownloadclientCreate(client);
   }
 
-  async updateDownloadClient(id: string, client: any) {
+  async updateDownloadClient(id: string, client: DownloadClientResource): Promise<DownloadClientResource> {
     return this.api.v3DownloadclientUpdate(id, client);
   }
 
-  async deleteDownloadClient(id: string) {
+  async deleteDownloadClient(id: string): Promise<void> {
     return this.api.v3DownloadclientDelete(+id);
   }
 
-  async testDownloadClient(client: any) {
+  async testDownloadClient(client: DownloadClientResource): Promise<any> {
     return this.api.v3DownloadclientTestCreate(client);
   }
 

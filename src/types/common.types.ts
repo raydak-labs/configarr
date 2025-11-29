@@ -79,6 +79,8 @@ export type MappedTemplates = Partial<
     | "delete_unmanaged_quality_profiles"
     | "root_folders"
     | "delay_profiles"
+    | "download_clients"
+    | "delete_unmanaged_download_clients"
   >
 >;
 
