@@ -89,8 +89,12 @@ export class ReadarrClient
     return this.api.v1MetadataprofileCreate(profile);
   }
 
-  async updateMetadataProfile(id: number, profile: MetadataProfileResource) {
-    return this.api.v1MetadataprofileUpdate(id.toString(), profile);
+  async updateMetadataProfile(id: string, profile: MetadataProfileResource) {
+    return this.api.v1MetadataprofileUpdate(id, profile);
+  }
+
+  async deleteMetadataProfile(id: string) {
+    return this.api.v1MetadataprofileDelete(Number(id));
   }
 
   async getNaming() {

@@ -19,6 +19,7 @@ import {
   getUnmanagedQualityProfiles,
   loadQualityProfilesFromServer,
 } from "./quality-profiles";
+import { syncMetadataProfiles } from "./metadataProfiles/metadataProfileSyncer";
 import { cloneRecyclarrTemplateRepo } from "./recyclarr-importer";
 import { loadServerTags } from "./tags";
 import { getTelemetryInstance, Telemetry } from "./telemetry";
@@ -243,6 +244,9 @@ const pipeline = async (globalConfig: InputConfigSchema, instanceConfig: InputCo
       }
     }
   }
+
+  // Handle metadata profiles (Lidarr / Readarr) - unified sync with optional deletion
+  await syncMetadataProfiles(arrType, config, serverCache);
 
   await syncRootFolders(arrType, config.root_folders, serverCache);
 

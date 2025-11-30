@@ -167,3 +167,6 @@ cli-bun
 cli-deno
 
 result
+
+# Git worktrees
+.worktrees/

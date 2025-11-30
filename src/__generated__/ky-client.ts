@@ -209,7 +209,17 @@ export class HttpClient<SecurityDataType = unknown> {
           if (contentType && contentType.includes("application/json")) {
             // Process JSON data
             const errorJson = await response.json();
-            logger.error(errorJson, `Failed executing request: ${error.message}`);
+
+            let errorMessage = "unknown error";
+
+            if (Array.isArray(errorJson)) {
+              errorMessage = errorJson.map((e) => e.message || e.errorMessage).join(", ");
+            } else {
+              errorMessage = errorJson.message || errorJson.errorMessage || errorMessage;
+            }
+
+            logger.error(errorJson, `Failed executing request: '${errorMessage}'`);
+
             throw new Error(errorJson);
           } else {
             // Handle non-JSON response
