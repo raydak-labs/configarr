@@ -32,7 +32,11 @@
       type = lib.types.str;
     };
 
-    package = lib.mkPackageOption (import ../package.nix {inherit lib pkgs;});
+    package = lib.mkOption {
+      default = import ../package.nix {inherit lib pkgs;};
+      description = "Package to use";
+      type = lib.types.package;
+    };
 
     schedule = lib.mkOption {
       default = "daily";
