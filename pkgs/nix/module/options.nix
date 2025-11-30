@@ -7,7 +7,7 @@
     config = lib.mkOption {
       default = "";
       description = "YAML configuration.";
-      type = lib.types.string;
+      type = lib.types.str;
     };
 
     dataDir = lib.mkOption {
