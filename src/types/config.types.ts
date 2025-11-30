@@ -187,6 +187,13 @@ export type MediaNamingType = {
     daily?: string;
     anime?: string;
   };
+
+  // lidarr
+  renameTracks?: boolean;
+  replaceIllegalCharacters?: boolean;
+  standardTrackFormat?: string;
+  multiDiscTrackFormat?: string;
+  artistFolderFormat?: string;
 };
 
 export type InputConfigQualityProfile = {
