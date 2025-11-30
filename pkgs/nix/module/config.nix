@@ -25,7 +25,7 @@ in {
           EnvironmentFile = lib.optional (cfg.environmentFile != null) cfg.environmentFile;
           ExecStart = let
             pkg =
-              if cfg.package
+              if (cfg.package != null)
               then cfg.package
               else (import ../package.nix {inherit lib pkgs;});
           in
