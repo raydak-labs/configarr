@@ -1,4 +1,8 @@
-{lib, ...}: {
+{
+  lib,
+  pkgs,
+  ...
+}: {
   options.services.configarr = {
     config = lib.mkOption {
       default = "";
@@ -27,6 +31,8 @@
       description = "Group for the Configarr service.";
       type = lib.types.str;
     };
+
+    package = lib.mkPackageOption (import ../package.nix {inherit lib pkgs;});
 
     schedule = lib.mkOption {
       default = "daily";

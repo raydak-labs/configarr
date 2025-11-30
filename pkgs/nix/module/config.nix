@@ -23,7 +23,13 @@ in {
         '';
         serviceConfig = {
           EnvironmentFile = lib.optional (cfg.environmentFile != null) cfg.environmentFile;
-          ExecStart = lib.getExe (import ../package.nix {inherit lib pkgs;});
+          ExecStart = let
+            pkg =
+              if cfg.package
+              then cfg.package
+              else (import ../package.nix {inherit lib pkgs;});
+          in
+            lib.getExe pkg;
           Group = cfg.group;
           Type = "oneshot";
           User = cfg.user;
