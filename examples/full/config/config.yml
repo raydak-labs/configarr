@@ -252,6 +252,29 @@ readarr:
           # Not supported in whisparr
           #min_format_score: 200
 
+    metadata_profiles:
+      - name: "Default"
+        min_popularity: 10
+        skip_missing_date: true
+        skip_missing_isbn: false
+        skip_parts_and_sets: false
+        skip_secondary_series: false
+        allowed_languages:
+          - eng # ISO 639-3 language codes (3-letter)
+          - deu
+        min_pages: 50
+        must_not_contain:
+          - "Text in title"
+
+    delete_unmanaged_metadata_profiles:
+      enabled: true
+      ignore:
+        - Standard
+        - None
+
+    delete_unmanaged_profiles:
+      enabled: true
+
 lidarr:
   instance1:
     # Set the URL/API Key to your actual instance
@@ -280,3 +303,16 @@ lidarr:
           until_score: 200
           # Not supported in whisparr
           #min_format_score: 200
+
+    metadata_profiles:
+      - name: Default
+        primary_types:
+          - Album
+          - EP
+        secondary_types:
+          - Studio
+        release_statuses:
+          - Official
+
+    delete_unmanaged_metadata_profiles:
+      enabled: true

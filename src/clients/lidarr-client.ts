@@ -79,16 +79,24 @@ export class LidarrClient implements IArrClient<QualityProfileResource, QualityD
   }
 
   // Metadata Profiles
-  async getMetadataProfiles() {
+  getMetadataProfiles() {
     return this.api.v1MetadataprofileList();
   }
 
-  async createMetadataProfile(profile: MetadataProfileResource) {
+  getMetadataProfileSchema() {
+    return this.api.v1MetadataprofileSchemaList();
+  }
+
+  createMetadataProfile(profile: MetadataProfileResource) {
     return this.api.v1MetadataprofileCreate(profile);
   }
 
-  async updateMetadataProfile(id: number, profile: MetadataProfileResource) {
-    return this.api.v1MetadataprofileUpdate(id.toString(), profile);
+  updateMetadataProfile(id: string, profile: MetadataProfileResource) {
+    return this.api.v1MetadataprofileUpdate(id, profile);
+  }
+
+  deleteMetadataProfile(id: string) {
+    return this.api.v1MetadataprofileDelete(Number(id));
   }
 
   async getNaming() {

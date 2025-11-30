@@ -117,6 +117,25 @@ export type InputConfigArrInstance = {
   media_naming?: MediaNamingType;
 
   /**
+   * Optional metadata profiles (Lidarr / Readarr only).
+   * Kept close to each Arr application's native MetadataProfileResource.
+   */
+  metadata_profiles?: InputConfigMetadataProfile[];
+
+  /**
+   * Deletes all metadata profiles that are present on the server but not defined
+   * in this configuration. Can be further narrowed using the ignore list.
+   */
+  delete_unmanaged_metadata_profiles?: {
+    enabled: boolean;
+    /**
+     * Names of metadata profiles that should never be deleted automatically.
+     * Can be specified as an array of strings.
+     */
+    ignore?: string[];
+  };
+
+  /**
    * @experimental since v1.14.0
    */
   root_folders?: InputConfigRootFolder[];
@@ -195,6 +214,30 @@ export type InputConfigQualityProfileItem = {
   enabled?: boolean;
 };
 
+// Lidarr-specific metadata profile config
+export type InputConfigLidarrMetadataProfile = {
+  name: string;
+  primary_types?: string[];
+  secondary_types?: string[];
+  release_statuses?: string[];
+};
+
+// Readarr-specific metadata profile config
+export type InputConfigReadarrMetadataProfile = {
+  name: string;
+  min_popularity?: number;
+  skip_missing_date?: boolean;
+  skip_missing_isbn?: boolean;
+  skip_parts_and_sets?: boolean;
+  skip_secondary_series?: boolean;
+  allowed_languages?: string[] | null;
+  min_pages?: number | null;
+  must_not_contain?: string[];
+};
+
+// Union type for backward compatibility
+export type InputConfigMetadataProfile = InputConfigLidarrMetadataProfile | InputConfigReadarrMetadataProfile;
+
 export type InputConfigIncludeItem = {
   // depends on source what this actually is. Can be the filename -> recyclarr or id in the files -> trash
   template: string;
@@ -211,6 +254,11 @@ export type ConfigArrInstance = OmitTyped<InputConfigArrInstance, "custom_format
   include?: ConfigIncludeItem[];
   custom_formats: ConfigCustomFormat[];
   quality_profiles: ConfigQualityProfile[];
+  /**
+   * Metadata profiles are kept in configuration shape; they are translated to
+   * the concrete Arr application's MetadataProfileResource in the feature layer.
+   */
+  metadata_profiles?: InputConfigMetadataProfile[];
 };
 
 export type ConfigQualityProfile = OmitTyped<Required<InputConfigQualityProfile>, "qualities" | "reset_unmatched_scores" | "language"> & {

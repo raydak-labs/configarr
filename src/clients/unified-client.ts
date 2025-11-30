@@ -111,9 +111,6 @@ export interface IArrClient<
   updateQualityProfile(id: string, profile: QP): Promise<QP>;
   deleteQualityProfile(id: string): Promise<void>;
 
-  // Metadata Profiles (Lidarr only)
-  getMetadataProfiles?(): Promise<any[]>;
-
   // Custom Formats
   getCustomFormats(): Promise<CF[]>;
   createCustomFormat(format: CF): Promise<CF>;
@@ -210,13 +207,6 @@ export class UnifiedClient implements IArrClient {
     return await this.api.deleteQualityProfile(id);
   }
 
-  async getMetadataProfiles() {
-    if (this.type === "LIDARR") {
-      return await (this.api as any).getMetadataProfiles();
-    }
-    throw new Error(`Metadata profiles are not supported for ${this.type}`);
-  }
-
   async getCustomFormats() {
     return await this.api.getCustomFormats();
   }
@@ -295,18 +285,5 @@ export class UnifiedClient implements IArrClient {
 
   async testConnection() {
     return await this.api.testConnection();
-  }
-
-  // Helper method to check if a specific feature is supported
-  supportsFeature(feature: "metadataProfiles" | "qualityProfiles" | "qualityDefinitions"): boolean {
-    switch (feature) {
-      case "metadataProfiles":
-        return this.type === "READARR";
-      case "qualityProfiles":
-      case "qualityDefinitions":
-        return true; // Supported by all types
-      default:
-        return false;
-    }
   }
 }
