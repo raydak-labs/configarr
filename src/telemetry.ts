@@ -53,6 +53,9 @@ export interface TelemetryData {
   // Delay profiles
   delay_profiles: boolean;
 
+  // Download clients
+  download_clients: boolean;
+
   // Experimental features
   enable_full_git_clone: boolean;
 
@@ -245,6 +248,11 @@ export class Telemetry {
     if (!this.telemetryData.delay_profiles && instanceConfig.delay_profiles) {
       this.telemetryData.delay_profiles = true;
     }
+
+    // Download clients
+    if (!this.telemetryData.download_clients && instanceConfig.download_clients && instanceConfig.download_clients.length > 0) {
+      this.telemetryData.download_clients = true;
+    }
   }
 
   private collectTelemetryData(globalConfig: InputConfigSchema, instances: Record<ArrType, InputConfigArrInstance[]>): TelemetryData {
@@ -321,6 +329,8 @@ export class Telemetry {
       root_folders: allInstances.some((i) => i.root_folders && i.root_folders.length > 0),
 
       delay_profiles: allInstances.some((i) => i.delay_profiles !== undefined),
+
+      download_clients: allInstances.some((i) => i.download_clients && i.download_clients.length > 0),
 
       enable_full_git_clone: globalConfig.enableFullGitClone === true,
 

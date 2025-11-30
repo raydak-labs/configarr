@@ -59,6 +59,19 @@ sonarr:
     #   ignore:
     #     - QualityProfileToKeep
 
+    # since v<>. Optional
+    # download_clients:
+    #   - name: SABnzbd
+    #     implementation: Sabnzbd
+    #     enable: true
+    #     priority: 1
+    #     protocol: usenet
+    #     fields:
+    #       - name: host
+    #         value: localhost
+    #       - name: port
+    #         value: 8080
+
     quality_definition:
       type: series
 

@@ -439,6 +439,38 @@ Notes:
 
 - **experimental**, available since `v1.18.0`
 
+## Download Clients {#download-clients}
+
+You can configure download clients declaratively. Only clients specified in config will be created or updated - existing clients not in config are left untouched.
+
+```yml
+# ...
+sonarr:
+  instance1:
+    # ...
+    # since v<>. Optional
+    download_clients:
+      - name: SABnzbd
+        implementation: Sabnzbd
+        enable: true
+        priority: 1
+        protocol: usenet
+        fields:
+          - name: host
+            value: localhost
+          - name: port
+            value: 8080
+          - name: apiKey
+            value: your-api-key
+```
+
+Notes:
+
+- available since `v<>`
+- Clients are matched by `name` + `implementation`
+- Only specified fields are updated - unspecified fields are preserved
+- Sensitive fields like `apiKey` and `password` are not compared (server masks them)
+
 ## CustomFormatGroups {#custom-format-groups}
 
 Support has been added to allow using the TRaSH-Guide custom format groups: [see here](https://github.com/TRaSH-Guides/Guides/tree/master/docs/json/sonarr/cf-groups).

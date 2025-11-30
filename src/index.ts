@@ -28,6 +28,7 @@ import { InputConfigArrInstance, InputConfigSchema } from "./types/config.types"
 import { TrashArrSupportedConst, TrashQualityDefinition, TrashQualityDefinitionQuality } from "./types/trashguide.types";
 import { isInConstArray } from "./util";
 import { syncRootFolders } from "./rootFolder/rootFolderSyncer";
+import { calculateDownloadClientsDiff, applyDownloadClients } from "./download-client";
 
 const pipeline = async (globalConfig: InputConfigSchema, instanceConfig: InputConfigArrInstance, arrType: ArrType) => {
   const api = getUnifiedClient();
@@ -292,6 +293,10 @@ const pipeline = async (globalConfig: InputConfigSchema, instanceConfig: InputCo
       }
     }
   }
+
+  const currentDownloadClients = await api.getDownloadClients();
+  const dlcDiff = calculateDownloadClientsDiff(currentDownloadClients, config.download_clients ?? []);
+  await applyDownloadClients(api, dlcDiff, getEnvs().DRY_RUN);
 };
 
 const runArrType = async (

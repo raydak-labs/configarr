@@ -142,6 +142,23 @@ export class ReadarrClient
     return this.api.v1DelayprofileDelete(+id);
   }
 
+  // Download Clients
+  async getDownloadClients() {
+    return this.api.v1DownloadclientList();
+  }
+
+  async createDownloadClient(data: any) {
+    return this.api.v1DownloadclientCreate(data);
+  }
+
+  async updateDownloadClient(id: string, data: any) {
+    return this.api.v1DownloadclientUpdate(id, data);
+  }
+
+  async deleteDownloadClient(id: string) {
+    return this.api.v1DownloadclientDelete(Number.parseInt(id));
+  }
+
   async getTags() {
     return this.api.v1TagList();
   }

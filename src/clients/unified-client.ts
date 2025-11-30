@@ -139,6 +139,12 @@ export interface IArrClient<
   updateDelayProfile(id: string, data: any): Promise<any>;
   deleteDelayProfile(id: string): Promise<any>;
 
+  // Download Clients
+  getDownloadClients(): Promise<any>;
+  createDownloadClient(data: any): Promise<any>;
+  updateDownloadClient(id: string, data: any): Promise<any>;
+  deleteDownloadClient(id: string): Promise<any>;
+
   // Tags
   getTags(): Promise<any>;
   createTag(tag: any): Promise<any>;
@@ -279,6 +285,22 @@ export class UnifiedClient implements IArrClient {
 
   async deleteDelayProfile(id: string) {
     return this.api.deleteDelayProfile(id);
+  }
+
+  async getDownloadClients() {
+    return this.api.getDownloadClients();
+  }
+
+  async createDownloadClient(data: any) {
+    return this.api.createDownloadClient(data);
+  }
+
+  async updateDownloadClient(id: string, data: any) {
+    return this.api.updateDownloadClient(id, data);
+  }
+
+  async deleteDownloadClient(id: string) {
+    return this.api.deleteDownloadClient(id);
   }
 
   async getTags() {

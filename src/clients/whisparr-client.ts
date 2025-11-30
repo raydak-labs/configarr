@@ -150,6 +150,23 @@ export class WhisparrClient
     return this.api.v3DelayprofileDelete(+id);
   }
 
+  // Download Clients
+  async getDownloadClients() {
+    return this.api.v3DownloadclientList();
+  }
+
+  async createDownloadClient(data: any) {
+    return this.api.v3DownloadclientCreate(data);
+  }
+
+  async updateDownloadClient(id: string, data: any) {
+    return this.api.v3DownloadclientUpdate(id, data);
+  }
+
+  async deleteDownloadClient(id: string) {
+    return this.api.v3DownloadclientDelete(Number.parseInt(id));
+  }
+
   async getTags() {
     return this.api.v3TagList();
   }

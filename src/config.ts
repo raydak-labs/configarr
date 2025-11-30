@@ -742,6 +742,10 @@ export const mergeConfigsAndTemplates = async (
     mergedTemplates.delay_profiles = instanceConfig.delay_profiles;
   }
 
+  if (instanceConfig.download_clients) {
+    mergedTemplates.download_clients = instanceConfig.download_clients;
+  }
+
   if (mergedTemplates.custom_formats && mergedTemplates.custom_formats.length > 0) {
     // Merge custom formats with same trash_ids
     mergedTemplates.custom_formats = mergeAndReduceCustomFormats(mergedTemplates.custom_formats);
