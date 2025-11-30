@@ -245,7 +245,9 @@ const pipeline = async (globalConfig: InputConfigSchema, instanceConfig: InputCo
   }
 
   // Handle metadata profiles (Lidarr / Readarr) - unified sync with optional deletion
-  await syncMetadataProfiles(arrType, config, serverCache);
+  if ("LIDARR" === arrType || "READARR" === arrType) {
+    await syncMetadataProfiles(arrType, config, serverCache);
+  }
 
   await syncRootFolders(arrType, config.root_folders, serverCache);
 
