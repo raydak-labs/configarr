@@ -33,7 +33,7 @@ jobs:
             platform: windows-x64
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Inject enhanced GitHub environment variables
         uses: rlespinasse/github-slug-action@v5
