@@ -863,6 +863,19 @@ const mapConfigMediaNamingToApi = async (arrType: ArrType, mediaNaming: MediaNam
     return apiObject;
   }
 
+  if (arrType === "LIDARR") {
+    const apiObject = {
+      ...(mediaNaming.renameTracks != null && { renameTracks: mediaNaming.renameTracks }),
+      ...(mediaNaming.replaceIllegalCharacters != null && { replaceIllegalCharacters: mediaNaming.replaceIllegalCharacters }),
+      ...(mediaNaming.standardTrackFormat && { standardTrackFormat: mediaNaming.standardTrackFormat }),
+      ...(mediaNaming.multiDiscTrackFormat && { multiDiscTrackFormat: mediaNaming.multiDiscTrackFormat }),
+      ...(mediaNaming.artistFolderFormat && { artistFolderFormat: mediaNaming.artistFolderFormat }),
+    };
+
+    logger.debug(apiObject, `Mapped mediaNaming to API:`);
+    return apiObject;
+  }
+
   logger.warn(`MediaNaming not supported for ${arrType}`);
 };
 
