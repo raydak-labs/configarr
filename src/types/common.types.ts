@@ -81,6 +81,7 @@ export type MappedTemplates = Partial<
     | "metadata_profiles"
     | "root_folders"
     | "delay_profiles"
+    | "download_clients"
   >
 >;
 

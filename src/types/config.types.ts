@@ -146,6 +146,8 @@ export type InputConfigArrInstance = {
     default?: InputConfigDelayProfile;
     additional?: InputConfigDelayProfile[];
   };
+
+  download_clients?: InputConfigDownloadClient[];
 } & Pick<InputConfigSchema, "customFormatDefinitions">;
 
 export type InputConfigDelayProfile = {
@@ -159,6 +161,24 @@ export type InputConfigDelayProfile = {
   minimumCustomFormatScore?: number;
   order?: number;
   tags?: string[];
+};
+
+export type InputConfigDownloadClient = {
+  configContract?: string; // e.g. SabnzbdSettings
+  enable?: boolean;
+  fields?: {
+    name: string;
+    value?: unknown;
+  }[];
+  implementation: string; // e.g. Sabnzbd
+  implementationName?: string; // e.g. SABnzbd
+  infoLink?: string; // optional docs link
+  name: string; // e.g. SABnzbd
+  priority?: number;
+  protocol?: "torrent" | "usenet";
+  removeCompletedDownloads?: boolean;
+  removeFailedDownloads?: boolean;
+  tags?: string[]; // label names, resolved to IDs later
 };
 
 export type MediaManagementType = {

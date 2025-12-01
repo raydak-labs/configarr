@@ -62,3 +62,9 @@ export type MergedDelayProfileResource = import("./sonarr/data-contracts").Delay
   import("./radarr/data-contracts").DelayProfileResource;
 
 export type MergedTagResource = RadarrTagResource;
+
+export type MergedDownloadClientResource = import("./lidarr/data-contracts").DownloadClientResource &
+  import("./radarr/data-contracts").DownloadClientResource &
+  import("./readarr/data-contracts").DownloadClientResource &
+  import("./sonarr/data-contracts").DownloadClientResource &
+  import("./whisparr/data-contracts").DownloadClientResource;
