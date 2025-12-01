@@ -8,14 +8,12 @@ import type { TagResource } from "../__generated__/radarr/data-contracts";
 import { DownloadProtocol } from "../__generated__/radarr/data-contracts";
 import { ArrType } from "../types/common.types";
 
-// Mock implementation of BaseDownloadClientSync for testing
 class MockDownloadClientSync extends BaseDownloadClientSync {
   constructor() {
     super();
   }
 
-  // Expose protected methods for testing
-  public testValidateDownloadClient(config: InputConfigDownloadClient, schema: DownloadClientResource[]) {
+    public testValidateDownloadClient(config: InputConfigDownloadClient, schema: DownloadClientResource[]) {
     return this.validateDownloadClient(config, schema);
   }
 
@@ -39,8 +37,7 @@ class MockDownloadClientSync extends BaseDownloadClientSync {
     return this.getApi();
   }
 
-  // Implement abstract methods minimally for testing
-  protected getArrType(): ArrType {
+    protected getArrType(): ArrType {
     return "RADARR";
   }
 
@@ -103,7 +100,7 @@ describe("BaseDownloadClientSync – utility methods", () => {
 
     test("handles leading/trailing underscores", () => {
       expect(sync.testSnakeToCamel("_private_field")).toBe("PrivateField");
-      expect(sync.testSnakeToCamel("trailing_")).toBe("trailing_"); // trailing underscore doesn't convert
+      expect(sync.testSnakeToCamel("trailing_")).toBe("trailing_");
     });
   });
 
@@ -154,9 +151,9 @@ describe("BaseDownloadClientSync – utility methods", () => {
         "RADARR",
       );
 
-      expect(result).toHaveProperty("nestedObj"); // converts key name
-      expect(result.nestedObj).toEqual({ inner_field: "value" }); // doesn't recurse into object
-      expect(result).toHaveProperty("nested_obj"); // keeps original key
+      expect(result).toHaveProperty("nestedObj");
+      expect(result.nestedObj).toEqual({ inner_field: "value" });
+      expect(result).toHaveProperty("nested_obj");
     });
   });
 
@@ -290,7 +287,6 @@ describe("BaseDownloadClientSync – utility methods", () => {
 
   describe("lazy API initialization", () => {
     test("getApi() throws error when not configured", () => {
-      // This test verifies that getApi() properly throws when API is not configured
       expect(() => sync.testGetApi()).toThrow("Please configure API first.");
     });
   });

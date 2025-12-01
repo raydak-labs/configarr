@@ -1,23 +1,18 @@
 import { describe, expect, test } from "vitest";
 import { ServerCache } from "../cache";
-import {
-  filterUnmanagedClients,
-  isDownloadClientEqual,
-  resolveTagNamesToIds,
-  validateDownloadClient,
-  normalizeConfigFields,
-  getCategoryFieldName,
-} from "./downloadClientSyncer";
+import { GenericDownloadClientSync } from "./downloadClientGeneric";
 import type { DownloadClientResource, TagResource } from "../__generated__/radarr/data-contracts";
 import { DownloadProtocol } from "../__generated__/radarr/data-contracts";
 import type { MergedTagResource } from "../__generated__/mergedTypes";
 import type { InputConfigDownloadClient } from "../types/config.types";
 import type { ArrClientLanguageResource } from "../clients/unified-client";
 
-// Helper type for tests - allows string literals for protocol
 type TestDownloadClientResource = Omit<DownloadClientResource, "protocol"> & {
   protocol?: DownloadProtocol;
 };
+
+// Helper function for tests
+const getTestSync = () => new GenericDownloadClientSync("RADARR");
 
 describe("downloadClientSyncer – tag resolution", () => {
   test("resolves tag names to IDs (case-insensitive)", () => {
@@ -27,7 +22,7 @@ describe("downloadClientSyncer – tag resolution", () => {
       { id: 3, label: "Test-Tag" },
     ];
 
-    const { ids, missingTags } = resolveTagNamesToIds(["Movies", "4k", "test-tag"], serverTags);
+    const { ids, missingTags } = getTestSync().resolveTagNamesToIds(["Movies", "4k", "test-tag"], serverTags);
 
     expect(ids).toEqual([1, 2, 3]);
     expect(missingTags).toEqual([]);
@@ -39,7 +34,7 @@ describe("downloadClientSyncer – tag resolution", () => {
       { id: 2, label: "4K" },
     ];
 
-    const { ids, missingTags } = resolveTagNamesToIds([1, 2, 999], serverTags);
+    const { ids, missingTags } = getTestSync().resolveTagNamesToIds([1, 2, 999], serverTags);
 
     expect(ids).toEqual([1, 2, 999]);
     expect(missingTags).toEqual([]);
@@ -48,7 +43,7 @@ describe("downloadClientSyncer – tag resolution", () => {
   test("identifies missing tags", () => {
     const serverTags: TagResource[] = [{ id: 1, label: "movies" }];
 
-    const { ids, missingTags } = resolveTagNamesToIds(["movies", "missing1", "missing2"], serverTags);
+    const { ids, missingTags } = getTestSync().resolveTagNamesToIds(["movies", "missing1", "missing2"], serverTags);
 
     expect(ids).toEqual([1]);
     expect(missingTags).toEqual(["missing1", "missing2"]);
@@ -60,7 +55,7 @@ describe("downloadClientSyncer – tag resolution", () => {
       { id: 2, label: "4K" },
     ];
 
-    const { ids, missingTags } = resolveTagNamesToIds(["movies", 2, "new-tag", 999], serverTags);
+    const { ids, missingTags } = getTestSync().resolveTagNamesToIds(["movies", 2, "new-tag", 999], serverTags);
 
     expect(ids).toEqual([1, 2, 999]);
     expect(missingTags).toEqual(["new-tag"]);
@@ -69,7 +64,7 @@ describe("downloadClientSyncer – tag resolution", () => {
   test("handles empty tag list", () => {
     const serverTags: TagResource[] = [];
 
-    const { ids, missingTags } = resolveTagNamesToIds([], serverTags);
+    const { ids, missingTags } = getTestSync().resolveTagNamesToIds([], serverTags);
 
     expect(ids).toEqual([]);
     expect(missingTags).toEqual([]);
@@ -78,48 +73,47 @@ describe("downloadClientSyncer – tag resolution", () => {
 
 describe("downloadClientSyncer – field normalization", () => {
   test("converts generic category to app-specific field for Radarr", () => {
-    const result = normalizeConfigFields({ category: "movies" }, "RADARR");
+    const result = getTestSync().normalizeConfigFields({ category: "movies" }, "RADARR");
 
     expect(result).toHaveProperty("category", "movies");
     expect(result).toHaveProperty("movieCategory", "movies");
   });
 
   test("converts generic category to app-specific field for Sonarr", () => {
-    const result = normalizeConfigFields({ category: "tv" }, "SONARR");
+    const result = getTestSync().normalizeConfigFields({ category: "tv" }, "SONARR");
 
     expect(result).toHaveProperty("category", "tv");
     expect(result).toHaveProperty("tvCategory", "tv");
   });
 
   test("converts generic category to app-specific field for Lidarr", () => {
-    const result = normalizeConfigFields({ category: "music" }, "LIDARR");
+    const result = getTestSync().normalizeConfigFields({ category: "music" }, "LIDARR");
 
     expect(result).toHaveProperty("category", "music");
     expect(result).toHaveProperty("musicCategory", "music");
   });
 
   test("converts generic category to app-specific field for Readarr", () => {
-    const result = normalizeConfigFields({ category: "books" }, "READARR");
+    const result = getTestSync().normalizeConfigFields({ category: "books" }, "READARR");
 
     expect(result).toHaveProperty("category", "books");
     expect(result).toHaveProperty("bookCategory", "books");
   });
 
   test("converts snake_case to camelCase", () => {
-    const result = normalizeConfigFields({ use_ssl: true, api_key: "test123", recent_priority: 5 }, "RADARR");
+    const result = getTestSync().normalizeConfigFields({ use_ssl: true, api_key: "test123", recent_priority: 5 }, "RADARR");
 
     expect(result).toHaveProperty("useSsl", true);
     expect(result).toHaveProperty("apiKey", "test123");
     expect(result).toHaveProperty("recentPriority", 5);
 
-    // Also keeps originals for backward compatibility
     expect(result).toHaveProperty("use_ssl", true);
     expect(result).toHaveProperty("api_key", "test123");
     expect(result).toHaveProperty("recent_priority", 5);
   });
 
   test("handles mixed field naming", () => {
-    const result = normalizeConfigFields({ category: "movies", use_ssl: true, host: "localhost" }, "RADARR");
+    const result = getTestSync().normalizeConfigFields({ category: "movies", use_ssl: true, host: "localhost" }, "RADARR");
 
     expect(result).toHaveProperty("movieCategory", "movies");
     expect(result).toHaveProperty("useSsl", true);
@@ -155,7 +149,7 @@ describe("downloadClientSyncer – validation", () => {
       fields: { host: "localhost", port: 8080 },
     };
 
-    const result = validateDownloadClient(config, mockSchema as any as DownloadClientResource[]);
+    const result = getTestSync().validateDownloadClient(config, mockSchema as any as DownloadClientResource[]);
 
     expect(result.valid).toBe(true);
     expect(result.errors).toEqual([]);
@@ -166,7 +160,7 @@ describe("downloadClientSyncer – validation", () => {
       type: "qBittorrent",
     };
 
-    const result = validateDownloadClient(config, mockSchema as any as DownloadClientResource[]);
+    const result = getTestSync().validateDownloadClient(config, mockSchema as any as DownloadClientResource[]);
 
     expect(result.valid).toBe(false);
     expect(result.errors.some((e) => (e.includes("name") && e.includes("required")) || e.includes("undefined"))).toBe(true);
@@ -178,7 +172,7 @@ describe("downloadClientSyncer – validation", () => {
       type: "qBittorrent",
     };
 
-    const result = validateDownloadClient(config, mockSchema as any as DownloadClientResource[]);
+    const result = getTestSync().validateDownloadClient(config, mockSchema as any as DownloadClientResource[]);
 
     expect(result.valid).toBe(false);
     expect(result.errors.some((e) => e.includes("name"))).toBe(true);
@@ -189,7 +183,7 @@ describe("downloadClientSyncer – validation", () => {
       name: "Test",
     };
 
-    const result = validateDownloadClient(config, mockSchema as any as DownloadClientResource[]);
+    const result = getTestSync().validateDownloadClient(config, mockSchema as any as DownloadClientResource[]);
 
     expect(result.valid).toBe(false);
     expect(result.errors.some((e) => (e.includes("type") && e.includes("required")) || e.includes("undefined"))).toBe(true);
@@ -201,7 +195,7 @@ describe("downloadClientSyncer – validation", () => {
       type: "UnknownClient",
     };
 
-    const result = validateDownloadClient(config, mockSchema as any as DownloadClientResource[]);
+    const result = getTestSync().validateDownloadClient(config, mockSchema as any as DownloadClientResource[]);
 
     expect(result.valid).toBe(false);
     expect(result.errors.some((e) => e.includes("Unknown download client type"))).toBe(true);
@@ -214,7 +208,7 @@ describe("downloadClientSyncer – validation", () => {
       priority: 999,
     };
 
-    const result = validateDownloadClient(config, mockSchema as any as DownloadClientResource[]);
+    const result = getTestSync().validateDownloadClient(config, mockSchema as any as DownloadClientResource[]);
 
     expect(result.valid).toBe(true);
     expect(result.warnings.some((w) => w.includes("Priority"))).toBe(true);
@@ -227,7 +221,7 @@ describe("downloadClientSyncer – validation", () => {
       priority: -1,
     };
 
-    const result = validateDownloadClient(config, mockSchema as any as DownloadClientResource[]);
+    const result = getTestSync().validateDownloadClient(config, mockSchema as any as DownloadClientResource[]);
 
     expect(result.valid).toBe(false);
     expect(result.errors.some((e) => e.includes("Priority"))).toBe(true);
@@ -240,7 +234,7 @@ describe("downloadClientSyncer – validation", () => {
       tags: ["valid", ""],
     };
 
-    const result = validateDownloadClient(config, mockSchema as any as DownloadClientResource[]);
+    const result = getTestSync().validateDownloadClient(config, mockSchema as any as DownloadClientResource[]);
 
     expect(result.valid).toBe(false);
     expect(result.errors.some((e) => e.includes("Tag"))).toBe(true);
@@ -253,7 +247,7 @@ describe("downloadClientSyncer – validation", () => {
       tags: ["movies", "4k", 123],
     };
 
-    const result = validateDownloadClient(config, mockSchema as any as DownloadClientResource[]);
+    const result = getTestSync().validateDownloadClient(config, mockSchema as any as DownloadClientResource[]);
 
     expect(result.valid).toBe(true);
   });
@@ -261,11 +255,11 @@ describe("downloadClientSyncer – validation", () => {
 
 describe("downloadClientSyncer – category field mapping", () => {
   test("maps correct category fields for each arr type", () => {
-    expect(getCategoryFieldName("SONARR")).toBe("tvCategory");
-    expect(getCategoryFieldName("LIDARR")).toBe("musicCategory");
-    expect(getCategoryFieldName("RADARR")).toBe("movieCategory");
-    expect(getCategoryFieldName("WHISPARR")).toBe("movieCategory");
-    expect(getCategoryFieldName("READARR")).toBe("bookCategory");
+    expect(getTestSync().getCategoryFieldName("SONARR")).toBe("tvCategory");
+    expect(getTestSync().getCategoryFieldName("LIDARR")).toBe("musicCategory");
+    expect(getTestSync().getCategoryFieldName("RADARR")).toBe("movieCategory");
+    expect(getTestSync().getCategoryFieldName("WHISPARR")).toBe("movieCategory");
+    expect(getTestSync().getCategoryFieldName("READARR")).toBe("bookCategory");
   });
 });
 
@@ -309,7 +303,7 @@ describe("downloadClientSyncer – deletion logic", () => {
 
     const deleteConfig = { enabled: true, ignore: [] };
 
-    const result = filterUnmanagedClients(serverClients, configClients, deleteConfig);
+    const result = getTestSync().filterUnmanagedClients(serverClients, configClients, deleteConfig);
 
     // Only the server client whose (name, implementation) pair does NOT
     // appear in the configuration should be considered unmanaged.
@@ -335,7 +329,7 @@ describe("downloadClientSyncer – deletion logic", () => {
 
     const configClients: InputConfigDownloadClient[] = [];
 
-    const result = filterUnmanagedClients(serverClients, configClients, false);
+    const result = getTestSync().filterUnmanagedClients(serverClients, configClients, false);
 
     expect(result).toEqual([]);
   });
@@ -368,7 +362,7 @@ describe("downloadClientSyncer – equality & omission semantics", () => {
       // This should be treated as "do not manage" for those properties
     };
 
-    const equal = isDownloadClientEqual(config, server, cache, "RADARR");
+    const equal = getTestSync().isDownloadClientEqual(config, server, cache);
 
     expect(equal).toBe(true);
   });
@@ -396,7 +390,7 @@ describe("downloadClientSyncer – equality & omission semantics", () => {
       enable: false, // explicitly different from server
     };
 
-    const equal = isDownloadClientEqual(config, server, cache, "RADARR");
+    const equal = getTestSync().isDownloadClientEqual(config, server, cache);
 
     expect(equal).toBe(false);
   });

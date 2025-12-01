@@ -7,7 +7,6 @@ import { DownloadProtocol } from "../__generated__/radarr/data-contracts";
 import type { TagResource } from "../__generated__/radarr/data-contracts";
 import { ArrType } from "../types/common.types";
 
-// Mock the unified client
 vi.mock("../clients/unified-client", () => ({
   getUnifiedClient: vi.fn(() => ({
     getDownloadClients: vi.fn(),
@@ -97,7 +96,7 @@ describe("GenericDownloadClientSync – ARR type handling", () => {
         name: "Test Client",
         type: "qBittorrent",
         fields: { host: "localhost" },
-        // enable and priority omitted - should be treated as "do not manage"
+        
       };
 
       const isEqual = sync.isDownloadClientEqual(configClient, serverClient, cache);
@@ -159,7 +158,7 @@ describe("GenericDownloadClientSync – ARR type handling", () => {
         type: "qBittorrent",
         fields: {
           host: "localhost",
-          port: "8080", // exact field name match
+          port: "8080", 
         },
       };
 

@@ -5,12 +5,6 @@ import { InputConfigDownloadClient } from "../types/config.types";
 import type { DownloadClientResource, DownloadClientField } from "../types/download-client.types";
 import { BaseDownloadClientSync } from "./downloadClientBase";
 import { DownloadClientDiff } from "./downloadClient.types";
-
-/**
- * Generic download client synchronization implementation
- * Handles most ARR types (Radarr, Sonarr, Whisparr, Readarr) with standard logic
- * Follows the established pattern used by GenericRootFolderSync
- */
 export class GenericDownloadClientSync extends BaseDownloadClientSync {
   constructor(private arrType: ArrType) {
     super();
@@ -19,17 +13,12 @@ export class GenericDownloadClientSync extends BaseDownloadClientSync {
   protected getArrType(): ArrType {
     return this.arrType;
   }
-
-  /**
-   * Check if two download clients are equal (ignoring ID)
-   * Implements omission semantics - undefined config properties don't affect equality
-   */
   public isDownloadClientEqual = (config: InputConfigDownloadClient, server: DownloadClientResource, cache: ServerCache): boolean => {
-    // Compare basic properties
+    // Basic comparison
     if (config.name !== server.name) return false;
 
-    // Only compare top-level properties when they are explicitly specified in the config.
-    // When omitted in the config, they are treated as "do not manage" and do not affect equality.
+    // Compare only when specified
+    // Omitted means "do not manage"
     if (config.enable !== undefined && config.enable !== server.enable) return false;
     if (config.priority !== undefined && config.priority !== server.priority) return false;
     if (config.remove_completed_downloads !== undefined && config.remove_completed_downloads !== server.removeCompletedDownloads) {
@@ -88,9 +77,6 @@ export class GenericDownloadClientSync extends BaseDownloadClientSync {
     return true;
   };
 
-  /**
-   * Determine if update should be partial (only specified fields) or full
-   */
   public shouldUsePartialUpdate = (config: InputConfigDownloadClient): boolean => {
     const hasFieldOverrides = !!(config.fields && Object.keys(config.fields).length > 0);
 
@@ -113,9 +99,6 @@ export class GenericDownloadClientSync extends BaseDownloadClientSync {
     return specifiedTopLevelProps > 0 && specifiedTopLevelProps <= 2;
   };
 
-  /**
-   * Calculate diff between configured download clients and server download clients
-   */
   async calculateDiff(
     configClients: InputConfigDownloadClient[],
     serverClients: DownloadClientResource[],
@@ -145,10 +128,6 @@ export class GenericDownloadClientSync extends BaseDownloadClientSync {
     return { create, update, unchanged, deleted };
   }
 
-  /**
-   * Create download client payload from config
-   * This method implements the core logic for transforming configuration into API payload
-   */
   async resolveConfig(
     config: InputConfigDownloadClient,
     cache: ServerCache,

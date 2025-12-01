@@ -9,22 +9,12 @@ import { cloneWithJSON } from "../util";
 import { z } from "zod";
 import { ValidationResult, ConnectionTestResult, DownloadClientDiff, DownloadClientSyncResult, TagLike } from "./downloadClient.types";
 
-// ============================================================================
-// CONSTANTS
-// ============================================================================
-
-/**
- * Constraints for download client configuration
- */
 const DOWNLOAD_CLIENT_CONSTRAINTS = {
   PRIORITY_MIN: 1,
   PRIORITY_MAX: 50,
   NAME_MAX_LENGTH: 100,
 } as const;
 
-/**
- * Mapping of ARR types to their category field names
- */
 const ARR_CATEGORY_FIELDS: Record<ArrType, string> = {
   SONARR: "tvCategory",
   LIDARR: "musicCategory",
@@ -32,14 +22,6 @@ const ARR_CATEGORY_FIELDS: Record<ArrType, string> = {
   WHISPARR: "movieCategory",
   READARR: "bookCategory",
 } as const;
-
-// ============================================================================
-// ERROR HANDLING
-// ============================================================================
-
-/**
- * Custom error class for download client operations
- */
 export class DownloadClientError extends Error {
   constructor(
     message: string,
@@ -52,13 +34,6 @@ export class DownloadClientError extends Error {
   }
 }
 
-// ============================================================================
-// VALIDATION SCHEMAS
-// ============================================================================
-
-/**
- * Zod schema for download client configuration validation
- */
 const DownloadClientConfigSchema = z.object({
   name: z
     .string()
@@ -78,22 +53,11 @@ const DownloadClientConfigSchema = z.object({
     .optional()
     .default([]),
 });
-
-// ============================================================================
-// ABSTRACT BASE CLASS
-// ============================================================================
-
-/**
- * Base class for download client synchronization
- * Follows the established pattern used by rootFolder and metadataProfiles modules
- */
 export abstract class BaseDownloadClientSync {
   protected api: IArrClient;
   protected logger = logger;
 
   constructor() {
-    // Lazy initialization to allow testing without API configuration
-    // Will be initialized when first accessed through getApi()
     this.api = null as any;
   }
 
@@ -104,7 +68,6 @@ export abstract class BaseDownloadClientSync {
     return this.api;
   }
 
-  // Abstract methods for type-specific implementations
   protected abstract getArrType(): ArrType;
   protected abstract calculateDiff(
     configClients: InputConfigDownloadClient[],
@@ -117,30 +80,15 @@ export abstract class BaseDownloadClientSync {
     serverClient?: DownloadClientResource,
     partialUpdate?: boolean,
   ): Promise<DownloadClientResource>;
-
-  // ============================================================================
-  // UTILITY METHODS (Extracted from current implementation)
-  // ============================================================================
-
-  /**
-   * Get the category field name for a specific *arr application
-   */
   public getCategoryFieldName = (arrType: ArrType): string => {
     return ARR_CATEGORY_FIELDS[arrType] || ARR_CATEGORY_FIELDS.SONARR;
   };
 
-  /**
-   * Convert snake_case to camelCase
-   */
   protected snakeToCamel = (str: string): string => {
     return str.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
   };
 
-  /**
-   * Normalize configuration field names
-   * Supports both camelCase and snake_case, plus generic "category" field
-   */
-  public normalizeConfigFields = (configFields: Record<string, any>, arrType: ArrType): Record<string, any> => {
+    public normalizeConfigFields = (configFields: Record<string, any>, arrType: ArrType): Record<string, any> => {
     const normalized: Record<string, any> = {};
 
     for (const [key, value] of Object.entries(configFields)) {
@@ -148,16 +96,16 @@ export abstract class BaseDownloadClientSync {
       if (key === "category") {
         const appCategoryField = this.getCategoryFieldName(arrType);
         normalized[appCategoryField] = value;
-        // Also keep original for backward compatibility
+        // Backward compatibility
         normalized[key] = value;
         continue;
       }
 
-      // Convert snake_case to camelCase
+      // Convert to camelCase
       const camelKey = this.snakeToCamel(key);
       normalized[camelKey] = value;
 
-      // Also keep original key for backward compatibility
+      // Keep original key
       if (key !== camelKey) {
         normalized[key] = value;
       }
@@ -166,10 +114,6 @@ export abstract class BaseDownloadClientSync {
     return normalized;
   };
 
-  /**
-   * Resolve tag names to tag IDs
-   * Converts an array of tag names/IDs to tag IDs by looking them up in the server's tag list
-   */
   public resolveTagNamesToIds = (tagNames: (string | number)[], serverTags: TagLike[]): { ids: number[]; missingTags: string[] } => {
     const ids: number[] = [];
     const missingTags: string[] = [];
@@ -190,17 +134,10 @@ export abstract class BaseDownloadClientSync {
     return { ids, missingTags };
   };
 
-  /**
-   * Find download client implementation in schema by name
-   */
   protected findImplementationInSchema = (schema: DownloadClientResource[], implementation: string): DownloadClientResource | undefined => {
     return schema.find((s: DownloadClientResource) => s.implementation?.toLowerCase() === implementation.toLowerCase());
   };
 
-  /**
-   * Merge field values from config into schema template
-   * Supports both camelCase and snake_case field names in config
-   */
   protected mergeFieldsWithSchema = (
     schemaFields: DownloadClientField[],
     configFields: Record<string, any>,
@@ -234,9 +171,6 @@ export abstract class BaseDownloadClientSync {
     }
   };
 
-  /**
-   * Validate download client configuration
-   */
   protected validateDownloadClientConfig = (
     config: unknown,
   ): {
@@ -263,9 +197,6 @@ export abstract class BaseDownloadClientSync {
     };
   };
 
-  /**
-   * Validate download client configuration with business logic
-   */
   public validateDownloadClient = (config: InputConfigDownloadClient, schema: DownloadClientResource[]): ValidationResult => {
     // First, validate with Zod schema for type safety
     const zodValidation = this.validateDownloadClientConfig(config);
@@ -313,9 +244,6 @@ export abstract class BaseDownloadClientSync {
     return { valid: errors.length === 0, errors, warnings };
   };
 
-  /**
-   * Test download client connection
-   */
   protected testDownloadClientConnection = async (clientPayload: DownloadClientResource): Promise<ConnectionTestResult> => {
     try {
       // Use the test endpoint if available
@@ -366,9 +294,6 @@ export abstract class BaseDownloadClientSync {
     }
   };
 
-  /**
-   * Get download client schema from server with caching
-   */
   protected getDownloadClientSchema = async (cache: ServerCache): Promise<DownloadClientResource[]> => {
     const cached = cache.getDownloadClientSchema();
     if (cached) {
@@ -380,9 +305,6 @@ export abstract class BaseDownloadClientSync {
     return schema;
   };
 
-  /**
-   * Filter unmanaged download clients based on delete configuration
-   */
   public filterUnmanagedClients = (
     serverClients: DownloadClientResource[],
     configClients: InputConfigDownloadClient[],
@@ -415,14 +337,8 @@ export abstract class BaseDownloadClientSync {
     });
   };
 
-  // ============================================================================
   // MAIN SYNC ORCHESTRATION (Extracted from current implementation)
-  // ============================================================================
 
-  /**
-   * Synchronize download clients configuration
-   * Main orchestration method that follows the established pattern
-   */
   public async syncDownloadClients(config: MergedConfigInstance, serverCache: ServerCache): Promise<DownloadClientSyncResult> {
     const configClients = config.download_clients ?? [];
 
