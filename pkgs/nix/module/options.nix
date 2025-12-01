@@ -1,9 +1,13 @@
-{lib, ...}: {
+{
+  lib,
+  pkgs,
+  ...
+}: {
   options.services.configarr = {
     config = lib.mkOption {
       default = "";
       description = "YAML configuration.";
-      type = lib.types.string;
+      type = lib.types.str;
     };
 
     dataDir = lib.mkOption {
@@ -26,6 +30,12 @@
       default = "configarr";
       description = "Group for the Configarr service.";
       type = lib.types.str;
+    };
+
+    package = lib.mkOption {
+      default = import ../package.nix {inherit lib pkgs;};
+      description = "Package to use";
+      type = lib.types.package;
     };
 
     schedule = lib.mkOption {

@@ -18,12 +18,20 @@ in {
         preStart = let
           configFile = pkgs.writeText "configarr-config.yml" cfg.config;
         in ''
+          echo "Creating configarr config file at ${cfg.dataDir}/config/"
           install -D -m 0644 ${configFile} ${cfg.dataDir}/config/config.yml
           chown ${cfg.user}:${cfg.group} ${cfg.dataDir}/config/config.yml
+          echo "Created configarr config file at ${cfg.dataDir}/config/"
         '';
         serviceConfig = {
           EnvironmentFile = lib.optional (cfg.environmentFile != null) cfg.environmentFile;
-          ExecStart = lib.getExe (import ../package.nix {inherit lib pkgs;});
+          ExecStart = let
+            pkg =
+              if (cfg.package != null)
+              then cfg.package
+              else (import ../package.nix {inherit lib pkgs;});
+          in
+            lib.getExe pkg;
           Group = cfg.group;
           Type = "oneshot";
           User = cfg.user;
