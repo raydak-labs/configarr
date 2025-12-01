@@ -147,23 +147,21 @@ export type InputConfigArrInstance = {
     additional?: InputConfigDelayProfile[];
   };
   /**
-   * @experimental
+   * @experimental since v1.19.0
    * Download clients configuration
    */
   download_clients?: InputConfigDownloadClient[];
   /**
-   * @experimental
+   * @experimental since v1.19.0
    * Delete unmanaged download clients
    */
-  delete_unmanaged_download_clients?:
-    | boolean
-    | {
-        enabled: boolean;
-        /**
-         * Names of download clients to ignore deleting
-         */
-        ignore?: string[];
-      };
+  delete_unmanaged_download_clients?: {
+    enabled: boolean;
+    /**
+     * Names of download clients to ignore deleting
+     */
+    ignore?: string[];
+  };
 } & Pick<InputConfigSchema, "customFormatDefinitions">;
 
 export type InputConfigDelayProfile = {

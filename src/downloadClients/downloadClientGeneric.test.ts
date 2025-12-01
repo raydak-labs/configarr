@@ -276,7 +276,7 @@ describe("GenericDownloadClientSync – ARR type handling", () => {
 
       const configClients: InputConfigDownloadClient[] = [];
 
-      const unmanagedClients = sync.filterUnmanagedClients(serverClients, configClients, false);
+      const unmanagedClients = sync.filterUnmanagedClients(serverClients, configClients, { enabled: false });
 
       expect(unmanagedClients).toEqual([]);
     });

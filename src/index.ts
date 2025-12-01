@@ -299,7 +299,7 @@ const pipeline = async (globalConfig: InputConfigSchema, instanceConfig: InputCo
   }
 
   // Download Clients
-  if (config.download_clients || config.delete_unmanaged_download_clients) {
+  if (config.download_clients || config.delete_unmanaged_download_clients?.enabled) {
     if (getEnvs().DRY_RUN) {
       logger.info("DryRun: Would sync download clients.");
     } else {

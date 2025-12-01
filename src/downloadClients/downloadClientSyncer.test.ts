@@ -328,7 +328,7 @@ describe("downloadClientSyncer – deletion logic", () => {
 
     const configClients: InputConfigDownloadClient[] = [];
 
-    const result = getTestSync().filterUnmanagedClients(serverClients, configClients, false);
+    const result = getTestSync().filterUnmanagedClients(serverClients, configClients, { enabled: false });
 
     expect(result).toEqual([]);
   });

@@ -29,17 +29,6 @@ const ARR_CATEGORY_FIELDS: Record<ArrType, string> = {
   WHISPARR: "movieCategory",
   READARR: "bookCategory",
 } as const;
-export class DownloadClientError extends Error {
-  constructor(
-    message: string,
-    public readonly clientName: string | undefined,
-    public readonly operation: string,
-    public readonly originalError?: Error,
-  ) {
-    super(message);
-    this.name = "DownloadClientError";
-  }
-}
 
 const DownloadClientConfigSchema = z.object({
   name: z
@@ -60,6 +49,7 @@ const DownloadClientConfigSchema = z.object({
     .optional()
     .default([]),
 });
+
 export abstract class BaseDownloadClientSync {
   protected api: IArrClient;
   protected logger = logger;
@@ -76,17 +66,20 @@ export abstract class BaseDownloadClientSync {
   }
 
   protected abstract getArrType(): ArrType;
+
   protected abstract calculateDiff(
     configClients: InputConfigDownloadClient[],
     serverClients: DownloadClientResource[],
     cache: ServerCache,
   ): Promise<DownloadClientDiff>;
+
   public abstract resolveConfig(
     config: InputConfigDownloadClient,
     cache: ServerCache,
     serverClient?: DownloadClientResource,
     partialUpdate?: boolean,
   ): Promise<DownloadClientResource>;
+
   public getCategoryFieldName = (arrType: ArrType): string => {
     return ARR_CATEGORY_FIELDS[arrType] || ARR_CATEGORY_FIELDS.SONARR;
   };
@@ -317,13 +310,13 @@ export abstract class BaseDownloadClientSync {
     configClients: InputConfigDownloadClient[],
     deleteConfig: MergedConfigInstance["delete_unmanaged_download_clients"],
   ): DownloadClientResource[] => {
-    const enabled = typeof deleteConfig === "boolean" ? deleteConfig : (deleteConfig?.enabled ?? false);
+    const enabled = deleteConfig?.enabled ?? false;
 
     if (!enabled) {
       return [];
     }
 
-    const ignoreNames = typeof deleteConfig === "boolean" ? [] : (deleteConfig?.ignore ?? []);
+    const ignoreNames = deleteConfig?.ignore ?? [];
 
     // Identify managed clients by a composite key of name + implementation
     const configKeys = new Set(
@@ -344,12 +337,10 @@ export abstract class BaseDownloadClientSync {
     });
   };
 
-  // MAIN SYNC ORCHESTRATION (Extracted from current implementation)
-
   public async syncDownloadClients(config: MergedConfigInstance, serverCache: ServerCache): Promise<DownloadClientSyncResult> {
     const configClients = config.download_clients ?? [];
 
-    if (configClients.length === 0 && !config.delete_unmanaged_download_clients) {
+    if (configClients.length === 0 && !config.delete_unmanaged_download_clients?.enabled) {
       this.logger.info("No download clients configured and delete_unmanaged not enabled, skipping");
       return { added: 0, updated: 0, removed: 0 };
     }
@@ -516,7 +507,7 @@ export abstract class BaseDownloadClientSync {
     }
 
     // Handle unmanaged clients deletion
-    if (config.delete_unmanaged_download_clients) {
+    if (config.delete_unmanaged_download_clients?.enabled) {
       const unmanagedClients = this.filterUnmanagedClients(serverClients, configClients, config.delete_unmanaged_download_clients);
 
       this.logger.info(`Found ${unmanagedClients.length} unmanaged download client(s) to delete`);
