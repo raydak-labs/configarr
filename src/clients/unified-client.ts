@@ -1,6 +1,7 @@
 import { MergedCustomFormatResource, MergedQualityDefinitionResource, MergedQualityProfileResource } from "../__generated__/mergedTypes";
 import { logger } from "../logger";
 import { ArrType } from "../types/common.types";
+import type { DownloadClientResource } from "../types/download-client.types";
 import { LidarrClient } from "./lidarr-client";
 import { RadarrClient } from "./radarr-client";
 import { ReadarrClient } from "./readarr-client";
@@ -142,6 +143,14 @@ export interface IArrClient<
   // deleteTag(id: string): Promise<void>;
   // updateTag(id: string, tag: any): Promise<any>;
 
+  // Download Clients
+  getDownloadClientSchema(): Promise<DownloadClientResource[]>;
+  getDownloadClients(): Promise<DownloadClientResource[]>;
+  createDownloadClient(client: DownloadClientResource): Promise<DownloadClientResource>;
+  updateDownloadClient(id: string, client: DownloadClientResource): Promise<DownloadClientResource>;
+  deleteDownloadClient(id: string): Promise<void>;
+  testDownloadClient(client: DownloadClientResource): Promise<any>;
+
   // System/Health Check
   getSystemStatus(): Promise<any>;
   testConnection(): Promise<boolean>;
@@ -277,6 +286,30 @@ export class UnifiedClient implements IArrClient {
 
   async createTag(tag: any) {
     return this.api.createTag(tag);
+  }
+
+  async getDownloadClientSchema() {
+    return this.api.getDownloadClientSchema();
+  }
+
+  async getDownloadClients() {
+    return this.api.getDownloadClients();
+  }
+
+  async createDownloadClient(client: DownloadClientResource): Promise<DownloadClientResource> {
+    return this.api.createDownloadClient(client);
+  }
+
+  async updateDownloadClient(id: string, client: DownloadClientResource): Promise<DownloadClientResource> {
+    return this.api.updateDownloadClient(id, client);
+  }
+
+  async deleteDownloadClient(id: string): Promise<void> {
+    return this.api.deleteDownloadClient(id);
+  }
+
+  async testDownloadClient(client: DownloadClientResource): Promise<any> {
+    return this.api.testDownloadClient(client);
   }
 
   async getSystemStatus() {

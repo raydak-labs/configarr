@@ -6,6 +6,7 @@ import {
 } from "./__generated__/mergedTypes";
 import { ArrClientLanguageResource } from "./clients/unified-client";
 import { logger } from "./logger";
+import type { DownloadClientResource } from "./types/download-client.types";
 
 export class ServerCache {
   private cache: Record<string, any> = {};
@@ -14,6 +15,7 @@ export class ServerCache {
   private _cf: MergedCustomFormatResource[];
   private _tags: MergedTagResource[] = [];
   private _languages: ArrClientLanguageResource[];
+  private _downloadClientSchema: DownloadClientResource[] | null = null;
 
   constructor(
     qd: MergedQualityDefinitionResource[],
@@ -91,5 +93,13 @@ export class ServerCache {
       logger.debug(`No Tags received from server.`);
     }
     this._tags = newTags;
+  }
+
+  public getDownloadClientSchema(): DownloadClientResource[] | null {
+    return this._downloadClientSchema;
+  }
+
+  public setDownloadClientSchema(schema: DownloadClientResource[]): void {
+    this._downloadClientSchema = schema;
   }
 }
