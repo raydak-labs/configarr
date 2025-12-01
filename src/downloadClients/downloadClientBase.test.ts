@@ -1,19 +1,19 @@
 import { describe, expect, test, vi, beforeEach } from "vitest";
 import { BaseDownloadClientSync } from "./downloadClientBase";
 import type { InputConfigDownloadClient } from "../types/config.types";
-import type { DownloadClientResource } from "../types/download-client.types";
 import type { ServerCache } from "../cache";
 import type { IArrClient } from "../clients/unified-client";
 import type { TagResource } from "../__generated__/radarr/data-contracts";
 import { DownloadProtocol } from "../__generated__/radarr/data-contracts";
 import { ArrType } from "../types/common.types";
+import { DownloadClientResource } from "./downloadClient.types";
 
 class MockDownloadClientSync extends BaseDownloadClientSync {
   constructor() {
     super();
   }
 
-    public testValidateDownloadClient(config: InputConfigDownloadClient, schema: DownloadClientResource[]) {
+  public testValidateDownloadClient(config: InputConfigDownloadClient, schema: DownloadClientResource[]) {
     return this.validateDownloadClient(config, schema);
   }
 
@@ -37,7 +37,7 @@ class MockDownloadClientSync extends BaseDownloadClientSync {
     return this.getApi();
   }
 
-    protected getArrType(): ArrType {
+  protected getArrType(): ArrType {
     return "RADARR";
   }
 

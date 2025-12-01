@@ -1,11 +1,10 @@
 import { describe, expect, test } from "vitest";
-import { ServerCache } from "../cache";
-import { GenericDownloadClientSync } from "./downloadClientGeneric";
+import type { MergedTagResource } from "../__generated__/mergedTypes";
 import type { DownloadClientResource, TagResource } from "../__generated__/radarr/data-contracts";
 import { DownloadProtocol } from "../__generated__/radarr/data-contracts";
-import type { MergedTagResource } from "../__generated__/mergedTypes";
+import { ServerCache } from "../cache";
 import type { InputConfigDownloadClient } from "../types/config.types";
-import type { ArrClientLanguageResource } from "../clients/unified-client";
+import { GenericDownloadClientSync } from "./downloadClientGeneric";
 
 type TestDownloadClientResource = Omit<DownloadClientResource, "protocol"> & {
   protocol?: DownloadProtocol;

@@ -4,10 +4,17 @@ import { getEnvs } from "../env";
 import { logger } from "../logger";
 import { ArrType } from "../types/common.types";
 import { InputConfigDownloadClient, MergedConfigInstance } from "../types/config.types";
-import type { DownloadClientResource, DownloadClientField } from "../types/download-client.types";
 import { cloneWithJSON } from "../util";
 import { z } from "zod";
-import { ValidationResult, ConnectionTestResult, DownloadClientDiff, DownloadClientSyncResult, TagLike } from "./downloadClient.types";
+import {
+  ValidationResult,
+  ConnectionTestResult,
+  DownloadClientDiff,
+  DownloadClientSyncResult,
+  TagLike,
+  DownloadClientField,
+  DownloadClientResource,
+} from "./downloadClient.types";
 
 const DOWNLOAD_CLIENT_CONSTRAINTS = {
   PRIORITY_MIN: 1,
@@ -88,7 +95,7 @@ export abstract class BaseDownloadClientSync {
     return str.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
   };
 
-    public normalizeConfigFields = (configFields: Record<string, any>, arrType: ArrType): Record<string, any> => {
+  public normalizeConfigFields = (configFields: Record<string, any>, arrType: ArrType): Record<string, any> => {
     const normalized: Record<string, any> = {};
 
     for (const [key, value] of Object.entries(configFields)) {

@@ -1,11 +1,10 @@
-import { describe, expect, test, vi, beforeEach } from "vitest";
-import { GenericDownloadClientSync } from "./downloadClientGeneric";
-import type { InputConfigDownloadClient } from "../types/config.types";
-import type { DownloadClientResource } from "../types/download-client.types";
-import { ServerCache } from "../cache";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 import { DownloadProtocol } from "../__generated__/radarr/data-contracts";
-import type { TagResource } from "../__generated__/radarr/data-contracts";
+import { ServerCache } from "../cache";
 import { ArrType } from "../types/common.types";
+import type { InputConfigDownloadClient } from "../types/config.types";
+import { GenericDownloadClientSync } from "./downloadClientGeneric";
+import { DownloadClientResource } from "./downloadClient.types";
 
 vi.mock("../clients/unified-client", () => ({
   getUnifiedClient: vi.fn(() => ({
@@ -96,7 +95,6 @@ describe("GenericDownloadClientSync – ARR type handling", () => {
         name: "Test Client",
         type: "qBittorrent",
         fields: { host: "localhost" },
-        
       };
 
       const isEqual = sync.isDownloadClientEqual(configClient, serverClient, cache);
@@ -158,7 +156,7 @@ describe("GenericDownloadClientSync – ARR type handling", () => {
         type: "qBittorrent",
         fields: {
           host: "localhost",
-          port: "8080", 
+          port: "8080",
         },
       };
 

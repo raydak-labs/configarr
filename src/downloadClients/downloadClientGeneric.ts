@@ -2,9 +2,9 @@ import { ServerCache } from "../cache";
 import { logger } from "../logger";
 import { ArrType } from "../types/common.types";
 import { InputConfigDownloadClient } from "../types/config.types";
-import type { DownloadClientResource, DownloadClientField } from "../types/download-client.types";
+import { DownloadClientDiff, DownloadClientField, DownloadClientResource } from "./downloadClient.types";
 import { BaseDownloadClientSync } from "./downloadClientBase";
-import { DownloadClientDiff } from "./downloadClient.types";
+
 export class GenericDownloadClientSync extends BaseDownloadClientSync {
   constructor(private arrType: ArrType) {
     super();
@@ -13,6 +13,7 @@ export class GenericDownloadClientSync extends BaseDownloadClientSync {
   protected getArrType(): ArrType {
     return this.arrType;
   }
+
   public isDownloadClientEqual = (config: InputConfigDownloadClient, server: DownloadClientResource, cache: ServerCache): boolean => {
     // Basic comparison
     if (config.name !== server.name) return false;

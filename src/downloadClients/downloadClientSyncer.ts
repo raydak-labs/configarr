@@ -5,7 +5,7 @@ import { BaseDownloadClientSync } from "./downloadClientBase";
 import { GenericDownloadClientSync } from "./downloadClientGeneric";
 import { DownloadClientSyncResult } from "./downloadClient.types";
 
-export function createDownloadClientSync(arrType: ArrType): BaseDownloadClientSync {
+function createDownloadClientSync(arrType: ArrType): BaseDownloadClientSync {
   return new GenericDownloadClientSync(arrType);
 }
 
