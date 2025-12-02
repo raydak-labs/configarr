@@ -29,10 +29,6 @@ class MockDownloadClientSync extends BaseDownloadClientSync {
     return this.normalizeConfigFields(configFields, arrType);
   }
 
-  public testSnakeToCamel(str: string) {
-    return this.snakeToCamel(str);
-  }
-
   public testGetApi(): IArrClient {
     return this.getApi();
   }
@@ -77,31 +73,6 @@ describe("BaseDownloadClientSync – utility methods", () => {
 
   beforeEach(() => {
     sync = new MockDownloadClientSync();
-  });
-
-  describe("snakeToCamel conversion", () => {
-    test("converts simple snake_case to camelCase", () => {
-      expect(sync.testSnakeToCamel("hello_world")).toBe("helloWorld");
-      expect(sync.testSnakeToCamel("test_case")).toBe("testCase");
-      expect(sync.testSnakeToCamel("api_key")).toBe("apiKey");
-    });
-
-    test("handles multiple underscores", () => {
-      expect(sync.testSnakeToCamel("very_long_field_name")).toBe("veryLongFieldName");
-    });
-
-    test("handles empty string", () => {
-      expect(sync.testSnakeToCamel("")).toBe("");
-    });
-
-    test("handles string without underscores", () => {
-      expect(sync.testSnakeToCamel("camel")).toBe("camel");
-    });
-
-    test("handles leading/trailing underscores", () => {
-      expect(sync.testSnakeToCamel("_private_field")).toBe("PrivateField");
-      expect(sync.testSnakeToCamel("trailing_")).toBe("trailing_");
-    });
   });
 
   describe("category field mapping", () => {

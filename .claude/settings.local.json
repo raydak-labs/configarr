@@ -8,7 +8,8 @@
       "Bash(git stash:*)",
       "Bash(pnpm build:*)",
       "Skill(superpowers:using-superpowers)",
-      "Skill(superpowers:verification-before-completion)"
+      "Skill(superpowers:verification-before-completion)",
+      "Bash(pnpm lint)"
     ],
     "deny": [],
     "ask": []
