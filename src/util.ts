@@ -323,3 +323,24 @@ export function pickFromConst<T extends readonly string[], K extends T[number]>(
 export function isInConstArray<T extends readonly unknown[]>(array: T, value: unknown): value is T[number] {
   return array.includes(value as T[number]);
 }
+
+/**
+ * Convert snake_case string to camelCase
+ * @param str - The snake_case string to convert
+ * @returns The camelCase version of the string
+ */
+export const snakeToCamel = (str: string): string => {
+  return str.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+};
+
+/**
+ * Download client category field mappings for different *arr applications
+ * Maps generic "category" field to app-specific field names
+ */
+export const DOWNLOAD_CLIENT_CATEGORY_FIELDS = {
+  SONARR: "tvCategory",
+  LIDARR: "musicCategory",
+  RADARR: "movieCategory",
+  WHISPARR: "movieCategory",
+  READARR: "bookCategory",
+} as const;

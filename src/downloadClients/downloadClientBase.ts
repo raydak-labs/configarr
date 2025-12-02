@@ -4,11 +4,10 @@ import { getEnvs } from "../env";
 import { logger } from "../logger";
 import { ArrType } from "../types/common.types";
 import { InputConfigDownloadClient, MergedConfigInstance } from "../types/config.types";
-import { cloneWithJSON } from "../util";
+import { cloneWithJSON, snakeToCamel, DOWNLOAD_CLIENT_CATEGORY_FIELDS } from "../util";
 import { z } from "zod";
 import {
   ValidationResult,
-  ConnectionTestResult,
   DownloadClientDiff,
   DownloadClientSyncResult,
   TagLike,
@@ -20,59 +19,6 @@ import {
 const PRIORITY_MIN = 1;
 const PRIORITY_MAX = 50;
 const NAME_MAX_LENGTH = 100;
-
-const CATEGORY_FIELDS = {
-  SONARR: "tvCategory",
-  LIDARR: "musicCategory",
-  RADARR: "movieCategory",
-  WHISPARR: "movieCategory",
-  READARR: "bookCategory",
-} as const satisfies Record<ArrType, string>;
-
-// Utility functions
-const snakeToCamel = (str: string): string => {
-  return str.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
-};
-
-const createErrorParts = (error: unknown): string[] => {
-  const errorMessage = error instanceof Error ? error.message : String(error);
-  const httpError = error as any;
-
-  const status = httpError?.response?.status;
-  const data = httpError?.response?.data;
-
-  let structuredDetail: string | undefined;
-
-  if (data) {
-    if (typeof data === "string") {
-      structuredDetail = data;
-    } else if (typeof data === "object" && data !== null) {
-      const message = (data as any).message ?? (data as any).error;
-      const errors = Array.isArray((data as any).errors)
-        ? (data as any).errors.map((e: any) => e.errorMessage ?? e.message ?? String(e)).join("; ")
-        : undefined;
-
-      structuredDetail = [message, errors].filter(Boolean).join(" - ") || undefined;
-    }
-  }
-
-  const statusPrefix = status ? `HTTP ${status}` : "Connection test failed";
-  const structuredMessage = structuredDetail ? `${statusPrefix}: ${structuredDetail}` : statusPrefix;
-
-  // Common error patterns
-  let friendly: string | undefined;
-  if (errorMessage.includes("connection refused") || errorMessage.includes("ECONNREFUSED")) {
-    friendly = "Connection refused - check host and port";
-  } else if (errorMessage.includes("timeout") || errorMessage.includes("ETIMEDOUT")) {
-    friendly = "Connection timeout - check network connectivity";
-  } else if (errorMessage.includes("unauthorized") || errorMessage.includes("401")) {
-    friendly = "Authentication failed - check username/password/API key";
-  } else if (errorMessage.includes("not found") || errorMessage.includes("404")) {
-    friendly = "Endpoint not found - check URL base path";
-  }
-
-  return [friendly, structuredMessage, errorMessage].filter((part, index, self) => part && self.indexOf(part) === index) as string[];
-};
 
 const DownloadClientConfigSchema = z.object({
   name: z
@@ -118,7 +64,7 @@ export abstract class BaseDownloadClientSync {
   ): Promise<DownloadClientResource>;
 
   public getCategoryFieldName(arrType: ArrType): string {
-    return CATEGORY_FIELDS[arrType] ?? CATEGORY_FIELDS.SONARR;
+    return DOWNLOAD_CLIENT_CATEGORY_FIELDS[arrType] ?? DOWNLOAD_CLIENT_CATEGORY_FIELDS.SONARR;
   }
 
   public normalizeConfigFields(configFields: Record<string, unknown>, arrType: ArrType): Record<string, unknown> {
@@ -241,16 +187,6 @@ export abstract class BaseDownloadClientSync {
     }
 
     return { valid: errors.length === 0, errors, warnings };
-  }
-
-  protected async testDownloadClientConnection(clientPayload: DownloadClientResource): Promise<ConnectionTestResult> {
-    try {
-      await this.getApi().testDownloadClient(clientPayload);
-      return { success: true, message: "Connection successful" };
-    } catch (error) {
-      const errorParts = createErrorParts(error);
-      return { success: false, error: errorParts.join(" | ") };
-    }
   }
 
   protected async getDownloadClientSchema(cache: ServerCache): Promise<DownloadClientResource[]> {
@@ -383,17 +319,6 @@ export abstract class BaseDownloadClientSync {
 
         const payload = await this.resolveConfig(config, serverCache);
 
-        // Test connection before creating
-        this.logger.debug(`Testing connection for '${config.name}'...`);
-        const testResult = await this.testDownloadClientConnection(payload);
-
-        if (!testResult.success) {
-          this.logger.warn(`Connection test failed for '${config.name}': ${testResult.error}`);
-          this.logger.warn(`Creating anyway - you may need to fix connection settings`);
-        } else {
-          this.logger.debug(`Connection test passed for '${config.name}'`);
-        }
-
         await this.getApi().createDownloadClient(payload);
         added++;
         this.logger.info(`Created download client: '${config.name}' (${config.type})`);
@@ -424,17 +349,6 @@ export abstract class BaseDownloadClientSync {
 
         const payload = await this.resolveConfig(config, serverCache, server, partialUpdate);
         payload.id = server.id; // Preserve server ID
-
-        // Test connection before updating
-        this.logger.debug(`Testing connection for '${config.name}'...`);
-        const testResult = await this.testDownloadClientConnection(payload);
-
-        if (!testResult.success) {
-          this.logger.warn(`Connection test failed for '${config.name}': ${testResult.error}`);
-          this.logger.warn(`Updating anyway - you may need to fix connection settings`);
-        } else {
-          this.logger.debug(`Connection test passed for '${config.name}'`);
-        }
 
         await this.getApi().updateDownloadClient(server.id!.toString(), payload);
         updated++;

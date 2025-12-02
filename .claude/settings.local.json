@@ -9,7 +9,8 @@
       "Bash(pnpm build:*)",
       "Skill(superpowers:using-superpowers)",
       "Skill(superpowers:verification-before-completion)",
-      "Bash(pnpm lint)"
+      "Bash(pnpm lint)",
+      "Skill(superpowers:brainstorming)"
     ],
     "deny": [],
     "ask": []
