@@ -2,6 +2,7 @@
 import type { BeforeRequestHook, Hooks, KyInstance, Options as KyOptions, NormalizedOptions } from "ky";
 import ky, { HTTPError } from "ky";
 import { logger } from "../logger";
+import { createConnectionErrorParts } from "../clients/unified-client";
 
 type KyResponse<Data> = Response & {
   json<T extends Data = Data>(): Promise<T>;
@@ -198,6 +199,11 @@ export class HttpClient<SecurityDataType = unknown> {
     } catch (error: any) {
       logger.debug(`Error during request with error: ${error?.name}`);
 
+      // Use createConnectionErrorParts for consistent error handling
+      const errorParts = createConnectionErrorParts(error);
+      const [friendlyMessage, structuredMessage, rawMessage] = errorParts;
+      const enhancedMessage = structuredMessage || friendlyMessage || rawMessage;
+
       if (error instanceof HTTPError) {
         const { response, request } = error;
 
@@ -222,21 +228,26 @@ export class HttpClient<SecurityDataType = unknown> {
 
             throw new Error(errorJson);
           } else {
-            // Handle non-JSON response
-            logger.error(`HTTP Error: ${response.status} ${response.statusText}`);
+            // Handle non-JSON response - use enhanced error message
+            logger.error(`HTTP Error: ${response.status} ${response.statusText}. ${enhancedMessage || ""}`);
           }
         } else if (request) {
           // The request was made but no response was received
           // `request` is an instance of XMLHttpRequest in the browser and an instance of
           // http.ClientRequest in node.js
-          const errorJson = await request.json();
-          logger.error(errorJson, `Failed during request (probably some connection issues?)`);
+          try {
+            const errorJson = await request.json();
+            logger.error(errorJson, `Failed during request (probably some connection issues?). ${enhancedMessage || ""}`);
+          } catch (jsonError) {
+            logger.error(`Failed during request (probably some connection issues?). ${enhancedMessage || ""}`);
+          }
           throw error;
         } else {
           // Something happened in setting up the request that triggered an Error
-          logger.error(`No request/response information. Unknown error`);
+          logger.error(`No request/response information. Unknown error. ${enhancedMessage || ""}`);
         }
       } else if (error instanceof TypeError) {
+        // Use enhanced message for TypeError but preserve original detailed handling
         let errorMessage = "Probably some connection issues. If not, feel free to open an issue with details to improve handling.";
 
         if (error.cause && error.cause instanceof Error) {
@@ -247,9 +258,16 @@ export class HttpClient<SecurityDataType = unknown> {
           }
         }
 
+        // Add the enhanced message if it provides additional context
+        if (enhancedMessage && !errorMessage.includes(enhancedMessage)) {
+          errorMessage += ` ${enhancedMessage}`;
+        }
+
         logger.error(errorMessage);
       } else {
-        logger.error(`An not expected error happened. Feel free to open an issue with details to improve handling.`);
+        logger.error(
+          `An not expected error happened. Feel free to open an issue with details to improve handling. ${enhancedMessage || ""}`,
+        );
       }
 
       throw error;
