@@ -37,23 +37,69 @@ export const validateClientParams = (url: string, apiKey: string, arrType: ArrTy
 };
 
 export const logConnectionError = (error: any, arrType: ArrType) => {
-  let message;
   const arrLabel = arrType.toLowerCase();
-  const causeError = error?.cause?.message || error?.cause?.errors?.map((e: any) => e.message).join(";") || undefined;
+  const errorParts = createConnectionErrorParts(error);
 
+  if (errorParts.length > 0) {
+    const [friendlyMessage, structuredMessage] = errorParts;
+    const bestMessage = structuredMessage || friendlyMessage;
+    return `Connection to ${arrLabel} API failed: ${bestMessage}`;
+  }
+
+  // Fallback to original logic if createConnectionErrorParts returns empty
+  const causeError = error?.cause?.message || error?.cause?.errors?.map((e: any) => e.message).join(";") || undefined;
   const errorMessage = (error.message && `Message: ${error.message}`) || "";
   const causeMessage = (causeError && `- Cause: ${causeError}`) || "";
 
   if (error.response) {
-    // The request was made and the server responded with a status code
-    // that falls out of the range of 2xx
-    message = `Unable to retrieve data from ${arrLabel} API. Server responded with status code ${error.response.status}: ${error.response.statusText}. Please check the API server status or your request parameters.`;
+    return `Unable to retrieve data from ${arrLabel} API. Server responded with status code ${error.response.status}: ${error.response.statusText}. Please check the API server status or your request parameters.`;
   } else {
-    // Something happened in setting up the request that triggered an Error
-    message = `An unexpected error occurred while setting up the ${arrLabel} request: ${errorMessage} ${causeMessage}. Please try again.`;
+    return `An unexpected error occurred while setting up the ${arrLabel} request: ${errorMessage} ${causeMessage}. Please try again.`;
+  }
+};
+
+/**
+ * Create detailed error parts for connection testing and error reporting
+ * Returns an array of error messages with structured details and user-friendly messages
+ */
+export const createConnectionErrorParts = (error: unknown): string[] => {
+  const errorMessage = error instanceof Error ? error.message : String(error);
+  const httpError = error as any;
+
+  const status = httpError?.response?.status;
+  const data = httpError?.response?.data;
+
+  let structuredDetail: string | undefined;
+
+  if (data) {
+    if (typeof data === "string") {
+      structuredDetail = data;
+    } else if (typeof data === "object" && data !== null) {
+      const message = (data as any).message ?? (data as any).error;
+      const errors = Array.isArray((data as any).errors)
+        ? (data as any).errors.map((e: any) => e.errorMessage ?? e.message ?? String(e)).join("; ")
+        : undefined;
+
+      structuredDetail = [message, errors].filter(Boolean).join(" - ") || undefined;
+    }
   }
 
-  return message;
+  const statusPrefix = status ? `HTTP ${status}` : "Connection test failed";
+  const structuredMessage = structuredDetail ? `${statusPrefix}: ${structuredDetail}` : statusPrefix;
+
+  // Common connection error patterns with user-friendly messages
+  let friendly: string | undefined;
+  if (errorMessage.includes("connection refused") || errorMessage.includes("ECONNREFUSED")) {
+    friendly = "Connection refused - check host and port";
+  } else if (errorMessage.includes("timeout") || errorMessage.includes("ETIMEDOUT")) {
+    friendly = "Connection timeout - check network connectivity";
+  } else if (errorMessage.includes("unauthorized") || errorMessage.includes("401")) {
+    friendly = "Authentication failed - check username/password/API key";
+  } else if (errorMessage.includes("not found") || errorMessage.includes("404")) {
+    friendly = "Endpoint not found - check URL base path";
+  }
+
+  return [friendly, structuredMessage, errorMessage].filter((part, index, self) => part && self.indexOf(part) === index) as string[];
 };
 
 export const configureApi = async (type: ArrType, baseUrl: string, apiKey: string) => {
