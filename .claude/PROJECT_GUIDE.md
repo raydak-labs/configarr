@@ -112,7 +112,7 @@ All \*arr clients implement `IArrClient` interface:
 
 - **YAML-based** configuration with `config.yml`
 - **Template support** - Recyclarr templates, TRaSH Guides, local files, URLs
-- **Secrets management** - `!secret` and `!env` tags for sensitive data
+- **Secrets management** - `!secret`, `!env` and `!file` tags for sensitive data
 - **Type-safe** - Zod schemas for validation
 
 ### Sync Architecture

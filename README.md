@@ -58,6 +58,8 @@ Full documentation can be found here: [Documentation](https://configarr.de)
   - You can provide values with the custom tags:
     - `value: !secret secretKey`: Loads the value from the secrets file with the key `secretKey`
     - `value: !env ENV_NAME`: Loads the value from the environment variable `ENV_NAME`
+    - `value: !file FILE_NAME`: Loads the value from the file `FILE_NAME`
+      - Make sure Configarr has enough permissions to read the file
 
 ## Custom formats
 

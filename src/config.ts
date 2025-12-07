@@ -65,6 +65,18 @@ const envTag = {
   },
 };
 
+const fileTag = {
+  identify: (value: any) => value instanceof String,
+  tag: "!file",
+  resolve(path: string) {
+    if (!existsSync(path)) {
+      logger.error(`File "${path}" specified in the config does not exist.`);
+      throw new Error("File needed by the config not found.");
+    }
+    return readFileSync(path, "utf8");
+  }
+};
+
 // TODO some schema validation. For now only check if something can be imported
 export const getConfig = (): ConfigSchema => {
   if (config) {
@@ -80,7 +92,7 @@ export const getConfig = (): ConfigSchema => {
 
   const file = readFileSync(configLocation, "utf8");
 
-  const inputConfig = yaml.parse(file, { customTags: [secretsTag, envTag] }) as InputConfigSchema;
+  const inputConfig = yaml.parse(file, { customTags: [secretsTag, envTag, fileTag] }) as InputConfigSchema;
 
   config = transformConfig(inputConfig);
 
@@ -97,7 +109,7 @@ export const readConfigRaw = (): object => {
 
   const file = readFileSync(configLocation, "utf8");
 
-  const inputConfig = yaml.parse(file, { customTags: [secretsTag, envTag] });
+  const inputConfig = yaml.parse(file, { customTags: [secretsTag, envTag, fileTag] });
 
   return inputConfig;
 };
