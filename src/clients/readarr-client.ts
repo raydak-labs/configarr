@@ -12,9 +12,12 @@ import { logger } from "../logger";
 import type { DownloadClientResource } from "../types/download-client.types";
 import { IArrClient, logConnectionError, validateClientParams } from "./unified-client";
 
-export class ReadarrClient
-  implements IArrClient<QualityProfileResource, QualityDefinitionResource, CustomFormatResource, LanguageResource>
-{
+export class ReadarrClient implements IArrClient<
+  QualityProfileResource,
+  QualityDefinitionResource,
+  CustomFormatResource,
+  LanguageResource
+> {
   private api!: Api<unknown>;
 
   constructor(baseUrl: string, apiKey: string) {

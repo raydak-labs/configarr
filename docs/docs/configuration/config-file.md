@@ -165,6 +165,7 @@ sonarr:
           preferred: 500
           max: 1000
 
+
 # other file template.yml
 ---
 quality_definition:
