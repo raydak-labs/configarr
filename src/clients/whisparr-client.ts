@@ -21,9 +21,12 @@ declare module "../__generated__/whisparr/data-contracts" {
   }
 }
 
-export class WhisparrClient
-  implements IArrClient<QualityProfileResource, QualityDefinitionResource, CustomFormatResource, LanguageResource>
-{
+export class WhisparrClient implements IArrClient<
+  QualityProfileResource,
+  QualityDefinitionResource,
+  CustomFormatResource,
+  LanguageResource
+> {
   private api!: Api<unknown>;
   private languageMap: Map<string, LanguageResource> = new Map();
 

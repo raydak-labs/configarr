@@ -29,15 +29,15 @@
   },
   "devDependencies": {
     "@hyrious/esbuild-plugin-commonjs": "0.2.6",
-    "@playwright/test": "1.56.1",
-    "@release-it/conventional-changelog": "10.0.1",
-    "@types/node": "24.9.2",
-    "@vitest/coverage-v8": "4.0.8",
-    "esbuild": "0.25.11",
-    "prettier": "3.6.2",
-    "release-it": "19.0.5",
+    "@playwright/test": "1.57.0",
+    "@release-it/conventional-changelog": "10.0.3",
+    "@types/node": "24.10.4",
+    "@vitest/coverage-v8": "4.0.15",
+    "esbuild": "0.27.1",
+    "prettier": "3.7.4",
+    "release-it": "19.1.0",
     "swagger-typescript-api": "13.2.16",
     "typescript": "5.9.3",
-    "vitest": "4.0.8"
+    "vitest": "4.0.15"
   }
 }
