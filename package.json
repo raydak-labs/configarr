@@ -2,6 +2,10 @@
   "name": "configarr",
   "version": "0.0.0",
   "description": "",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/raydak-labs/configarr.git"
+  },
   "type": "module",
   "scripts": {
     "build": "tsx esbuild.ts",
@@ -30,7 +34,7 @@
   "devDependencies": {
     "@hyrious/esbuild-plugin-commonjs": "0.2.6",
     "@playwright/test": "1.57.0",
-    "@release-it/conventional-changelog": "10.0.3",
+    "@release-it/conventional-changelog": "^10.0.4",
     "@types/node": "24.10.4",
     "@vitest/coverage-v8": "4.0.15",
     "esbuild": "0.27.1",
