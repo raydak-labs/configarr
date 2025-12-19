@@ -92,6 +92,48 @@ sonarr:
 - When loading TRaSH-Guides templates from URLs, specify `source: TRASH` in the include entry
 - Network requests have a 30-second timeout
 
+### Repository URL Configuration
+
+You can override the default repository URLs for TRaSH-Guides and Recyclarr templates:
+
+```yaml title="config.yml"
+# Use a custom TRaSH-Guides fork
+trashGuideUrl: https://github.com/your-org/fork-TRASH-Guides
+
+# Use a custom Recyclarr templates fork
+recyclarrConfigUrl: https://github.com/your-org/fork-recyclarr-configs
+
+# Optional: Specify a custom branch/revision (defaults to 'master')
+trashRevision: main
+recyclarrRevision: develop
+```
+
+**Repository URL Changes:**
+
+When you change `trashGuideUrl` or `recyclarrConfigUrl` in your config:
+
+- Configarr automatically detects existing cached repositories
+- If the remote URL has changed, it deletes the old repository and re-clones from the new URL
+- The new repository is cloned fresh, avoiding any divergent branch issues
+- If the revision doesn't exist in the new repository, a clear error message is provided
+- **No manual cache deletion is required** - changes take effect on the next run
+
+**Example Scenario:**
+
+1. Start with default TRaSH-Guides repository
+2. Change `trashGuideUrl` to a custom fork in your config
+3. Run Configarr - it automatically detects the URL change, deletes the old cache, and clones from the new repository
+4. Done! No manual intervention needed.
+
+**Error Handling:**
+
+If something goes wrong during repository updates:
+
+- Clear error messages are logged explaining what failed
+- The revision may not exist in the new repository
+- The new URL may not be accessible
+- Check the logs for guidance on how to resolve the issue
+
 ## Configuration Files Reference
 
 If you want to deep dive into available values and parameters you can always check the direct source code reference for available configurations: [Source Code](https://github.com/raydak-labs/configarr/blob/main/src/types/config.types.ts)

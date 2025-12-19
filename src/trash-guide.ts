@@ -78,7 +78,10 @@ export const cloneTrashRepo = async () => {
   const revision = applicationConfig.trashRevision ?? "master";
   const sparseDisabled = applicationConfig.enableFullGitClone === true;
 
-  const cloneResult = await cloneGitRepo(rootPath, gitUrl, revision, { disabled: sparseDisabled, sparseDirs: ["docs/json"] });
+  const cloneResult = await cloneGitRepo(rootPath, gitUrl, revision, {
+    disabled: sparseDisabled,
+    sparseDirs: ["docs/json"],
+  });
   logger.info(`TRaSH-Guides repo: ref[${cloneResult.ref}], hash[${cloneResult.hash}], path[${cloneResult.localPath}]`);
   await createCache();
 };
