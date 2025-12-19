@@ -7,6 +7,7 @@ import {
   QualityProfileResource,
 } from "../__generated__/radarr/data-contracts";
 import { logger } from "../logger";
+import type { DownloadClientResource } from "../types/download-client.types";
 import { cloneWithJSON } from "../util";
 import { IArrClient, logConnectionError, validateClientParams } from "./unified-client";
 
@@ -146,6 +147,31 @@ export class RadarrClient implements IArrClient<QualityProfileResource, QualityD
 
   async createTag(tag: any) {
     return this.api.v3TagCreate(tag);
+  }
+
+  // Download Clients
+  async getDownloadClientSchema(): Promise<DownloadClientResource[]> {
+    return this.api.v3DownloadclientSchemaList();
+  }
+
+  async getDownloadClients(): Promise<DownloadClientResource[]> {
+    return this.api.v3DownloadclientList();
+  }
+
+  async createDownloadClient(client: DownloadClientResource): Promise<DownloadClientResource> {
+    return this.api.v3DownloadclientCreate(client);
+  }
+
+  async updateDownloadClient(id: string, client: DownloadClientResource): Promise<DownloadClientResource> {
+    return this.api.v3DownloadclientUpdate(+id, client);
+  }
+
+  async deleteDownloadClient(id: string): Promise<void> {
+    return this.api.v3DownloadclientDelete(+id);
+  }
+
+  async testDownloadClient(client: DownloadClientResource): Promise<any> {
+    return this.api.v3DownloadclientTestCreate(client);
   }
 
   // System/Health Check

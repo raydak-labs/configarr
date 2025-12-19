@@ -536,6 +536,48 @@ Notes:
 
 See example [Radarr API DelayProfile](https://radarr.video/docs/api/#/DelayProfile) for more details on available fields.
 
+## Download Clients
+
+Configarr can (experimentally) manage the **Download Clients** configured in your \*Arr
+applications (for example qBittorrent, Transmission, SABnzbd, etc.).
+
+- Create download clients that exist in the config but not in the \*Arr instance
+- Optionally delete unmanaged download clients
+
+```yaml title="config.yml"
+sonarr:
+  instance1:
+    base_url: http://sonarr:8989
+    api_key: !secret SONARR_API_KEY
+
+    # (experimental) Manage Sonarr download clients
+    download_clients:
+      data:
+        - name: "qBit 4K"
+          type: qbittorrent
+          enable: true
+          priority: 1
+          remove_completed_downloads: true
+          remove_failed_downloads: true
+          tags:
+            - "4K" # Tag name (auto-resolved to ID)
+          fields:
+            host: qbittorrent
+            port: 8080
+            use_ssl: false
+            url_base: /
+            username: sonarr
+            password: changeme
+            tv_category: series-4k
+       # Set to true to always update password otherwise existing passwords will not be updated because we can not retrieve existing passwords
+       update_password: false
+      # Delete unmanaged download clients
+      delete_unmanaged:
+        enabled: true
+        ignore:
+          - "Manual Test Client"
+```
+
 ## Experimental supported fields
 
 - Experimental support for `media_management` and `media_naming_api` (since v1.5.0)

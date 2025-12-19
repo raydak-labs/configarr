@@ -94,6 +94,33 @@ sonarr:
     #   - from: RenamedExampleProfile
     #     to: ClonedProfile
 
+    # (experimental) Manage download clients
+    download_clients:
+      data:
+        - name: "qBit 4K"
+          type: qbittorrent
+          enable: false
+          priority: 1
+          remove_completed_downloads: true
+          remove_failed_downloads: true
+          tags:
+            - "4K"
+            - "Anime"
+          fields:
+            host: qbittorrent
+            port: 8080
+            use_ssl: false
+            url_base: /
+            username: sonarr
+            password: changeme
+            tv_category: my-cat
+            tv_imported_category: import-cat
+      update_password: false
+      delete_unmanaged:
+        enabled: false
+        ignore:
+          - "Some client name"
+
 radarr:
   instance1:
     # Set the URL/API Key to your actual instance
@@ -134,6 +161,32 @@ radarr:
 
     # experimental
     media_naming_api: {}
+
+    # (experimental) Manage download clients
+    download_clients:
+      data:
+        - name: "qBit 4K"
+          type: qbittorrent
+          enable: false
+          priority: 1
+          remove_completed_downloads: true
+          remove_failed_downloads: true
+          tags:
+            - "4K"
+            - "Anime"
+          fields:
+            host: qbittorrent
+            port: 8080
+            use_ssl: false
+            url_base: /
+            username: sonarr
+            password: changeme
+            movie_imported_category: series-4k
+      update_password: false
+      delete_unmanaged:
+        enabled: false
+        ignore:
+          - "Some client name"
 
     # naming from TRaSH. See docs
     media_naming: {}
