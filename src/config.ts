@@ -74,7 +74,7 @@ const fileTag = {
       throw new Error("File needed by the config not found.");
     }
     return readFileSync(path, "utf8");
-  }
+  },
 };
 
 // TODO some schema validation. For now only check if something can be imported
