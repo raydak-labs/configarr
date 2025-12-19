@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync } from "node:fs";
 import path from "node:path";
 import simpleGit, { CheckRepoActions } from "simple-git";
 import { MergedCustomFormatResource } from "./__generated__/mergedTypes";
@@ -248,6 +248,23 @@ export function zipNLength<T extends unknown[][]>(...arrays: T): Array<{ [K in k
   return result as Array<{ [K in keyof T]: T[K] extends (infer U)[] ? U : never }>;
 }
 
+async function performCloneOperation(gitUrl: string, rootPath: string, sparseConfig: { disabled: boolean; sparseDirs?: string[] }) {
+  const gitClient = simpleGit({ baseDir: rootPath });
+  let sparseEnabled = false;
+
+  if (!sparseConfig.disabled && sparseConfig.sparseDirs && sparseConfig.sparseDirs.length > 0) {
+    sparseEnabled = true;
+  }
+
+  await simpleGit().clone(gitUrl, rootPath, ["--filter=blob:none", (sparseEnabled && "--sparse") || ""]);
+
+  if (sparseEnabled) {
+    await gitClient.raw(["sparse-checkout", "set", ...sparseConfig.sparseDirs!]);
+  }
+
+  logger.info(`Cloned repository: '${gitUrl}'`);
+}
+
 export const cloneGitRepo = async (
   localPath: string,
   gitUrl: string,
@@ -264,51 +281,75 @@ export const cloneGitRepo = async (
   }
 
   const gitClient = simpleGit({ baseDir: rootPath });
-  const r = await gitClient.checkIsRepo(CheckRepoActions.IS_REPO_ROOT);
+  const isRepo = await gitClient.checkIsRepo(CheckRepoActions.IS_REPO_ROOT);
 
-  if (!r) {
-    let sparseEnabled = false;
+  // Check if we need to re-clone due to remote URL change
+  let shouldReClone = false;
+  if (isRepo) {
+    try {
+      const remotes = await gitClient.getRemotes(true);
+      const originRemote = remotes.find((remote) => remote.name === "origin");
 
-    if (!cloneConf.disabled && cloneConf.sparseDirs && cloneConf.sparseDirs.length > 0) {
-      sparseEnabled = true;
-    }
-
-    await simpleGit().clone(gitUrl, rootPath, ["--filter=blob:none", (sparseEnabled && "--sparse") || ""]);
-
-    if (sparseEnabled) {
-      await gitClient.raw(["sparse-checkout", "set", ...cloneConf.sparseDirs!]);
-    }
-    logger.info(`Freshly cloned repository: '${gitUrl}' at '${revision}'`);
-  }
-
-  await gitClient.checkout(revision, ["-f"]);
-  const result = await gitClient.status();
-
-  let updated = false;
-
-  if (!result.detached) {
-    const res = await gitClient.pull();
-    if (res.files.length > 0) {
-      updated = true;
-      logger.info(`Repository updated to new commit: '${gitUrl}' at '${revision}'`);
+      if (originRemote && originRemote.refs.fetch !== gitUrl) {
+        logger.info(`Remote URL for repository has changed from '${originRemote.refs.fetch}' to '${gitUrl}'`);
+        shouldReClone = true;
+      }
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      logger.debug(`Failed to check remote URL: ${errorMsg}`);
+      // If we can't determine the URL, treat as needing re-clone to be safe
+      shouldReClone = true;
     }
   }
 
-  let hash: string = "unknown";
+  // Delete and re-clone if repository doesn't exist or URL changed
+  if (!isRepo || shouldReClone) {
+    if (shouldReClone) {
+      logger.info(`Removing existing repository at '${rootPath}' and re-cloning...`);
+      rmSync(rootPath, { recursive: true, force: true });
+      mkdirSync(rootPath, { recursive: true });
+    }
 
+    await performCloneOperation(gitUrl, rootPath, cloneConf);
+  }
+
+  // Checkout the specified revision
   try {
-    hash = await gitClient.revparse(["--verify", "HEAD"]);
-  } catch (err: unknown) {
-    // Ignore
-    logger.debug(`Unable to extract hash from commit`);
-  }
+    await gitClient.checkout(revision, ["-f"]);
+    const result = await gitClient.status();
 
-  return {
-    ref: result.current,
-    hash: hash,
-    localPath: localPath,
-    updated,
-  };
+    let updated = false;
+
+    if (!result.detached) {
+      const res = await gitClient.pull();
+      if (res.files.length > 0) {
+        updated = true;
+        logger.info(`Repository updated to new commit: '${gitUrl}' at '${revision}'`);
+      }
+    }
+
+    let hash: string = "unknown";
+
+    try {
+      hash = await gitClient.revparse(["--verify", "HEAD"]);
+    } catch (err: unknown) {
+      // Ignore
+      logger.debug(`Unable to extract hash from commit`);
+    }
+
+    return {
+      ref: result.current,
+      hash: hash,
+      localPath: localPath,
+      updated,
+    };
+  } catch (err: unknown) {
+    const errorMsg = err instanceof Error ? err.message : String(err);
+    logger.error(`Failed to checkout revision '${revision}' from '${gitUrl}': ${errorMsg}`);
+    throw new Error(
+      `Unable to checkout revision '${revision}' from '${gitUrl}'. The revision may not exist in the repository. Error: ${errorMsg}`,
+    );
+  }
 };
 
 export const roundToDecimal = (num: number, decimalPlaces = 0) => {
