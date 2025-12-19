@@ -782,11 +782,14 @@ export const mergeConfigsAndTemplates = async (
     const instanceData = instanceConfig.download_clients.data || [];
     const existingDeleteManaged = mergedTemplates.download_clients?.delete_unmanaged;
     const instanceDeleteManaged = instanceConfig.download_clients.delete_unmanaged;
+    const existingConfig = mergedTemplates.download_clients?.config;
+    const instanceConfig_ = instanceConfig.download_clients.config;
 
     mergedTemplates.download_clients = {
       data: [...existingData, ...instanceData],
       update_password: instanceConfig.download_clients.update_password,
-      delete_unmanaged: instanceDeleteManaged ? instanceDeleteManaged : existingDeleteManaged
+      delete_unmanaged: instanceDeleteManaged ? instanceDeleteManaged : existingDeleteManaged,
+      config: instanceConfig_ ? { ...existingConfig, ...instanceConfig_ } : existingConfig,
     };
   }
 

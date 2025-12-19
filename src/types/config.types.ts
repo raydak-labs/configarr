@@ -63,6 +63,32 @@ export type InputConfigRootFolderGeneric = string;
 
 export type InputConfigRootFolder = InputConfigRootFolderGeneric | InputConfigRootFolderLidarr;
 
+export type InputConfigDownloadClientConfig = {
+  /**
+   * Folders where download clients store downloads
+   */
+  download_client_working_folders?: string;
+  /**
+   * Enable completed download handling
+   * @default true
+   */
+  enable_completed_download_handling?: boolean;
+  /**
+   * Automatically redownload failed downloads
+   * @default false
+   */
+  auto_redownload_failed?: boolean;
+  /**
+   * Automatically redownload failed downloads from interactive search
+   * @default false
+   */
+  auto_redownload_failed_from_interactive_search?: boolean;
+  /**
+   * Radarr only: Check interval for finished downloads (in minutes)
+   */
+  check_for_finished_download_interval?: number;
+};
+
 export type InputConfigArrInstance = {
   base_url: string;
   api_key: string;
@@ -171,6 +197,10 @@ export type InputConfigArrInstance = {
        */
       ignore?: string[];
     };
+    /**
+     * Global download client configuration
+     */
+    config?: InputConfigDownloadClientConfig;
   };
 } & Pick<InputConfigSchema, "customFormatDefinitions">;
 

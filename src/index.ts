@@ -11,6 +11,7 @@ import { getConfig, mergeConfigsAndTemplates } from "./config";
 import { calculateCFsToManage, deleteCustomFormat, loadCustomFormatDefinitions, loadServerCustomFormats, manageCf } from "./custom-formats";
 import { calculateDelayProfilesDiff, deleteAdditionalDelayProfiles, mapToServerDelayProfile } from "./delay-profiles";
 import { syncDownloadClients } from "./downloadClients/downloadClientSyncer";
+import { syncDownloadClientConfig } from "./downloadClientConfig/downloadClientConfigSyncer";
 import { logger, logHeading, logInstanceHeading } from "./logger";
 import { calculateMediamanagementDiff, calculateNamingDiff } from "./media-management";
 import { calculateQualityDefinitionDiff, loadQualityDefinitionFromServer } from "./quality-definitions";
@@ -307,6 +308,19 @@ const pipeline = async (globalConfig: InputConfigSchema, instanceConfig: InputCo
         await syncDownloadClients(arrType, config, serverCache);
       } catch (err: any) {
         logger.error(`Failed to sync download clients: ${err.message}`);
+      }
+    }
+  }
+
+  // Download Client Configuration
+  if (config.download_clients?.config) {
+    if (getEnvs().DRY_RUN) {
+      logger.info("DryRun: Would sync download client config.");
+    } else {
+      try {
+        await syncDownloadClientConfig(arrType, config, serverCache);
+      } catch (err: any) {
+        logger.error(`Failed to sync download client config: ${err.message}`);
       }
     }
   }

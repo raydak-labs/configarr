@@ -187,6 +187,13 @@ radarr:
         enabled: false
         ignore:
           - "Some client name"
+      # Global download client configuration
+      config:
+        download_client_working_folders: "/downloads,/tmp"
+        enable_completed_download_handling: true
+        auto_redownload_failed: false
+        auto_redownload_failed_from_interactive_search: false
+        check_for_finished_download_interval: 5
 
     # naming from TRaSH. See docs
     media_naming: {}

@@ -536,13 +536,14 @@ Notes:
 
 See example [Radarr API DelayProfile](https://radarr.video/docs/api/#/DelayProfile) for more details on available fields.
 
-## Download Clients
+## Download Clients <span className="theme-doc-version-badge badge badge--secondary configarr-badge">1.19.0</span>
 
 Configarr can (experimentally) manage the **Download Clients** configured in your \*Arr
 applications (for example qBittorrent, Transmission, SABnzbd, etc.).
 
 - Create download clients that exist in the config but not in the \*Arr instance
 - Optionally delete unmanaged download clients
+- Manage global download client configuration settings since `v1.19.0`
 
 ```yaml title="config.yml"
 sonarr:
@@ -576,7 +577,23 @@ sonarr:
         enabled: true
         ignore:
           - "Manual Test Client"
+      # (since v1.19.0) Global download client configuration
+      config:
+        enable_completed_download_handling: true
+        auto_redownload_failed: false
+        auto_redownload_failed_from_interactive_search: false
+        # Radarr only: Check interval for finished downloads (in minutes)
+        # check_for_finished_download_interval: 1
 ```
+
+### Download Client Configuration <span className="theme-doc-version-badge badge badge--secondary configarr-badge">1.19.0</span>
+
+The `config` section allows you to manage global download client settings.
+Please check the \*Arr-specific API for supported fields (in the REST APIs under `DownloadClientConfig`).
+
+- convert the camelCase typed fields like `enableCompletedDownloadHandling` to snake_case: `enable_completed_download_handling`
+
+**Note:** Instance-specific fields (like `check_for_finished_download_interval` for Radarr) are automatically filtered based on the \*Arr type. Unsupported fields are safely ignored.
 
 ## Experimental supported fields
 

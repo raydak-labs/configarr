@@ -139,6 +139,15 @@ sonarr:
     #    enabled: true
     #    ignore:
     #      - "Manual Test Client"
+    #  # Global download client configuration
+    #  config:
+    #    download_client_working_folders: "/downloads,/tmp"
+    #    enable_completed_download_handling: true
+    #    auto_redownload_failed: false
+    #    auto_redownload_failed_from_interactive_search: false
+    #    # Radarr only: Check interval for finished downloads (in minutes)
+    #    check_for_finished_download_interval: 5
+    #    # Note: auto_redownload_failed_from_interactive_search is not available in Whisparr
 
     # (experimental) since v1.12.0
     # allows using the cf-groups from TRaSH-Guide.

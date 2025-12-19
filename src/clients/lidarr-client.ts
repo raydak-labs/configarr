@@ -2,6 +2,7 @@ import { KyHttpClient } from "../__generated__/ky-client";
 import { Api } from "../__generated__/lidarr/Api";
 import {
   CustomFormatResource,
+  DownloadClientConfigResource,
   LanguageResource,
   MetadataProfileResource,
   QualityDefinitionResource,
@@ -180,6 +181,15 @@ export class LidarrClient implements IArrClient<QualityProfileResource, QualityD
 
   async testDownloadClient(client: DownloadClientResource): Promise<any> {
     return this.api.v1DownloadclientTestCreate(client);
+  }
+
+  // Download Client Configuration
+  async getDownloadClientConfig(): Promise<DownloadClientConfigResource> {
+    return this.api.v1ConfigDownloadclientList();
+  }
+
+  async updateDownloadClientConfig(id: string, config: DownloadClientConfigResource): Promise<DownloadClientConfigResource> {
+    return this.api.v1ConfigDownloadclientUpdate(id, config);
   }
 
   // System/Health Check

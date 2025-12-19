@@ -2,6 +2,7 @@ import { KyHttpClient } from "../__generated__/ky-client";
 import { Api } from "../__generated__/whisparr/Api";
 import {
   CustomFormatResource,
+  DownloadClientConfigResource,
   LanguageResource,
   QualityDefinitionResource,
   QualityProfileResource,
@@ -183,6 +184,15 @@ export class WhisparrClient
 
   async testDownloadClient(client: DownloadClientResource): Promise<any> {
     return this.api.v3DownloadclientTestCreate(client);
+  }
+
+  // Download Client Configuration
+  async getDownloadClientConfig(): Promise<DownloadClientConfigResource> {
+    return this.api.v3ConfigDownloadclientList();
+  }
+
+  async updateDownloadClientConfig(id: string, config: DownloadClientConfigResource): Promise<DownloadClientConfigResource> {
+    return this.api.v3ConfigDownloadclientUpdate(id, config);
   }
 
   // System/Health Check
