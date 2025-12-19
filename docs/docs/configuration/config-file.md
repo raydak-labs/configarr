@@ -536,6 +536,65 @@ Notes:
 
 See example [Radarr API DelayProfile](https://radarr.video/docs/api/#/DelayProfile) for more details on available fields.
 
+## Download Clients <span className="theme-doc-version-badge badge badge--secondary configarr-badge">1.19.0</span>
+
+Configarr can (experimentally) manage the **Download Clients** configured in your \*Arr
+applications (for example qBittorrent, Transmission, SABnzbd, etc.).
+
+- Create download clients that exist in the config but not in the \*Arr instance
+- Optionally delete unmanaged download clients
+- Manage global download client configuration settings since `v1.19.0`
+
+```yaml title="config.yml"
+sonarr:
+  instance1:
+    base_url: http://sonarr:8989
+    api_key: !secret SONARR_API_KEY
+
+    # (experimental) Manage Sonarr download clients
+    download_clients:
+      data:
+        - name: "qBit 4K"
+          type: qbittorrent
+          enable: true
+          priority: 1
+          remove_completed_downloads: true
+          remove_failed_downloads: true
+          tags:
+            - "4K" # Tag name (auto-resolved to ID)
+          fields:
+            host: qbittorrent
+            port: 8080
+            use_ssl: false
+            url_base: /
+            username: sonarr
+            password: changeme
+            tv_category: series-4k
+       # Set to true to always update password otherwise existing passwords will not be updated because we can not retrieve existing passwords
+       update_password: false
+      # Delete unmanaged download clients
+      delete_unmanaged:
+        enabled: true
+        ignore:
+          - "Manual Test Client"
+      # (since v1.19.0) Global download client configuration
+      config:
+        enable_completed_download_handling: true
+        auto_redownload_failed: false
+        auto_redownload_failed_from_interactive_search: false
+        # Radarr only: Check interval for finished downloads (in minutes)
+        # check_for_finished_download_interval: 1
+```
+
+### Download Client Configuration <span className="theme-doc-version-badge badge badge--secondary configarr-badge">1.19.0</span>
+
+The `config` section allows you to manage global download client settings.
+Please check the \*Arr-specific API for supported fields (in the REST APIs under `DownloadClientConfig`).
+
+- convert the camelCase typed fields like `enableCompletedDownloadHandling` to snake_case: `enable_completed_download_handling`
+
+**Note:** Instance-specific fields (like `check_for_finished_download_interval` for Radarr) are automatically filtered based on the \*Arr type. Unsupported fields are safely ignored.
+
 ## Experimental supported fields
 
 - Experimental support for `media_management` and `media_naming_api` (since v1.5.0)

@@ -112,6 +112,42 @@ sonarr:
 
     # naming from recyclarr: https://recyclarr.dev/wiki/yaml/config-reference/media-naming/
     #media_naming: {}
+    # (experimental) Manage download clients
+    #download_clients:
+    #  - name: "Primary qBittorrent"
+    #    type: qbittorrent
+    #    enable: true
+    #    priority: 1
+    #    remove_completed_downloads: true
+    #    remove_failed_downloads: true
+    #    tags:
+    #      - "4K"
+    #      - "High Quality"
+    #    fields:
+    #      host: qbittorrent
+    #      port: 8080
+    #      use_ssl: false
+    #      url_base: /
+    #      username: sonarr
+    #      password: changeme
+    #      tv_category: series-4k
+    #
+    #  # Always update password fields even when they match the server
+    #  update_password: false
+    #  # Delete unmanaged download clients
+    #  delete_unmanaged:
+    #    enabled: true
+    #    ignore:
+    #      - "Manual Test Client"
+    #  # Global download client configuration
+    #  config:
+    #    download_client_working_folders: "/downloads,/tmp"
+    #    enable_completed_download_handling: true
+    #    auto_redownload_failed: false
+    #    auto_redownload_failed_from_interactive_search: false
+    #    # Radarr only: Check interval for finished downloads (in minutes)
+    #    check_for_finished_download_interval: 5
+    #    # Note: auto_redownload_failed_from_interactive_search is not available in Whisparr
 
     # (experimental) since v1.12.0
     # allows using the cf-groups from TRaSH-Guide.

@@ -2,12 +2,14 @@ import { KyHttpClient } from "../__generated__/ky-client";
 import { Api } from "../__generated__/lidarr/Api";
 import {
   CustomFormatResource,
+  DownloadClientConfigResource,
   LanguageResource,
   MetadataProfileResource,
   QualityDefinitionResource,
   QualityProfileResource,
 } from "../__generated__/lidarr/data-contracts";
 import { logger } from "../logger";
+import type { DownloadClientResource } from "../types/download-client.types";
 import { IArrClient, logConnectionError, validateClientParams } from "./unified-client";
 
 export class LidarrClient implements IArrClient<QualityProfileResource, QualityDefinitionResource, CustomFormatResource, LanguageResource> {
@@ -154,6 +156,40 @@ export class LidarrClient implements IArrClient<QualityProfileResource, QualityD
 
   async createTag(tag: any) {
     return this.api.v1TagCreate(tag);
+  }
+
+  // Download Clients
+  async getDownloadClientSchema(): Promise<DownloadClientResource[]> {
+    return this.api.v1DownloadclientSchemaList();
+  }
+
+  async getDownloadClients(): Promise<DownloadClientResource[]> {
+    return this.api.v1DownloadclientList();
+  }
+
+  async createDownloadClient(client: DownloadClientResource): Promise<DownloadClientResource> {
+    return this.api.v1DownloadclientCreate(client);
+  }
+
+  async updateDownloadClient(id: string, client: DownloadClientResource): Promise<DownloadClientResource> {
+    return this.api.v1DownloadclientUpdate(+id, client);
+  }
+
+  async deleteDownloadClient(id: string): Promise<void> {
+    return this.api.v1DownloadclientDelete(+id);
+  }
+
+  async testDownloadClient(client: DownloadClientResource): Promise<any> {
+    return this.api.v1DownloadclientTestCreate(client);
+  }
+
+  // Download Client Configuration
+  async getDownloadClientConfig(): Promise<DownloadClientConfigResource> {
+    return this.api.v1ConfigDownloadclientList();
+  }
+
+  async updateDownloadClientConfig(id: string, config: DownloadClientConfigResource): Promise<DownloadClientConfigResource> {
+    return this.api.v1ConfigDownloadclientUpdate(id, config);
   }
 
   // System/Health Check

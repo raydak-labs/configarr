@@ -776,6 +776,23 @@ export const mergeConfigsAndTemplates = async (
     mergedTemplates.delay_profiles = instanceConfig.delay_profiles;
   }
 
+  // Merge download_clients if defined in instanceConfig
+  if (instanceConfig.download_clients) {
+    const existingData = mergedTemplates.download_clients?.data || [];
+    const instanceData = instanceConfig.download_clients.data || [];
+    const existingDeleteManaged = mergedTemplates.download_clients?.delete_unmanaged;
+    const instanceDeleteManaged = instanceConfig.download_clients.delete_unmanaged;
+    const existingConfig = mergedTemplates.download_clients?.config;
+    const instanceConfig_ = instanceConfig.download_clients.config;
+
+    mergedTemplates.download_clients = {
+      data: [...existingData, ...instanceData],
+      update_password: instanceConfig.download_clients.update_password,
+      delete_unmanaged: instanceDeleteManaged ? instanceDeleteManaged : existingDeleteManaged,
+      config: instanceConfig_ ? { ...existingConfig, ...instanceConfig_ } : existingConfig,
+    };
+  }
+
   if (mergedTemplates.custom_formats && mergedTemplates.custom_formats.length > 0) {
     // Merge custom formats with same trash_ids
     mergedTemplates.custom_formats = mergeAndReduceCustomFormats(mergedTemplates.custom_formats);

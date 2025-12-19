@@ -2,11 +2,13 @@ import { KyHttpClient } from "../__generated__/ky-client";
 import { Api } from "../__generated__/whisparr/Api";
 import {
   CustomFormatResource,
+  DownloadClientConfigResource,
   LanguageResource,
   QualityDefinitionResource,
   QualityProfileResource,
 } from "../__generated__/whisparr/data-contracts";
 import { logger } from "../logger";
+import type { DownloadClientResource } from "../types/download-client.types";
 import { cloneWithJSON } from "../util";
 import { IArrClient, logConnectionError, validateClientParams } from "./unified-client";
 
@@ -156,6 +158,41 @@ export class WhisparrClient
 
   async createTag(tag: any) {
     return this.api.v3TagCreate(tag);
+  }
+
+  // Download Clients
+  async getDownloadClientSchema(): Promise<DownloadClientResource[]> {
+    return this.api.v3DownloadclientSchemaList();
+  }
+
+  async getDownloadClients(): Promise<DownloadClientResource[]> {
+    return this.api.v3DownloadclientList();
+  }
+
+  async createDownloadClient(client: DownloadClientResource): Promise<DownloadClientResource> {
+    return this.api.v3DownloadclientCreate(client);
+  }
+
+  // Note: Whisparr's v3 API expects string for update but number for delete
+  async updateDownloadClient(id: string, client: DownloadClientResource): Promise<DownloadClientResource> {
+    return this.api.v3DownloadclientUpdate(id, client);
+  }
+
+  async deleteDownloadClient(id: string): Promise<void> {
+    return this.api.v3DownloadclientDelete(+id);
+  }
+
+  async testDownloadClient(client: DownloadClientResource): Promise<any> {
+    return this.api.v3DownloadclientTestCreate(client);
+  }
+
+  // Download Client Configuration
+  async getDownloadClientConfig(): Promise<DownloadClientConfigResource> {
+    return this.api.v3ConfigDownloadclientList();
+  }
+
+  async updateDownloadClientConfig(id: string, config: DownloadClientConfigResource): Promise<DownloadClientConfigResource> {
+    return this.api.v3ConfigDownloadclientUpdate(id, config);
   }
 
   // System/Health Check

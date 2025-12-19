@@ -323,3 +323,19 @@ export function pickFromConst<T extends readonly string[], K extends T[number]>(
 export function isInConstArray<T extends readonly unknown[]>(array: T, value: unknown): value is T[number] {
   return array.includes(value as T[number]);
 }
+
+/**
+ * Convert snake_case string to camelCase
+ * @param str - The snake_case string to convert
+ * @returns The camelCase version of the string
+ */
+export const snakeToCamel = (str: string): string => {
+  return str.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+};
+
+/**
+ * Convert camelCase to snake_case
+ */
+export const camelToSnake = (str: string): string => {
+  return str.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
+};
