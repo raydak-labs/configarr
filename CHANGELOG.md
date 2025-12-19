@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.19.0](///compare/v1.18.0...v1.19.0) (2025-12-19)
+
+### Features
+
+- add download client sync dba819f
+- Add file tag 9582747
+- add support for metadata profiles (lidarr, readarr) 3b7595c
+- download client general configuration 53fccee
+
+### Bug Fixes
+
+- changing remote repos should work without manual intervention f39bac2, closes #359
+- correctly handle metadata sync for unrelated services 2cfee60
+- **deps:** update dependencies (non-major) ([#355](undefined/undefined/undefined/issues/355)) fd70b7b
+
+### (internal) Refactorings
+
+- improve error logs a352649
+
 ## [1.18.0](https://github.com/raydak-labs/configarr/compare/v1.17.2...v1.18.0) (2025-11-23)
 
 ### Features
