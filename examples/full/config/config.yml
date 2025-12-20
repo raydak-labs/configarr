@@ -120,6 +120,14 @@ sonarr:
         enabled: false
         ignore:
           - "Some client name"
+      # (since v1.20.0) Remote path mappings for download clients
+      remote_paths:
+        - host: "transmission"
+          remote_path: "/downloads/tv"
+          local_path: "/data/media/downloads/tv"
+        - host: "qbittorrent"
+          remote_path: "/downloads"
+          local_path: "/data/downloads"
 
 radarr:
   instance1:
@@ -187,7 +195,15 @@ radarr:
         enabled: false
         ignore:
           - "Some client name"
-      # Global download client configuration
+       # (since v1.20.0) Remote path mappings for download clients
+       remote_paths:
+         - host: "transmission"
+           remote_path: "/downloads/movies"
+           local_path: "/data/media/downloads/movies"
+         - host: "qbittorrent"
+           remote_path: "/downloads"
+           local_path: "/data/downloads"
+       # Global download client configuration
       config:
         download_client_working_folders: "/downloads,/tmp"
         enable_completed_download_handling: true

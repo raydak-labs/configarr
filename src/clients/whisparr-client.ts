@@ -6,6 +6,7 @@ import {
   LanguageResource,
   QualityDefinitionResource,
   QualityProfileResource,
+  RemotePathMappingResource,
 } from "../__generated__/whisparr/data-contracts";
 import { logger } from "../logger";
 import type { DownloadClientResource } from "../types/download-client.types";
@@ -196,6 +197,23 @@ export class WhisparrClient implements IArrClient<
 
   async updateDownloadClientConfig(id: string, config: DownloadClientConfigResource): Promise<DownloadClientConfigResource> {
     return this.api.v3ConfigDownloadclientUpdate(id, config);
+  }
+
+  // Remote Path Mappings
+  async getRemotePathMappings(): Promise<RemotePathMappingResource[]> {
+    return this.api.v3RemotepathmappingList();
+  }
+
+  async createRemotePathMapping(mapping: RemotePathMappingResource): Promise<RemotePathMappingResource> {
+    return this.api.v3RemotepathmappingCreate(mapping);
+  }
+
+  async updateRemotePathMapping(id: string, mapping: RemotePathMappingResource): Promise<RemotePathMappingResource> {
+    return this.api.v3RemotepathmappingUpdate(id, mapping);
+  }
+
+  async deleteRemotePathMapping(id: string): Promise<void> {
+    return this.api.v3RemotepathmappingDelete(+id);
   }
 
   // System/Health Check

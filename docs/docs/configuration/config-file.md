@@ -638,6 +638,34 @@ Please check the \*Arr-specific API for supported fields (in the REST APIs under
 
 **Note:** Instance-specific fields (like `check_for_finished_download_interval` for Radarr) are automatically filtered based on the \*Arr type. Unsupported fields are safely ignored.
 
+### Remote Path Mappings <span className="theme-doc-version-badge badge badge--secondary configarr-badge">1.20.0</span>
+
+Remote path mappings allow you to remap remote paths from your download clients to local paths that your \*Arr applications can access. This is useful when your download client is running on a different machine or in a container with different mount paths.
+
+```yaml title="config.yml"
+radarr:
+  instance1:
+    download_clients:
+      remote_paths:
+        - host: "transmission"
+          remote_path: "/downloads/complete"
+          local_path: "/data/media/downloads/complete"
+        - host: "192.168.1.100"
+          remote_path: "/torrents"
+          local_path: "/mnt/torrents"
+```
+
+**Key Points:**
+
+- `host`: The hostname or IP address of the download client
+- `remote_path`: The path as seen by the download client (must be unique combined with host)
+- `local_path`: The path as accessible by the \*Arr application
+- Mappings are matched by `host + remote_path` combination (must be unique)
+- Existing mappings with matching host+remote_path will be updated with new local_path
+- Mappings that exist on the server but not in config will be deleted
+
+For more details, check the \*Arr-specific API documentation under the `RemotePathMapping` resource endpoint.
+
 ## Experimental supported fields
 
 - Experimental support for `media_management` and `media_naming_api` (since v1.5.0)

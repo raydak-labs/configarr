@@ -12,6 +12,7 @@ import { calculateCFsToManage, deleteCustomFormat, loadCustomFormatDefinitions, 
 import { calculateDelayProfilesDiff, deleteAdditionalDelayProfiles, mapToServerDelayProfile } from "./delay-profiles";
 import { syncDownloadClients } from "./downloadClients/downloadClientSyncer";
 import { syncDownloadClientConfig } from "./downloadClientConfig/downloadClientConfigSyncer";
+import { syncRemotePaths } from "./remotePaths/remotePathSyncer";
 import { logger, logHeading, logInstanceHeading } from "./logger";
 import { calculateMediamanagementDiff, calculateNamingDiff } from "./media-management";
 import { calculateQualityDefinitionDiff, loadQualityDefinitionFromServer } from "./quality-definitions";
@@ -324,6 +325,25 @@ const pipeline = async (globalConfig: InputConfigSchema, instanceConfig: InputCo
         logger.error(`Failed to sync download client config: ${err.message}`);
       }
     }
+  }
+
+  // Sync remote path mappings
+  if (
+    config.download_clients?.remote_paths !== undefined &&
+    (config.download_clients.remote_paths.length > 0 || config.download_clients.delete_unmanaged_remote_paths)
+  ) {
+    logger.debug(`[DEBUG] About to sync remote paths for ${arrType}. Count: ${config.download_clients.remote_paths.length}`);
+    if (getEnvs().DRY_RUN) {
+      logger.info("DryRun: Would sync remote path mappings.");
+    } else {
+      try {
+        await syncRemotePaths(arrType, config, serverCache);
+      } catch (err: any) {
+        logger.error(`Failed to sync remote path mappings: ${err.message}`);
+      }
+    }
+  } else {
+    logger.debug(`[DEBUG] No remote paths to sync for ${arrType}. download_clients: ${JSON.stringify(config.download_clients)}`);
   }
 };
 
