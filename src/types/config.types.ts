@@ -59,9 +59,30 @@ export type InputConfigRootFolderLidarr = {
   tags?: string[];
 };
 
+export type InputConfigRootFolderReadarr = {
+  path: string;
+  name: string;
+  metadata_profile: string;
+  quality_profile: string;
+  monitor?: "all" | "future" | "missing" | "existing" | "latest" | "first" | "none" | "unknown";
+  monitor_new_items?: "all" | "none" | "new";
+  tags?: string[];
+  // Calibre integration (optional)
+  is_calibre_library?: boolean;
+  calibre_host?: string;
+  calibre_port?: number;
+  calibre_url_base?: string;
+  calibre_username?: string;
+  calibre_password?: string;
+  calibre_library?: string;
+  calibre_output_format?: string;
+  calibre_output_profile?: string;
+  calibre_use_ssl?: boolean;
+};
+
 export type InputConfigRootFolderGeneric = string;
 
-export type InputConfigRootFolder = InputConfigRootFolderGeneric | InputConfigRootFolderLidarr;
+export type InputConfigRootFolder = InputConfigRootFolderGeneric | InputConfigRootFolderLidarr | InputConfigRootFolderReadarr;
 
 export type InputConfigDownloadClientConfig = {
   /**
