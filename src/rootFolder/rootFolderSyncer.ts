@@ -4,11 +4,14 @@ import { InputConfigRootFolder } from "../types/config.types";
 import { RootFolderSyncResult } from "./rootFolder.types";
 import { BaseRootFolderSync, GenericRootFolderSync } from "./rootFolderBase";
 import { LidarrRootFolderSync } from "./rootFolderLidarr";
+import { ReadarrRootFolderSync } from "./rootFolderReadarr";
 
 export function createRootFolderSync(arrType: ArrType): BaseRootFolderSync {
   switch (arrType) {
     case "LIDARR":
       return new LidarrRootFolderSync();
+    case "READARR":
+      return new ReadarrRootFolderSync();
     default:
       return new GenericRootFolderSync(arrType);
   }
