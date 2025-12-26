@@ -1,6 +1,15 @@
 {
   "permissions": {
-    "allow": ["Bash(pnpm test:*)"],
+    "allow": [
+      "Bash(pnpm test:*)",
+      "Skill(superpowers:requesting-code-review)",
+      "Bash(git rev-parse:*)",
+      "Bash(pnpm run lint)",
+      "Bash(pnpm run typecheck)",
+      "Bash(pnpm typecheck)",
+      "Bash(pnpm lint:fix:*)",
+      "Bash(pnpm run build:*)"
+    ],
     "deny": [],
     "ask": []
   }

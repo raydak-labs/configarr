@@ -4,7 +4,7 @@ import { SonarrClient } from "../clients/sonarr-client";
 import { LidarrClient } from "../clients/lidarr-client";
 import { ReadarrClient } from "../clients/readarr-client";
 import { WhisparrClient } from "../clients/whisparr-client";
-import { getUnifiedClient } from "../clients/unified-client";
+import { getSpecificClient } from "../clients/unified-client";
 import { logger } from "../logger";
 import { ArrType } from "../types/common.types";
 import { InputConfigDownloadClientConfig, MergedConfigInstance } from "../types/config.types";
@@ -97,39 +97,37 @@ export async function syncDownloadClientConfig(
   }
 
   try {
-    const api = getUnifiedClient();
-
     // Get specific client for this arrType
     let getConfigFn: () => Promise<Record<string, any>>;
     let updateConfigFn: (id: string, config: Record<string, any>) => Promise<Record<string, any>>;
 
     switch (arrType) {
       case "RADARR": {
-        const radarrClient = api.getSpecificClient<RadarrClient>();
+        const radarrClient = getSpecificClient<RadarrClient>();
         getConfigFn = () => radarrClient.getDownloadClientConfig();
         updateConfigFn = (id: string, cfg: Record<string, any>) => radarrClient.updateDownloadClientConfig(id, cfg);
         break;
       }
       case "SONARR": {
-        const sonarrClient = api.getSpecificClient<SonarrClient>();
+        const sonarrClient = getSpecificClient<SonarrClient>();
         getConfigFn = () => sonarrClient.getDownloadClientConfig();
         updateConfigFn = (id: string, cfg: Record<string, any>) => sonarrClient.updateDownloadClientConfig(id, cfg);
         break;
       }
       case "LIDARR": {
-        const lidarrClient = api.getSpecificClient<LidarrClient>();
+        const lidarrClient = getSpecificClient<LidarrClient>();
         getConfigFn = () => lidarrClient.getDownloadClientConfig();
         updateConfigFn = (id: string, cfg: Record<string, any>) => lidarrClient.updateDownloadClientConfig(id, cfg);
         break;
       }
       case "READARR": {
-        const readarrClient = api.getSpecificClient<ReadarrClient>();
+        const readarrClient = getSpecificClient<ReadarrClient>();
         getConfigFn = () => readarrClient.getDownloadClientConfig();
         updateConfigFn = (id: string, cfg: Record<string, any>) => readarrClient.updateDownloadClientConfig(id, cfg);
         break;
       }
       case "WHISPARR": {
-        const whisparrClient = api.getSpecificClient<WhisparrClient>();
+        const whisparrClient = getSpecificClient<WhisparrClient>();
         getConfigFn = () => whisparrClient.getDownloadClientConfig();
         updateConfigFn = (id: string, cfg: Record<string, any>) => whisparrClient.updateDownloadClientConfig(id, cfg);
         break;

@@ -796,12 +796,16 @@ export const mergeConfigsAndTemplates = async (
     const instanceDeleteManaged = instanceConfig.download_clients.delete_unmanaged;
     const existingConfig = mergedTemplates.download_clients?.config;
     const instanceConfig_ = instanceConfig.download_clients.config;
+    const existingRemotePaths = mergedTemplates.download_clients?.remote_paths || [];
+    const instanceRemotePaths = instanceConfig.download_clients.remote_paths || [];
 
     mergedTemplates.download_clients = {
       data: [...existingData, ...instanceData],
       update_password: instanceConfig.download_clients.update_password,
       delete_unmanaged: instanceDeleteManaged ? instanceDeleteManaged : existingDeleteManaged,
       config: instanceConfig_ ? { ...existingConfig, ...instanceConfig_ } : existingConfig,
+      remote_paths: [...existingRemotePaths, ...instanceRemotePaths],
+      delete_unmanaged_remote_paths: instanceConfig.download_clients.delete_unmanaged_remote_paths,
     };
   }
 

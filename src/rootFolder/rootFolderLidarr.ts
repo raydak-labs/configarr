@@ -8,7 +8,7 @@ import {
 } from "../__generated__/lidarr/data-contracts";
 import { ServerCache } from "../cache";
 import { LidarrClient } from "../clients/lidarr-client";
-import { getUnifiedClient } from "../clients/unified-client";
+import { getSpecificClient } from "../clients/unified-client";
 import { loadQualityProfilesFromServer } from "../quality-profiles";
 import { InputConfigRootFolder } from "../types/config.types";
 import { compareObjectsCarr } from "../util";
@@ -16,7 +16,7 @@ import { RootFolderDiff } from "./rootFolder.types";
 import { BaseRootFolderSync } from "./rootFolderBase";
 
 export class LidarrRootFolderSync extends BaseRootFolderSync {
-  protected api: LidarrClient = getUnifiedClient().getSpecificClient();
+  protected api: LidarrClient = getSpecificClient<LidarrClient>();
 
   protected getArrType(): "LIDARR" {
     return "LIDARR";

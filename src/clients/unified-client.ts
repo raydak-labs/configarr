@@ -21,6 +21,15 @@ export const getUnifiedClient = (): UnifiedClient => {
   return unifiedClient;
 };
 
+/**
+ * Get the underlying specific client instance
+ * This bypasses the unified client wrapper and returns the actual RadarrClient, SonarrClient, etc.
+ */
+export const getSpecificClient = <T extends RadarrClient | SonarrClient | LidarrClient | ReadarrClient | WhisparrClient>(): T => {
+  const client = getUnifiedClient();
+  return (client as any).api as T;
+};
+
 export const validateClientParams = (url: string, apiKey: string, arrType: ArrType) => {
   const arrLabel = arrType.toLowerCase();
 
@@ -204,11 +213,8 @@ export interface IArrClient<
 
 export class UnifiedClient implements IArrClient {
   private api!: IArrClient;
-  private type: ArrType;
 
   constructor(type: ArrType, baseUrl: string, apiKey: string) {
-    this.type = type;
-
     switch (type) {
       case "SONARR":
         this.api = new SonarrClient(baseUrl, apiKey);
@@ -228,10 +234,6 @@ export class UnifiedClient implements IArrClient {
       default:
         throw new Error(`Invalid API type: ${type}`);
     }
-  }
-
-  getSpecificClient<T extends IArrClient>(): T {
-    return this.api as T;
   }
 
   async getLanguages() {
