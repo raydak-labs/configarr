@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.19.1](https://github.com/raydak-labs/configarr/compare/v1.19.0...v1.19.1) (2026-01-10)
+
+### Bug Fixes
+
+- repair broken changelog links and update release-it plugin ([570b90e](https://github.com/raydak-labs/configarr/commit/570b90e12b3a10e1295446f59456b5fd27d79750)), closes [#355](https://github.com/raydak-labs/configarr/issues/355)
+- try implementing a fix for legacy kernels in the git checkout process ([778d6ba](https://github.com/raydak-labs/configarr/commit/778d6ba7fe0050ea981bda24a5b634cc1838a756))
+
 ## [1.19.0](https://github.com/raydak-labs/configarr/compare/v1.18.0...v1.19.0) (2025-12-19)
 
 ### Features
