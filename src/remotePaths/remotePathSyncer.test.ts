@@ -22,13 +22,8 @@ vi.mock("../clients/unified-client");
 vi.mock("../logger");
 
 describe("remotePathSyncer", () => {
-  let mockCache: any;
-
   beforeEach(() => {
     vi.clearAllMocks();
-    mockCache = {
-      tags: [],
-    };
   });
 
   it("should return early when no remote_paths in config", async () => {
@@ -38,7 +33,7 @@ describe("remotePathSyncer", () => {
       download_clients: {},
     };
 
-    const result = await syncRemotePaths("RADARR", config, mockCache);
+    const result = await syncRemotePaths("RADARR", config);
 
     expect(result).toEqual({
       created: 0,
@@ -61,7 +56,7 @@ describe("remotePathSyncer", () => {
       },
     };
 
-    const result = await syncRemotePaths("RADARR", config, mockCache);
+    const result = await syncRemotePaths("RADARR", config);
 
     expect(result.created).toBe(0);
     expect(result.updated).toBe(0);
@@ -118,7 +113,7 @@ describe("remotePathSyncer", () => {
         },
       };
 
-      const result = await syncRemotePaths("RADARR", config, mockCache);
+      const result = await syncRemotePaths("RADARR", config);
 
       expect(result.updated).toBe(1);
       expect(mockRadarrClient.updateRemotePathMapping).toHaveBeenCalledWith(
@@ -153,7 +148,7 @@ describe("remotePathSyncer", () => {
         },
       };
 
-      const result = await syncRemotePaths("RADARR", config, mockCache);
+      const result = await syncRemotePaths("RADARR", config);
 
       // Should be detected as unchanged (paths are the same after normalization)
       expect(result.unchanged).toBe(1);
@@ -180,7 +175,7 @@ describe("remotePathSyncer", () => {
         },
       };
 
-      const result = await syncRemotePaths("RADARR", config, mockCache);
+      const result = await syncRemotePaths("RADARR", config);
 
       expect(result.deleted).toBe(2);
       expect(mockRadarrClient.deleteRemotePathMapping).toHaveBeenCalledWith("1");
@@ -226,7 +221,7 @@ describe("remotePathSyncer", () => {
         },
       };
 
-      const result = await syncRemotePaths("RADARR", config, mockCache);
+      const result = await syncRemotePaths("RADARR", config);
 
       expect(result.created).toBe(1);
       expect(result.updated).toBe(1);
@@ -284,7 +279,7 @@ describe("remotePathSyncer", () => {
         },
       };
 
-      const result = await syncRemotePaths("RADARR", config, mockCache);
+      const result = await syncRemotePaths("RADARR", config);
 
       expect(result.created).toBe(2);
       expect(mockRadarrClient.createRemotePathMapping).toHaveBeenCalledTimes(2);

@@ -337,7 +337,7 @@ const pipeline = async (globalConfig: InputConfigSchema, instanceConfig: InputCo
       logger.info("DryRun: Would sync remote path mappings.");
     } else {
       try {
-        await syncRemotePaths(arrType, config, serverCache);
+        await syncRemotePaths(arrType, config);
       } catch (err: any) {
         logger.error(`Failed to sync remote path mappings: ${err.message}`);
       }

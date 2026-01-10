@@ -1,4 +1,3 @@
-import { ServerCache } from "../cache";
 import { getSpecificClient } from "../clients/unified-client";
 import { logger } from "../logger";
 import { ArrType } from "../types/common.types";
@@ -64,6 +63,7 @@ function calculateDiff(configs: InputConfigRemotePath[], serverMappings: RemoteP
   // Find items to delete
   const toDelete = Array.from(serverMap.entries())
     .filter(([key]) => !configMap.has(key))
+    .filter(([, mapping]) => !!mapping.id)
     .map(([, mapping]) => ({ id: mapping.id! }));
 
   return { toCreate, toUpdate, toDelete, unchanged };
@@ -72,11 +72,7 @@ function calculateDiff(configs: InputConfigRemotePath[], serverMappings: RemoteP
 /**
  * Sync remote path mappings for a specific *Arr instance
  */
-export async function syncRemotePaths(
-  arrType: ArrType,
-  config: MergedConfigInstance,
-  serverCache: ServerCache,
-): Promise<RemotePathSyncResult> {
+export async function syncRemotePaths(arrType: ArrType, config: MergedConfigInstance): Promise<RemotePathSyncResult> {
   const remotePaths = config.download_clients?.remote_paths;
   const deleteUnmanaged = config.download_clients?.delete_unmanaged_remote_paths ?? false;
 
