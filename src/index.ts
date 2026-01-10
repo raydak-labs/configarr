@@ -31,7 +31,6 @@ import { InputConfigArrInstance, InputConfigSchema } from "./types/config.types"
 import { TrashArrSupportedConst, TrashQualityDefinition, TrashQualityDefinitionQuality } from "./types/trashguide.types";
 import { isInConstArray } from "./util";
 import { syncRootFolders } from "./rootFolder/rootFolderSyncer";
-import { logHolidayGreeting } from "./holidays";
 
 const pipeline = async (globalConfig: InputConfigSchema, instanceConfig: InputConfigArrInstance, arrType: ArrType) => {
   const api = getUnifiedClient();
@@ -382,8 +381,6 @@ const runArrType = async (
 const run = async () => {
   logger.info(`Support the project: https://ko-fi.com/blackdark93 - Star on Github! https://github.com/raydak-labs/configarr`);
   logger.info(`Configarr Version: ${getEnvs().CONFIGARR_VERSION}`);
-
-  logHolidayGreeting();
 
   const buildInfo = getBuildInfo();
   logger.debug(`Build Info: ${buildInfo.buildTime} | ${buildInfo.githubSha.slice(0, 7)} | (run id) ${buildInfo.githubRunId}`);
