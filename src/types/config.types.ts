@@ -1,6 +1,5 @@
 import { ConfigarrCF } from "./common.types";
 import { TrashCF, TrashQualityDefinitionQuality, TrashScores } from "./trashguide.types";
-import { InputConfigRemotePath } from "../remotePaths/remotePath.types";
 
 export type CustomFormatDefinitions = (TrashCF | ConfigarrCF)[];
 
@@ -89,6 +88,16 @@ export type InputConfigDownloadClientConfig = {
    */
   check_for_finished_download_interval?: number;
 };
+
+/**
+ * Configuration for a single remote path mapping
+ * @experimental since v1.20.0
+ */
+export interface InputConfigRemotePath {
+  host: string;
+  remote_path: string;
+  local_path: string;
+}
 
 export type InputConfigArrInstance = {
   base_url: string;

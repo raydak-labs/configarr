@@ -1,20 +1,9 @@
 import { ServerCache } from "../cache";
-import { RadarrClient } from "../clients/radarr-client";
-import { SonarrClient } from "../clients/sonarr-client";
-import { LidarrClient } from "../clients/lidarr-client";
-import { ReadarrClient } from "../clients/readarr-client";
-import { WhisparrClient } from "../clients/whisparr-client";
 import { getSpecificClient } from "../clients/unified-client";
 import { logger } from "../logger";
 import { ArrType } from "../types/common.types";
-import {
-  InputConfigRemotePath,
-  RemotePathMappingResource,
-  RemotePathSyncResult,
-  RemotePathDiff,
-  RemotePathConfigSchema,
-} from "./remotePath.types";
-import { MergedConfigInstance } from "../types/config.types";
+import { RemotePathMappingResource, RemotePathSyncResult, RemotePathDiff } from "./remotePath.types";
+import { InputConfigRemotePath, MergedConfigInstance } from "../types/config.types";
 import { getEnvs } from "../env";
 
 /**
@@ -31,29 +20,6 @@ function normalizePath(path: string): string {
  */
 function createCompositeKey(host: string, remotePath: string): string {
   return `${host}||${normalizePath(remotePath)}`;
-}
-
-/**
- * Validate remote path configuration
- * Throws if validation fails
- */
-function validateRemotePathConfig(remotePaths: InputConfigRemotePath[]): void {
-  // Check for duplicates by host + remote_path combination
-  const keys = new Set<string>();
-  for (const config of remotePaths) {
-    const key = createCompositeKey(config.host, config.remote_path);
-    if (keys.has(key)) {
-      throw new Error(`Duplicate remote path mapping: '${config.host} + ${config.remote_path}' already configured.`);
-    }
-    keys.add(key);
-
-    // Validate individual config
-    try {
-      RemotePathConfigSchema.parse(config);
-    } catch (error) {
-      throw new Error(`Invalid remote path config: ${error instanceof Error ? error.message : String(error)}`);
-    }
-  }
 }
 
 /**
@@ -114,10 +80,6 @@ export async function syncRemotePaths(
   const remotePaths = config.download_clients?.remote_paths;
   const deleteUnmanaged = config.download_clients?.delete_unmanaged_remote_paths ?? false;
 
-  logger.debug(`[DEBUG] download_clients: ${JSON.stringify(config.download_clients)}`);
-  logger.debug(`[DEBUG] remote_paths: ${JSON.stringify(remotePaths)}`);
-  logger.debug(`[DEBUG] delete_unmanaged_remote_paths: ${deleteUnmanaged}`);
-
   // If remote_paths is undefined/not present, skip management entirely
   if (remotePaths === undefined) {
     logger.debug(`No remote path mappings specified for ${arrType}`);
@@ -135,31 +97,9 @@ export async function syncRemotePaths(
   }
 
   try {
-    // Validate config
-    validateRemotePathConfig(remotePaths);
-
-    // Get specific client for this arrType
-    let client: RadarrClient | SonarrClient | LidarrClient | ReadarrClient | WhisparrClient;
-
-    switch (arrType) {
-      case "RADARR":
-        client = getSpecificClient<RadarrClient>();
-        break;
-      case "SONARR":
-        client = getSpecificClient<SonarrClient>();
-        break;
-      case "LIDARR":
-        client = getSpecificClient<LidarrClient>();
-        break;
-      case "READARR":
-        client = getSpecificClient<ReadarrClient>();
-        break;
-      case "WHISPARR":
-        client = getSpecificClient<WhisparrClient>();
-        break;
-      default:
-        throw new Error(`Unknown arrType: ${arrType}`);
-    }
+    // Config validation happens earlier in validateConfig (config.ts)
+    // Get specific client for this arrType - TypeScript infers the correct type
+    const client = getSpecificClient(arrType);
 
     // Fetch current server mappings
     logger.debug(`Fetching remote path mappings from ${arrType}...`);
@@ -216,7 +156,8 @@ export async function syncRemotePaths(
           // Try to find the existing mapping and update it (match by host AND remotePath)
           const normalizedConfigPath = normalizePath(config.remote_path);
           const existingMapping = serverMappings.find(
-            (m) => m.host === config.host && m.remotePath && normalizePath(m.remotePath) === normalizedConfigPath,
+            (m: RemotePathMappingResource) =>
+              m.host === config.host && m.remotePath && normalizePath(m.remotePath) === normalizedConfigPath,
           );
           if (existingMapping && existingMapping.id) {
             logger.debug(`RemotePath '${config.host} + ${config.remote_path}' already exists. Attempting to update instead.`);

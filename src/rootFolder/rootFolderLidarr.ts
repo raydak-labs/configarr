@@ -16,7 +16,7 @@ import { RootFolderDiff } from "./rootFolder.types";
 import { BaseRootFolderSync } from "./rootFolderBase";
 
 export class LidarrRootFolderSync extends BaseRootFolderSync {
-  protected api: LidarrClient = getSpecificClient<LidarrClient>();
+  protected api: LidarrClient = getSpecificClient("LIDARR");
 
   protected getArrType(): "LIDARR" {
     return "LIDARR";

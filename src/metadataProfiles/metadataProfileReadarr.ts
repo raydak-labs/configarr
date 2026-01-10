@@ -8,7 +8,7 @@ import { MetadataProfileDiff } from "./metadataProfile.types";
 import { BaseMetadataProfileSync } from "./metadataProfileBase";
 
 export class ReadarrMetadataProfileSync extends BaseMetadataProfileSync<MetadataProfileResource> {
-  protected api: ReadarrClient = getSpecificClient<ReadarrClient>();
+  protected api: ReadarrClient = getSpecificClient("READARR");
 
   protected getArrType(): "READARR" {
     return "READARR";

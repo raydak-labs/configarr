@@ -22,13 +22,25 @@ export const getUnifiedClient = (): UnifiedClient => {
 };
 
 /**
- * Get the underlying specific client instance
- * This bypasses the unified client wrapper and returns the actual RadarrClient, SonarrClient, etc.
+ * Type map that maps ArrType to its corresponding client type
  */
-export const getSpecificClient = <T extends RadarrClient | SonarrClient | LidarrClient | ReadarrClient | WhisparrClient>(): T => {
-  const client = getUnifiedClient();
-  return (client as any).api as T;
+type ArrTypeToClient = {
+  RADARR: RadarrClient;
+  SONARR: SonarrClient;
+  LIDARR: LidarrClient;
+  READARR: ReadarrClient;
+  WHISPARR: WhisparrClient;
 };
+
+/**
+ * Get the underlying specific client instance by arrType
+ * This bypasses the unified client wrapper and returns the actual RadarrClient, SonarrClient, etc.
+ * Type-safe: TypeScript will infer the correct client type based on the arrType parameter.
+ */
+export function getSpecificClient<T extends ArrType>(arrType: T): ArrTypeToClient[T] {
+  const client = getUnifiedClient();
+  return (client as any).api;
+}
 
 export const validateClientParams = (url: string, apiKey: string, arrType: ArrType) => {
   const arrLabel = arrType.toLowerCase();

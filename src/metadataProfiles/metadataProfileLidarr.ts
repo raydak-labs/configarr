@@ -7,7 +7,7 @@ import { MetadataProfileDiff } from "./metadataProfile.types";
 import { BaseMetadataProfileSync } from "./metadataProfileBase";
 
 export class LidarrMetadataProfileSync extends BaseMetadataProfileSync<MetadataProfileResource> {
-  protected api: LidarrClient = getSpecificClient<LidarrClient>();
+  protected api: LidarrClient = getSpecificClient("LIDARR");
 
   protected getArrType(): "LIDARR" {
     return "LIDARR";

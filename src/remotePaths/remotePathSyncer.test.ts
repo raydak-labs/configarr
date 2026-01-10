@@ -49,46 +49,8 @@ describe("remotePathSyncer", () => {
     });
   });
 
-  it("should validate config and reject empty strings", async () => {
-    const config: any = {
-      custom_formats: [],
-      quality_profiles: [],
-      download_clients: {
-        remote_paths: [
-          {
-            host: "",
-            remote_path: "/downloads",
-            local_path: "/data/downloads",
-          },
-        ],
-      },
-    };
-
-    await expect(syncRemotePaths("RADARR", config, mockCache)).rejects.toThrow();
-  });
-
-  it("should detect duplicate composite keys", async () => {
-    const config: any = {
-      custom_formats: [],
-      quality_profiles: [],
-      download_clients: {
-        remote_paths: [
-          {
-            host: "transmission",
-            remote_path: "/downloads",
-            local_path: "/data/downloads",
-          },
-          {
-            host: "transmission",
-            remote_path: "/downloads",
-            local_path: "/data/other",
-          },
-        ],
-      },
-    };
-
-    await expect(syncRemotePaths("RADARR", config, mockCache)).rejects.toThrow(/Duplicate remote path mapping/);
-  });
+  // Note: Config validation (empty strings, duplicates) now happens earlier in validateConfig (config.ts)
+  // These tests are removed as validation is no longer part of the syncer's responsibility
 
   it("should return zero counts when no changes needed", async () => {
     const config: any = {
@@ -122,7 +84,10 @@ describe("remotePathSyncer", () => {
         api: mockRadarrClient,
       } as any);
 
-      vi.mocked(getSpecificClient).mockReturnValue(mockRadarrClient);
+      // Mock getSpecificClient for all arrTypes
+      vi.mocked(getSpecificClient).mockImplementation((arrType?: string) => {
+        return mockRadarrClient;
+      });
     });
 
     it("should handle already exists error by falling back to update", async () => {

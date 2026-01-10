@@ -196,14 +196,14 @@ radarr:
         ignore:
           - "Some client name"
        # (since v1.20.0) Remote path mappings for download clients
-       remote_paths:
-         - host: "transmission"
-           remote_path: "/downloads/movies"
-           local_path: "/data/media/downloads/movies"
-         - host: "qbittorrent"
-           remote_path: "/downloads"
-           local_path: "/data/downloads"
-       # Global download client configuration
+      remote_paths:
+        - host: "transmission"
+          remote_path: "/downloads/movies"
+          local_path: "/data/media/downloads/movies"
+        - host: "qbittorrent"
+          remote_path: "/downloads"
+          local_path: "/data/downloads"
+      # Global download client configuration
       config:
         download_client_working_folders: "/downloads,/tmp"
         enable_completed_download_handling: true

@@ -97,48 +97,12 @@ export async function syncDownloadClientConfig(
   }
 
   try {
-    // Get specific client for this arrType
-    let getConfigFn: () => Promise<Record<string, any>>;
-    let updateConfigFn: (id: string, config: Record<string, any>) => Promise<Record<string, any>>;
-
-    switch (arrType) {
-      case "RADARR": {
-        const radarrClient = getSpecificClient<RadarrClient>();
-        getConfigFn = () => radarrClient.getDownloadClientConfig();
-        updateConfigFn = (id: string, cfg: Record<string, any>) => radarrClient.updateDownloadClientConfig(id, cfg);
-        break;
-      }
-      case "SONARR": {
-        const sonarrClient = getSpecificClient<SonarrClient>();
-        getConfigFn = () => sonarrClient.getDownloadClientConfig();
-        updateConfigFn = (id: string, cfg: Record<string, any>) => sonarrClient.updateDownloadClientConfig(id, cfg);
-        break;
-      }
-      case "LIDARR": {
-        const lidarrClient = getSpecificClient<LidarrClient>();
-        getConfigFn = () => lidarrClient.getDownloadClientConfig();
-        updateConfigFn = (id: string, cfg: Record<string, any>) => lidarrClient.updateDownloadClientConfig(id, cfg);
-        break;
-      }
-      case "READARR": {
-        const readarrClient = getSpecificClient<ReadarrClient>();
-        getConfigFn = () => readarrClient.getDownloadClientConfig();
-        updateConfigFn = (id: string, cfg: Record<string, any>) => readarrClient.updateDownloadClientConfig(id, cfg);
-        break;
-      }
-      case "WHISPARR": {
-        const whisparrClient = getSpecificClient<WhisparrClient>();
-        getConfigFn = () => whisparrClient.getDownloadClientConfig();
-        updateConfigFn = (id: string, cfg: Record<string, any>) => whisparrClient.updateDownloadClientConfig(id, cfg);
-        break;
-      }
-      default:
-        throw new Error(`Unknown arrType: ${arrType}`);
-    }
+    // Get specific client for this arrType - TypeScript infers the correct type
+    const client = getSpecificClient(arrType);
 
     // Fetch current server config
     logger.debug(`Fetching download client config from ${arrType}...`);
-    const serverConfig = await getConfigFn();
+    const serverConfig = await client.getDownloadClientConfig();
 
     // Normalize and filter desired config
     const normalizedConfig = normalizeConfigFields(downloadClientConfig);
@@ -166,7 +130,7 @@ export async function syncDownloadClientConfig(
     // Update the config
     const configId = serverConfig.id?.toString() || "1";
     logger.info(`Updating download client config for ${arrType}...`);
-    await updateConfigFn(configId, mergedConfig);
+    await client.updateDownloadClientConfig(configId, mergedConfig);
 
     logger.info(`Successfully updated download client config for ${arrType}`);
     return { updated: true, arrType };

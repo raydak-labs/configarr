@@ -1,14 +1,6 @@
 import { z } from "zod";
 import { ArrType } from "../types/common.types";
-
-/**
- * Configuration for a single remote path mapping
- */
-export interface InputConfigRemotePath {
-  host: string;
-  remote_path: string;
-  local_path: string;
-}
+import { InputConfigRemotePath } from "../types/config.types";
 
 /**
  * Zod schema for validating remote path configuration
@@ -46,24 +38,6 @@ export interface RemotePathMappingResource {
   remotePath?: string | null;
   localPath?: string | null;
 }
-
-/**
- * Type for creating a new remote path mapping (no id)
- * Generic to work with any arr client's RemotePathMappingResource type
- */
-export type RemotePathMappingCreate<T = RemotePathMappingResource> = Omit<T, "id"> & {
-  host: string;
-  remotePath: string;
-  localPath: string;
-};
-
-/**
- * Type for updating an existing remote path mapping (includes id)
- * Generic to work with any arr client's RemotePathMappingResource type
- */
-export type RemotePathMappingUpdate<T = RemotePathMappingResource> = RemotePathMappingCreate<T> & {
-  id: number;
-};
 
 /**
  * Internal diff calculation result
