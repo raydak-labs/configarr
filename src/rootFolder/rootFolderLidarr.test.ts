@@ -2,11 +2,10 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { LidarrRootFolderSync } from "./rootFolderLidarr";
 import { ServerCache } from "../cache";
 import { InputConfigRootFolderLidarr } from "../types/config.types";
-import { getUnifiedClient, getSpecificClient } from "../clients/unified-client";
+import { getSpecificClient } from "../clients/unified-client";
 
 // Mock the unified client
 vi.mock("../clients/unified-client", () => ({
-  getUnifiedClient: vi.fn(),
   getSpecificClient: vi.fn(),
 }));
 
@@ -28,9 +27,6 @@ describe("LidarrRootFolderSync", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    (getUnifiedClient as any).mockReturnValue({
-      api: mockApi,
-    });
     (getSpecificClient as any).mockReturnValue(mockApi);
     serverCache = new ServerCache([], [], [], []);
     serverCache.tags = [];

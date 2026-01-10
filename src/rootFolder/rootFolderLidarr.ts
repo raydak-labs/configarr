@@ -10,19 +10,19 @@ import { ServerCache } from "../cache";
 import { LidarrClient } from "../clients/lidarr-client";
 import { getSpecificClient } from "../clients/unified-client";
 import { loadQualityProfilesFromServer } from "../quality-profiles";
-import { InputConfigRootFolder } from "../types/config.types";
+import { InputConfigRootFolderLidarr } from "../types/config.types";
 import { compareObjectsCarr } from "../util";
 import { RootFolderDiff } from "./rootFolder.types";
 import { BaseRootFolderSync } from "./rootFolderBase";
 
-export class LidarrRootFolderSync extends BaseRootFolderSync {
+export class LidarrRootFolderSync extends BaseRootFolderSync<InputConfigRootFolderLidarr> {
   protected api: LidarrClient = getSpecificClient("LIDARR");
 
   protected getArrType(): "LIDARR" {
     return "LIDARR";
   }
 
-  public async resolveRootFolderConfig(config: InputConfigRootFolder, serverCache: ServerCache): Promise<RootFolderResource> {
+  public async resolveRootFolderConfig(config: InputConfigRootFolderLidarr, serverCache: ServerCache): Promise<RootFolderResource> {
     if (typeof config === "string") {
       throw new Error(`Lidarr root folders must be objects with name, metadata_profile, and quality_profile. Got string: ${config}`);
     }
@@ -135,7 +135,10 @@ export class LidarrRootFolderSync extends BaseRootFolderSync {
     return compareObjectsCarr(serverFields, configFields).equal;
   }
 
-  async calculateDiff(rootFolders: InputConfigRootFolder[], serverCache: ServerCache): Promise<RootFolderDiff | null> {
+  async calculateDiff(
+    rootFolders: InputConfigRootFolderLidarr[],
+    serverCache: ServerCache,
+  ): Promise<RootFolderDiff<InputConfigRootFolderLidarr> | null> {
     if (rootFolders == null) {
       this.logger.debug(`Config 'root_folders' not specified. Ignoring.`);
       return null;
@@ -155,9 +158,9 @@ export class LidarrRootFolderSync extends BaseRootFolderSync {
       };
     }
 
-    const missingOnServer: InputConfigRootFolder[] = [];
+    const missingOnServer: InputConfigRootFolderLidarr[] = [];
     const notAvailableAnymore: RootFolderResource[] = [];
-    const changed: Array<{ config: InputConfigRootFolder; server: RootFolderResource }> = [];
+    const changed: Array<{ config: InputConfigRootFolderLidarr; server: RootFolderResource }> = [];
 
     // Create maps for efficient lookup
     const serverByPath = new Map<string, RootFolderResource>();

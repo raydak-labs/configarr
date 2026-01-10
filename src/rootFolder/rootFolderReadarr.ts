@@ -7,22 +7,21 @@ import {
   TagResource,
 } from "../__generated__/readarr/data-contracts";
 import { ServerCache } from "../cache";
-import { ReadarrClient } from "../clients/readarr-client";
-import { getUnifiedClient } from "../clients/unified-client";
+import { getSpecificClient } from "../clients/unified-client";
 import { loadQualityProfilesFromServer } from "../quality-profiles";
-import { InputConfigRootFolder } from "../types/config.types";
+import { InputConfigRootFolderReadarr } from "../types/config.types";
 import { compareObjectsCarr } from "../util";
 import { RootFolderDiff } from "./rootFolder.types";
 import { BaseRootFolderSync } from "./rootFolderBase";
 
-export class ReadarrRootFolderSync extends BaseRootFolderSync {
-  protected api: ReadarrClient = getUnifiedClient().getSpecificClient();
+export class ReadarrRootFolderSync extends BaseRootFolderSync<InputConfigRootFolderReadarr> {
+  protected api = getSpecificClient("READARR");
 
   protected getArrType(): "READARR" {
     return "READARR";
   }
 
-  public async resolveRootFolderConfig(config: InputConfigRootFolder, serverCache: ServerCache): Promise<RootFolderResource> {
+  public async resolveRootFolderConfig(config: InputConfigRootFolderReadarr, serverCache: ServerCache): Promise<RootFolderResource> {
     if (typeof config === "string") {
       throw new Error(`Readarr root folders must be objects with name, metadata_profile, and quality_profile. Got string: ${config}`);
     }
@@ -93,12 +92,12 @@ export class ReadarrRootFolderSync extends BaseRootFolderSync {
       result.defaultMonitorOption = config.monitor as MonitorTypes;
     }
 
-    if ("monitor_new_items" in config && config.monitor_new_items) {
+    if (config.monitor_new_items) {
       result.defaultNewItemMonitorOption = config.monitor_new_items as NewItemMonitorTypes;
     }
 
     // Calibre integration fields (Readarr-specific)
-    if ("is_calibre_library" in config) {
+    if (config.is_calibre_library !== undefined) {
       result.isCalibreLibrary = config.is_calibre_library;
       result.host = config.calibre_host;
       result.port = config.calibre_port;
@@ -160,7 +159,10 @@ export class ReadarrRootFolderSync extends BaseRootFolderSync {
     return compareObjectsCarr(serverFields, configFields).equal;
   }
 
-  async calculateDiff(rootFolders: InputConfigRootFolder[], serverCache: ServerCache): Promise<RootFolderDiff | null> {
+  async calculateDiff(
+    rootFolders: InputConfigRootFolderReadarr[],
+    serverCache: ServerCache,
+  ): Promise<RootFolderDiff<InputConfigRootFolderReadarr> | null> {
     if (rootFolders == null) {
       this.logger.debug(`Config 'root_folders' not specified. Ignoring.`);
       return null;
@@ -179,9 +181,9 @@ export class ReadarrRootFolderSync extends BaseRootFolderSync {
       };
     }
 
-    const missingOnServer: InputConfigRootFolder[] = [];
+    const missingOnServer: InputConfigRootFolderReadarr[] = [];
     const notAvailableAnymore: RootFolderResource[] = [];
-    const changed: Array<{ config: InputConfigRootFolder; server: RootFolderResource }> = [];
+    const changed: Array<{ config: InputConfigRootFolderReadarr; server: RootFolderResource }> = [];
 
     // Create maps for efficient lookup
     const serverByPath = new Map<string, RootFolderResource>();
