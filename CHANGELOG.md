@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.20.0](https://github.com/raydak-labs/configarr/compare/v1.19.1...v1.20.0) (2026-01-10)
+
+### Features
+
+- add Readarr root folder sync support ([8d757de](https://github.com/raydak-labs/configarr/commit/8d757de5d7e4247aebf366f5dc7773d12eda90a3)), closes [raydak-labs/configarr#264](https://github.com/raydak-labs/configarr/issues/264)
+- add remote path mapping for download clients ([dd7ab2a](https://github.com/raydak-labs/configarr/commit/dd7ab2a3e6138953a850099fd2867059b4358cee))
+
+### (internal) Refactorings
+
+- add generics for better types ([914c2c6](https://github.com/raydak-labs/configarr/commit/914c2c6f14caf9c2ac89b869dcae1226bf90c41c))
+- better use client specific things ([042c8e5](https://github.com/raydak-labs/configarr/commit/042c8e528a1909e246c81299b5293ec11da2401c))
+- review changes ([0b12b53](https://github.com/raydak-labs/configarr/commit/0b12b5331717b0d8b2a55a628890db7255d36577))
+
 ## [1.19.1](https://github.com/raydak-labs/configarr/compare/v1.19.0...v1.19.1) (2026-01-10)
 
 ### Bug Fixes
