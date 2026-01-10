@@ -86,3 +86,53 @@ Reference issues:
 
 - https://github.com/raydak-labs/configarr/issues/266
 - https://github.com/raydak-labs/configarr/issues/188
+
+## Git Clone Errors with Legacy Kernels
+
+If you encounter errors like:
+
+```
+Error: Unable to checkout revision 'master' from 'https://github.com/recyclarr/config-templates'. The revision may not exist in the repository. Error: index-pack failed
+```
+
+or
+
+```
+Function not implemented
+```
+
+This can be caused by legacy kernels that don't support modern git clone options like `--filter=blob:none` or sparse checkout features.
+
+### Solution
+
+Set the `CONFIGARR_DISABLE_GIT_CLONE_OPTIONS` environment variable to disable these advanced git clone options:
+
+**Docker Compose:**
+
+```yaml
+services:
+  configarr:
+    environment:
+      - CONFIGARR_DISABLE_GIT_CLONE_OPTIONS=1
+    # ...other options
+```
+
+**Docker run:**
+
+```bash
+docker run -e CONFIGARR_DISABLE_GIT_CLONE_OPTIONS=1 ...
+```
+
+**Kubernetes:**
+
+```yaml
+env:
+  - name: CONFIGARR_DISABLE_GIT_CLONE_OPTIONS
+    value: "1"
+```
+
+When this variable is set, Configarr will perform standard git clones without the `--filter=blob:none` or `--sparse` options, which should work with older kernel versions.
+
+Reference issues:
+
+- https://github.com/raydak-labs/configarr/issues/367
