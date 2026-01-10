@@ -21,6 +21,34 @@ export const getUnifiedClient = (): UnifiedClient => {
   return unifiedClient;
 };
 
+/**
+ * Type map that maps ArrType to its corresponding client type
+ */
+type ArrTypeToClient = {
+  RADARR: RadarrClient;
+  SONARR: SonarrClient;
+  LIDARR: LidarrClient;
+  READARR: ReadarrClient;
+  WHISPARR: WhisparrClient;
+};
+
+/**
+ * Get the underlying specific client instance by arrType
+ * This bypasses the unified client wrapper and returns the actual RadarrClient, SonarrClient, etc.
+ * Type-safe: TypeScript will infer the correct client type based on the arrType parameter.
+ * @throws Error if the requested arrType doesn't match the configured client type
+ */
+export function getSpecificClient<T extends ArrType>(arrType: T): ArrTypeToClient[T] {
+  const client = getUnifiedClient();
+  // Validate that the requested type matches the configured client type
+  if (client.type !== arrType) {
+    throw new Error(
+      `Type mismatch: requested ${arrType} but client is configured for ${client.type}. Ensure configureApi is called with the correct arrType.`,
+    );
+  }
+  return (client as any).api;
+}
+
 export const validateClientParams = (url: string, apiKey: string, arrType: ArrType) => {
   const arrLabel = arrType.toLowerCase();
 
@@ -204,11 +232,10 @@ export interface IArrClient<
 
 export class UnifiedClient implements IArrClient {
   private api!: IArrClient;
-  private type: ArrType;
+  readonly type: ArrType;
 
   constructor(type: ArrType, baseUrl: string, apiKey: string) {
     this.type = type;
-
     switch (type) {
       case "SONARR":
         this.api = new SonarrClient(baseUrl, apiKey);
@@ -228,10 +255,6 @@ export class UnifiedClient implements IArrClient {
       default:
         throw new Error(`Invalid API type: ${type}`);
     }
-  }
-
-  getSpecificClient<T extends IArrClient>(): T {
-    return this.api as T;
   }
 
   async getLanguages() {

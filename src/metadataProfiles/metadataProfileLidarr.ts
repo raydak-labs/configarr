@@ -1,13 +1,13 @@
 import { MetadataProfileResource, PrimaryAlbumType, ReleaseStatus, SecondaryAlbumType } from "../__generated__/lidarr/data-contracts";
 import { ServerCache } from "../cache";
 import { LidarrClient } from "../clients/lidarr-client";
-import { getUnifiedClient } from "../clients/unified-client";
+import { getSpecificClient } from "../clients/unified-client";
 import { InputConfigLidarrMetadataProfile, InputConfigMetadataProfile } from "../types/config.types";
 import { MetadataProfileDiff } from "./metadataProfile.types";
 import { BaseMetadataProfileSync } from "./metadataProfileBase";
 
 export class LidarrMetadataProfileSync extends BaseMetadataProfileSync<MetadataProfileResource> {
-  protected api: LidarrClient = getUnifiedClient().getSpecificClient();
+  protected api: LidarrClient = getSpecificClient("LIDARR");
 
   protected getArrType(): "LIDARR" {
     return "LIDARR";

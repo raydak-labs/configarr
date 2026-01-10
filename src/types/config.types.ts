@@ -89,6 +89,16 @@ export type InputConfigDownloadClientConfig = {
   check_for_finished_download_interval?: number;
 };
 
+/**
+ * Configuration for a single remote path mapping
+ * @experimental since v1.20.0
+ */
+export interface InputConfigRemotePath {
+  host: string;
+  remote_path: string;
+  local_path: string;
+}
+
 export type InputConfigArrInstance = {
   base_url: string;
   api_key: string;
@@ -201,6 +211,17 @@ export type InputConfigArrInstance = {
      * Global download client configuration
      */
     config?: InputConfigDownloadClientConfig;
+    /**
+     * Remote path mappings for download clients
+     * @experimental since v1.20.0
+     */
+    remote_paths?: InputConfigRemotePath[];
+    /**
+     * Delete unmanaged remote path mappings
+     * @experimental since v1.20.0
+     * @default false
+     */
+    delete_unmanaged_remote_paths?: boolean;
   };
 } & Pick<InputConfigSchema, "customFormatDefinitions">;
 

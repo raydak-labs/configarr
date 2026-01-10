@@ -30,10 +30,12 @@ import {
   InputConfigIncludeItem,
   InputConfigInstance,
   InputConfigMetadataProfile,
+  InputConfigRemotePath,
   InputConfigSchema,
   MediaNamingType,
   MergedConfigInstance,
 } from "./types/config.types";
+import { RemotePathConfigSchema } from "./remotePaths/remotePath.types";
 import { TrashCFGroupMapping, TrashQP } from "./types/trashguide.types";
 import { isUrl, loadTemplateFromUrl } from "./url-template-importer";
 import { cloneWithJSON } from "./util";
@@ -176,6 +178,32 @@ export const parseIncludes = (input: InputConfigIncludeItem): ConfigIncludeItem 
   source: input.source ?? "RECYCLARR",
 });
 
+/**
+ * Validate remote path mappings configuration
+ * Checks for duplicate host + remote_path combinations and validates structure
+ * @throws Error if validation fails
+ */
+const validateRemotePaths = (remotePaths: InputConfigRemotePath[]): void => {
+  const keys = new Set<string>();
+  for (const config of remotePaths) {
+    // Validate structure using Zod schema
+    try {
+      RemotePathConfigSchema.parse(config);
+    } catch (error) {
+      throw new Error(`Invalid remote path config: ${error instanceof Error ? error.message : String(error)}`);
+    }
+
+    // Check for duplicates by host + remote_path combination
+    // Normalize path for duplicate detection (remove trailing slashes)
+    const normalizedRemotePath = config.remote_path.replace(/\/+$/, "");
+    const key = `${config.host}||${normalizedRemotePath}`;
+    if (keys.has(key)) {
+      throw new Error(`Duplicate remote path mapping: '${config.host} + ${config.remote_path}' already configured.`);
+    }
+    keys.add(key);
+  }
+};
+
 export const validateConfig = (input: InputConfigInstance): MergedConfigInstance => {
   // TODO add validation and warnings like assign_scores. Setting default values not always the best
 
@@ -184,6 +212,11 @@ export const validateConfig = (input: InputConfigInstance): MergedConfigInstance
   if (preferredRatio != null && (preferredRatio < 0 || preferredRatio > 1)) {
     logger.warn(`QualityDefinition: PreferredRatio must be between 0 and 1. Ignoring`);
     delete input.quality_definition!["preferred_ratio"];
+  }
+
+  // Validate remote path mappings if present
+  if (input.download_clients?.remote_paths) {
+    validateRemotePaths(input.download_clients.remote_paths);
   }
 
   return {
@@ -796,12 +829,16 @@ export const mergeConfigsAndTemplates = async (
     const instanceDeleteManaged = instanceConfig.download_clients.delete_unmanaged;
     const existingConfig = mergedTemplates.download_clients?.config;
     const instanceConfig_ = instanceConfig.download_clients.config;
+    const existingRemotePaths = mergedTemplates.download_clients?.remote_paths || [];
+    const instanceRemotePaths = instanceConfig.download_clients.remote_paths || [];
 
     mergedTemplates.download_clients = {
       data: [...existingData, ...instanceData],
       update_password: instanceConfig.download_clients.update_password,
       delete_unmanaged: instanceDeleteManaged ? instanceDeleteManaged : existingDeleteManaged,
       config: instanceConfig_ ? { ...existingConfig, ...instanceConfig_ } : existingConfig,
+      remote_paths: [...existingRemotePaths, ...instanceRemotePaths],
+      delete_unmanaged_remote_paths: instanceConfig.download_clients.delete_unmanaged_remote_paths,
     };
   }
 

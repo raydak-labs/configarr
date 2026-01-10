@@ -7,6 +7,7 @@ import {
   MetadataProfileResource,
   QualityDefinitionResource,
   QualityProfileResource,
+  RemotePathMappingResource,
 } from "../__generated__/lidarr/data-contracts";
 import { logger } from "../logger";
 import type { DownloadClientResource } from "../types/download-client.types";
@@ -190,6 +191,23 @@ export class LidarrClient implements IArrClient<QualityProfileResource, QualityD
 
   async updateDownloadClientConfig(id: string, config: DownloadClientConfigResource): Promise<DownloadClientConfigResource> {
     return this.api.v1ConfigDownloadclientUpdate(id, config);
+  }
+
+  // Remote Path Mappings
+  async getRemotePathMappings(): Promise<RemotePathMappingResource[]> {
+    return this.api.v1RemotepathmappingList();
+  }
+
+  async createRemotePathMapping(mapping: RemotePathMappingResource): Promise<RemotePathMappingResource> {
+    return this.api.v1RemotepathmappingCreate(mapping);
+  }
+
+  async updateRemotePathMapping(id: string, mapping: RemotePathMappingResource): Promise<RemotePathMappingResource> {
+    return this.api.v1RemotepathmappingUpdate(id, mapping);
+  }
+
+  async deleteRemotePathMapping(id: string): Promise<void> {
+    return this.api.v1RemotepathmappingDelete(+id);
   }
 
   // System/Health Check
