@@ -250,15 +250,29 @@ export function zipNLength<T extends unknown[][]>(...arrays: T): Array<{ [K in k
 
 async function performCloneOperation(gitUrl: string, rootPath: string, sparseConfig: { disabled: boolean; sparseDirs?: string[] }) {
   const gitClient = simpleGit({ baseDir: rootPath });
+  const disableGitCloneOptions = process.env.CONFIGARR_DISABLE_GIT_CLONE_OPTIONS !== undefined;
   let sparseEnabled = false;
 
   if (!sparseConfig.disabled && sparseConfig.sparseDirs && sparseConfig.sparseDirs.length > 0) {
     sparseEnabled = true;
+    logger.debug(`Sparse checkout enabled for directories: ${sparseConfig.sparseDirs.join(", ")}`);
+  } else {
+    logger.debug(`Sparse checkout disabled`);
   }
 
-  await simpleGit().clone(gitUrl, rootPath, ["--filter=blob:none", (sparseEnabled && "--sparse") || ""]);
+  if (disableGitCloneOptions) {
+    logger.debug(`CONFIGARR_DISABLE_GIT_CLONE_OPTIONS is set - using clean clone without filter or sparse options`);
+    // Clean clone without filter or sparse options
+    await simpleGit().clone(gitUrl, rootPath);
+  } else {
+    const cloneArgs = ["--filter=blob:none"];
+    if (sparseEnabled) {
+      cloneArgs.push("--sparse");
+    }
+    await simpleGit().clone(gitUrl, rootPath, cloneArgs);
+  }
 
-  if (sparseEnabled) {
+  if (sparseEnabled && !disableGitCloneOptions) {
     await gitClient.raw(["sparse-checkout", "set", ...sparseConfig.sparseDirs!]);
   }
 
