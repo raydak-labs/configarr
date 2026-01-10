@@ -8,14 +8,14 @@ import { InputConfigRootFolder } from "../types/config.types";
 import { RootFolderDiff, RootFolderSyncResult } from "./rootFolder.types";
 
 // Base class for root folder synchronization
-export abstract class BaseRootFolderSync {
-  protected api: IArrClient = getUnifiedClient();
+export abstract class BaseRootFolderSync<TConfig extends InputConfigRootFolder = InputConfigRootFolder> {
+  protected api!: IArrClient;
   protected logger = logger;
 
-  abstract calculateDiff(rootFolders: InputConfigRootFolder[], serverCache: ServerCache): Promise<RootFolderDiff | null>;
-  public abstract resolveRootFolderConfig(config: InputConfigRootFolder, serverCache: ServerCache): Promise<MergedRootFolderResource>;
+  abstract calculateDiff(rootFolders: TConfig[], serverCache: ServerCache): Promise<RootFolderDiff<TConfig> | null>;
+  public abstract resolveRootFolderConfig(config: TConfig, serverCache: ServerCache): Promise<MergedRootFolderResource>;
 
-  async syncRootFolders(rootFolders: InputConfigRootFolder[], serverCache: ServerCache): Promise<RootFolderSyncResult> {
+  async syncRootFolders(rootFolders: TConfig[], serverCache: ServerCache): Promise<RootFolderSyncResult> {
     const diff = await this.calculateDiff(rootFolders, serverCache);
 
     if (!diff) {
@@ -70,7 +70,9 @@ export abstract class BaseRootFolderSync {
 }
 
 // Generic sync for most arr types (Radarr, Sonarr, etc.)
-export class GenericRootFolderSync extends BaseRootFolderSync {
+export class GenericRootFolderSync extends BaseRootFolderSync<InputConfigRootFolder> {
+  protected api: IArrClient = getUnifiedClient();
+
   constructor(private arrType: ArrType) {
     super();
   }
@@ -88,7 +90,10 @@ export class GenericRootFolderSync extends BaseRootFolderSync {
     return { path: config.path };
   }
 
-  async calculateDiff(rootFolders: InputConfigRootFolder[], serverCache: ServerCache): Promise<RootFolderDiff | null> {
+  async calculateDiff(
+    rootFolders: InputConfigRootFolder[],
+    serverCache: ServerCache,
+  ): Promise<RootFolderDiff<InputConfigRootFolder> | null> {
     if (rootFolders == null) {
       this.logger.debug(`Config 'root_folders' not specified. Ignoring.`);
       return null;

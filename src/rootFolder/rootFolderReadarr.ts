@@ -5,29 +5,28 @@ import {
   QualityProfileResource,
   RootFolderResource,
   TagResource,
-} from "../__generated__/lidarr/data-contracts";
+} from "../__generated__/readarr/data-contracts";
 import { ServerCache } from "../cache";
-import { LidarrClient } from "../clients/lidarr-client";
 import { getSpecificClient } from "../clients/unified-client";
 import { loadQualityProfilesFromServer } from "../quality-profiles";
-import { InputConfigRootFolderLidarr } from "../types/config.types";
+import { InputConfigRootFolderReadarr } from "../types/config.types";
 import { compareObjectsCarr } from "../util";
 import { RootFolderDiff } from "./rootFolder.types";
 import { BaseRootFolderSync } from "./rootFolderBase";
 
-export class LidarrRootFolderSync extends BaseRootFolderSync<InputConfigRootFolderLidarr> {
-  protected api: LidarrClient = getSpecificClient("LIDARR");
+export class ReadarrRootFolderSync extends BaseRootFolderSync<InputConfigRootFolderReadarr> {
+  protected api = getSpecificClient("READARR");
 
-  protected getArrType(): "LIDARR" {
-    return "LIDARR";
+  protected getArrType(): "READARR" {
+    return "READARR";
   }
 
-  public async resolveRootFolderConfig(config: InputConfigRootFolderLidarr, serverCache: ServerCache): Promise<RootFolderResource> {
+  public async resolveRootFolderConfig(config: InputConfigRootFolderReadarr, serverCache: ServerCache): Promise<RootFolderResource> {
     if (typeof config === "string") {
-      throw new Error(`Lidarr root folders must be objects with name, metadata_profile, and quality_profile. Got string: ${config}`);
+      throw new Error(`Readarr root folders must be objects with name, metadata_profile, and quality_profile. Got string: ${config}`);
     }
 
-    // Load quality profiles and metadata profiles for Lidarr
+    // Load quality profiles and metadata profiles for Readarr
     const [qualityProfiles, metadataProfiles] = await Promise.all([loadQualityProfilesFromServer(), this.api.getMetadataProfiles()]);
 
     const qualityProfileMap = new Map<string, number>();
@@ -50,11 +49,11 @@ export class LidarrRootFolderSync extends BaseRootFolderSync<InputConfigRootFold
     const qualityProfileId = config.quality_profile ? qualityProfileMap.get(config.quality_profile) : undefined;
 
     if (config.metadata_profile && metadataProfileId === undefined) {
-      throw new Error(`Metadata profile '${config.metadata_profile}' not found on Lidarr server`);
+      throw new Error(`Metadata profile '${config.metadata_profile}' not found on Readarr server`);
     }
 
     if (config.quality_profile && qualityProfileId === undefined) {
-      throw new Error(`Quality profile '${config.quality_profile}' not found on Lidarr server`);
+      throw new Error(`Quality profile '${config.quality_profile}' not found on Readarr server`);
     }
 
     // Resolve tag names to IDs, creating tags if they don't exist
@@ -93,15 +92,30 @@ export class LidarrRootFolderSync extends BaseRootFolderSync<InputConfigRootFold
       result.defaultMonitorOption = config.monitor as MonitorTypes;
     }
 
-    if (config.monitor_new_album) {
-      result.defaultNewItemMonitorOption = config.monitor_new_album as NewItemMonitorTypes;
+    if (config.monitor_new_items) {
+      result.defaultNewItemMonitorOption = config.monitor_new_items as NewItemMonitorTypes;
+    }
+
+    // Calibre integration fields (Readarr-specific)
+    if (config.is_calibre_library !== undefined) {
+      result.isCalibreLibrary = config.is_calibre_library;
+      result.host = config.calibre_host;
+      result.port = config.calibre_port;
+      result.urlBase = config.calibre_url_base;
+      result.username = config.calibre_username;
+      result.password = config.calibre_password;
+      result.library = config.calibre_library;
+      result.outputFormat = config.calibre_output_format;
+      result.outputProfile = config.calibre_output_profile;
+      result.useSsl = config.calibre_use_ssl;
     }
 
     return result;
   }
 
   private isRootFolderConfigEqual(resolvedConfig: RootFolderResource, serverFolder: RootFolderResource): boolean {
-    // Only compare the configurable fields, filter out server-only fields like id, accessible, freeSpace, etc.
+    // Compare only configurable fields; server-only fields like id, accessible, freeSpace are excluded.
+    // Password is excluded since the API returns masked values, not the actual password.
     const configFields = {
       name: resolvedConfig.name,
       path: resolvedConfig.path,
@@ -110,35 +124,45 @@ export class LidarrRootFolderSync extends BaseRootFolderSync<InputConfigRootFold
       defaultMonitorOption: resolvedConfig.defaultMonitorOption,
       defaultNewItemMonitorOption: resolvedConfig.defaultNewItemMonitorOption,
       defaultTags: resolvedConfig.defaultTags,
-    };
-
-    // For Lidarr, we know the server folder has the Lidarr-specific fields
-    const lidarrServerFolder = serverFolder as RootFolderResource & {
-      name?: string;
-      defaultMetadataProfileId?: number;
-      defaultQualityProfileId?: number;
-      defaultMonitorOption?: string;
-      defaultNewItemMonitorOption?: string;
-      defaultTags?: number[];
+      // Calibre fields
+      isCalibreLibrary: resolvedConfig.isCalibreLibrary,
+      host: resolvedConfig.host,
+      port: resolvedConfig.port,
+      urlBase: resolvedConfig.urlBase,
+      username: resolvedConfig.username,
+      library: resolvedConfig.library,
+      outputFormat: resolvedConfig.outputFormat,
+      outputProfile: resolvedConfig.outputProfile,
+      useSsl: resolvedConfig.useSsl,
     };
 
     const serverFields = {
-      name: lidarrServerFolder.name,
-      path: lidarrServerFolder.path,
-      defaultMetadataProfileId: lidarrServerFolder.defaultMetadataProfileId,
-      defaultQualityProfileId: lidarrServerFolder.defaultQualityProfileId,
-      defaultMonitorOption: lidarrServerFolder.defaultMonitorOption,
-      defaultNewItemMonitorOption: lidarrServerFolder.defaultNewItemMonitorOption,
-      defaultTags: lidarrServerFolder.defaultTags,
+      name: serverFolder.name,
+      path: serverFolder.path,
+      defaultMetadataProfileId: serverFolder.defaultMetadataProfileId,
+      defaultQualityProfileId: serverFolder.defaultQualityProfileId,
+      defaultMonitorOption: serverFolder.defaultMonitorOption,
+      defaultNewItemMonitorOption: serverFolder.defaultNewItemMonitorOption,
+      defaultTags: serverFolder.defaultTags,
+      // Calibre fields
+      isCalibreLibrary: serverFolder.isCalibreLibrary,
+      host: serverFolder.host,
+      port: serverFolder.port,
+      urlBase: serverFolder.urlBase,
+      username: serverFolder.username,
+      library: serverFolder.library,
+      outputFormat: serverFolder.outputFormat,
+      outputProfile: serverFolder.outputProfile,
+      useSsl: serverFolder.useSsl,
     };
 
     return compareObjectsCarr(serverFields, configFields).equal;
   }
 
   async calculateDiff(
-    rootFolders: InputConfigRootFolderLidarr[],
+    rootFolders: InputConfigRootFolderReadarr[],
     serverCache: ServerCache,
-  ): Promise<RootFolderDiff<InputConfigRootFolderLidarr> | null> {
+  ): Promise<RootFolderDiff<InputConfigRootFolderReadarr> | null> {
     if (rootFolders == null) {
       this.logger.debug(`Config 'root_folders' not specified. Ignoring.`);
       return null;
@@ -148,19 +172,18 @@ export class LidarrRootFolderSync extends BaseRootFolderSync<InputConfigRootFold
 
     // If config is empty array, all server folders should be removed
     if (rootFolders.length === 0) {
-      const notAvailableAnymore = serverData.map((folder) => (typeof folder === "string" ? folder : folder));
-      this.logger.info(`Found ${notAvailableAnymore.length} differences for root folders.`);
+      this.logger.info(`Found ${serverData.length} differences for root folders.`);
 
       return {
         missingOnServer: [],
-        notAvailableAnymore,
+        notAvailableAnymore: serverData,
         changed: [],
       };
     }
 
-    const missingOnServer: InputConfigRootFolderLidarr[] = [];
+    const missingOnServer: InputConfigRootFolderReadarr[] = [];
     const notAvailableAnymore: RootFolderResource[] = [];
-    const changed: Array<{ config: InputConfigRootFolderLidarr; server: RootFolderResource }> = [];
+    const changed: Array<{ config: InputConfigRootFolderReadarr; server: RootFolderResource }> = [];
 
     // Create maps for efficient lookup
     const serverByPath = new Map<string, RootFolderResource>();
