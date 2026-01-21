@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import yaml from "yaml";
-import { mergeConfigsAndTemplates, transformConfig } from "./config";
+import { getSecrets, mergeConfigsAndTemplates, resetSecretsCache, transformConfig } from "./config";
+import * as env from "./env";
 import * as localImporter from "./local-importer";
 import * as reclarrImporter from "./recyclarr-importer";
 import * as trashGuide from "./trash-guide";
@@ -22,6 +23,28 @@ vi.mock("ky", () => {
   mockKy.get = mockKyGet;
   return {
     default: mockKy,
+  };
+});
+
+// Mock fast-glob for secrets tests
+const mockFastGlobSync = vi.hoisted(() => vi.fn());
+vi.mock("fast-glob", () => {
+  return {
+    default: {
+      sync: mockFastGlobSync,
+    },
+  };
+});
+
+// Mock fs for secrets tests - must be hoisted before imports
+const mockExistsSync = vi.hoisted(() => vi.fn());
+const mockReadFileSync = vi.hoisted(() => vi.fn());
+vi.mock("node:fs", async () => {
+  const actual = await vi.importActual<typeof import("node:fs")>("node:fs");
+  return {
+    ...actual,
+    existsSync: mockExistsSync,
+    readFileSync: mockReadFileSync,
   };
 });
 
@@ -666,5 +689,401 @@ describe("custom_formats ordering", () => {
     result = await mergeConfigsAndTemplates({}, inputConfig, "SONARR");
     cf = result.config.custom_formats.find((cf) => cf.trash_ids?.includes("test-cf"));
     expect(cf?.assign_scores_to?.[0]?.score).toBe(2);
+  });
+});
+
+describe("getSecrets", () => {
+  beforeEach(() => {
+    vi.resetAllMocks();
+    mockFastGlobSync.mockClear();
+    mockExistsSync.mockClear();
+    mockReadFileSync.mockClear();
+    resetSecretsCache();
+  });
+
+  test("should load single secret file (backward compatibility)", () => {
+    const secretLocation = "/config/secrets.yml";
+    const secretContent = "API_KEY: test-key-123\nOTHER_SECRET: test-value";
+
+    vi.spyOn(env, "getHelpers").mockReturnValue({
+      configLocation: "/config/config.yml",
+      secretLocation,
+      repoPath: "/repos",
+    });
+
+    mockFastGlobSync.mockReturnValue([secretLocation]);
+    mockExistsSync.mockReturnValue(true);
+    mockReadFileSync.mockReturnValue(secretContent);
+
+    const secrets = getSecrets();
+
+    expect(secrets).toEqual({
+      API_KEY: "test-key-123",
+      OTHER_SECRET: "test-value",
+    });
+    expect(mockReadFileSync).toHaveBeenCalledWith(secretLocation, "utf8");
+  });
+
+  test("should throw error when single secret file does not exist", () => {
+    const secretLocation = "/config/secrets-nonexistent.yml";
+
+    vi.spyOn(env, "getHelpers").mockReturnValue({
+      configLocation: "/config/config.yml",
+      secretLocation,
+      repoPath: "/repos",
+    });
+
+    // fast-glob returns empty for non-existent file
+    mockFastGlobSync.mockReturnValue([]);
+    // existsSync also returns false
+    mockExistsSync.mockReturnValue(false);
+
+    expect(() => getSecrets()).toThrow("Secret file not found.");
+  });
+
+  test("should load multiple secret files via glob pattern", () => {
+    const secretLocation = "/config/secrets-glob/*.yml";
+    const secretFile1 = "/config/secrets-glob/sonarr.yml";
+    const secretFile2 = "/config/secrets-glob/radarr.yml";
+    const secretContent1 = "SONARR_API_KEY: sonarr-key-123";
+    const secretContent2 = "RADARR_API_KEY: radarr-key-456";
+
+    vi.spyOn(env, "getHelpers").mockReturnValue({
+      configLocation: "/config/config.yml",
+      secretLocation,
+      repoPath: "/repos",
+    });
+
+    // Mock fast-glob
+    mockFastGlobSync.mockReturnValue([secretFile1, secretFile2]);
+
+    mockExistsSync.mockImplementation((path) => {
+      return path === secretFile1 || path === secretFile2;
+    });
+
+    mockReadFileSync.mockImplementation((path) => {
+      if (path === secretFile1) return secretContent1;
+      if (path === secretFile2) return secretContent2;
+      return "";
+    });
+
+    const secrets = getSecrets();
+
+    expect(secrets).toEqual({
+      SONARR_API_KEY: "sonarr-key-123",
+      RADARR_API_KEY: "radarr-key-456",
+    });
+    expect(mockFastGlobSync).toHaveBeenCalled();
+  });
+
+  test("should merge multiple secret files with later files overriding earlier ones", () => {
+    const secretLocation = "/config/secrets-merge/*.yml";
+    const secretFile1 = "/config/secrets-merge/common.yml";
+    const secretFile2 = "/config/secrets-merge/override.yml";
+    const secretContent1 = "API_KEY: original-key\nCOMMON_VALUE: common";
+    const secretContent2 = "API_KEY: overridden-key";
+
+    vi.spyOn(env, "getHelpers").mockReturnValue({
+      configLocation: "/config/config.yml",
+      secretLocation,
+      repoPath: "/repos",
+    });
+
+    // Mock fast-glob to return files in alphabetical order
+    mockFastGlobSync.mockReturnValue([secretFile1, secretFile2]);
+
+    mockExistsSync.mockReturnValue(true);
+    mockReadFileSync.mockImplementation((path) => {
+      if (path === secretFile1) return secretContent1;
+      if (path === secretFile2) return secretContent2;
+      return "";
+    });
+
+    const secrets = getSecrets();
+
+    // Later file should override earlier file's values
+    expect(secrets).toEqual({
+      API_KEY: "overridden-key",
+      COMMON_VALUE: "common",
+    });
+  });
+
+  test("should handle glob pattern with no matches", () => {
+    const secretLocation = "/config/secrets-empty/*.yml";
+
+    vi.spyOn(env, "getHelpers").mockReturnValue({
+      configLocation: "/config/config.yml",
+      secretLocation,
+      repoPath: "/repos",
+    });
+
+    // Mock fast-glob to return empty array
+    mockFastGlobSync.mockReturnValue([]);
+
+    const secrets = getSecrets();
+
+    // Should return empty object, not throw
+    expect(secrets).toEqual({});
+  });
+
+  test("should skip invalid YAML files and continue with others", () => {
+    const secretLocation = "/config/secrets-invalid/*.yml";
+    const secretFile1 = "/config/secrets-invalid/valid.yml";
+    const secretFile2 = "/config/secrets-invalid/invalid.yml";
+    const secretContent1 = "VALID_KEY: valid-value";
+    const secretContent2 = "invalid: yaml: content: [unclosed";
+
+    vi.spyOn(env, "getHelpers").mockReturnValue({
+      configLocation: "/config/config.yml",
+      secretLocation,
+      repoPath: "/repos",
+    });
+
+    // Mock fast-glob
+    mockFastGlobSync.mockReturnValue([secretFile1, secretFile2]);
+
+    mockExistsSync.mockReturnValue(true);
+    mockReadFileSync.mockImplementation((path) => {
+      if (path === secretFile1) return secretContent1;
+      if (path === secretFile2) return secretContent2;
+      return "";
+    });
+
+    // Mock yaml.parse to throw for invalid file
+    const originalParse = yaml.parse;
+    const parseSpy = vi.spyOn(yaml, "parse").mockImplementation((content: string) => {
+      if (content === secretContent2) {
+        throw new Error("Invalid YAML");
+      }
+      return originalParse(content);
+    });
+
+    const secrets = getSecrets();
+
+    // Should only contain valid file's content
+    expect(secrets).toEqual({
+      VALID_KEY: "valid-value",
+    });
+  });
+
+  test("should skip empty files and continue with others", () => {
+    const secretLocation = "/config/secrets-empty-files/*.yml";
+    const secretFile1 = "/config/secrets-empty-files/empty.yml";
+    const secretFile2 = "/config/secrets-empty-files/valid.yml";
+    const secretContent1 = "   \n  \n  ";
+    const secretContent2 = "VALID_KEY: valid-value";
+
+    vi.spyOn(env, "getHelpers").mockReturnValue({
+      configLocation: "/config/config.yml",
+      secretLocation,
+      repoPath: "/repos",
+    });
+
+    // Mock fast-glob
+    mockFastGlobSync.mockReturnValue([secretFile1, secretFile2]);
+
+    mockExistsSync.mockReturnValue(true);
+    mockReadFileSync.mockImplementation((path) => {
+      if (path === secretFile1) return secretContent1;
+      if (path === secretFile2) return secretContent2;
+      return "";
+    });
+
+    const secrets = getSecrets();
+
+    // Should only contain valid file's content
+    expect(secrets).toEqual({
+      VALID_KEY: "valid-value",
+    });
+  });
+
+  test("should cache secrets after first load", () => {
+    const secretLocation = "/config/secrets-cache.yml";
+    const secretContent = "API_KEY: test-key";
+
+    vi.spyOn(env, "getHelpers").mockReturnValue({
+      configLocation: "/config/config.yml",
+      secretLocation,
+      repoPath: "/repos",
+    });
+
+    mockFastGlobSync.mockReturnValue([secretLocation]);
+    mockExistsSync.mockReturnValue(true);
+    mockReadFileSync.mockReturnValue(secretContent);
+
+    const secrets1 = getSecrets();
+    const secrets2 = getSecrets();
+
+    // Should return same object (cached)
+    expect(secrets1).toBe(secrets2);
+    // Should only read file once (cached on second call)
+    expect(mockReadFileSync).toHaveBeenCalledTimes(1);
+  });
+
+  test("should load multiple secret files via comma-separated list", () => {
+    const secretLocation = "/config/secrets1.yml,/config/secrets2.yml";
+    const secretFile1 = "/config/secrets1.yml";
+    const secretFile2 = "/config/secrets2.yml";
+    const secretContent1 = "SONARR_API_KEY: sonarr-key-123";
+    const secretContent2 = "RADARR_API_KEY: radarr-key-456";
+
+    vi.spyOn(env, "getHelpers").mockReturnValue({
+      configLocation: "/config/config.yml",
+      secretLocation,
+      repoPath: "/repos",
+    });
+
+    mockFastGlobSync.mockImplementation((pattern: string) => {
+      if (pattern === "/config/secrets1.yml") return [secretFile1];
+      if (pattern === "/config/secrets2.yml") return [secretFile2];
+      return [];
+    });
+
+    mockExistsSync.mockImplementation((path) => {
+      return path === secretFile1 || path === secretFile2;
+    });
+
+    mockReadFileSync.mockImplementation((path) => {
+      if (path === secretFile1) return secretContent1;
+      if (path === secretFile2) return secretContent2;
+      return "";
+    });
+
+    const secrets = getSecrets();
+
+    expect(secrets).toEqual({
+      SONARR_API_KEY: "sonarr-key-123",
+      RADARR_API_KEY: "radarr-key-456",
+    });
+  });
+
+  test("should merge comma-separated files with later files overriding earlier ones", () => {
+    const secretLocation = "/config/common.yml,/config/override.yml";
+    const secretFile1 = "/config/common.yml";
+    const secretFile2 = "/config/override.yml";
+    const secretContent1 = "API_KEY: original-key\nCOMMON_VALUE: common";
+    const secretContent2 = "API_KEY: overridden-key";
+
+    vi.spyOn(env, "getHelpers").mockReturnValue({
+      configLocation: "/config/config.yml",
+      secretLocation,
+      repoPath: "/repos",
+    });
+
+    mockFastGlobSync.mockImplementation((pattern: string) => {
+      if (pattern === "/config/common.yml") return [secretFile1];
+      if (pattern === "/config/override.yml") return [secretFile2];
+      return [];
+    });
+
+    mockExistsSync.mockReturnValue(true);
+    mockReadFileSync.mockImplementation((path) => {
+      if (path === secretFile1) return secretContent1;
+      if (path === secretFile2) return secretContent2;
+      return "";
+    });
+
+    const secrets = getSecrets();
+
+    // Later file should override earlier file's values
+    expect(secrets).toEqual({
+      API_KEY: "overridden-key",
+      COMMON_VALUE: "common",
+    });
+  });
+
+  test("should handle comma-separated list with whitespace", () => {
+    const secretLocation = "/config/file1.yml , /config/file2.yml , /config/file3.yml";
+    const secretFile1 = "/config/file1.yml";
+    const secretFile2 = "/config/file2.yml";
+    const secretFile3 = "/config/file3.yml";
+    const secretContent1 = "KEY1: value1";
+    const secretContent2 = "KEY2: value2";
+    const secretContent3 = "KEY3: value3";
+
+    vi.spyOn(env, "getHelpers").mockReturnValue({
+      configLocation: "/config/config.yml",
+      secretLocation,
+      repoPath: "/repos",
+    });
+
+    mockFastGlobSync.mockImplementation((pattern: string) => {
+      if (pattern === "/config/file1.yml") return [secretFile1];
+      if (pattern === "/config/file2.yml") return [secretFile2];
+      if (pattern === "/config/file3.yml") return [secretFile3];
+      return [];
+    });
+
+    mockExistsSync.mockReturnValue(true);
+    mockReadFileSync.mockImplementation((path) => {
+      if (path === secretFile1) return secretContent1;
+      if (path === secretFile2) return secretContent2;
+      if (path === secretFile3) return secretContent3;
+      return "";
+    });
+
+    const secrets = getSecrets();
+
+    expect(secrets).toEqual({
+      KEY1: "value1",
+      KEY2: "value2",
+      KEY3: "value3",
+    });
+  });
+
+  test("should handle empty comma-separated list", () => {
+    const secretLocation = ",,,";
+
+    vi.spyOn(env, "getHelpers").mockReturnValue({
+      configLocation: "/config/config.yml",
+      secretLocation,
+      repoPath: "/repos",
+    });
+
+    mockFastGlobSync.mockReturnValue([]);
+
+    const secrets = getSecrets();
+
+    // Should return empty object, not throw
+    expect(secrets).toEqual({});
+  });
+
+  test("should skip invalid files in comma-separated list and continue with others", () => {
+    const secretLocation = "/config/valid.yml,/config/invalid.yml,/config/another-valid.yml";
+    const secretFile1 = "/config/valid.yml";
+    const secretFile2 = "/config/invalid.yml";
+    const secretFile3 = "/config/another-valid.yml";
+    const secretContent1 = "VALID_KEY1: value1";
+    const secretContent2 = "invalid: yaml: [unclosed bracket";
+    const secretContent3 = "VALID_KEY2: value2";
+
+    vi.spyOn(env, "getHelpers").mockReturnValue({
+      configLocation: "/config/config.yml",
+      secretLocation,
+      repoPath: "/repos",
+    });
+
+    mockFastGlobSync.mockImplementation((pattern: string) => {
+      if (pattern === "/config/valid.yml") return [secretFile1];
+      if (pattern === "/config/invalid.yml") return [secretFile2];
+      if (pattern === "/config/another-valid.yml") return [secretFile3];
+      return [];
+    });
+
+    mockExistsSync.mockReturnValue(true);
+    mockReadFileSync.mockImplementation((path) => {
+      if (path === secretFile1) return secretContent1;
+      if (path === secretFile2) return secretContent2;
+      if (path === secretFile3) return secretContent3;
+      return "";
+    });
+
+    const secrets = getSecrets();
+
+    // Should only contain valid files' content (invalid file will fail to parse)
+    expect(secrets).toEqual({
+      VALID_KEY1: "value1",
+      VALID_KEY2: "value2",
+    });
   });
 });

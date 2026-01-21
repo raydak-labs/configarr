@@ -23,6 +23,7 @@
   "license": "ISC",
   "dependencies": {
     "dotenv": "17.2.3",
+    "fast-glob": "3.3.3",
     "ky": "1.14.3",
     "pino": "10.3.0",
     "pino-pretty": "13.1.3",

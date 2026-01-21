@@ -1,4 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
+import path from "node:path";
+import fg from "fast-glob";
 import yaml from "yaml";
 import { NamingConfigResource as RadarrNamingConfigResource } from "./__generated__/radarr/data-contracts";
 import { NamingConfigResource as SonarrNamingConfigResource } from "./__generated__/sonarr/data-contracts";
@@ -42,6 +44,11 @@ import { cloneWithJSON } from "./util";
 
 let config: ConfigSchema;
 let secrets: any;
+
+// For testing: reset the secrets cache
+export const resetSecretsCache = (): void => {
+  secrets = undefined;
+};
 
 const secretsTag = {
   identify: (value: any) => value instanceof String,
@@ -116,6 +123,48 @@ export const readConfigRaw = (): object => {
   return inputConfig;
 };
 
+/**
+ * Expand a path pattern (glob or direct path) into an array of file paths
+ */
+const expandPathPattern = (pattern: string): string[] => {
+  const result = fg.sync(pattern, {
+    absolute: true,
+    onlyFiles: true,
+    caseSensitiveMatch: false,
+  });
+  return Array.isArray(result) ? result.sort() : [];
+};
+
+/**
+ * Load and parse a single secret file
+ */
+const loadSecretFile = (filePath: string): any | null => {
+  const resolvedPath = path.isAbsolute(filePath) ? filePath : path.resolve(process.cwd(), filePath);
+
+  if (!existsSync(resolvedPath)) {
+    logger.warn(`Secret file "${resolvedPath}" does not exist. Skipping.`);
+    return null;
+  }
+
+  try {
+    const fileContent = readFileSync(resolvedPath, "utf8");
+    if (!fileContent.trim()) {
+      logger.debug(`Secret file "${resolvedPath}" is empty. Skipping.`);
+      return null;
+    }
+
+    const parsed = yaml.parse(fileContent);
+    if (parsed && typeof parsed === "object") {
+      return parsed;
+    }
+    logger.warn(`Secret file "${resolvedPath}" does not contain a valid YAML object. Skipping.`);
+    return null;
+  } catch (error) {
+    logger.error(`Failed to parse secret file "${resolvedPath}": ${error instanceof Error ? error.message : String(error)}. Skipping.`);
+    return null;
+  }
+};
+
 export const getSecrets = () => {
   if (secrets) {
     return secrets;
@@ -123,14 +172,42 @@ export const getSecrets = () => {
 
   const secretLocation = getHelpers().secretLocation;
 
-  if (!existsSync(secretLocation)) {
-    logger.error(`Secret file in location "${secretLocation}" does not exists.`);
+  // Split by comma and expand each pattern (glob or direct path)
+  const patterns = secretLocation
+    .split(",")
+    .map((p) => p.trim())
+    .filter((p) => p.length > 0);
+
+  const allFilePaths: string[] = [];
+  for (const pattern of patterns) {
+    const expanded = expandPathPattern(pattern);
+    allFilePaths.push(...expanded);
+  }
+
+  // Single file path (backward compatibility) - throw error if not found (but not for glob patterns)
+  if (patterns.length === 1 && patterns[0] && allFilePaths.length === 0 && !/[*?\[\{]/.test(patterns[0])) {
+    logger.error(`Secret file in location "${patterns[0]}" does not exist.`);
     throw new Error("Secret file not found.");
   }
 
-  const file = readFileSync(secretLocation, "utf8");
-  config = yaml.parse(file);
-  return config;
+  if (allFilePaths.length === 0) {
+    logger.warn(`No secret files found from "${secretLocation}". Continuing with empty secrets.`);
+    secrets = {};
+    return secrets;
+  }
+
+  // Load and merge all files
+  const secretObjects = allFilePaths.map(loadSecretFile).filter((obj): obj is any => obj !== null);
+
+  if (secretObjects.length === 0) {
+    logger.warn(`No valid secret files could be loaded from "${secretLocation}". Continuing with empty secrets.`);
+    secrets = {};
+    return secrets;
+  }
+
+  logger.debug(`Loaded and merged secrets from ${secretObjects.length} file(s)`);
+  secrets = secretObjects.reduce((merged, current) => ({ ...merged, ...current }), {});
+  return secrets;
 };
 
 // 2024-09-30: Recyclarr assign_scores_to adjustments
