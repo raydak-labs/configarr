@@ -671,7 +671,7 @@ For more details, check the \*Arr-specific API documentation under the `RemotePa
 - Experimental support for `media_management`, `media_naming_api`, and `ui_config` (since v1.5.0)
   With those you can configure different settings in the different tabs available per *arr.
   All fields are under experimental support.
-  The supports elements in those are dependent on the *arr used.
+  The supported elements in those are dependent on the *arr used.
   Check following API documentation of available fields:
 
   Naming APIs:
