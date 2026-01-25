@@ -13,6 +13,7 @@ import { calculateDelayProfilesDiff, deleteAdditionalDelayProfiles, mapToServerD
 import { syncDownloadClients } from "./downloadClients/downloadClientSyncer";
 import { syncDownloadClientConfig } from "./downloadClientConfig/downloadClientConfigSyncer";
 import { syncRemotePaths } from "./remotePaths/remotePathSyncer";
+import { syncUiConfig } from "./uiConfigs/uiConfigSyncer";
 import { logger, logHeading, logInstanceHeading } from "./logger";
 import { calculateMediamanagementDiff, calculateNamingDiff } from "./media-management";
 import { calculateQualityDefinitionDiff, loadQualityDefinitionFromServer } from "./quality-definitions";
@@ -183,6 +184,8 @@ const pipeline = async (globalConfig: InputConfigSchema, instanceConfig: InputCo
       logger.info(`Updated MediaManagement`);
     }
   }
+
+  await syncUiConfig(arrType, config.ui_config);
 
   const serverQP = await loadQualityProfilesFromServer();
   serverCache.qp = serverQP;

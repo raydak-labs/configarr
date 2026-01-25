@@ -7,6 +7,7 @@ import {
   QualityDefinitionResource,
   QualityProfileResource,
   RemotePathMappingResource,
+  UiConfigResource,
 } from "../__generated__/sonarr/data-contracts";
 import { logger } from "../logger";
 import type { DownloadClientResource } from "../types/download-client.types";
@@ -100,6 +101,14 @@ export class SonarrClient implements IArrClient<QualityProfileResource, QualityD
 
   async updateMediamanagement(id: string, data: any) {
     return this.api.v3ConfigMediamanagementUpdate(id, data);
+  }
+
+  async getUiConfig(): Promise<UiConfigResource> {
+    return this.api.v3ConfigUiList();
+  }
+
+  async updateUiConfig(id: string, data: UiConfigResource): Promise<UiConfigResource> {
+    return this.api.v3ConfigUiUpdate(id, data);
   }
 
   async getRootfolders() {
