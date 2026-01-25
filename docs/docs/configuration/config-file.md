@@ -672,7 +672,7 @@ For more details, check the \*Arr-specific API documentation under the `RemotePa
   With those you can configure different settings in the different tabs available per *arr.
   All fields are under experimental support.
   The supported elements in those are dependent on the *arr used.
-  Check following API documentation of available fields:
+  Check the following API documentation of available fields:
 
   Naming APIs:
   - https://radarr.video/docs/api/#/NamingConfig/get_api_v3_config_naming
