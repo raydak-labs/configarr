@@ -111,6 +111,9 @@ sonarr:
     # experimental available in all *arr
     #media_naming_api: {}
 
+    # experimental available in all *arr
+    #ui_config: {}
+
     # naming from recyclarr: https://recyclarr.dev/wiki/yaml/config-reference/media-naming/
     #media_naming: {}
     # (experimental) Manage download clients

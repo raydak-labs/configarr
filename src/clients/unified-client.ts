@@ -198,6 +198,9 @@ export interface IArrClient<
   getMediamanagement(): Promise<any>;
   updateMediamanagement(id: string, data: any): Promise<any>;
 
+  getUiConfig(): Promise<any>;
+  updateUiConfig(id: string, data: any): Promise<any>;
+
   getRootfolders(): Promise<any>;
   addRootFolder(data: any): Promise<any>;
   updateRootFolder(id: string, data: any): Promise<any>;
@@ -315,6 +318,14 @@ export class UnifiedClient implements IArrClient {
 
   async updateMediamanagement(id: string, data: any) {
     return this.api.updateMediamanagement(id, data);
+  }
+
+  async getUiConfig() {
+    return this.api.getUiConfig();
+  }
+
+  async updateUiConfig(id: string, data: any) {
+    return this.api.updateUiConfig(id, data);
   }
 
   async getRootfolders() {

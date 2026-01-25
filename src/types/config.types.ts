@@ -166,6 +166,8 @@ export type InputConfigArrInstance = {
   /* @experimental */
   media_management?: MediaManagementType;
   /* @experimental */
+  ui_config?: UiConfigType;
+  /* @experimental */
   media_naming_api?: MediaNamingApiType;
   renameQualityProfiles?: { from: string; to: string }[];
   cloneQualityProfiles?: { from: string; to: string }[];
@@ -300,6 +302,10 @@ export type InputConfigDownloadClient = {
 };
 
 export type MediaManagementType = {
+  // APIs not consistent across different *arrs. Keeping empty or generic
+};
+
+export type UiConfigType = {
   // APIs not consistent across different *arrs. Keeping empty or generic
 };
 

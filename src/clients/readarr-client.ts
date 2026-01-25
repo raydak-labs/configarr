@@ -119,6 +119,14 @@ export class ReadarrClient implements IArrClient<
     return this.api.v1ConfigMediamanagementUpdate(id, data);
   }
 
+  async getUiConfig() {
+    return this.api.v1ConfigUiList();
+  }
+
+  async updateUiConfig(id: string, data: any) {
+    return this.api.v1ConfigUiUpdate(id, data);
+  }
+
   async getRootfolders() {
     return this.api.v1RootfolderList();
   }

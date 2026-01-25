@@ -15,6 +15,7 @@ import { syncDownloadClientConfig } from "./downloadClientConfig/downloadClientC
 import { syncRemotePaths } from "./remotePaths/remotePathSyncer";
 import { logger, logHeading, logInstanceHeading } from "./logger";
 import { calculateMediamanagementDiff, calculateNamingDiff } from "./media-management";
+import { calculateUiConfigDiff } from "./ui-config";
 import { calculateQualityDefinitionDiff, loadQualityDefinitionFromServer } from "./quality-definitions";
 import {
   calculateQualityProfilesDiff,
@@ -181,6 +182,18 @@ const pipeline = async (globalConfig: InputConfigSchema, instanceConfig: InputCo
       // TODO this will need a radarr/sonarr separation for sure to have good and correct typings
       await api.updateMediamanagement(managementDiff.updatedData.id! + "", managementDiff.updatedData as any); // Ignore types
       logger.info(`Updated MediaManagement`);
+    }
+  }
+
+  const uiConfigDiff = await calculateUiConfigDiff(config.ui_config);
+
+  if (uiConfigDiff) {
+    if (getEnvs().DRY_RUN) {
+      logger.info("DryRun: Would update UI Config.");
+    } else {
+      // TODO this will need a radarr/sonarr separation for sure to have good and correct typings
+      await api.updateUiConfig(uiConfigDiff.updatedData.id! + "", uiConfigDiff.updatedData as any); // Ignore types
+      logger.info(`Updated UI Config`);
     }
   }
 
