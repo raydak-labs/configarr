@@ -110,6 +110,14 @@ export class RadarrClient implements IArrClient<QualityProfileResource, QualityD
     return this.api.v3ConfigMediamanagementUpdate(id, data);
   }
 
+  async getUiConfig() {
+    return this.api.v3ConfigUiList();
+  }
+
+  async updateUiConfig(id: string, data: any) {
+    return this.api.v3ConfigUiUpdate(id, data);
+  }
+
   async getRootfolders() {
     return this.api.v3RootfolderList();
   }
