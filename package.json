@@ -34,7 +34,7 @@
   "devDependencies": {
     "@hyrious/esbuild-plugin-commonjs": "0.2.6",
     "@playwright/test": "1.58.0",
-    "@release-it/conventional-changelog": "^10.0.4",
+    "@release-it/conventional-changelog": "10.0.4",
     "@types/node": "24.10.9",
     "@vitest/coverage-v8": "4.0.18",
     "esbuild": "0.27.2",
