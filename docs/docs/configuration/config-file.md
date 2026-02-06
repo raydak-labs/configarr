@@ -156,6 +156,17 @@ SONARR_API_KEY: your_sonarr_api_key_here
 RADARR_API_KEY: your_radarr_api_key_here
 ```
 
+**Multiple secrets and globs** <span className="theme-doc-version-badge badge badge--secondary configarr-badge">1.21.0</span>
+
+`SECRETS_LOCATION` can be a comma-separated list of files and/or glob patterns. All matched files are loaded and merged; later files override earlier ones.
+
+```bash
+SECRETS_LOCATION=./config/secrets.yml,./config/overrides.yml
+SECRETS_LOCATION=./config/secrets/*.yml
+```
+
+If a single non-glob path is provided and the file doesn't exist, Configarr fails on startup. If a glob has no matches, it continues with empty secrets and logs a warning.
+
 ### Enable/Disable
 
 You can configure enabled `*Arr` instance with options in the `config.yml` file.
