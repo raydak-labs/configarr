@@ -8,7 +8,11 @@
       "Bash(pnpm run typecheck)",
       "Bash(pnpm typecheck)",
       "Bash(pnpm lint:fix:*)",
-      "Bash(pnpm run build:*)"
+      "Bash(pnpm run build:*)",
+      "Bash(gh pr view:*)",
+      "Bash(git fetch:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ],
     "deny": [],
     "ask": []
