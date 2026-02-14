@@ -19,10 +19,11 @@ This guide will help you deploy Configarr in a Kubernetes environment. Configarr
 
 ### 1. Create the Configuration Files
 
-First, you'll need to create two files:
+First, create `config.yml` and choose how to provide sensitive values:
 
-- `config.yml` - Your main Configarr configuration
-- `secrets.yml` - Contains sensitive information like API keys
+- `config.yml` - Your main Configarr configuration (required)
+- Environment variables via Kubernetes `Secret` + `!env` in `config.yml` (recommended)
+- `secrets.yml` + `!secret` in `config.yml` (optional alternative)
 
 For detailed configuration options, see the [Configuration Guide](../configuration/config-file.md).
 
@@ -52,6 +53,8 @@ spec:
               envFrom:
                 - configMapRef:
                     name: common-deployment-environment
+                - secretRef:
+                    name: configarr-env
               volumeMounts:
                 - mountPath: /app/repos # Cache repositories
                   name: app-data
@@ -59,9 +62,6 @@ spec:
                 - name: config-volume # Mount specific config
                   mountPath: /app/config/config.yml
                   subPath: config.yml
-                - name: secret-volume
-                  mountPath: /app/config/secrets.yml # Mount secrets
-                  subPath: secrets.yml
           volumes:
             - name: app-data
               persistentVolumeClaim:
@@ -69,19 +69,15 @@ spec:
             - name: config-volume
               configMap:
                 name: configarr
-            - name: secret-volume
-              secret:
-                secretName: configarr
           restartPolicy: Never
 ---
 apiVersion: v1
 kind: Secret
 metadata:
-  name: configarr
+  name: configarr-env
 type: Opaque
 stringData:
-  secrets.yml: |
-    SONARR_API_KEY: "your-sonarr-api-key-here"
+  SONARR_API_KEY: "your-sonarr-api-key-here"
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -95,7 +91,7 @@ data:
     sonarr:
       series:
         base_url: http://sonarr:8989
-        api_key: !secret SONARR_API_KEY
+        api_key: !env SONARR_API_KEY
 
         quality_definition:
           type: series
@@ -139,14 +135,16 @@ kubectl apply -f configarr.yaml
    - Main configuration file mounted from ConfigMap
    - See [Configuration Guide](../configuration/config-file.md) for options
 
-3. **Secrets** (`/app/config/secrets.yml`):
-   - Sensitive data mounted from Kubernetes Secret
-   - Used for API keys and other credentials
+3. **Environment Variables** (`envFrom.secretRef`):
+   - Sensitive data loaded from Kubernetes Secret
+   - Referenced with `!env` in `config.yml`
+   - Avoids duplicating API keys in both Kubernetes Secrets and a mounted `secrets.yml`
 
 ### Security Considerations
 
 - Store sensitive information in Kubernetes Secrets
-- Use `!secret` in your config.yml to reference values from secrets.yml
+- Use `!env` in `config.yml` to read values injected from Kubernetes Secrets
+- If you prefer mounted secret files, `!secret` with `secrets.yml` is still supported
 - Consider using sealed secrets or external secret management solutions
 
 ## Alternative Deployment Options
@@ -165,7 +163,7 @@ If Kubernetes is not suitable for your environment, consider:
    kubectl logs <pod-name>
    ```
 
-2. Verify your secrets are properly mounted:
+2. Verify your secret-backed environment variables are present:
 
    ```bash
    kubectl describe pod <pod-name>
