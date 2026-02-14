@@ -1,7 +1,7 @@
 ---
 sidebar_position: 2
 title: Configuration File
-description: "Learn how to configure Configarr using config.yml and secrets.yml"
+description: "Learn how to configure Configarr using config.yml, environment variables, and optional secrets.yml"
 keywords: [configarr configuration, yaml config, secrets management, custom formats]
 ---
 
@@ -11,17 +11,19 @@ import ExampleUnamanagedCustomFormats from "!!raw-loader!./\_include/unmanaged-c
 
 # Configuration Files
 
-Configarr uses two main configuration files:
+Configarr uses one required configuration file and one optional file for secrets:
 
-- `config.yml` - Contains your main configuration
-- `secrets.yml` - Stores sensitive information like API keys
+- `config.yml` - Required. Contains your main configuration.
+- `secrets.yml` - Optional. Stores sensitive information when you use `!secret`.
 
 ## Usage
 
-1. Create both `config.yml` and `secrets.yml` files
-2. Place them in your Configarr configuration directory
-3. For Docker installations, mount these files as volumes
-4. For Kubernetes deployments, create ConfigMaps/Secrets from these files
+1. Create `config.yml`
+2. Decide how you want to provide sensitive values:
+   - Use `!env` and inject environment variables (recommended for containers/Kubernetes)
+   - Or use `!secret` and provide a `secrets.yml` file
+3. Place your configuration files in the Configarr configuration directory
+4. For Docker/Kubernetes, pass secrets using environment variables or mounted secret files
 
 Configarr will automatically load these configurations on startup and apply them to your Sonarr/Radarr instances.
 
@@ -149,7 +151,7 @@ The main configuration file that defines your Sonarr and Radarr instances, custo
 
 ### secrets.yml
 
-Store sensitive information like API keys in this file. Never commit this file to version control.
+Store sensitive information like API keys in this file when using `!secret`. Never commit this file to version control.
 
 ```yaml title="secrets.yml"
 SONARR_API_KEY: your_sonarr_api_key_here
@@ -166,6 +168,28 @@ SECRETS_LOCATION=./config/secrets/*.yml
 ```
 
 If a single non-glob path is provided and the file doesn't exist, Configarr fails on startup. If a glob has no matches, it continues with empty secrets and logs a warning.
+
+### Value sources (`!secret`, `!env`, `!file`)
+
+Configarr supports custom YAML tags to load values from different sources:
+
+- `!secret`: Loads a key from `secrets.yml`
+- `!env`: Loads an environment variable
+- `!file`: Loads the contents of a file
+
+```yaml title="config.yml"
+sonarr:
+  series:
+    base_url: !env SONARR_URL
+    api_key: !env SONARR_API_KEY
+
+radarr:
+  default:
+    base_url: !secret RADARR_URL
+    api_key: !secret RADARR_API_KEY
+```
+
+For Kubernetes, using `!env` is usually the easiest approach because values can come directly from Kubernetes Secrets via container environment variables.
 
 ### Enable/Disable
 
