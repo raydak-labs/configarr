@@ -327,15 +327,24 @@ export const cloneGitRepo = async (
     await performCloneOperation(gitUrl, rootPath, cloneConf);
   }
 
+  // Re-instantiate gitClient after potential re-clone to ensure clean state
+  const gitClientAfterClone = simpleGit({ baseDir: rootPath });
+
   // Checkout the specified revision
   try {
-    await gitClient.checkout(revision, ["-f"]);
-    const result = await gitClient.status();
+    // After a re-clone, ensure clean state before checkout
+    // (the old gitClient may have had cached state about files that no longer exist)
+    if (shouldReClone) {
+      await gitClientAfterClone.reset(["--hard"]);
+    }
+    await gitClientAfterClone.checkout(revision, ["-f"]);
+    const result = await gitClientAfterClone.status();
 
     let updated = false;
 
-    if (!result.detached) {
-      const res = await gitClient.pull();
+    // Only pull if we didn't just re-clone (fresh clone already has latest)
+    if (!result.detached && !shouldReClone) {
+      const res = await gitClientAfterClone.pull();
       if (res.files.length > 0) {
         updated = true;
         logger.info(`Repository updated to new commit: '${gitUrl}' at '${revision}'`);
@@ -345,7 +354,7 @@ export const cloneGitRepo = async (
     let hash: string = "unknown";
 
     try {
-      hash = await gitClient.revparse(["--verify", "HEAD"]);
+      hash = await gitClientAfterClone.revparse(["--verify", "HEAD"]);
     } catch (err: unknown) {
       // Ignore
       logger.debug(`Unable to extract hash from commit`);
