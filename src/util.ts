@@ -294,7 +294,7 @@ export const cloneGitRepo = async (
     mkdirSync(rootPath, { recursive: true });
   }
 
-  const gitClient = simpleGit({ baseDir: rootPath });
+  let gitClient = simpleGit({ baseDir: rootPath });
   const isRepo = await gitClient.checkIsRepo(CheckRepoActions.IS_REPO_ROOT);
 
   // Check if we need to re-clone due to remote URL change
@@ -327,24 +327,20 @@ export const cloneGitRepo = async (
     await performCloneOperation(gitUrl, rootPath, cloneConf);
   }
 
-  // Re-instantiate gitClient after potential re-clone to ensure clean state
-  const gitClientAfterClone = simpleGit({ baseDir: rootPath });
+  // Re-instantiate gitClient after potential re-clone
+  // (if we re-cloned, the old client references a deleted directory)
+  gitClient = simpleGit({ baseDir: rootPath });
 
   // Checkout the specified revision
   try {
-    // After a re-clone, ensure clean state before checkout
-    // (the old gitClient may have had cached state about files that no longer exist)
-    if (shouldReClone) {
-      await gitClientAfterClone.reset(["--hard"]);
-    }
-    await gitClientAfterClone.checkout(revision, ["-f"]);
-    const result = await gitClientAfterClone.status();
+    await gitClient.checkout(revision, ["-f"]);
+    const result = await gitClient.status();
 
     let updated = false;
 
-    // Only pull if we didn't just re-clone (fresh clone already has latest)
-    if (!result.detached && !shouldReClone) {
-      const res = await gitClientAfterClone.pull();
+    // Pull if not in detached HEAD state
+    if (!result.detached) {
+      const res = await gitClient.pull();
       if (res.files.length > 0) {
         updated = true;
         logger.info(`Repository updated to new commit: '${gitUrl}' at '${revision}'`);
@@ -354,7 +350,7 @@ export const cloneGitRepo = async (
     let hash: string = "unknown";
 
     try {
-      hash = await gitClientAfterClone.revparse(["--verify", "HEAD"]);
+      hash = await gitClient.revparse(["--verify", "HEAD"]);
     } catch (err: unknown) {
       // Ignore
       logger.debug(`Unable to extract hash from commit`);
