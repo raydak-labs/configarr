@@ -294,7 +294,7 @@ export const cloneGitRepo = async (
     mkdirSync(rootPath, { recursive: true });
   }
 
-  const gitClient = simpleGit({ baseDir: rootPath });
+  let gitClient = simpleGit({ baseDir: rootPath });
   const isRepo = await gitClient.checkIsRepo(CheckRepoActions.IS_REPO_ROOT);
 
   // Check if we need to re-clone due to remote URL change
@@ -327,6 +327,10 @@ export const cloneGitRepo = async (
     await performCloneOperation(gitUrl, rootPath, cloneConf);
   }
 
+  // Re-instantiate gitClient after potential re-clone
+  // (if we re-cloned, the old client references a deleted directory)
+  gitClient = simpleGit({ baseDir: rootPath });
+
   // Checkout the specified revision
   try {
     await gitClient.checkout(revision, ["-f"]);
@@ -334,6 +338,7 @@ export const cloneGitRepo = async (
 
     let updated = false;
 
+    // Pull if not in detached HEAD state
     if (!result.detached) {
       const res = await gitClient.pull();
       if (res.files.length > 0) {
