@@ -33,6 +33,12 @@ export type InputConfigSchema = {
 
   lidarr?: Record<string, InputConfigArrInstance>;
   lidarrEnabled?: boolean;
+
+  /**
+   * Top-level download clients block. Provides defaults and shared client definitions.
+   * Instance download_clients overlay these (data array references top-level data by id).
+   */
+  download_clients?: InputConfigDownloadClientsTopLevel;
 };
 
 export type InputConfigCustomFormat = {
@@ -263,6 +269,10 @@ export type InputConfigDelayProfile = {
 
 export type InputConfigDownloadClient = {
   /**
+   * Reference to top-level download_clients id. Used only during config merge; not sent to API.
+   */
+  id?: string;
+  /**
    * Download client name (must be unique)
    */
   name: string;
@@ -299,6 +309,23 @@ export type InputConfigDownloadClient = {
    * Tag names will be automatically resolved to IDs, creating new tags if needed
    */
   tags?: (string | number)[];
+};
+
+/**
+ * Top-level download_clients block. Same shape as per-instance download_clients
+ * except data is a key-value map (id → client) instead of an array.
+ */
+export type InputConfigDownloadClientsTopLevel = {
+  /**
+   * Download client definitions keyed by id. Referenced from instance download_clients.data via id.
+   */
+  data?: Record<string, InputConfigDownloadClient>;
+  update_password?: boolean;
+  delete_unmanaged?: {
+    enabled: boolean;
+    ignore?: string[];
+  };
+  config?: InputConfigDownloadClientConfig;
 };
 
 export type MediaManagementType = {

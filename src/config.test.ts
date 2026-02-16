@@ -690,6 +690,137 @@ describe("custom_formats ordering", () => {
     cf = result.config.custom_formats.find((cf) => cf.trash_ids?.includes("test-cf"));
     expect(cf?.assign_scores_to?.[0]?.score).toBe(2);
   });
+
+  describe("download_clients resolution", () => {
+    const minimalInstanceConfig = (downloadClients: InputConfigArrInstance["download_clients"]): InputConfigArrInstance => ({
+      api_key: "test",
+      base_url: "http://sonarr:8989",
+      quality_profiles: [],
+      download_clients: downloadClients,
+    });
+
+    beforeEach(() => {
+      vi.spyOn(reclarrImporter, "loadRecyclarrTemplates").mockReturnValue(new Map());
+      vi.spyOn(localImporter, "loadLocalRecyclarrTemplate").mockReturnValue(new Map());
+      vi.spyOn(trashGuide, "loadQPFromTrash").mockReturnValue(Promise.resolve(new Map()));
+      vi.spyOn(trashGuide, "loadTrashCustomFormatGroups").mockReturnValue(Promise.resolve(new Map()));
+    });
+
+    test("should merge instance entry with top-level base when id is present and found", async () => {
+      const globalConfig: InputConfigSchema = {
+        download_clients: {
+          data: {
+            qb: {
+              name: "qbit-global",
+              type: "qbittorrent",
+              fields: { host: "globalhost", port: 9090 },
+            },
+          },
+        },
+      };
+      const instanceConfig = minimalInstanceConfig({
+        data: [
+          {
+            id: "qb",
+            name: "MyQbit",
+            type: "qbittorrent",
+            fields: { port: 8080 },
+          },
+        ],
+      });
+
+      const result = await mergeConfigsAndTemplates(globalConfig, instanceConfig, "SONARR");
+
+      expect(result.config.download_clients?.data).toHaveLength(1);
+      const client = result.config.download_clients!.data![0]!;
+      expect(client).not.toHaveProperty("id");
+      expect(client.name).toBe("MyQbit");
+      expect(client.type).toBe("qbittorrent");
+      expect(client.fields).toEqual({ host: "globalhost", port: 8080 });
+    });
+
+    test("should use instance as-is and log warning when id is present but not found in global", async () => {
+      const globalConfig: InputConfigSchema = { download_clients: { data: {} } };
+      const instanceConfig = minimalInstanceConfig({
+        data: [{ id: "missing", name: "Standalone", type: "transmission" }],
+      });
+      const warnSpy = vi.spyOn(await import("./logger").then((m) => m.logger), "warn");
+
+      const result = await mergeConfigsAndTemplates(globalConfig, instanceConfig, "SONARR");
+
+      expect(result.config.download_clients?.data).toHaveLength(1);
+      const client = result.config.download_clients!.data![0]!;
+      expect(client).not.toHaveProperty("id");
+      expect(client.name).toBe("Standalone");
+      expect(client.type).toBe("transmission");
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("not found"));
+    });
+
+    test("should use entry as-is when id is absent (fully inline)", async () => {
+      const globalConfig: InputConfigSchema = {
+        download_clients: { data: { qb: { name: "qbit", type: "qbittorrent" } } },
+      };
+      const instanceConfig = minimalInstanceConfig({
+        data: [{ name: "NoId", type: "qbittorrent" }],
+      });
+
+      const result = await mergeConfigsAndTemplates(globalConfig, instanceConfig, "SONARR");
+
+      expect(result.config.download_clients?.data).toHaveLength(1);
+      const client = result.config.download_clients!.data![0]!;
+      expect(client.name).toBe("NoId");
+      expect(client.type).toBe("qbittorrent");
+    });
+
+    test("should prefer instance values over global values when instance values are set", async () => {
+      const globalConfig: InputConfigSchema = {
+        download_clients: {
+          data: { qb: { name: "qbit", type: "qbittorrent" } },
+          update_password: true,
+          delete_unmanaged: { enabled: true, ignore: ["Keep"] },
+          config: { enable_completed_download_handling: false },
+        },
+      };
+      const instanceConfig = minimalInstanceConfig({
+        data: [{ id: "qb", name: "MyQbit", type: "qbittorrent" }],
+        update_password: false,
+        delete_unmanaged: { enabled: false, ignore: ["Keep-Instance"] },
+        config: { enable_completed_download_handling: true },
+      });
+
+      const result = await mergeConfigsAndTemplates(globalConfig, instanceConfig, "SONARR");
+
+      expect(result.config.download_clients?.update_password).toBe(false);
+      expect(result.config.download_clients?.delete_unmanaged).toEqual({
+        enabled: false,
+        ignore: ["Keep-Instance"],
+      });
+      expect(result.config.download_clients?.config?.enable_completed_download_handling).toBe(true);
+    });
+
+    test("should use global values when instance values are not set", async () => {
+      const globalConfig: InputConfigSchema = {
+        download_clients: {
+          data: { qb: { name: "qbit", type: "qbittorrent" } },
+          update_password: true,
+          delete_unmanaged: { enabled: true, ignore: ["Keep"] },
+          config: { enable_completed_download_handling: false },
+        },
+      };
+      const instanceConfig = minimalInstanceConfig({
+        data: [{ id: "qb", name: "MyQbit", type: "qbittorrent" }],
+      });
+
+      const result = await mergeConfigsAndTemplates(globalConfig, instanceConfig, "SONARR");
+
+      expect(result.config.download_clients?.update_password).toBe(true);
+      expect(result.config.download_clients?.delete_unmanaged).toEqual({
+        enabled: true,
+        ignore: ["Keep"],
+      });
+      expect(result.config.download_clients?.config?.enable_completed_download_handling).toBe(false);
+    });
+  });
 });
 
 describe("getSecrets", () => {

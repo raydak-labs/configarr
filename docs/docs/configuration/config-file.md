@@ -623,7 +623,7 @@ applications (for example qBittorrent, Transmission, SABnzbd, etc.).
 - Optionally delete unmanaged download clients
 - Manage global download client configuration settings since `v1.19.0`
 
-```yaml title="config.yml"
+```yaml title="config.yml (inline, no top-level)"
 sonarr:
   instance1:
     base_url: http://sonarr:8989
@@ -663,6 +663,65 @@ sonarr:
         # Radarr only: Check interval for finished downloads (in minutes)
         # check_for_finished_download_interval: 1
 ```
+
+### Top-level download client block
+
+You can define a full **download_clients** block at the **top level** of `config.yml` (same level as `sonarr:`, `radarr:`, etc.). It has the same options as per-instance `download_clients`, except **`data`** is a **key-value map** (id → client config) instead of an array. Instances then reference these by `id` in their `download_clients.data` array; the top-level block also supplies defaults for **`update_password`**, **`delete_unmanaged`**, and **`config`**, which the instance can override.
+
+- **Top-level `download_clients`**: `data` (map: id → client config), `update_password`, `delete_unmanaged`, `config`. All optional; instance values override when present.
+- **Instance `download_clients.data`**: Array of entries. Each entry can include optional **`id`**; if present, Configarr looks up that id in the top-level `download_clients.data` and merges (base + instance overlay). Instance-only fields (e.g. name, tags, `fields.tv_category`) override the base.
+- **If `id` is present but not found** in top-level `data`: A warning is logged and the entry is used as-is.
+- **If `id` is not specified** in the instance's download_clients: Entry is used as-is (fully inline).
+
+**Example: top-level block with shared clients and defaults**
+
+```yaml title="config.yml"
+# Top-level block: data is key-value (id → config); update_password, delete_unmanaged, config are defaults
+download_clients:
+  data:
+    qb:
+      name: "qBit"
+      type: qbittorrent
+      enable: true
+      priority: 1
+      remove_completed_downloads: true
+      remove_failed_downloads: true
+      fields:
+        host: qbittorrent
+        port: 8080
+        use_ssl: false
+        username: admin
+        password: changeme
+  update_password: false
+  delete_unmanaged:
+    enabled: true
+    ignore: ["Manual Test Client"]
+  config:
+    enable_completed_download_handling: true
+    auto_redownload_failed: false
+
+sonarr:
+  instance1:
+    base_url: http://sonarr:8989
+    api_key: !secret SONARR_API_KEY
+    download_clients:
+      data:
+        - id: qb
+          name: "qBit"
+          fields: { tv_category: series }
+          tags: ["sonarr"]
+        # Reuse same shared client but with different tags and tv_category
+        - id: qb
+          name: "qBit 4K"
+          fields: { tv_category: series-4k }
+          tags: ["4K"]
+      # optional: override top-level defaults
+      # update_password: true
+      # delete_unmanaged: { enabled: true, ignore: [] }
+      # config: { enable_completed_download_handling: false }
+```
+
+You can still define download clients **inline** per instance (no top-level block) by omitting `id` in each entry.
 
 ### Download Client Configuration <span className="theme-doc-version-badge badge badge--secondary configarr-badge">1.19.0</span>
 

@@ -29,6 +29,7 @@ import {
   InputConfigArrInstance,
   InputConfigCustomFormat,
   InputConfigCustomFormatGroup,
+  InputConfigDownloadClient,
   InputConfigIncludeItem,
   InputConfigInstance,
   InputConfigMetadataProfile,
@@ -279,6 +280,42 @@ const validateRemotePaths = (remotePaths: InputConfigRemotePath[]): void => {
     }
     keys.add(key);
   }
+};
+
+/**
+ * Resolve a single download_clients.data entry: if it has id, look up base in global map and merge (base + instance overlay); strip id from result.
+ * Note: `id` is only an instance-side mechanism (reference into the top-level map). Top-level download_clients entries are not expected to set `id`;
+ * if present there, it is stripped when used as base so it is never propagated.
+ */
+const resolveDownloadClientEntry = (
+  instanceEntry: InputConfigDownloadClient,
+  globalDownloadClients: Record<string, InputConfigDownloadClient> | undefined,
+): InputConfigDownloadClient => {
+  const { id, ...rest } = instanceEntry;
+  if (id === undefined) {
+    return rest as InputConfigDownloadClient;
+  }
+  if (id === "") {
+    logger.warn(
+      `Empty download_clients data id configured on instance entry; ignoring base reference and using instance configuration only.`,
+    );
+    return rest as InputConfigDownloadClient;
+  }
+  const baseRaw = globalDownloadClients?.[id];
+  if (!baseRaw) {
+    logger.warn(`Top-level download_clients id '${id}' not found`);
+    return rest as InputConfigDownloadClient;
+  }
+  // Top-level entries are keyed by id; strip id from base so it is not propagated (id is instance-side only).
+  const { id: _baseId, ...base } = baseRaw;
+  const merged: InputConfigDownloadClient = {
+    ...base,
+    ...rest,
+    fields: { ...(base.fields ?? {}), ...(rest.fields ?? {}) },
+  };
+  // Don't include the Configarr-internal `id` in the result
+  const { id: _omit, ...result } = merged;
+  return result;
 };
 
 export const validateConfig = (input: InputConfigInstance): MergedConfigInstance => {
@@ -898,24 +935,36 @@ export const mergeConfigsAndTemplates = async (
     mergedTemplates.delay_profiles = instanceConfig.delay_profiles;
   }
 
-  // Merge download_clients if defined in instanceConfig
-  if (instanceConfig.download_clients) {
-    const existingData = mergedTemplates.download_clients?.data || [];
-    const instanceData = instanceConfig.download_clients.data || [];
-    const existingDeleteManaged = mergedTemplates.download_clients?.delete_unmanaged;
-    const instanceDeleteManaged = instanceConfig.download_clients.delete_unmanaged;
-    const existingConfig = mergedTemplates.download_clients?.config;
-    const instanceConfig_ = instanceConfig.download_clients.config;
-    const existingRemotePaths = mergedTemplates.download_clients?.remote_paths || [];
-    const instanceRemotePaths = instanceConfig.download_clients.remote_paths || [];
+  // Merge download_clients: top-level block (global) provides defaults; instance overrides. Data definitions live in global.data (key-value); instance data array references them by id.
+  // Priority: instance > global > merged templates > default.
+  const globalDCs = globalConfig.download_clients;
+  const instanceDCs = instanceConfig.download_clients;
+  if (instanceDCs || globalDCs) {
+    const existingDCData = mergedTemplates.download_clients?.data || [];
+    const instanceDCData = instanceDCs?.data || [];
+    const resolvedDCData = instanceDCData.map((entry) => resolveDownloadClientEntry(entry, globalDCs?.data));
+    const existingDCDeleteManaged = mergedTemplates.download_clients?.delete_unmanaged;
+    const globalDCDeleteManaged = globalDCs?.delete_unmanaged;
+    const instanceDCDeleteManaged = instanceDCs?.delete_unmanaged;
+    const existingDCConfig = mergedTemplates.download_clients?.config;
+    const globalDCConfig = globalDCs?.config;
+    const instanceDCConfig = instanceDCs?.config;
+    const existingDCRemotePaths = mergedTemplates.download_clients?.remote_paths || [];
+    const instanceDCRemotePaths = instanceDCs?.remote_paths || [];
+
+    const mergedDCConfig =
+      existingDCConfig || globalDCConfig || instanceDCConfig
+        ? { ...(existingDCConfig ?? {}), ...(globalDCConfig ?? {}), ...(instanceDCConfig ?? {}) }
+        : undefined;
 
     mergedTemplates.download_clients = {
-      data: [...existingData, ...instanceData],
-      update_password: instanceConfig.download_clients.update_password,
-      delete_unmanaged: instanceDeleteManaged ? instanceDeleteManaged : existingDeleteManaged,
-      config: instanceConfig_ ? { ...existingConfig, ...instanceConfig_ } : existingConfig,
-      remote_paths: [...existingRemotePaths, ...instanceRemotePaths],
-      delete_unmanaged_remote_paths: instanceConfig.download_clients.delete_unmanaged_remote_paths,
+      data: [...existingDCData, ...resolvedDCData],
+      update_password: instanceDCs?.update_password ?? globalDCs?.update_password ?? mergedTemplates.download_clients?.update_password,
+      delete_unmanaged: instanceDCDeleteManaged ?? globalDCDeleteManaged ?? existingDCDeleteManaged,
+      config: mergedDCConfig,
+      remote_paths: [...existingDCRemotePaths, ...instanceDCRemotePaths],
+      delete_unmanaged_remote_paths:
+        instanceDCs?.delete_unmanaged_remote_paths ?? mergedTemplates.download_clients?.delete_unmanaged_remote_paths,
     };
   }
 
