@@ -58,7 +58,7 @@ export class GenericDownloadClientSync extends BaseDownloadClientSync {
       // Special handling for password fields - server masks them as "********" unless update_password is enabled
       if (
         !valuesMatch &&
-        fieldName.toLowerCase().includes("password") &&
+        (fieldName.toLowerCase().includes("password") || fieldName.toLowerCase().includes("apikey")) &&
         serverValue === "********" &&
         typeof configValue === "string" &&
         configValue.length > 0 &&
