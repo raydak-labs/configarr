@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.21.0](https://github.com/raydak-labs/configarr/compare/v1.20.0...v1.21.0) (2026-02-17)
+
+### Features
+
+- add support for multiple + glob secrets ([69259b1](https://github.com/raydak-labs/configarr/commit/69259b15aa9230c000addea910faab11ad26a30a))
+- **config:** Add support for managing UI Config settings ([fd7af46](https://github.com/raydak-labs/configarr/commit/fd7af463058768f89621a8b72e7be15b59ce9628))
+
+### Bug Fixes
+
+- cloning problems when switching urls ([#389](https://github.com/raydak-labs/configarr/issues/389)) ([1cc2c69](https://github.com/raydak-labs/configarr/commit/1cc2c6909116ca8b93b6a842d7abda8ca1792b0c)), closes [#388](https://github.com/raydak-labs/configarr/issues/388)
+- **deps:** update dependencies (non-major) ([546084b](https://github.com/raydak-labs/configarr/commit/546084bb4238efe621d1364405b311ae57359ce3))
+- ignore api key when syncing download clients ([356b141](https://github.com/raydak-labs/configarr/commit/356b14101686f43ba9d66504e7db8c2e6077505c))
+
 ## [1.20.0](https://github.com/raydak-labs/configarr/compare/v1.19.1...v1.20.0) (2026-01-10)
 
 ### Features
