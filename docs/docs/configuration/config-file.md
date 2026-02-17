@@ -705,9 +705,9 @@ For more details, check the \*Arr-specific API documentation under the `RemotePa
 
 - Experimental support for `media_management` and `media_naming_api` (since v1.5.0)
   With those you can configure different settings in the different tabs available per *arr.
-  Both fields are under experimental support.
-  The supports elements in those are dependent on the *arr used.
-  Check following API documentation of available fields:
+  These fields are under experimental support.
+  The supported elements are dependent on the *arr used.
+  Check the following API documentation of available fields:
 
   Naming APIs:
   - https://radarr.video/docs/api/#/NamingConfig/get_api_v3_config_naming
@@ -722,3 +722,15 @@ For more details, check the \*Arr-specific API documentation under the `RemotePa
   - https://whisparr.com/docs/api/#/MediaManagementConfig/get_api_v3_config_mediamanagement
   - https://readarr.com/docs/api/#/MediaManagementConfig/get_api_v1_config_mediamanagement
   - https://lidarr.audio/docs/api/#/MediaManagementConfig/get_api_v1_config_mediamanagement
+
+- Experimental support for `ui_config` (since v1.21.0)
+  Allows configuring UI settings like theme, language, calendar preferences, etc.
+  The supported elements are dependent on the \*arr used.
+  Check the following API documentation of available fields:
+
+  UI Config APIs:
+  - https://radarr.video/docs/api/#/UiConfig/put_api_v3_config_ui__id_
+  - https://sonarr.tv/docs/api/#v3/tag/uiconfig/PUT/api/v3/config/ui/{id}
+  - https://whisparr.com/docs/api/#/UiConfig/put_api_v3_config_ui__id_
+  - https://readarr.com/docs/api/#/UiConfig/put_api_v1_config_ui__id_
+  - https://lidarr.audio/docs/api/#/UiConfig/put_api_v1_config_ui__id_

@@ -8,6 +8,7 @@ import {
   QualityDefinitionResource,
   QualityProfileResource,
   RemotePathMappingResource,
+  UiConfigResource,
 } from "../__generated__/readarr/data-contracts";
 import { logger } from "../logger";
 import type { DownloadClientResource } from "../types/download-client.types";
@@ -117,6 +118,14 @@ export class ReadarrClient implements IArrClient<
 
   async updateMediamanagement(id: string, data: any) {
     return this.api.v1ConfigMediamanagementUpdate(id, data);
+  }
+
+  async getUiConfig(): Promise<UiConfigResource> {
+    return this.api.v1ConfigUiList();
+  }
+
+  async updateUiConfig(id: string, data: UiConfigResource): Promise<UiConfigResource> {
+    return this.api.v1ConfigUiUpdate(id, data);
   }
 
   async getRootfolders() {
