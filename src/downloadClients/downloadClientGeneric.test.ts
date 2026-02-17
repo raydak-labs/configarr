@@ -172,7 +172,7 @@ describe("GenericDownloadClientSync – ARR type handling", () => {
       expect(isEqual).toBe(true);
     });
 
-    test("handles password masking without false diff", () => {
+    test("handles password and apiKey masking without false diff", () => {
       sync = new GenericDownloadClientSync("RADARR");
       const cache = new ServerCache([], [], [], []);
 
@@ -190,6 +190,7 @@ describe("GenericDownloadClientSync – ARR type handling", () => {
           { name: "host", value: "qbittorrent" },
           { name: "port", value: 8080 },
           { name: "password", value: "********" }, // Masked password from server
+          { name: "apiKey", value: "********" }, // Masked api_key from server
         ],
         tags: [],
       };
@@ -203,7 +204,8 @@ describe("GenericDownloadClientSync – ARR type handling", () => {
         fields: {
           host: "qbittorrent",
           port: 8080,
-          password: "changeme", // Actual password in config
+          password: "changeme_p", // Actual password in config
+          api_key: "changeme_k", // Actual api_key in config
         },
       };
 
