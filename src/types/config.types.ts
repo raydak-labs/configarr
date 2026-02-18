@@ -312,8 +312,10 @@ export type InputConfigDownloadClient = {
 };
 
 /**
- * Top-level download_clients block. Same shape as per-instance download_clients
- * except data is a key-value map (id → client) instead of an array.
+ * Top-level download_clients block. Similar to per-instance download_clients but a subset:
+ * data is a key-value map (id → client) instead of an array, and only data, update_password,
+ * delete_unmanaged, and config are supported (e.g. remote_paths and delete_unmanaged_remote_paths
+ * are instance-level only).
  */
 export type InputConfigDownloadClientsTopLevel = {
   /**
