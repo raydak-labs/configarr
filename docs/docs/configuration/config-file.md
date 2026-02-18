@@ -669,7 +669,7 @@ sonarr:
 You can define a full **download_clients** block at the **top level** of `config.yml` (same level as `sonarr:`, `radarr:`, etc.). It has the same options as per-instance `download_clients`, except **`data`** is a **key-value map** (id → client config) instead of an array. Instances then reference these by `id` in their `download_clients.data` array; the top-level block also supplies defaults for **`update_password`**, **`delete_unmanaged`**, and **`config`**, which the instance can override.
 
 - **Top-level `download_clients`**: `data` (map: id → client config), `update_password`, `delete_unmanaged`, `config`. All optional; instance values override when present.
-- **Instance `download_clients.data`**: Array of entries. Each entry can include optional **`id`**; if present, Configarr looks up that id in the top-level `download_clients.data` and merges (base + instance overlay). Instance-only fields (e.g. name, tags, `fields.tv_category`) override the base.
+- **Instance `download_clients.data`**: Array of entries. Each entry can include an optional **`id`**; if present, Configarr looks up that id in the top-level `download_clients.data` and merges (base + instance overlay). Instance-only fields (e.g. name, tags, `fields.tv_category`) override the base.
 - **If `id` is present but not found** in top-level `data`: A warning is logged and the entry is used as-is.
 - **If `id` is not specified** in the instance's download_clients: Entry is used as-is (fully inline).
 
