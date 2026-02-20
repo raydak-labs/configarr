@@ -136,3 +136,73 @@ When this variable is set, Configarr will perform standard git clones without th
 Reference issues:
 
 - https://github.com/raydak-labs/configarr/issues/367
+
+## TRaSH-Guides Breaking Changes (Feb 2026) {#trash-guides-breaking-changes-2026-02}
+
+:::warning Breaking Change
+TRaSH-Guides made significant changes to their JSON structure in February 2026.
+This affects both CF groups semantics and quality profile ordering.
+:::
+
+**Commit:** [2994a7979d8036a7908a92e2cd286054fd4fcc1b](https://github.com/TRaSH-Guides/Guides/commit/2994a7979d8036a7908a92e2cd286054fd4fcc1b)
+
+### What Changed
+
+**1. CF Groups: `exclude` → `include` semantics**
+
+```json
+// OLD: CFs applied to ALL profiles EXCEPT listed ones
+"quality_profiles": {
+  "exclude": { "HD Bluray + WEB": "..." }
+}
+
+// NEW: CFs applied ONLY to listed profiles
+"quality_profiles": {
+  "include": { "Remux + WEB 1080p": "..." }
+}
+```
+
+**2. Quality Profile Items: API order → Display order**
+
+- **Before**: Quality items in API response order (internal)
+- **After**: Quality items in display order (highest-to-lowest priority)
+
+### Backward Compatibility
+
+**Option 1: Pin to TRaSH-Guides revision (recommended for stability)**
+
+For Configarr versions **< 1.22.0**, pin to the last commit before the changes:
+
+```yaml
+# config.yml
+trashRevision: d2105f2e1b04c7e30ae44e73d682298609438216
+```
+
+This uses the old TRaSH-Guides structure without needing the compatibility flag.
+
+**Option 2: Use compatibility flag (Configarr >= 1.22.0)**
+
+For Configarr versions **>= 1.22.0**, use the new TRaSH-Guides structure with the compatibility flag if needed:
+
+```yaml
+# config.yml
+# Enable for old TRaSH-Guides behavior (before Feb 2026)
+compatibilityTrashGuide20260219Enabled: true
+```
+
+| Setting           | CF Groups           | Quality Ordering            |
+| ----------------- | ------------------- | --------------------------- |
+| `false` (default) | `include` semantics | Display order (no reversal) |
+| `true`            | `exclude` semantics | API order (with reversal)   |
+
+:::info Temporary Flag
+The `compatibilityTrashGuide20260219Enabled` flag is **temporary** and will be removed in a future version.
+It's recommended to update to the latest TRaSH-Guides version.
+:::
+
+### Version Matrix
+
+| Configarr Version | TRaSH-Guides Default | Old Behavior Via                                                                                            |
+| ----------------- | -------------------- | ----------------------------------------------------------------------------------------------------------- |
+| < 1.22.0          | Old structure        | N/A (default)                                                                                               |
+| >= 1.22.0         | New structure        | `compatibilityTrashGuide20260219Enabled: true` OR `trashRevision: d2105f2e1b04c7e30ae44e73d682298609438216` |

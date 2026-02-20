@@ -2,9 +2,19 @@
 #trashGuideUrl: https://github.com/BlackDark/fork-TRASH-Guides
 #recyclarrConfigUrl: https://github.com/BlackDark/fork-recyclarr-configs
 
+# Optional: Specify a custom branch/revision (defaults to 'master')
+#trashRevision: master
+#recyclarrRevision: master
+
 # since v1.12.0. Optional. Enable for legacy configuration to clone full repos (trash, recyclarr) instead of sparse.
 # Default is false. Setting to true increases storage usage up to 10x.
 #enableFullGitClone: true
+
+# since v1.22.0. Optional. Enable compatibility mode for TRaSH-Guides changes from Feb 2026.
+# When true: uses old behavior (exclude semantics for CF groups, reversed quality ordering)
+# When false (default): uses new behavior (include semantics, display order for qualities)
+# See: https://github.com/TRaSH-Guides/Guides/commit/2994a7979d8036a7908a92e2cd286054fd4fcc1b
+#compatibilityTrashGuide20260219Enabled: false
 
 # Optional: Enable anonymous telemetry tracking of feature usage
 # Default is false. Set to true to help improve Configarr by sharing anonymous usage statistics.
