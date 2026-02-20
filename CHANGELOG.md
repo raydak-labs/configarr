@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.0](https://github.com/raydak-labs/configarr/compare/v1.21.0...v1.22.0) (2026-02-20)
+
+### Features
+
+- support the breaking changes from TRaSH-Guide. IMPORTANT ([#393](https://github.com/raydak-labs/configarr/issues/393)) ([b2320ea](https://github.com/raydak-labs/configarr/commit/b2320ead2194f9bd0e8268075b582d509bbbb96b))
+
 ## [1.21.0](https://github.com/raydak-labs/configarr/compare/v1.20.0...v1.21.0) (2026-02-17)
 
 ### Features
