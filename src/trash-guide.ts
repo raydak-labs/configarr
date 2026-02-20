@@ -298,21 +298,33 @@ export const loadNamingFromTrashRadarr = async (): Promise<TrashRadarrNaming | n
 };
 
 // TODO merge two methods?
-export const transformTrashQPToTemplate = (data: TrashQP): ConfigQualityProfile => {
+export const transformTrashQPToTemplate = (data: TrashQP, useOldQualityOrder: boolean = false): ConfigQualityProfile => {
+  const items = data.items
+    .map((e): ConfigQualityProfileItem | null => {
+      if (!e.allowed) {
+        return null;
+      }
+      // TRaSH-Guides now provides qualities in display order (highest-to-lowest)
+      // Old behavior (useOldQualityOrder=true): reverse nested items to convert from API order
+      // New behavior (useOldQualityOrder=false): use items as-is since they're already in display order
+      // Use a non-mutating reverse to avoid side effects on the original TrashQP data
+      return {
+        name: e.name,
+        qualities: useOldQualityOrder ? (e.items ? [...e.items].reverse() : undefined) : e.items,
+      };
+    })
+    .filter(notEmpty);
+
+  // Old behavior: reverse the entire array to convert from API order to display order
+  // New behavior: use items as-is since TRaSH-Guides now provides them in display order
+  const qualities = useOldQualityOrder ? items.toReversed() : items;
+
   return {
     min_format_score: data.minFormatScore,
     score_set: data.trash_score_set,
     upgrade: { allowed: data.upgradeAllowed, until_quality: data.cutoff, until_score: data.cutoffFormatScore },
     name: data.name,
-    qualities: data.items
-      .map((e): ConfigQualityProfileItem | null => {
-        if (!e.allowed) {
-          return null;
-        }
-        return { name: e.name, qualities: e.items?.reverse() };
-      })
-      .filter(notEmpty)
-      .toReversed(),
+    qualities,
     quality_sort: "top", // default
     language: data.language,
   };
@@ -322,7 +334,11 @@ export const transformTrashQPCFs = (data: TrashQP): ConfigCustomFormat => {
   return { assign_scores_to: [{ name: data.name }], trash_ids: Object.values(data.formatItems) };
 };
 
-export const transformTrashQPCFGroups = (template: TrashQP, trashCFGroupMapping: TrashCFGroupMapping): ConfigCustomFormat[] => {
+export const transformTrashQPCFGroups = (
+  template: TrashQP,
+  trashCFGroupMapping: TrashCFGroupMapping,
+  useExcludeSemantics: boolean = false,
+): ConfigCustomFormat[] => {
   const profileName = template.name;
   const results: ConfigCustomFormat[] = [];
 
@@ -330,25 +346,50 @@ export const transformTrashQPCFGroups = (template: TrashQP, trashCFGroupMapping:
   for (const [_, cfGroup] of trashCFGroupMapping) {
     // Check if the default prop is truthy (string "true")
     if (cfGroup.default === "true") {
-      // Check if template is excluded via exclude field
-      const isExcluded = cfGroup.quality_profiles?.exclude?.[profileName] != null;
+      if (useExcludeSemantics) {
+        // OLD BEHAVIOR: Check if template is excluded via exclude field
+        const isExcluded = cfGroup.quality_profiles?.exclude?.[profileName] != null;
 
-      if (!isExcluded) {
-        // Include all required and default CFs from this group
-        const cfsToInclude = cfGroup.custom_formats.filter((cf) => cf.required || cf.default === true);
+        if (!isExcluded) {
+          // Include all required and default CFs from this group
+          const cfsToInclude = cfGroup.custom_formats.filter((cf) => cf.required || cf.default === true);
 
-        if (cfsToInclude.length > 0) {
-          logger.debug(
-            `Including ${cfsToInclude.length} [${cfsToInclude.map((cf) => cf.name).join(", ")}] CFs from default group '${cfGroup.name}' for TrashGuide profile '${profileName}'`,
-          );
+          if (cfsToInclude.length > 0) {
+            logger.debug(
+              `Including ${cfsToInclude.length} [${cfsToInclude.map((cf) => cf.name).join(", ")}] CFs from default group '${cfGroup.name}' for TrashGuide profile '${profileName}'`,
+            );
 
-          results.push({
-            trash_ids: cfsToInclude.map((cf) => cf.trash_id),
-            assign_scores_to: [{ name: profileName }],
-          });
+            results.push({
+              trash_ids: cfsToInclude.map((cf) => cf.trash_id),
+              assign_scores_to: [{ name: profileName }],
+            });
+          }
+        } else {
+          logger.debug(`Excluding default CF group '${cfGroup.name}' for TrashGuide profile '${profileName}' due to exclude field`);
         }
       } else {
-        logger.debug(`Excluding default CF group '${cfGroup.name}' for TrashGuide profile '${profileName}' due to exclude field`);
+        // NEW BEHAVIOR: Check if template is included via include field
+        const isIncluded = cfGroup.quality_profiles?.include?.[profileName] != null;
+
+        if (isIncluded) {
+          // Include all required and default CFs from this group
+          const cfsToInclude = cfGroup.custom_formats.filter((cf) => cf.required || cf.default === true);
+
+          if (cfsToInclude.length > 0) {
+            logger.debug(
+              `Including ${cfsToInclude.length} [${cfsToInclude.map((cf) => cf.name).join(", ")}] CFs from default group '${cfGroup.name}' for TrashGuide profile '${profileName}'`,
+            );
+
+            results.push({
+              trash_ids: cfsToInclude.map((cf) => cf.trash_id),
+              assign_scores_to: [{ name: profileName }],
+            });
+          }
+        } else {
+          const hasIncludeList = cfGroup.quality_profiles?.include != null;
+          const reason = hasIncludeList ? "(profile not in include list)" : "(no include list defined for this group)";
+          logger.debug(`Skipping default CF group '${cfGroup.name}' for TrashGuide profile '${profileName}' ${reason}`);
+        }
       }
     }
   }

@@ -18,6 +18,15 @@ export type InputConfigSchema = {
    */
   telemetry?: boolean;
   customFormatDefinitions?: CustomFormatDefinitions;
+  /**
+   * Enable compatibility mode for TRaSH-Guides changes from Feb 2026.
+   * When true: Uses old behavior for both CF groups (exclude semantics) and quality ordering (with reversal).
+   * When false (default): Uses new behavior - CF groups use include semantics, quality ordering matches display order.
+   * @see https://github.com/TRaSH-Guides/Guides/commit/2994a7979d8036a7908a92e2cd286054fd4fcc1b
+   * @default false
+   * @temporary This option will be removed in a future version
+   */
+  compatibilityTrashGuide20260219Enabled?: boolean;
 
   sonarr?: Record<string, InputConfigArrInstance>;
   sonarrEnabled?: boolean;

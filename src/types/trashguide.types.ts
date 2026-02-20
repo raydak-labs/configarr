@@ -141,9 +141,15 @@ export type TrashCustomFormatGroups = {
   custom_formats: TrashCFGItem[];
   quality_profiles?: {
     /**
+     * @deprecated Use include instead. Kept for compatibility with old TRaSH-Guides versions.
      * Exclude profiles for which this group should not be applied if enabled in default.
      */
-    exclude: Record<string, string>; // name to id like: "HD Bluray + WEB": "d1d67249d3890e49bc12e275d989a7e9"
+    exclude?: Record<string, string>; // name to id like: "HD Bluray + WEB": "d1d67249d3890e49bc12e275d989a7e9"
+    /**
+     * Profiles for which this group should be applied.
+     * Only profiles listed here will receive the CFs from this group.
+     */
+    include?: Record<string, string>; // name to id like: "HD Bluray + WEB": "d1d67249d3890e49bc12e275d989a7e9"
   };
 };
 

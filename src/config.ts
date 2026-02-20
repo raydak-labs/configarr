@@ -404,17 +404,21 @@ const includeTrashTemplate = (
     mergedTemplates,
     trashCFGroupMapping,
     customFormatGroups,
+    useExcludeSemantics,
   }: {
     mergedTemplates: MappedMergedTemplates;
     trashCFGroupMapping: TrashCFGroupMapping;
     customFormatGroups: InputConfigCustomFormatGroup[];
+    useExcludeSemantics: boolean;
   },
 ) => {
-  mergedTemplates.quality_profiles.push(transformTrashQPToTemplate(template));
+  // useExcludeSemantics=true means use old TRaSH-Guides behavior (before Feb 2026)
+  // This affects both CF groups semantics and quality ordering
+  mergedTemplates.quality_profiles.push(transformTrashQPToTemplate(template, useExcludeSemantics));
   mergedTemplates.custom_formats.push(transformTrashQPCFs(template));
 
   // For TrashGuide profiles, check and include default CF groups
-  const requiredCFsFromCFGroups = transformTrashQPCFGroups(template, trashCFGroupMapping);
+  const requiredCFsFromCFGroups = transformTrashQPCFGroups(template, trashCFGroupMapping, useExcludeSemantics);
 
   const numberOfCfsLoaded = requiredCFsFromCFGroups.reduce((p, c) => {
     (c.trash_ids || []).forEach((id) => p.add(id));
@@ -433,11 +437,13 @@ const includeTemplateOrderDefault = async (
     local,
     trash,
     trashCFGroupMapping,
+    useExcludeSemantics,
   }: {
     recyclarr: Map<string, MappedTemplates>;
     local: Map<string, MappedTemplates>;
     trash: Map<string, TrashQP>;
     trashCFGroupMapping: TrashCFGroupMapping;
+    useExcludeSemantics: boolean;
   },
   { mergedTemplates }: { mergedTemplates: MappedMergedTemplates },
 ) => {
@@ -517,7 +523,12 @@ const includeTemplateOrderDefault = async (
 
     // Route to appropriate handler based on source
     if (e.source === "TRASH") {
-      includeTrashTemplate(resolvedTemplate as TrashQP, { mergedTemplates, trashCFGroupMapping, customFormatGroups: [] });
+      includeTrashTemplate(resolvedTemplate as TrashQP, {
+        mergedTemplates,
+        trashCFGroupMapping,
+        customFormatGroups: [],
+        useExcludeSemantics,
+      });
     } else {
       includeRecyclarrTemplate(resolvedTemplate as MappedTemplates, { mergedTemplates, trashCFGroupMapping });
     }
@@ -529,7 +540,12 @@ const includeTemplateOrderDefault = async (
       logger.warn(`Unknown 'trash' template requested: '${e.template}'`);
       return;
     }
-    includeTrashTemplate(resolvedTemplate, { mergedTemplates, trashCFGroupMapping, customFormatGroups: [] });
+    includeTrashTemplate(resolvedTemplate, {
+      mergedTemplates,
+      trashCFGroupMapping,
+      customFormatGroups: [],
+      useExcludeSemantics,
+    });
   });
   mappedIncludes.recyclarr.forEach((e) => {
     const resolvedTemplate = recyclarr.get(e.template);
@@ -621,6 +637,10 @@ export const mergeConfigsAndTemplates = async (
     custom_formats: [],
     quality_profiles: [],
   };
+  // Determine which CF group semantics to use based on compatibility flag
+  // When true: use old "exclude" semantics (apply to all except excluded)
+  // When false/undefined: use new "include" semantics (apply only to included)
+  const useExcludeSemantics = globalConfig.compatibilityTrashGuide20260219Enabled === true;
   if (instanceConfig.include) {
     await includeTemplateOrderDefault(
       instanceConfig.include,
@@ -629,6 +649,7 @@ export const mergeConfigsAndTemplates = async (
         local: localTemplateMap,
         trash: trashTemplates,
         trashCFGroupMapping,
+        useExcludeSemantics,
       },
       {
         mergedTemplates,
