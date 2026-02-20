@@ -141,7 +141,7 @@ Reference issues:
 
 :::warning Breaking Change
 TRaSH-Guides made significant changes to their JSON structure in February 2026.
-This affects both CF groups semantics and quality profile ordering.
+This affects both CF group semantics and quality profile ordering.
 :::
 
 **Commit:** [2994a7979d8036a7908a92e2cd286054fd4fcc1b](https://github.com/TRaSH-Guides/Guides/commit/2994a7979d8036a7908a92e2cd286054fd4fcc1b)

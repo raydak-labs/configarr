@@ -553,7 +553,7 @@ Notes:
 ### TRaSH-Guides Breaking Changes (Feb 2026) {#trash-guides-breaking-changes-2026-02}
 
 :::warning Breaking Change
-TRaSH-Guides made significant changes to their JSON structure in February 2026, affecting both CF groups semantics and quality profile ordering.
+TRaSH-Guides made significant changes to their JSON structure in February 2026, affecting both CF group semantics and quality profile ordering.
 :::
 
 For detailed information about what changed, backward compatibility options, and version matrix, see the [TRaSH-Guides Breaking Changes FAQ](../faq.md#trash-guides-breaking-changes-2026-02).

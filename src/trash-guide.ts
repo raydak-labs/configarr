@@ -307,7 +307,11 @@ export const transformTrashQPToTemplate = (data: TrashQP, useOldQualityOrder: bo
       // TRaSH-Guides now provides qualities in display order (highest-to-lowest)
       // Old behavior (useOldQualityOrder=true): reverse nested items to convert from API order
       // New behavior (useOldQualityOrder=false): use items as-is since they're already in display order
-      return { name: e.name, qualities: useOldQualityOrder ? e.items?.reverse() : e.items };
+      // Use a non-mutating reverse to avoid side effects on the original TrashQP data
+      return {
+        name: e.name,
+        qualities: useOldQualityOrder ? (e.items ? [...e.items].reverse() : undefined) : e.items,
+      };
     })
     .filter(notEmpty);
 
@@ -382,7 +386,9 @@ export const transformTrashQPCFGroups = (
             });
           }
         } else {
-          logger.debug(`Skipping default CF group '${cfGroup.name}' for TrashGuide profile '${profileName}' (not in include list)`);
+          const hasIncludeList = cfGroup.quality_profiles?.include != null;
+          const reason = hasIncludeList ? "(profile not in include list)" : "(no include list defined for this group)";
+          logger.debug(`Skipping default CF group '${cfGroup.name}' for TrashGuide profile '${profileName}' ${reason}`);
         }
       }
     }
