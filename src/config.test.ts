@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import yaml from "yaml";
-import { getSecrets, mergeConfigsAndTemplates, resetSecretsCache, transformConfig } from "./config";
+import { getSecrets, mergeConfigsAndTemplates, readConfigRaw, resetSecretsCache, transformConfig } from "./config";
 import * as env from "./env";
 import * as localImporter from "./local-importer";
 import * as reclarrImporter from "./recyclarr-importer";
@@ -689,6 +689,92 @@ describe("custom_formats ordering", () => {
     result = await mergeConfigsAndTemplates({}, inputConfig, "SONARR");
     cf = result.config.custom_formats.find((cf) => cf.trash_ids?.includes("test-cf"));
     expect(cf?.assign_scores_to?.[0]?.score).toBe(2);
+  });
+
+  describe("CONFIGARR_ENABLE_MERGE (YAML merge keys)", () => {
+    const configLocation = "/config/config.yml";
+
+    beforeEach(() => {
+      mockExistsSync.mockReturnValue(true);
+    });
+
+    test("should merge YAML anchor when enableMerge is true", () => {
+      const yamlWithMerge = `
+base: &qb_base
+  type: qbittorrent
+  fields:
+    host: qbittorrent
+    port: 8080
+sonarr:
+  instance1:
+    base_url: http://sonarr:8989
+    api_key: test
+    download_clients:
+      data:
+        - <<: *qb_base
+          name: "MyQbit"
+          fields:
+            tv_category: series
+      update_password: false
+`;
+
+      vi.spyOn(env, "getHelpers").mockReturnValue({
+        configLocation,
+        secretLocation: "/config/secrets.yml",
+        repoPath: "/repos",
+        enableMerge: true,
+      });
+      mockReadFileSync.mockImplementation((path: string) => {
+        if (path === configLocation) return yamlWithMerge.trim();
+        return "";
+      });
+
+      const raw = readConfigRaw() as Record<string, unknown>;
+      const dc = (raw.sonarr as Record<string, unknown>)?.instance1 as Record<string, unknown>;
+      const data = (dc?.download_clients as Record<string, unknown>)?.data as Record<string, unknown>[];
+      expect(data).toHaveLength(1);
+      // Merge is shallow: base contributed type; override replaced fields entirely
+      expect(data[0]).toMatchObject({
+        name: "MyQbit",
+        type: "qbittorrent",
+        fields: { tv_category: "series" },
+      });
+    });
+
+    test("should not merge when enableMerge is false (<< remains literal or alias only)", () => {
+      const yamlWithMerge = `
+base: &qb_base
+  type: qbittorrent
+sonarr:
+  instance1:
+    base_url: http://sonarr:8989
+    api_key: test
+    download_clients:
+      data:
+        - <<: *qb_base
+          name: "MyQbit"
+`;
+
+      vi.spyOn(env, "getHelpers").mockReturnValue({
+        configLocation,
+        secretLocation: "/config/secrets.yml",
+        repoPath: "/repos",
+        enableMerge: false,
+      });
+      mockReadFileSync.mockImplementation((path: string) => {
+        if (path === configLocation) return yamlWithMerge.trim();
+        return "";
+      });
+
+      const raw = readConfigRaw() as Record<string, unknown>;
+      const dc = (raw.sonarr as Record<string, unknown>)?.instance1 as Record<string, unknown>;
+      const data = (dc?.download_clients as Record<string, unknown>)?.data as Record<string, unknown>[];
+      expect(data).toHaveLength(1);
+      const entry = data[0] as Record<string, unknown>;
+      expect(entry.name).toBe("MyQbit");
+      // With merge disabled, type from *qb_base is not merged into this object
+      expect(entry.type).toBeUndefined();
+    });
   });
 });
 
