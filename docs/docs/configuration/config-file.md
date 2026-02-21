@@ -682,7 +682,7 @@ You can avoid repeating the same download client settings by using **YAML anchor
 - **Aliases** (`*name`): Reuse that block by reference.
 - **Merge key** (`<<: *name`): Merge the anchored block into the current mapping; any keys you add after it override the anchored values.
 
-This works only when **merge keys is enabled**. Set the environment variable **`CONFIGARR_ENABLE_MERGE=true`** (see [Environment Variables](environment-variables.md)); otherwise `<<` is not interpreted as a merge key and your config may fail to parse or behave unexpectedly.
+This works only when **merge keys are enabled**. Set the environment variable **`CONFIGARR_ENABLE_MERGE=true`** (see [Environment Variables](environment-variables.md)); otherwise `<<` is not interpreted as a merge key and your config may fail to parse or behave unexpectedly.
 
 **Example: shared base with anchors and merge**
 
@@ -726,7 +726,7 @@ sonarr:
         auto_redownload_failed: false
 ```
 
-The anchor (`qb_base: &qb_base`) can live at any level, inside a different key (as above), or in at the top level. Each list item merges `*qb_base` with `<<:` and then overrides properties as needed. Without `CONFIGARR_ENABLE_MERGE=true`, use fully inline entries (no `<<`) as in the example at the start of this section.
+The anchor (`qb_base: &qb_base`) can live at any level, inside a different key (as above), or at the top level. Each list item merges `*qb_base` with `<<:` and then overrides properties as needed. Without `CONFIGARR_ENABLE_MERGE=true`, use fully inline entries (no `<<`) as in the example at the start of this section.
 
 ### Download Client Configuration <span className="theme-doc-version-badge badge badge--secondary configarr-badge">1.19.0</span>
 
