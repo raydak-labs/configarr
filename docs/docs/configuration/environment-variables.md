@@ -27,6 +27,7 @@ Each variable can be set to customize the behavior of the application.
 | `STOP_ON_ERROR`                       | `"false"`                 | No       | (Experimental, v1.11.0) Stop execution on any error on any instance.                                                                                                                                                                                                          |
 | `TELEMETRY_ENABLED`                   | `undefined`               | No       | Enables anonymous telemetry tracking of feature usage. Takes precedence over config file setting.                                                                                                                                                                             |
 | `CONFIGARR_DISABLE_GIT_CLONE_OPTIONS` | `undefined`               | No       | Disables custom git clone options (`--filter=blob:none` and `--sparse`). Use this if you encounter errors like "Function not implemented" or "index-pack failed" with legacy kernels. See [troubleshooting](../faq.md#git-clone-errors-with-legacy-kernels) for more details. |
+| `CONFIGARR_ENABLE_MERGE`              | `"false"`                 | No       | When set to `"true"`, enables YAML merge keys (`<<`) when parsing the main config file, so you can use anchors and merge keys to share and override config blocks. See [config file](config-file.md) for details.                                                             |
 
 ## Usage
 

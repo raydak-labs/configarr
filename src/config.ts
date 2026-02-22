@@ -92,7 +92,8 @@ export const getConfig = (): ConfigSchema => {
     return config;
   }
 
-  const configLocation = getHelpers().configLocation;
+  const helpers = getHelpers();
+  const configLocation = helpers.configLocation;
 
   if (!existsSync(configLocation)) {
     logger.error(`Config file in location "${configLocation}" does not exists.`);
@@ -101,7 +102,10 @@ export const getConfig = (): ConfigSchema => {
 
   const file = readFileSync(configLocation, "utf8");
 
-  const inputConfig = yaml.parse(file, { customTags: [secretsTag, envTag, fileTag] }) as InputConfigSchema;
+  const inputConfig = yaml.parse(file, {
+    customTags: [secretsTag, envTag, fileTag],
+    merge: helpers.enableMerge,
+  }) as InputConfigSchema;
 
   config = transformConfig(inputConfig);
 
@@ -109,7 +113,8 @@ export const getConfig = (): ConfigSchema => {
 };
 
 export const readConfigRaw = (): object => {
-  const configLocation = getHelpers().configLocation;
+  const helpers = getHelpers();
+  const configLocation = helpers.configLocation;
 
   if (!existsSync(configLocation)) {
     logger.error(`Config file in location "${configLocation}" does not exists.`);
@@ -118,7 +123,12 @@ export const readConfigRaw = (): object => {
 
   const file = readFileSync(configLocation, "utf8");
 
-  const inputConfig = yaml.parse(file, { customTags: [secretsTag, envTag, fileTag] });
+  logger.debug(`Merging config file with merge: ${helpers.enableMerge}`);
+
+  const inputConfig = yaml.parse(file, {
+    customTags: [secretsTag, envTag, fileTag],
+    merge: helpers.enableMerge,
+  });
 
   return inputConfig;
 };

@@ -53,6 +53,12 @@ const schema = z.object({
     .transform((x) => x === "true")
     .pipe(z.boolean())
     .default(false),
+  CONFIGARR_ENABLE_MERGE: z
+    .string()
+    .toLowerCase()
+    .transform((x) => x === "true")
+    .pipe(z.boolean())
+    .default(false),
   TELEMETRY_ENABLED: z
     .string()
     .toLowerCase()
@@ -95,6 +101,8 @@ export const getHelpers = () => ({
   secretLocation: getEnvs().SECRETS_LOCATION ?? `${getEnvs().ROOT_PATH}/config/secrets.yml`,
   // TODO: check for different env name
   repoPath: getEnvs().CUSTOM_REPO_ROOT ?? `${getEnvs().ROOT_PATH}/repos`,
+  /** Enable YAML << merge keys when parsing config (CONFIGARR_ENABLE_MERGE=true). */
+  enableMerge: getEnvs().CONFIGARR_ENABLE_MERGE,
   // TODO: add stuff like isDryRun,...?
 });
 
