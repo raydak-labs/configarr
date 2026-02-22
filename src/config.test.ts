@@ -795,6 +795,7 @@ describe("getSecrets", () => {
       configLocation: "/config/config.yml",
       secretLocation,
       repoPath: "/repos",
+      enableMerge: false,
     });
 
     mockFastGlobSync.mockReturnValue([secretLocation]);
@@ -817,6 +818,7 @@ describe("getSecrets", () => {
       configLocation: "/config/config.yml",
       secretLocation,
       repoPath: "/repos",
+      enableMerge: false,
     });
 
     // fast-glob returns empty for non-existent file
@@ -838,6 +840,7 @@ describe("getSecrets", () => {
       configLocation: "/config/config.yml",
       secretLocation,
       repoPath: "/repos",
+      enableMerge: false,
     });
 
     // Mock fast-glob
@@ -873,6 +876,7 @@ describe("getSecrets", () => {
       configLocation: "/config/config.yml",
       secretLocation,
       repoPath: "/repos",
+      enableMerge: false,
     });
 
     // Mock fast-glob to return files in alphabetical order
@@ -901,6 +905,7 @@ describe("getSecrets", () => {
       configLocation: "/config/config.yml",
       secretLocation,
       repoPath: "/repos",
+      enableMerge: false,
     });
 
     // Mock fast-glob to return empty array
@@ -923,6 +928,7 @@ describe("getSecrets", () => {
       configLocation: "/config/config.yml",
       secretLocation,
       repoPath: "/repos",
+      enableMerge: false,
     });
 
     // Mock fast-glob
@@ -963,6 +969,7 @@ describe("getSecrets", () => {
       configLocation: "/config/config.yml",
       secretLocation,
       repoPath: "/repos",
+      enableMerge: false,
     });
 
     // Mock fast-glob
@@ -991,6 +998,7 @@ describe("getSecrets", () => {
       configLocation: "/config/config.yml",
       secretLocation,
       repoPath: "/repos",
+      enableMerge: false,
     });
 
     mockFastGlobSync.mockReturnValue([secretLocation]);
@@ -1017,6 +1025,7 @@ describe("getSecrets", () => {
       configLocation: "/config/config.yml",
       secretLocation,
       repoPath: "/repos",
+      enableMerge: false,
     });
 
     mockFastGlobSync.mockImplementation((pattern: string) => {
@@ -1054,6 +1063,7 @@ describe("getSecrets", () => {
       configLocation: "/config/config.yml",
       secretLocation,
       repoPath: "/repos",
+      enableMerge: false,
     });
 
     mockFastGlobSync.mockImplementation((pattern: string) => {
@@ -1091,6 +1101,7 @@ describe("getSecrets", () => {
       configLocation: "/config/config.yml",
       secretLocation,
       repoPath: "/repos",
+      enableMerge: false,
     });
 
     mockFastGlobSync.mockImplementation((pattern: string) => {
@@ -1124,6 +1135,7 @@ describe("getSecrets", () => {
       configLocation: "/config/config.yml",
       secretLocation,
       repoPath: "/repos",
+      enableMerge: false,
     });
 
     mockFastGlobSync.mockReturnValue([]);
@@ -1147,6 +1159,7 @@ describe("getSecrets", () => {
       configLocation: "/config/config.yml",
       secretLocation,
       repoPath: "/repos",
+      enableMerge: false,
     });
 
     mockFastGlobSync.mockImplementation((pattern: string) => {
