@@ -696,7 +696,8 @@ x-download-clients:
     priority: 1
     remove_completed_downloads: true
     remove_failed_downloads: true
-    fields:
+    # YAML does a shallow merge, thus we must declare another anchor for the nested dictionary if we plan to override values in it
+    fields: &qb_fields
       host: qbittorrent
       port: 8080
       use_ssl: false
@@ -710,12 +711,16 @@ sonarr:
     download_clients:
       data:
         - <<: *qb_base
-          fields: { tv_category: series }
+          fields:
+            <<: *qb_fields
+            tv_category: series
           tags: ["sonarr"]
         # Reuse same base, override name and fields
         - <<: *qb_base
           name: "qBit 4K"
-          fields: { tv_category: series-4k }
+          fields:
+            <<: *qb_fields
+            tv_category: series-4k
           tags: ["4K"]
       update_password: false
       delete_unmanaged:
