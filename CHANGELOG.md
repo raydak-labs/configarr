@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.23.0](https://github.com/raydak-labs/configarr/compare/v1.22.0...v1.23.0) (2026-02-23)
+
+### Features
+
+- add enable merge option ([#394](https://github.com/raydak-labs/configarr/issues/394)) ([97d165d](https://github.com/raydak-labs/configarr/commit/97d165d3dc8af475cc51c4e89d9f5ca8ede831c8))
+
 ## [1.22.0](https://github.com/raydak-labs/configarr/compare/v1.21.0...v1.22.0) (2026-02-20)
 
 ### Features
