@@ -223,6 +223,65 @@ telemetry: true
 
 **Note:** Telemetry is disabled by default and is completely opt-in. See [Telemetry](./telemetry.md)
 
+### Sharing download client config with YAML anchors <span className="theme-doc-version-badge badge badge--secondary configarr-badge">1.23.0</span> {#yaml-anchors}
+
+You can avoid repeating the same download client settings by using **YAML anchors** and **merge keys**:
+
+- **Anchors** (`&name`): Define a block once and give it a name.
+- **Aliases** (`*name`): Reuse that block by reference.
+- **Merge key** (`<<: *name`): Merge the anchored block into the current mapping; any keys you add after it override the anchored values.
+
+This works only when **merge keys are enabled**. Set the environment variable **`CONFIGARR_ENABLE_MERGE=true`** (see [Environment Variables](environment-variables.md)); otherwise `<<` is not interpreted as a merge key and your config may fail to parse or behave unexpectedly.
+
+**Example: shared base with anchors and merge**
+
+```yaml title="config.yml (requires CONFIGARR_ENABLE_MERGE=true)"
+x-download-clients:
+  # Define an anchor for shared instance
+  qb_base: &qb_base
+    name: "qBit"
+    type: qbittorrent
+    enable: true
+    priority: 1
+    remove_completed_downloads: true
+    remove_failed_downloads: true
+    # YAML does a shallow merge, thus we must declare another anchor for the nested dictionary if we plan to override values in it
+    fields: &qb_fields
+      host: qbittorrent
+      port: 8080
+      use_ssl: false
+      username: admin
+      password: changeme
+
+sonarr:
+  instance1:
+    base_url: http://sonarr:8989
+    api_key: !secret SONARR_API_KEY
+    download_clients:
+      data:
+        - <<: *qb_base
+          fields:
+            <<: *qb_fields
+            tv_category: series
+          tags: ["sonarr"]
+        # Reuse same base, override name and fields
+        - <<: *qb_base
+          name: "qBit 4K"
+          fields:
+            <<: *qb_fields
+            tv_category: series-4k
+          tags: ["4K"]
+      update_password: false
+      delete_unmanaged:
+        enabled: true
+        ignore: ["Manual Test Client"]
+      config:
+        enable_completed_download_handling: true
+        auto_redownload_failed: false
+```
+
+The anchor (`qb_base: &qb_base`) can live at any level, inside a different key (as above), or at the top level. Each list item merges `*qb_base` with `<<:` and then overrides properties as needed. Without `CONFIGARR_ENABLE_MERGE=true`, use fully inline entries (no `<<`) as in the example at the start of this section.
+
 ## Quality Definition / Size
 
 Support has been added to allow configuring quality definitions manually if required.
@@ -673,65 +732,6 @@ sonarr:
         # Radarr only: Check interval for finished downloads (in minutes)
         # check_for_finished_download_interval: 1
 ```
-
-### Sharing download client config with YAML anchors
-
-You can avoid repeating the same download client settings by using **YAML anchors** and **merge keys**:
-
-- **Anchors** (`&name`): Define a block once and give it a name.
-- **Aliases** (`*name`): Reuse that block by reference.
-- **Merge key** (`<<: *name`): Merge the anchored block into the current mapping; any keys you add after it override the anchored values.
-
-This works only when **merge keys are enabled**. Set the environment variable **`CONFIGARR_ENABLE_MERGE=true`** (see [Environment Variables](environment-variables.md)); otherwise `<<` is not interpreted as a merge key and your config may fail to parse or behave unexpectedly.
-
-**Example: shared base with anchors and merge**
-
-```yaml title="config.yml (requires CONFIGARR_ENABLE_MERGE=true)"
-x-download-clients:
-  # Define an anchor for shared instance
-  qb_base: &qb_base
-    name: "qBit"
-    type: qbittorrent
-    enable: true
-    priority: 1
-    remove_completed_downloads: true
-    remove_failed_downloads: true
-    # YAML does a shallow merge, thus we must declare another anchor for the nested dictionary if we plan to override values in it
-    fields: &qb_fields
-      host: qbittorrent
-      port: 8080
-      use_ssl: false
-      username: admin
-      password: changeme
-
-sonarr:
-  instance1:
-    base_url: http://sonarr:8989
-    api_key: !secret SONARR_API_KEY
-    download_clients:
-      data:
-        - <<: *qb_base
-          fields:
-            <<: *qb_fields
-            tv_category: series
-          tags: ["sonarr"]
-        # Reuse same base, override name and fields
-        - <<: *qb_base
-          name: "qBit 4K"
-          fields:
-            <<: *qb_fields
-            tv_category: series-4k
-          tags: ["4K"]
-      update_password: false
-      delete_unmanaged:
-        enabled: true
-        ignore: ["Manual Test Client"]
-      config:
-        enable_completed_download_handling: true
-        auto_redownload_failed: false
-```
-
-The anchor (`qb_base: &qb_base`) can live at any level, inside a different key (as above), or at the top level. Each list item merges `*qb_base` with `<<:` and then overrides properties as needed. Without `CONFIGARR_ENABLE_MERGE=true`, use fully inline entries (no `<<`) as in the example at the start of this section.
 
 ### Download Client Configuration <span className="theme-doc-version-badge badge badge--secondary configarr-badge">1.19.0</span>
 
