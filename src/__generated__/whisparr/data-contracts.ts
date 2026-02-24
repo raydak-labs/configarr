@@ -123,6 +123,13 @@ export enum MediaCoverTypes {
   Clearlogo = "clearlogo",
 }
 
+export enum ListSyncLevelType {
+  Disabled = "disabled",
+  LogOnly = "logOnly",
+  KeepAndUnmonitor = "keepAndUnmonitor",
+  KeepAndTag = "keepAndTag",
+}
+
 export enum ImportListType {
   Program = "program",
   Plex = "plex",
@@ -659,6 +666,7 @@ export interface HostConfigResource {
   username?: string | null;
   password?: string | null;
   logLevel?: string | null;
+  logSizeLimit?: number | null;
   consoleLogLevel?: string | null;
   branch?: string | null;
   apiKey?: string | null;
@@ -706,6 +714,14 @@ export interface ImportListBulkResource {
   rootFolderPath?: string | null;
   /** @format int32 */
   qualityProfileId?: number | null;
+}
+
+export interface ImportListConfigResource {
+  /** @format int32 */
+  id?: number;
+  listSyncLevel?: ListSyncLevelType;
+  /** @format int32 */
+  listSyncTag?: number;
 }
 
 export interface ImportListExclusionResource {

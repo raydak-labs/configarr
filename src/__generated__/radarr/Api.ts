@@ -3962,8 +3962,7 @@ export class Api<SecurityDataType = unknown> {
    */
   v3RenameList = (
     query?: {
-      /** @format int32 */
-      movieId?: number;
+      movieId?: number[];
     },
     params: RequestParams = {},
   ) =>

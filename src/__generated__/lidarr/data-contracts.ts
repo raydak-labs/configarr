@@ -227,6 +227,7 @@ export enum AuthenticationRequiredType {
 export enum ArtistStatusType {
   Continuing = "continuing",
   Ended = "ended",
+  Deleted = "deleted",
 }
 
 export enum ApplyTags {
@@ -1036,6 +1037,9 @@ export interface MediaManagementConfigResource {
   /** @format int32 */
   minimumFreeSpaceWhenImporting?: number;
   copyUsingHardlinks?: boolean;
+  enableMediaInfo?: boolean;
+  useScriptImport?: boolean;
+  scriptImportPath?: string | null;
   importExtraFiles?: boolean;
   extraFileExtensions?: string | null;
 }

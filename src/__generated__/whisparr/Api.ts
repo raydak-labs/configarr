@@ -35,6 +35,7 @@ import {
   HistoryResourcePagingResource,
   HostConfigResource,
   ImportListBulkResource,
+  ImportListConfigResource,
   ImportListExclusionResource,
   ImportListResource,
   IndexerBulkResource,
@@ -1706,6 +1707,56 @@ export class Api<SecurityDataType = unknown> {
       body: data,
       secure: true,
       type: ContentType.Json,
+      ...params,
+    });
+  /**
+   * No description
+   *
+   * @tags ImportListConfig
+   * @name V3ConfigImportlistList
+   * @request GET:/api/v3/config/importlist
+   * @secure
+   */
+  v3ConfigImportlistList = (params: RequestParams = {}) =>
+    this.http.request<ImportListConfigResource, any>({
+      path: `/api/v3/config/importlist`,
+      method: "GET",
+      secure: true,
+      format: "json",
+      ...params,
+    });
+  /**
+   * No description
+   *
+   * @tags ImportListConfig
+   * @name V3ConfigImportlistUpdate
+   * @request PUT:/api/v3/config/importlist/{id}
+   * @secure
+   */
+  v3ConfigImportlistUpdate = (id: string, data: ImportListConfigResource, params: RequestParams = {}) =>
+    this.http.request<ImportListConfigResource, any>({
+      path: `/api/v3/config/importlist/${id}`,
+      method: "PUT",
+      body: data,
+      secure: true,
+      type: ContentType.Json,
+      format: "json",
+      ...params,
+    });
+  /**
+   * No description
+   *
+   * @tags ImportListConfig
+   * @name V3ConfigImportlistDetail
+   * @request GET:/api/v3/config/importlist/{id}
+   * @secure
+   */
+  v3ConfigImportlistDetail = (id: number, params: RequestParams = {}) =>
+    this.http.request<ImportListConfigResource, any>({
+      path: `/api/v3/config/importlist/${id}`,
+      method: "GET",
+      secure: true,
+      format: "json",
       ...params,
     });
   /**
