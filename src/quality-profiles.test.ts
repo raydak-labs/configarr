@@ -16,6 +16,7 @@ import {
   isOrderOfQualitiesEqual,
   isOrderOfConfigQualitiesEqual,
   mapQualities,
+  mapQualityProfiles,
 } from "./quality-profiles";
 import { CFProcessing } from "./types/common.types";
 import { ConfigQualityProfile, ConfigQualityProfileItem, MergedConfigInstance } from "./types/config.types";
@@ -846,6 +847,304 @@ describe("QualityProfiles", async () => {
       ];
 
       expect(isOrderOfQualitiesEqual(arr1, arr2)).toBe(true);
+    });
+  });
+
+  describe("mapQualityProfiles - use_default_score flag", () => {
+    test("should use default score when use_default_score is true", async () => {
+      // Setup CF with default score of 25
+      const carrIdMapping = new Map([
+        [
+          "test-cf-id",
+          {
+            carrConfig: {
+              configarr_id: "test-cf-id",
+              name: "Test CF",
+              configarr_scores: { default: 25 },
+            },
+            requestConfig: {},
+          },
+        ],
+      ]);
+
+      const cfMap: CFProcessing = {
+        carrIdMapping,
+        cfNameToCarrConfig: new Map(),
+      };
+
+      const config: MergedConfigInstance = {
+        custom_formats: [
+          {
+            trash_ids: ["test-cf-id"],
+            assign_scores_to: [{ name: "profile", use_default_score: true }],
+          },
+        ],
+        quality_profiles: [
+          {
+            name: "profile",
+            min_format_score: 0,
+            qualities: [],
+            quality_sort: "top",
+            upgrade: { allowed: true, until_quality: "HDTV-1080p", until_score: 1000 },
+            score_set: "default",
+          },
+        ],
+        customFormatDefinitions: [],
+        media_management: {},
+        media_naming: {},
+      };
+
+      const result = mapQualityProfiles(cfMap, config);
+      const profileScore = result.get("profile");
+      const cfScore = profileScore?.get("Test CF");
+
+      expect(cfScore?.score).toBe(25); // Should use default score
+    });
+
+    test("should use explicit score when use_default_score is false or not set", async () => {
+      const carrIdMapping = new Map([
+        [
+          "test-cf-id",
+          {
+            carrConfig: {
+              configarr_id: "test-cf-id",
+              name: "Test CF",
+              configarr_scores: { default: 25 },
+            },
+            requestConfig: {},
+          },
+        ],
+      ]);
+
+      const cfMap: CFProcessing = {
+        carrIdMapping,
+        cfNameToCarrConfig: new Map(),
+      };
+
+      const config: MergedConfigInstance = {
+        custom_formats: [
+          {
+            trash_ids: ["test-cf-id"],
+            assign_scores_to: [{ name: "profile", score: 100 }],
+          },
+        ],
+        quality_profiles: [
+          {
+            name: "profile",
+            min_format_score: 0,
+            qualities: [],
+            quality_sort: "top",
+            upgrade: { allowed: true, until_quality: "HDTV-1080p", until_score: 1000 },
+            score_set: "default",
+          },
+        ],
+        customFormatDefinitions: [],
+        media_management: {},
+        media_naming: {},
+      };
+
+      const result = mapQualityProfiles(cfMap, config);
+      const profileScore = result.get("profile");
+      const cfScore = profileScore?.get("Test CF");
+
+      expect(cfScore?.score).toBe(100); // Should use explicit score
+    });
+
+    test("should prefer use_default_score over explicit score when both are set", async () => {
+      // When both use_default_score: true and score are set, use_default_score takes precedence
+      const carrIdMapping = new Map([
+        [
+          "test-cf-id",
+          {
+            carrConfig: {
+              configarr_id: "test-cf-id",
+              name: "Test CF",
+              configarr_scores: { default: 25 },
+            },
+            requestConfig: {},
+          },
+        ],
+      ]);
+
+      const cfMap: CFProcessing = {
+        carrIdMapping,
+        cfNameToCarrConfig: new Map(),
+      };
+
+      const config: MergedConfigInstance = {
+        custom_formats: [
+          {
+            trash_ids: ["test-cf-id"],
+            assign_scores_to: [{ name: "profile", score: 100, use_default_score: true }],
+          },
+        ],
+        quality_profiles: [
+          {
+            name: "profile",
+            min_format_score: 0,
+            qualities: [],
+            quality_sort: "top",
+            upgrade: { allowed: true, until_quality: "HDTV-1080p", until_score: 1000 },
+            score_set: "default",
+          },
+        ],
+        customFormatDefinitions: [],
+        media_management: {},
+        media_naming: {},
+      };
+
+      const result = mapQualityProfiles(cfMap, config);
+      const profileScore = result.get("profile");
+      const cfScore = profileScore?.get("Test CF");
+
+      expect(cfScore?.score).toBe(25); // Should use default score, ignoring explicit 100
+    });
+
+    test("should use default when no score and no use_default_score", async () => {
+      const carrIdMapping = new Map([
+        [
+          "test-cf-id",
+          {
+            carrConfig: {
+              configarr_id: "test-cf-id",
+              name: "Test CF",
+              configarr_scores: { default: 25 },
+            },
+            requestConfig: {},
+          },
+        ],
+      ]);
+
+      const cfMap: CFProcessing = {
+        carrIdMapping,
+        cfNameToCarrConfig: new Map(),
+      };
+
+      const config: MergedConfigInstance = {
+        custom_formats: [
+          {
+            trash_ids: ["test-cf-id"],
+            assign_scores_to: [{ name: "profile" }], // No score, no flag
+          },
+        ],
+        quality_profiles: [
+          {
+            name: "profile",
+            min_format_score: 0,
+            qualities: [],
+            quality_sort: "top",
+            upgrade: { allowed: true, until_quality: "HDTV-1080p", until_score: 1000 },
+            score_set: "default",
+          },
+        ],
+        customFormatDefinitions: [],
+        media_management: {},
+        media_naming: {},
+      };
+
+      const result = mapQualityProfiles(cfMap, config);
+      const profileScore = result.get("profile");
+      const cfScore = profileScore?.get("Test CF");
+
+      expect(cfScore?.score).toBe(25); // Should fall back to default
+    });
+
+    test("should use score_set when configured and no explicit score", async () => {
+      const carrIdMapping = new Map([
+        [
+          "test-cf-id",
+          {
+            carrConfig: {
+              configarr_id: "test-cf-id",
+              name: "Test CF",
+              configarr_scores: { default: 25, "anime-sonarr": 50 },
+            },
+            requestConfig: {},
+          },
+        ],
+      ]);
+
+      const cfMap: CFProcessing = {
+        carrIdMapping,
+        cfNameToCarrConfig: new Map(),
+      };
+
+      const config: MergedConfigInstance = {
+        custom_formats: [
+          {
+            trash_ids: ["test-cf-id"],
+            assign_scores_to: [{ name: "profile" }], // No score
+          },
+        ],
+        quality_profiles: [
+          {
+            name: "profile",
+            min_format_score: 0,
+            qualities: [],
+            quality_sort: "top",
+            upgrade: { allowed: true, until_quality: "HDTV-1080p", until_score: 1000 },
+            score_set: "anime-sonarr", // Use anime-sonarr score set
+          },
+        ],
+        customFormatDefinitions: [],
+        media_management: {},
+        media_naming: {},
+      };
+
+      const result = mapQualityProfiles(cfMap, config);
+      const profileScore = result.get("profile");
+      const cfScore = profileScore?.get("Test CF");
+
+      expect(cfScore?.score).toBe(50); // Should use score_set (anime-sonarr) score
+    });
+
+    test("use_default_score should ignore score_set", async () => {
+      const carrIdMapping = new Map([
+        [
+          "test-cf-id",
+          {
+            carrConfig: {
+              configarr_id: "test-cf-id",
+              name: "Test CF",
+              configarr_scores: { default: 25, "anime-sonarr": 50 },
+            },
+            requestConfig: {},
+          },
+        ],
+      ]);
+
+      const cfMap: CFProcessing = {
+        carrIdMapping,
+        cfNameToCarrConfig: new Map(),
+      };
+
+      const config: MergedConfigInstance = {
+        custom_formats: [
+          {
+            trash_ids: ["test-cf-id"],
+            assign_scores_to: [{ name: "profile", use_default_score: true }],
+          },
+        ],
+        quality_profiles: [
+          {
+            name: "profile",
+            min_format_score: 0,
+            qualities: [],
+            quality_sort: "top",
+            upgrade: { allowed: true, until_quality: "HDTV-1080p", until_score: 1000 },
+            score_set: "anime-sonarr",
+          },
+        ],
+        customFormatDefinitions: [],
+        media_management: {},
+        media_naming: {},
+      };
+
+      const result = mapQualityProfiles(cfMap, config);
+      const profileScore = result.get("profile");
+      const cfScore = profileScore?.get("Test CF");
+
+      expect(cfScore?.score).toBe(25); // Should use default, ignoring score_set
     });
   });
 });

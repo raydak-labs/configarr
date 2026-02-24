@@ -691,6 +691,181 @@ describe("custom_formats ordering", () => {
     expect(cf?.assign_scores_to?.[0]?.score).toBe(2);
   });
 
+  describe("use_default_score flag", () => {
+    test("should reset group score to default with use_default_score: true", async () => {
+      // Scenario: Group sets score 0, instance CF uses use_default_score: true to reset to default
+      const groupCF1 = { name: "test-cf", trash_id: "test-cf", required: true };
+      vi.spyOn(trashGuide, "loadTrashCustomFormatGroups").mockReturnValue(
+        Promise.resolve(new Map([["group1", { name: "group1", trash_id: "group1", custom_formats: [groupCF1] }]])),
+      );
+
+      const recyclarrTemplates: Map<string, MappedTemplates> = new Map();
+      vi.spyOn(reclarrImporter, "loadRecyclarrTemplates").mockReturnValue(recyclarrTemplates);
+      vi.spyOn(localImporter, "loadLocalRecyclarrTemplate").mockReturnValue(new Map());
+      vi.spyOn(trashGuide, "loadQPFromTrash").mockReturnValue(Promise.resolve(new Map()));
+
+      const inputConfig: InputConfigArrInstance = {
+        include: [],
+        custom_format_groups: [{ trash_guide: [{ id: "group1" }], assign_scores_to: [{ name: "profile", score: 0 }] }],
+        custom_formats: [{ trash_ids: ["test-cf"], assign_scores_to: [{ name: "profile", use_default_score: true }] }],
+        quality_profiles: [dummyProfile],
+        api_key: "test",
+        base_url: "http://sonarr:8989",
+      };
+
+      const result = await mergeConfigsAndTemplates({}, inputConfig, "SONARR");
+      const cf = result.config.custom_formats.find((cf) => cf.trash_ids?.includes("test-cf"));
+      expect(cf?.assign_scores_to?.[0]?.use_default_score).toBe(true);
+      expect(cf?.assign_scores_to?.[0]?.score).toBeUndefined();
+    });
+
+    test("should reset template score to default with use_default_score: true", async () => {
+      // Scenario: Template sets score 10, instance CF uses use_default_score: true to reset to default
+      const templateCF: InputConfigCustomFormat = {
+        trash_ids: ["test-cf"],
+        assign_scores_to: [{ name: "profile", score: 10 }],
+      };
+      const template1: MappedTemplates = { custom_formats: [templateCF] };
+
+      vi.spyOn(trashGuide, "loadTrashCustomFormatGroups").mockReturnValue(Promise.resolve(new Map()));
+      const recyclarrTemplates: Map<string, MappedTemplates> = new Map([["template1", template1]]);
+      vi.spyOn(reclarrImporter, "loadRecyclarrTemplates").mockReturnValue(recyclarrTemplates);
+      vi.spyOn(localImporter, "loadLocalRecyclarrTemplate").mockReturnValue(new Map());
+      vi.spyOn(trashGuide, "loadQPFromTrash").mockReturnValue(Promise.resolve(new Map()));
+
+      const inputConfig: InputConfigArrInstance = {
+        include: [{ template: "template1", source: "RECYCLARR" }],
+        custom_format_groups: [],
+        custom_formats: [{ trash_ids: ["test-cf"], assign_scores_to: [{ name: "profile", use_default_score: true }] }],
+        quality_profiles: [dummyProfile],
+        api_key: "test",
+        base_url: "http://sonarr:8989",
+      };
+
+      const result = await mergeConfigsAndTemplates({}, inputConfig, "SONARR");
+      const cf = result.config.custom_formats.find((cf) => cf.trash_ids?.includes("test-cf"));
+      expect(cf?.assign_scores_to?.[0]?.use_default_score).toBe(true);
+    });
+
+    test("should prefer use_default_score: true over explicit score in same entry", async () => {
+      // When both use_default_score: true and score are set, use_default_score takes precedence
+      vi.spyOn(trashGuide, "loadTrashCustomFormatGroups").mockReturnValue(Promise.resolve(new Map()));
+      vi.spyOn(reclarrImporter, "loadRecyclarrTemplates").mockReturnValue(new Map());
+      vi.spyOn(localImporter, "loadLocalRecyclarrTemplate").mockReturnValue(new Map());
+      vi.spyOn(trashGuide, "loadQPFromTrash").mockReturnValue(Promise.resolve(new Map()));
+
+      const inputConfig: InputConfigArrInstance = {
+        include: [],
+        custom_format_groups: [],
+        custom_formats: [
+          {
+            trash_ids: ["test-cf"],
+            assign_scores_to: [{ name: "profile", score: 100, use_default_score: true }],
+          },
+        ],
+        quality_profiles: [dummyProfile],
+        api_key: "test",
+        base_url: "http://sonarr:8989",
+      };
+
+      const result = await mergeConfigsAndTemplates({}, inputConfig, "SONARR");
+      const cf = result.config.custom_formats.find((cf) => cf.trash_ids?.includes("test-cf"));
+      expect(cf?.assign_scores_to?.[0]?.use_default_score).toBe(true);
+      // Score should be undefined when use_default_score is true
+      expect(cf?.assign_scores_to?.[0]?.score).toBeUndefined();
+    });
+
+    test("should not override score without use_default_score flag", async () => {
+      // Scenario: Group sets score 0, instance CF without use_default_score keeps score 0
+      const groupCF1 = { name: "test-cf", trash_id: "test-cf", required: true };
+      vi.spyOn(trashGuide, "loadTrashCustomFormatGroups").mockReturnValue(
+        Promise.resolve(new Map([["group1", { name: "group1", trash_id: "group1", custom_formats: [groupCF1] }]])),
+      );
+
+      vi.spyOn(reclarrImporter, "loadRecyclarrTemplates").mockReturnValue(new Map());
+      vi.spyOn(localImporter, "loadLocalRecyclarrTemplate").mockReturnValue(new Map());
+      vi.spyOn(trashGuide, "loadQPFromTrash").mockReturnValue(Promise.resolve(new Map()));
+
+      const inputConfig: InputConfigArrInstance = {
+        include: [],
+        custom_format_groups: [{ trash_guide: [{ id: "group1" }], assign_scores_to: [{ name: "profile", score: 0 }] }],
+        custom_formats: [{ trash_ids: ["test-cf"], assign_scores_to: [{ name: "profile" }] }], // no score, no flag
+        quality_profiles: [dummyProfile],
+        api_key: "test",
+        base_url: "http://sonarr:8989",
+      };
+
+      const result = await mergeConfigsAndTemplates({}, inputConfig, "SONARR");
+      const cf = result.config.custom_formats.find((cf) => cf.trash_ids?.includes("test-cf"));
+      // Without use_default_score, the group's score 0 should be kept
+      expect(cf?.assign_scores_to?.[0]?.score).toBe(0);
+      expect(cf?.assign_scores_to?.[0]?.use_default_score).toBeFalsy();
+    });
+
+    test("should allow explicit score to override use_default_score from earlier", async () => {
+      // Scenario: First entry has use_default_score: true, later entry has explicit score
+      vi.spyOn(trashGuide, "loadTrashCustomFormatGroups").mockReturnValue(Promise.resolve(new Map()));
+      vi.spyOn(reclarrImporter, "loadRecyclarrTemplates").mockReturnValue(new Map());
+      vi.spyOn(localImporter, "loadLocalRecyclarrTemplate").mockReturnValue(new Map());
+      vi.spyOn(trashGuide, "loadQPFromTrash").mockReturnValue(Promise.resolve(new Map()));
+
+      const inputConfig: InputConfigArrInstance = {
+        include: [],
+        custom_format_groups: [],
+        custom_formats: [
+          { trash_ids: ["test-cf"], assign_scores_to: [{ name: "profile", use_default_score: true }] },
+          { trash_ids: ["test-cf"], assign_scores_to: [{ name: "profile", score: 50 }] },
+        ],
+        quality_profiles: [dummyProfile],
+        api_key: "test",
+        base_url: "http://sonarr:8989",
+      };
+
+      const result = await mergeConfigsAndTemplates({}, inputConfig, "SONARR");
+      const cf = result.config.custom_formats.find((cf) => cf.trash_ids?.includes("test-cf"));
+      // Later explicit score should override use_default_score
+      expect(cf?.assign_scores_to?.[0]?.score).toBe(50);
+      expect(cf?.assign_scores_to?.[0]?.use_default_score).toBe(false);
+    });
+
+    test("complex scenario: template + group + instance with use_default_score", async () => {
+      // Scenario: Template sets score 10, group sets score 0, instance uses use_default_score
+      const groupCF1 = { name: "test-cf", trash_id: "test-cf", required: true };
+      vi.spyOn(trashGuide, "loadTrashCustomFormatGroups").mockReturnValue(
+        Promise.resolve(new Map([["group1", { name: "group1", trash_id: "group1", custom_formats: [groupCF1] }]])),
+      );
+
+      const templateCF: InputConfigCustomFormat = {
+        trash_ids: ["test-cf"],
+        assign_scores_to: [{ name: "profile", score: 10 }],
+      };
+      const template1: MappedTemplates = {
+        custom_formats: [templateCF],
+        custom_format_groups: [{ trash_guide: [{ id: "group1" }], assign_scores_to: [{ name: "profile" }] }],
+      };
+
+      const recyclarrTemplates: Map<string, MappedTemplates> = new Map([["template1", template1]]);
+      vi.spyOn(reclarrImporter, "loadRecyclarrTemplates").mockReturnValue(recyclarrTemplates);
+      vi.spyOn(localImporter, "loadLocalRecyclarrTemplate").mockReturnValue(new Map());
+      vi.spyOn(trashGuide, "loadQPFromTrash").mockReturnValue(Promise.resolve(new Map()));
+
+      const inputConfig: InputConfigArrInstance = {
+        include: [{ template: "template1", source: "RECYCLARR" }],
+        custom_format_groups: [],
+        custom_formats: [{ trash_ids: ["test-cf"], assign_scores_to: [{ name: "profile", use_default_score: true }] }],
+        quality_profiles: [dummyProfile],
+        api_key: "test",
+        base_url: "http://sonarr:8989",
+      };
+
+      const result = await mergeConfigsAndTemplates({}, inputConfig, "SONARR");
+      const cf = result.config.custom_formats.find((cf) => cf.trash_ids?.includes("test-cf"));
+      // use_default_score: true should reset to default, overriding all previous scores
+      expect(cf?.assign_scores_to?.[0]?.use_default_score).toBe(true);
+      expect(cf?.assign_scores_to?.[0]?.score).toBeUndefined();
+    });
+  });
+
   describe("CONFIGARR_ENABLE_MERGE (YAML merge keys)", () => {
     const configLocation = "/config/config.yml";
 
