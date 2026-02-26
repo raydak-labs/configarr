@@ -575,8 +575,13 @@ const includeTemplateOrderDefault = async (
   });
 };
 
+type MergedScoreInfo = {
+  score?: number;
+  use_default_score?: boolean;
+};
+
 const mergeAndReduceCustomFormats = (cfs: InputConfigCustomFormat[]) => {
-  const idToQualityProfileToScore = new Map<string, Map<string, number | undefined>>();
+  const idToQualityProfileToScore = new Map<string, Map<string, MergedScoreInfo>>();
 
   cfs.forEach((cf) => {
     if (!cf.trash_ids || cf.trash_ids.length === 0) {
@@ -594,21 +599,36 @@ const mergeAndReduceCustomFormats = (cfs: InputConfigCustomFormat[]) => {
       const existing = idToQualityProfileToScore.get(id)!;
 
       [...(cf.quality_profiles || []), ...(cf.assign_scores_to || [])].forEach((qp) => {
-        if (!existing.has(qp.name)) {
-          existing.set(qp.name, qp.score);
-        } else {
-          const currentScore = existing.get(qp.name);
+        const hasUseDefaultScore = qp.use_default_score === true;
 
-          if (qp.score != null && qp.score != currentScore) {
-            existing.set(qp.name, qp.score);
+        if (!existing.has(qp.name)) {
+          // If use_default_score is true, set score to undefined (will use default during resolution)
+          existing.set(qp.name, {
+            score: hasUseDefaultScore ? undefined : qp.score,
+            use_default_score: hasUseDefaultScore,
+          });
+        } else {
+          const current = existing.get(qp.name)!;
+
+          // If use_default_score is explicitly set to true, always override
+          if (hasUseDefaultScore) {
+            existing.set(qp.name, { score: undefined, use_default_score: true });
+          } else if (qp.score != null && qp.score != current.score) {
+            // If explicit score is set and different from current, update it
+            existing.set(qp.name, { score: qp.score, use_default_score: false });
           }
+          // Otherwise, keep existing value (passive - no override)
         }
       });
     });
   });
 
   return Array.from(idToQualityProfileToScore.entries()).map(([trashId, qualityProfiles]) => {
-    const assign_scores_to = Array.from(qualityProfiles.entries()).map(([name, score]) => ({ name, score }));
+    const assign_scores_to = Array.from(qualityProfiles.entries()).map(([name, info]) => ({
+      name,
+      score: info.score,
+      use_default_score: info.use_default_score,
+    }));
 
     const result: InputConfigCustomFormat = {
       trash_ids: [trashId],

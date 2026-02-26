@@ -78,8 +78,14 @@ export const mapQualityProfiles = ({ carrIdMapping }: CFProcessing, { custom_for
           score_set = carr.carrConfig.configarr_scores?.[profileScoreConfig.score_set];
         }
 
-        // TODO (1): Don't set to 0. If undefined will be handled by reset_unmatched_score. Or should we directly handle this here?
-        cfScore.score = profile.score ?? score_set ?? carr.carrConfig.configarr_scores?.default;
+        // If use_default_score is explicitly set to true, use the TRaSH Guide default score
+        // This overrides any explicit score set by groups or templates
+        if (profile.use_default_score === true) {
+          cfScore.score = carr.carrConfig.configarr_scores?.default;
+        } else {
+          // Normal score resolution: explicit score > score_set > default
+          cfScore.score = profile.score ?? score_set ?? carr.carrConfig.configarr_scores?.default;
+        }
       }
     }
   }

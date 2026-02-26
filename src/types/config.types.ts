@@ -49,8 +49,8 @@ export type InputConfigCustomFormat = {
   /**
    * @deprecated replaced with assign_scores_to
    */
-  quality_profiles?: { name: string; score?: number }[];
-  assign_scores_to?: { name: string; score?: number }[];
+  quality_profiles?: { name: string; score?: number; use_default_score?: boolean }[];
+  assign_scores_to?: { name: string; score?: number; use_default_score?: boolean }[];
 };
 
 export type InputConfigCustomFormatGroup = {
