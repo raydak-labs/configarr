@@ -80,7 +80,7 @@ export const mapQualityProfiles = ({ carrIdMapping }: CFProcessing, { custom_for
 
         // If use_default_score is explicitly set to true, use the TRaSH Guide default score
         // This overrides any explicit score set by groups or templates
-        if ("use_default_score" in profile && profile.use_default_score === true) {
+        if (profile.use_default_score === true) {
           cfScore.score = carr.carrConfig.configarr_scores?.default;
         } else {
           // Normal score resolution: explicit score > score_set > default

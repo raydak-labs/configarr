@@ -599,7 +599,7 @@ const mergeAndReduceCustomFormats = (cfs: InputConfigCustomFormat[]) => {
       const existing = idToQualityProfileToScore.get(id)!;
 
       [...(cf.quality_profiles || []), ...(cf.assign_scores_to || [])].forEach((qp) => {
-        const hasUseDefaultScore = "use_default_score" in qp && qp.use_default_score === true;
+        const hasUseDefaultScore = qp.use_default_score === true;
 
         if (!existing.has(qp.name)) {
           // If use_default_score is true, set score to undefined (will use default during resolution)
