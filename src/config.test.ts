@@ -1,6 +1,13 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import yaml from "yaml";
-import { getSecrets, mergeConfigsAndTemplates, readConfigRaw, resetSecretsCache, transformConfig } from "./config";
+import {
+  getSecrets,
+  isTrashQualityDefinition,
+  mergeConfigsAndTemplates,
+  readConfigRaw,
+  resetSecretsCache,
+  transformConfig,
+} from "./config";
 import * as env from "./env";
 import * as localImporter from "./local-importer";
 import * as reclarrImporter from "./recyclarr-importer";
@@ -1359,5 +1366,47 @@ describe("getSecrets", () => {
       VALID_KEY1: "value1",
       VALID_KEY2: "value2",
     });
+  });
+});
+
+describe("isTrashQualityDefinition", () => {
+  test("returns true for valid QD JSON", () => {
+    const qd = {
+      trash_id: "aed34b9f60ee115dfa7918b742336277",
+      type: "movie",
+      qualities: [{ quality: "Bluray-1080p", min: 5, preferred: 95, max: 100 }],
+    };
+    expect(isTrashQualityDefinition(qd)).toBe(true);
+  });
+
+  test("returns false for quality profile JSON (has items array)", () => {
+    const qp = {
+      trash_id: "abc",
+      name: "HD Bluray + WEB",
+      items: [{ name: "Bluray-1080p", allowed: true }],
+      formatItems: {},
+      upgradeAllowed: true,
+      cutoff: "Bluray-1080p",
+      minFormatScore: 0,
+      cutoffFormatScore: 10000,
+      trash_score_set: "default",
+    };
+    expect(isTrashQualityDefinition(qp)).toBe(false);
+  });
+
+  test("returns false for null", () => {
+    expect(isTrashQualityDefinition(null)).toBe(false);
+  });
+
+  test("returns false for non-object", () => {
+    expect(isTrashQualityDefinition("string")).toBe(false);
+  });
+
+  test("returns false for empty object", () => {
+    expect(isTrashQualityDefinition({})).toBe(false);
+  });
+
+  test("returns false when qualities array is empty", () => {
+    expect(isTrashQualityDefinition({ trash_id: "abc", qualities: [] })).toBe(false);
   });
 });

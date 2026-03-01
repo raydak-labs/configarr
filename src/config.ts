@@ -15,6 +15,7 @@ import {
   loadQPFromTrash,
   loadTrashCustomFormatGroups,
   transformTrashCFGroups,
+  transformTrashQDs,
   transformTrashQPCFGroups,
   transformTrashQPCFs,
   transformTrashQPToTemplate,
@@ -38,7 +39,7 @@ import {
   MergedConfigInstance,
 } from "./types/config.types";
 import { RemotePathConfigSchema } from "./remotePaths/remotePath.types";
-import { TrashCFGroupMapping, TrashQP } from "./types/trashguide.types";
+import { TrashCFGroupMapping, TrashQP, TrashQualityDefinition, TrashQualityDefinitionQuality } from "./types/trashguide.types";
 import { isUrl, loadTemplateFromUrl } from "./url-template-importer";
 import { cloneWithJSON } from "./util";
 
@@ -438,6 +439,31 @@ const includeTrashTemplate = (
   // Log how many CFs were loaded from groups
   logger.info(`Loaded ${numberOfCfsLoaded.size} default CFs from CF-Groups for TRaSH-Guide profile '${template.name}'`);
   mergedTemplates.custom_formats.push(...requiredCFsFromCFGroups);
+};
+
+export const isTrashQualityDefinition = (json: unknown): json is TrashQualityDefinition => {
+  if (typeof json !== "object" || json === null) return false;
+  const obj = json as Record<string, unknown>;
+  if (typeof obj.trash_id !== "string") return false;
+  if (!Array.isArray(obj.qualities) || obj.qualities.length === 0) return false;
+  if (Array.isArray((obj as Record<string, unknown>).items)) return false;
+  const firstQuality = obj.qualities[0] as Record<string, unknown>;
+  return typeof firstQuality?.quality === "string" && typeof firstQuality?.min === "number";
+};
+
+const applyQualityDefinitionFromInclude = (
+  qd: TrashQualityDefinition,
+  preferredRatio: number | undefined,
+  mergedTemplates: MappedMergedTemplates,
+): void => {
+  const qualities: TrashQualityDefinitionQuality[] =
+    preferredRatio != null && preferredRatio >= 0 && preferredRatio <= 1 ? transformTrashQDs(qd, preferredRatio) : qd.qualities;
+
+  mergedTemplates.quality_definition = {
+    ...mergedTemplates.quality_definition,
+    qualities: [...(mergedTemplates.quality_definition?.qualities || []), ...qualities],
+  };
+  logger.info(`QualityDefinition: Applied '${qd.type}' from include (${qualities.length} qualities).`);
 };
 
 const includeTemplateOrderDefault = async (
