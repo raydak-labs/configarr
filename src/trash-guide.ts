@@ -186,6 +186,26 @@ export const loadQualityDefinitionFromTrash = async (
   return loadJsonFile(filePath);
 };
 
+export const loadAllQDsFromTrash = async (arrType: TrashArrSupported): Promise<Map<string, TrashQualityDefinition>> => {
+  const trashPath = arrType === "RADARR" ? trashRepoPaths.radarrQualitySize : trashRepoPaths.sonarrQualitySize;
+  const map = new Map<string, TrashQualityDefinition>();
+
+  // Note: intentionally bypasses module-level cache — the pre-warmed cache only contains
+  // a subset of QD types (movie, series, anime). This function must load ALL files from
+  // the quality-size directory, including types not pre-cached (e.g. sqp-streaming, sqp-uhd).
+  try {
+    const files = fs.readdirSync(trashPath).filter((fn) => fn.endsWith(".json"));
+    for (const item of files) {
+      const qd = loadJsonFile<TrashQualityDefinition>(`${trashPath}/${item}`);
+      map.set(qd.trash_id, qd);
+    }
+  } catch (err: any) {
+    logger.warn(`(${arrType}) Failed loading TRaSH-Guides QualityDefinitions from quality-size. Continue without ...`, err?.message);
+  }
+
+  return map;
+};
+
 export const loadQPFromTrash = async (arrType: TrashArrSupported) => {
   let trashPath = arrType === "RADARR" ? trashRepoPaths.radarrQP : trashRepoPaths.sonarrQP;
 

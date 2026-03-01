@@ -1,6 +1,13 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import yaml from "yaml";
-import { getSecrets, mergeConfigsAndTemplates, readConfigRaw, resetSecretsCache, transformConfig } from "./config";
+import {
+  getSecrets,
+  isTrashQualityDefinition,
+  mergeConfigsAndTemplates,
+  readConfigRaw,
+  resetSecretsCache,
+  transformConfig,
+} from "./config";
 import * as env from "./env";
 import * as localImporter from "./local-importer";
 import * as reclarrImporter from "./recyclarr-importer";
@@ -13,7 +20,7 @@ import {
   InputConfigCustomFormat,
   InputConfigSchema,
 } from "./types/config.types";
-import { TrashQP } from "./types/trashguide.types";
+import { TrashQP, TrashQualityDefinition } from "./types/trashguide.types";
 import { cloneWithJSON } from "./util";
 
 // Mock ky for URL template tests
@@ -413,6 +420,111 @@ describe("mergeConfigsAndTemplates", () => {
     expect(mockKyGet).toHaveBeenCalledWith("https://example.com/trash-template.json", { timeout: 30000 });
     expect(result.config.quality_profiles.length).toBe(1);
     expect(result.config.quality_profiles[0]!.name).toBe("TRASH Profile");
+  });
+
+  test("should auto-detect QD JSON from TRASH URL and apply it to quality_definition", async () => {
+    const qdTemplate: TrashQualityDefinition = {
+      trash_id: "aed34b9f60ee115dfa7918b742336277",
+      type: "movie",
+      qualities: [
+        { quality: "HDTV-720p", min: 10, preferred: 50, max: 67 },
+        { quality: "Bluray-1080p", min: 17, preferred: 140, max: 400 },
+      ],
+    };
+
+    mockKyGet.mockResolvedValue({
+      text: async () => JSON.stringify(qdTemplate),
+    });
+
+    vi.spyOn(reclarrImporter, "loadRecyclarrTemplates").mockReturnValue(new Map());
+    vi.spyOn(localImporter, "loadLocalRecyclarrTemplate").mockReturnValue(new Map());
+    vi.spyOn(trashGuide, "loadQPFromTrash").mockReturnValue(Promise.resolve(new Map()));
+    vi.spyOn(trashGuide, "loadTrashCustomFormatGroups").mockReturnValue(Promise.resolve(new Map()));
+    vi.spyOn(trashGuide, "loadAllQDsFromTrash").mockReturnValue(Promise.resolve(new Map()));
+
+    const inputConfig: InputConfigArrInstance = {
+      include: [{ template: "https://example.com/quality-size.json", source: "TRASH" }],
+      custom_formats: [],
+      quality_profiles: [],
+      api_key: "test",
+      base_url: "http://radarr:7878",
+    };
+
+    const result = await mergeConfigsAndTemplates({}, inputConfig, "RADARR");
+
+    expect(mockKyGet).toHaveBeenCalledWith("https://example.com/quality-size.json", { timeout: 30000 });
+    expect(result.config.quality_definition).toBeDefined();
+    expect(result.config.quality_definition?.qualities).toHaveLength(2);
+    expect(result.config.quality_definition?.qualities?.[0]?.quality).toBe("HDTV-720p");
+    expect(result.config.quality_definition?.qualities?.[1]?.quality).toBe("Bluray-1080p");
+  });
+
+  test("should auto-detect QD JSON from TRASH URL and apply preferred_ratio", async () => {
+    const qdTemplate: TrashQualityDefinition = {
+      trash_id: "aed34b9f60ee115dfa7918b742336277",
+      type: "movie",
+      qualities: [{ quality: "Bluray-1080p", min: 0, preferred: 100, max: 400 }],
+    };
+
+    mockKyGet.mockResolvedValue({
+      text: async () => JSON.stringify(qdTemplate),
+    });
+
+    vi.spyOn(reclarrImporter, "loadRecyclarrTemplates").mockReturnValue(new Map());
+    vi.spyOn(localImporter, "loadLocalRecyclarrTemplate").mockReturnValue(new Map());
+    vi.spyOn(trashGuide, "loadQPFromTrash").mockReturnValue(Promise.resolve(new Map()));
+    vi.spyOn(trashGuide, "loadTrashCustomFormatGroups").mockReturnValue(Promise.resolve(new Map()));
+    vi.spyOn(trashGuide, "loadAllQDsFromTrash").mockReturnValue(Promise.resolve(new Map()));
+
+    const inputConfig: InputConfigArrInstance = {
+      include: [{ template: "https://example.com/quality-size.json", source: "TRASH", preferred_ratio: 0.5 }],
+      custom_formats: [],
+      quality_profiles: [],
+      api_key: "test",
+      base_url: "http://radarr:7878",
+    };
+
+    const result = await mergeConfigsAndTemplates({}, inputConfig, "RADARR");
+
+    expect(result.config.quality_definition).toBeDefined();
+    expect(result.config.quality_definition?.qualities).toHaveLength(1);
+    // preferred should be interpolated at ratio=0.5: min + (pref - min) * (0.5/0.5) = 0 + (100-0)*1 = 100
+    expect(result.config.quality_definition?.qualities?.[0]?.preferred).toBe(100);
+  });
+
+  test("should auto-detect QD from named TRASH include and apply it to quality_definition", async () => {
+    const trashId = "aed34b9f60ee115dfa7918b742336277";
+    const qdTemplate: TrashQualityDefinition = {
+      trash_id: trashId,
+      type: "movie",
+      qualities: [
+        { quality: "HDTV-720p", min: 10, preferred: 50, max: 67 },
+        { quality: "Bluray-1080p", min: 17, preferred: 140, max: 400 },
+      ],
+    };
+
+    const trashQDMap: Map<string, TrashQualityDefinition> = new Map([[trashId, qdTemplate]]);
+
+    vi.spyOn(reclarrImporter, "loadRecyclarrTemplates").mockReturnValue(new Map());
+    vi.spyOn(localImporter, "loadLocalRecyclarrTemplate").mockReturnValue(new Map());
+    vi.spyOn(trashGuide, "loadQPFromTrash").mockReturnValue(Promise.resolve(new Map()));
+    vi.spyOn(trashGuide, "loadAllQDsFromTrash").mockReturnValue(Promise.resolve(trashQDMap));
+    vi.spyOn(trashGuide, "loadTrashCustomFormatGroups").mockReturnValue(Promise.resolve(new Map()));
+
+    const inputConfig: InputConfigArrInstance = {
+      include: [{ template: trashId, source: "TRASH", preferred_ratio: 0.5 }],
+      custom_formats: [],
+      quality_profiles: [],
+      api_key: "test",
+      base_url: "http://radarr:7878",
+    };
+
+    const result = await mergeConfigsAndTemplates({}, inputConfig, "RADARR");
+
+    expect(result.config.quality_definition).toBeDefined();
+    expect(result.config.quality_definition?.qualities).toHaveLength(2);
+    expect(result.config.quality_definition?.qualities?.[0]?.quality).toBe("HDTV-720p");
+    expect(result.config.quality_definition?.qualities?.[1]?.quality).toBe("Bluray-1080p");
   });
 });
 
@@ -1359,5 +1471,47 @@ describe("getSecrets", () => {
       VALID_KEY1: "value1",
       VALID_KEY2: "value2",
     });
+  });
+});
+
+describe("isTrashQualityDefinition", () => {
+  test("returns true for valid QD JSON", () => {
+    const qd = {
+      trash_id: "aed34b9f60ee115dfa7918b742336277",
+      type: "movie",
+      qualities: [{ quality: "Bluray-1080p", min: 5, preferred: 95, max: 100 }],
+    };
+    expect(isTrashQualityDefinition(qd)).toBe(true);
+  });
+
+  test("returns false for quality profile JSON (has items array)", () => {
+    const qp = {
+      trash_id: "abc",
+      name: "HD Bluray + WEB",
+      items: [{ name: "Bluray-1080p", allowed: true }],
+      formatItems: {},
+      upgradeAllowed: true,
+      cutoff: "Bluray-1080p",
+      minFormatScore: 0,
+      cutoffFormatScore: 10000,
+      trash_score_set: "default",
+    };
+    expect(isTrashQualityDefinition(qp)).toBe(false);
+  });
+
+  test("returns false for null", () => {
+    expect(isTrashQualityDefinition(null)).toBe(false);
+  });
+
+  test("returns false for non-object", () => {
+    expect(isTrashQualityDefinition("string")).toBe(false);
+  });
+
+  test("returns false for empty object", () => {
+    expect(isTrashQualityDefinition({})).toBe(false);
+  });
+
+  test("returns false when qualities array is empty", () => {
+    expect(isTrashQualityDefinition({ trash_id: "abc", qualities: [] })).toBe(false);
   });
 });

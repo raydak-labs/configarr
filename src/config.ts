@@ -10,11 +10,13 @@ import { logger } from "./logger";
 import { filterInvalidQualityProfiles } from "./quality-profiles";
 import { loadRecyclarrTemplates } from "./recyclarr-importer";
 import {
+  loadAllQDsFromTrash,
   loadNamingFromTrashRadarr,
   loadNamingFromTrashSonarr,
   loadQPFromTrash,
   loadTrashCustomFormatGroups,
   transformTrashCFGroups,
+  transformTrashQDs,
   transformTrashQPCFGroups,
   transformTrashQPCFs,
   transformTrashQPToTemplate,
@@ -38,7 +40,7 @@ import {
   MergedConfigInstance,
 } from "./types/config.types";
 import { RemotePathConfigSchema } from "./remotePaths/remotePath.types";
-import { TrashCFGroupMapping, TrashQP } from "./types/trashguide.types";
+import { TrashCFGroupMapping, TrashQP, TrashQualityDefinition, TrashQualityDefinitionQuality } from "./types/trashguide.types";
 import { isUrl, loadTemplateFromUrl } from "./url-template-importer";
 import { cloneWithJSON } from "./util";
 
@@ -440,18 +442,45 @@ const includeTrashTemplate = (
   mergedTemplates.custom_formats.push(...requiredCFsFromCFGroups);
 };
 
+export const isTrashQualityDefinition = (json: unknown): json is TrashQualityDefinition => {
+  if (typeof json !== "object" || json === null) return false;
+  const obj = json as Record<string, unknown>;
+  if (typeof obj.trash_id !== "string") return false;
+  if (!Array.isArray(obj.qualities) || obj.qualities.length === 0) return false;
+  if (Array.isArray((obj as Record<string, unknown>).items)) return false;
+  const firstQuality = obj.qualities[0] as Record<string, unknown>;
+  return typeof firstQuality?.quality === "string" && typeof firstQuality?.min === "number";
+};
+
+const applyQualityDefinitionFromInclude = (
+  qd: TrashQualityDefinition,
+  preferredRatio: number | undefined,
+  mergedTemplates: MappedMergedTemplates,
+): void => {
+  const qualities: TrashQualityDefinitionQuality[] =
+    preferredRatio != null && preferredRatio >= 0 && preferredRatio <= 1 ? transformTrashQDs(qd, preferredRatio) : qd.qualities;
+
+  mergedTemplates.quality_definition = {
+    ...mergedTemplates.quality_definition,
+    qualities: [...(mergedTemplates.quality_definition?.qualities || []), ...qualities],
+  };
+  logger.info(`QualityDefinition: Applied '${qd.type}' from include (${qualities.length} qualities).`);
+};
+
 const includeTemplateOrderDefault = async (
   include: InputConfigIncludeItem[],
   {
     recyclarr,
     local,
     trash,
+    trashQD,
     trashCFGroupMapping,
     useExcludeSemantics,
   }: {
     recyclarr: Map<string, MappedTemplates>;
     local: Map<string, MappedTemplates>;
     trash: Map<string, TrashQP>;
+    trashQD: Map<string, TrashQualityDefinition>;
     trashCFGroupMapping: TrashCFGroupMapping;
     useExcludeSemantics: boolean;
   },
@@ -472,7 +501,7 @@ const includeTemplateOrderDefault = async (
 
       switch (current.source) {
         case "TRASH":
-          if (trash.has(current.template)) {
+          if (trash.has(current.template) || trashQD.has(current.template)) {
             previous.trash.push(current);
           } else {
             logger.warn(`Included 'TRASH' template: ${current.template} not found.`);
@@ -533,18 +562,29 @@ const includeTemplateOrderDefault = async (
 
     // Route to appropriate handler based on source
     if (e.source === "TRASH") {
-      includeTrashTemplate(resolvedTemplate as TrashQP, {
-        mergedTemplates,
-        trashCFGroupMapping,
-        customFormatGroups: [],
-        useExcludeSemantics,
-      });
+      if (isTrashQualityDefinition(resolvedTemplate)) {
+        applyQualityDefinitionFromInclude(resolvedTemplate, e.preferred_ratio, mergedTemplates);
+      } else {
+        includeTrashTemplate(resolvedTemplate as TrashQP, {
+          mergedTemplates,
+          trashCFGroupMapping,
+          customFormatGroups: [],
+          useExcludeSemantics,
+        });
+      }
     } else {
       includeRecyclarrTemplate(resolvedTemplate as MappedTemplates, { mergedTemplates, trashCFGroupMapping });
     }
   }
 
   mappedIncludes.trash.forEach((e) => {
+    // Check QD map first — quality definitions have a different structure than quality profiles
+    const qdTemplate = trashQD.get(e.template);
+    if (qdTemplate) {
+      applyQualityDefinitionFromInclude(qdTemplate, e.preferred_ratio, mergedTemplates);
+      return;
+    }
+
     const resolvedTemplate = trash.get(e.template);
     if (resolvedTemplate == null) {
       logger.warn(`Unknown 'trash' template requested: '${e.template}'`);
@@ -653,11 +693,13 @@ export const mergeConfigsAndTemplates = async (
   const localTemplateMap = loadLocalRecyclarrTemplate(arrType);
   let recyclarrTemplateMap: Map<string, MappedTemplates> = new Map();
   let trashTemplates: Map<string, TrashQP> = new Map();
+  let trashQDTemplates: Map<string, TrashQualityDefinition> = new Map();
   let trashCFGroupMapping: TrashCFGroupMapping = new Map();
   if (arrType === "RADARR" || arrType === "SONARR") {
     // TODO: separation maybe not the best. Maybe time to split up processing for each arrType
     recyclarrTemplateMap = loadRecyclarrTemplates(arrType);
     trashTemplates = await loadQPFromTrash(arrType);
+    trashQDTemplates = await loadAllQDsFromTrash(arrType);
     trashCFGroupMapping = await loadTrashCustomFormatGroups(arrType);
   }
   logger.debug(
@@ -678,6 +720,7 @@ export const mergeConfigsAndTemplates = async (
         recyclarr: recyclarrTemplateMap,
         local: localTemplateMap,
         trash: trashTemplates,
+        trashQD: trashQDTemplates,
         trashCFGroupMapping,
         useExcludeSemantics,
       },
