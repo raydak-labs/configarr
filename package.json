@@ -41,7 +41,7 @@
     "esbuild": "0.27.2",
     "prettier": "3.8.1",
     "release-it": "19.2.4",
-    "swagger-typescript-api": "13.2.16",
+    "swagger-typescript-api": "13.2.18",
     "typescript": "5.9.3",
     "vitest": "4.0.18"
   }
