@@ -39,14 +39,12 @@ describe("TrashGuide", async () => {
       expect(result.size).toBe(0);
     });
 
-    test("should return an empty map for SONARR when directory doesn't exist", async () => {
-      vi.spyOn(fs, "readdirSync").mockImplementation(() => {
-        throw new Error("ENOENT: no such file or directory");
+    test("returns empty map when loadJsonFile throws", async () => {
+      vi.spyOn(fs, "readdirSync").mockReturnValue(["movie.json"] as any);
+      vi.spyOn(util, "loadJsonFile").mockImplementation(() => {
+        throw new Error("parse error");
       });
-
-      const result = await loadAllQDsFromTrash("SONARR");
-
-      expect(result).toBeInstanceOf(Map);
+      const result = await loadAllQDsFromTrash("RADARR");
       expect(result.size).toBe(0);
     });
 

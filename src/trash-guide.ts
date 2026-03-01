@@ -190,6 +190,9 @@ export const loadAllQDsFromTrash = async (arrType: TrashArrSupported): Promise<M
   const trashPath = arrType === "RADARR" ? trashRepoPaths.radarrQualitySize : trashRepoPaths.sonarrQualitySize;
   const map = new Map<string, TrashQualityDefinition>();
 
+  // Note: intentionally bypasses module-level cache — the pre-warmed cache only contains
+  // a subset of QD types (movie, series, anime). This function must load ALL files from
+  // the quality-size directory, including types not pre-cached (e.g. sqp-streaming, sqp-uhd).
   try {
     const files = fs.readdirSync(trashPath).filter((fn) => fn.endsWith(".json"));
     for (const item of files) {
