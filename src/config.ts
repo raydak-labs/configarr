@@ -10,6 +10,7 @@ import { logger } from "./logger";
 import { filterInvalidQualityProfiles } from "./quality-profiles";
 import { loadRecyclarrTemplates } from "./recyclarr-importer";
 import {
+  loadAllQDsFromTrash,
   loadNamingFromTrashRadarr,
   loadNamingFromTrashSonarr,
   loadQPFromTrash,
@@ -472,12 +473,14 @@ const includeTemplateOrderDefault = async (
     recyclarr,
     local,
     trash,
+    trashQD,
     trashCFGroupMapping,
     useExcludeSemantics,
   }: {
     recyclarr: Map<string, MappedTemplates>;
     local: Map<string, MappedTemplates>;
     trash: Map<string, TrashQP>;
+    trashQD: Map<string, TrashQualityDefinition>;
     trashCFGroupMapping: TrashCFGroupMapping;
     useExcludeSemantics: boolean;
   },
@@ -559,12 +562,16 @@ const includeTemplateOrderDefault = async (
 
     // Route to appropriate handler based on source
     if (e.source === "TRASH") {
-      includeTrashTemplate(resolvedTemplate as TrashQP, {
-        mergedTemplates,
-        trashCFGroupMapping,
-        customFormatGroups: [],
-        useExcludeSemantics,
-      });
+      if (isTrashQualityDefinition(resolvedTemplate)) {
+        applyQualityDefinitionFromInclude(resolvedTemplate, e.preferred_ratio, mergedTemplates);
+      } else {
+        includeTrashTemplate(resolvedTemplate as TrashQP, {
+          mergedTemplates,
+          trashCFGroupMapping,
+          customFormatGroups: [],
+          useExcludeSemantics,
+        });
+      }
     } else {
       includeRecyclarrTemplate(resolvedTemplate as MappedTemplates, { mergedTemplates, trashCFGroupMapping });
     }
@@ -679,11 +686,13 @@ export const mergeConfigsAndTemplates = async (
   const localTemplateMap = loadLocalRecyclarrTemplate(arrType);
   let recyclarrTemplateMap: Map<string, MappedTemplates> = new Map();
   let trashTemplates: Map<string, TrashQP> = new Map();
+  let trashQDTemplates: Map<string, TrashQualityDefinition> = new Map();
   let trashCFGroupMapping: TrashCFGroupMapping = new Map();
   if (arrType === "RADARR" || arrType === "SONARR") {
     // TODO: separation maybe not the best. Maybe time to split up processing for each arrType
     recyclarrTemplateMap = loadRecyclarrTemplates(arrType);
     trashTemplates = await loadQPFromTrash(arrType);
+    trashQDTemplates = await loadAllQDsFromTrash(arrType);
     trashCFGroupMapping = await loadTrashCustomFormatGroups(arrType);
   }
   logger.debug(
@@ -704,6 +713,7 @@ export const mergeConfigsAndTemplates = async (
         recyclarr: recyclarrTemplateMap,
         local: localTemplateMap,
         trash: trashTemplates,
+        trashQD: trashQDTemplates,
         trashCFGroupMapping,
         useExcludeSemantics,
       },
