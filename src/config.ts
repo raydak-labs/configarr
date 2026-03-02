@@ -501,7 +501,7 @@ const includeTemplateOrderDefault = async (
 
       switch (current.source) {
         case "TRASH":
-          if (trash.has(current.template)) {
+          if (trash.has(current.template) || trashQD.has(current.template)) {
             previous.trash.push(current);
           } else {
             logger.warn(`Included 'TRASH' template: ${current.template} not found.`);
@@ -578,6 +578,13 @@ const includeTemplateOrderDefault = async (
   }
 
   mappedIncludes.trash.forEach((e) => {
+    // Check QD map first — quality definitions have a different structure than quality profiles
+    const qdTemplate = trashQD.get(e.template);
+    if (qdTemplate) {
+      applyQualityDefinitionFromInclude(qdTemplate, e.preferred_ratio, mergedTemplates);
+      return;
+    }
+
     const resolvedTemplate = trash.get(e.template);
     if (resolvedTemplate == null) {
       logger.warn(`Unknown 'trash' template requested: '${e.template}'`);
