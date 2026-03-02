@@ -294,31 +294,31 @@ The `type` value must match the filename (without `.json`) in the TRaSH-Guides
 
 **Radarr** — available `type` values:
 
-| `type` | Description |
-|---|---|
-| `movie` | Standard movie sizes |
-| `anime` | Anime movie sizes |
+| `type`          | Description                               |
+| --------------- | ----------------------------------------- |
+| `movie`         | Standard movie sizes                      |
+| `anime`         | Anime movie sizes                         |
 | `sqp-streaming` | Streaming Preferred quality profile sizes |
-| `sqp-uhd` | UHD Streaming quality profile sizes |
+| `sqp-uhd`       | UHD Streaming quality profile sizes       |
 
 **Sonarr** — available `type` values:
 
-| `type` | Description |
-|---|---|
+| `type`   | Description              |
+| -------- | ------------------------ |
 | `series` | Standard TV series sizes |
-| `anime` | Anime series sizes |
+| `anime`  | Anime series sizes       |
 
 ```yml
 radarr:
   instance1:
     quality_definition:
-      type: movie         # matches radarr/quality-size/movie.json
-      preferred_ratio: 0.5  # optional: 0.0 (min) to 1.0 (max), default uses TRaSH preferred
+      type: movie # matches radarr/quality-size/movie.json
+      preferred_ratio: 0.5 # optional: 0.0 (min) to 1.0 (max), default uses TRaSH preferred
 
 sonarr:
   instance1:
     quality_definition:
-      type: series        # matches sonarr/quality-size/series.json
+      type: series # matches sonarr/quality-size/series.json
 ```
 
 > **Hint:** `type` (filename-based) may be deprecated in favor of `trash_id` in a future version.
@@ -336,14 +336,14 @@ This works for both named trash_id references and URL templates.
 radarr:
   instance1:
     include:
-      - template: aed34b9f60ee115dfa7918b742336277  # movie quality definition
+      - template: aed34b9f60ee115dfa7918b742336277 # movie quality definition
         source: TRASH
-        preferred_ratio: 0.5  # optional: only applies when include resolves to a QD
+        preferred_ratio: 0.5 # optional: only applies when include resolves to a QD
 
 sonarr:
   instance1:
     include:
-      - template: bef99584217af744e404ed44a33af589  # series quality definition
+      - template: bef99584217af744e404ed44a33af589 # series quality definition
         source: TRASH
 ```
 
@@ -360,14 +360,14 @@ radarr:
 
 **trash_id reference table:**
 
-| Arr | `type` | `trash_id` |
-|---|---|---|
-| Radarr | `movie` | `aed34b9f60ee115dfa7918b742336277` |
-| Radarr | `anime` | `c2aa9540a57d273a9e03a538efe0ca1b` |
+| Arr    | `type`          | `trash_id`                         |
+| ------ | --------------- | ---------------------------------- |
+| Radarr | `movie`         | `aed34b9f60ee115dfa7918b742336277` |
+| Radarr | `anime`         | `c2aa9540a57d273a9e03a538efe0ca1b` |
 | Radarr | `sqp-streaming` | `8f1391784833965c476bb6aee95fe328` |
-| Radarr | `sqp-uhd` | `da8c8c0268b2f304be588132831543d2` |
-| Sonarr | `series` | `bef99584217af744e404ed44a33af589` |
-| Sonarr | `anime` | `387e6278d8e06083d813358762e0ac63` |
+| Radarr | `sqp-uhd`       | `da8c8c0268b2f304be588132831543d2` |
+| Sonarr | `series`        | `bef99584217af744e404ed44a33af589` |
+| Sonarr | `anime`         | `387e6278d8e06083d813358762e0ac63` |
 
 ### Method 3: Manual quality sizes
 
@@ -380,8 +380,8 @@ sonarr:
   instance1:
     quality_definition:
       qualities:
-        - quality: "HDTV-720p"  # must match the name shown in the *arr UI
-          title: AdjustedName    # optional: rename in UI
+        - quality: "HDTV-720p" # must match the name shown in the *arr UI
+          title: AdjustedName # optional: rename in UI
           min: 17.1
           preferred: 500
           max: 1000
