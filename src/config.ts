@@ -43,6 +43,7 @@ import { RemotePathConfigSchema } from "./remotePaths/remotePath.types";
 import { TrashCFGroupMapping, TrashQP, TrashQualityDefinition, TrashQualityDefinitionQuality } from "./types/trashguide.types";
 import { isUrl, loadTemplateFromUrl } from "./url-template-importer";
 import { cloneWithJSON } from "./util";
+import { z } from "zod";
 
 let config: ConfigSchema;
 let secrets: any;
@@ -442,14 +443,25 @@ const includeTrashTemplate = (
   mergedTemplates.custom_formats.push(...requiredCFsFromCFGroups);
 };
 
+const TrashQualityDefinitionQualitySchema = z.object({
+  quality: z.string(),
+  title: z.string().optional(),
+  min: z.number(),
+  preferred: z.number(),
+  max: z.number(),
+});
+
+const TrashQualityDefinitionSchema = z.object({
+  trash_id: z.string(),
+  type: z.string(),
+  qualities: z.array(TrashQualityDefinitionQualitySchema).min(1),
+});
+
 export const isTrashQualityDefinition = (json: unknown): json is TrashQualityDefinition => {
-  if (typeof json !== "object" || json === null) return false;
-  const obj = json as Record<string, unknown>;
-  if (typeof obj.trash_id !== "string") return false;
-  if (!Array.isArray(obj.qualities) || obj.qualities.length === 0) return false;
-  if (Array.isArray((obj as Record<string, unknown>).items)) return false;
-  const firstQuality = obj.qualities[0] as Record<string, unknown>;
-  return typeof firstQuality?.quality === "string" && typeof firstQuality?.min === "number";
+  const result = TrashQualityDefinitionSchema.safeParse(json);
+  if (!result.success) return false;
+  if (Array.isArray((json as Record<string, unknown>).items)) return false;
+  return true;
 };
 
 const applyQualityDefinitionFromInclude = (

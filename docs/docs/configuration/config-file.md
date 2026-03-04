@@ -285,7 +285,7 @@ The anchor (`qb_base: &qb_base`) can live at any level, inside a different key (
 ## Quality Definition / Size
 
 Quality definitions control the min/max/preferred file sizes for each quality level.
-There are two ways to configure them:
+There are three ways to configure them:
 
 ### Method 1: Reference a TRaSH-Guides definition by type (classic)
 

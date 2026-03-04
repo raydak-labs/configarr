@@ -196,11 +196,17 @@ export const loadAllQDsFromTrash = async (arrType: TrashArrSupported): Promise<M
   try {
     const files = fs.readdirSync(trashPath).filter((fn) => fn.endsWith(".json"));
     for (const item of files) {
-      const qd = loadJsonFile<TrashQualityDefinition>(`${trashPath}/${item}`);
-      map.set(qd.trash_id, qd);
+      try {
+        const qd = loadJsonFile<TrashQualityDefinition>(`${trashPath}/${item}`);
+        map.set(qd.trash_id, qd);
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        logger.warn(`(${arrType}) Failed loading TRaSH-Guides QualityDefinition from '${item}'. Skipping. ${message}`);
+      }
     }
-  } catch (err: any) {
-    logger.warn(`(${arrType}) Failed loading TRaSH-Guides QualityDefinitions from quality-size. Continue without ...`, err?.message);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    logger.warn(`(${arrType}) Failed loading TRaSH-Guides QualityDefinitions from quality-size. Continue without ... ${message}`);
   }
 
   return map;

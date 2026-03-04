@@ -39,7 +39,24 @@ describe("TrashGuide", async () => {
       expect(result.size).toBe(0);
     });
 
-    test("returns empty map when loadJsonFile throws", async () => {
+    test("skips single bad file and loads the rest", async () => {
+      const mockQD: TrashQualityDefinition = {
+        trash_id: "id-anime",
+        type: "anime",
+        qualities: [],
+      };
+      vi.spyOn(fs, "readdirSync").mockReturnValue(["movie.json", "anime.json"] as any);
+      vi.spyOn(util, "loadJsonFile")
+        .mockImplementationOnce(() => {
+          throw new Error("parse error");
+        })
+        .mockReturnValueOnce(mockQD);
+      const result = await loadAllQDsFromTrash("RADARR");
+      expect(result.size).toBe(1);
+      expect(result.get("id-anime")).toEqual(mockQD);
+    });
+
+    test("returns empty map when all loadJsonFile calls throw", async () => {
       vi.spyOn(fs, "readdirSync").mockReturnValue(["movie.json"] as any);
       vi.spyOn(util, "loadJsonFile").mockImplementation(() => {
         throw new Error("parse error");

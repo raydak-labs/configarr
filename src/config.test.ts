@@ -1514,4 +1514,31 @@ describe("isTrashQualityDefinition", () => {
   test("returns false when qualities array is empty", () => {
     expect(isTrashQualityDefinition({ trash_id: "abc", qualities: [] })).toBe(false);
   });
+
+  test("returns false when first quality has missing or wrong-type preferred/max", () => {
+    expect(
+      isTrashQualityDefinition({
+        trash_id: "abc",
+        type: "movie",
+        qualities: [{ quality: "Bluray-1080p", min: 5 }],
+      }),
+    ).toBe(false);
+    expect(
+      isTrashQualityDefinition({
+        trash_id: "abc",
+        type: "movie",
+        qualities: [{ quality: "Bluray-1080p", min: 5, preferred: "95", max: 100 }],
+      }),
+    ).toBe(false);
+  });
+
+  test("returns false when a non-first quality is malformed", () => {
+    expect(
+      isTrashQualityDefinition({
+        trash_id: "abc",
+        type: "movie",
+        qualities: [{ quality: "SDTV", min: 2, preferred: 50, max: 100 }, { quality: "HDTV-720p" }],
+      }),
+    ).toBe(false);
+  });
 });
