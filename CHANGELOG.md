@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.24.0](https://github.com/raydak-labs/configarr/compare/v1.23.0...v1.24.0) (2026-03-09)
+
+### Features
+
+- add use_default_score flag to override CF scores ([#397](https://github.com/raydak-labs/configarr/issues/397)) ([3d7deeb](https://github.com/raydak-labs/configarr/commit/3d7deebd0fd5b57be34bbcec1955c02e3953fa1d))
+
+### Bug Fixes
+
+- correctly handle new profiles with not allowed upgrades ([5a3d8c1](https://github.com/raydak-labs/configarr/commit/5a3d8c1aa0e6b84808d32ff351cc16fca393664a)), closes [#408](https://github.com/raydak-labs/configarr/issues/408)
+- **deps:** update dependencies (non-major) ([c3eb357](https://github.com/raydak-labs/configarr/commit/c3eb35730cc02bf1d1f3945789a93b6b84e6890a))
+
+### (internal) Refactorings
+
+- adjust example runs ([8e3ec43](https://github.com/raydak-labs/configarr/commit/8e3ec434e9ee3b451b7757dd42731c3ad1b8e490))
+
 ## [1.23.0](https://github.com/raydak-labs/configarr/compare/v1.22.0...v1.23.0) (2026-02-23)
 
 ### Features
