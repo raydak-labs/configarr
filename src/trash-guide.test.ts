@@ -1,9 +1,94 @@
-import { describe, expect, test } from "vitest";
-import { loadQPFromTrash, transformTrashCFGroups, transformTrashQDs, transformTrashQPCFGroups } from "./trash-guide";
+import fs from "node:fs";
+import { beforeEach, describe, expect, test, vi } from "vitest";
+import { loadAllQDsFromTrash, loadQPFromTrash, transformTrashCFGroups, transformTrashQDs, transformTrashQPCFGroups } from "./trash-guide";
 import { InputConfigCustomFormatGroup } from "./types/config.types";
 import { TrashCFGroupMapping, TrashQualityDefinition, TrashQP } from "./types/trashguide.types";
+import * as util from "./util";
 
 describe("TrashGuide", async () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  describe("loadAllQDsFromTrash", () => {
+    test("should return a Map instance for a valid arrType", async () => {
+      const mockQD: TrashQualityDefinition = {
+        trash_id: "aed34b9f60ee115dfa7918b742336277",
+        type: "movie",
+        qualities: [{ quality: "SDTV", min: 2, preferred: 95, max: 100 }],
+      };
+
+      vi.spyOn(fs, "readdirSync").mockReturnValue(["movie.json"] as any);
+      vi.spyOn(util, "loadJsonFile").mockReturnValueOnce(mockQD);
+
+      const result = await loadAllQDsFromTrash("RADARR");
+
+      expect(result).toBeInstanceOf(Map);
+      expect(result.size).toBe(1);
+      expect(result.get("aed34b9f60ee115dfa7918b742336277")).toEqual(mockQD);
+    });
+
+    test("should return an empty map when the directory doesn't exist", async () => {
+      vi.spyOn(fs, "readdirSync").mockImplementation(() => {
+        throw new Error("ENOENT: no such file or directory");
+      });
+
+      const result = await loadAllQDsFromTrash("RADARR");
+
+      expect(result).toBeInstanceOf(Map);
+      expect(result.size).toBe(0);
+    });
+
+    test("skips single bad file and loads the rest", async () => {
+      const mockQD: TrashQualityDefinition = {
+        trash_id: "id-anime",
+        type: "anime",
+        qualities: [],
+      };
+      vi.spyOn(fs, "readdirSync").mockReturnValue(["movie.json", "anime.json"] as any);
+      vi.spyOn(util, "loadJsonFile")
+        .mockImplementationOnce(() => {
+          throw new Error("parse error");
+        })
+        .mockReturnValueOnce(mockQD);
+      const result = await loadAllQDsFromTrash("RADARR");
+      expect(result.size).toBe(1);
+      expect(result.get("id-anime")).toEqual(mockQD);
+    });
+
+    test("returns empty map when all loadJsonFile calls throw", async () => {
+      vi.spyOn(fs, "readdirSync").mockReturnValue(["movie.json"] as any);
+      vi.spyOn(util, "loadJsonFile").mockImplementation(() => {
+        throw new Error("parse error");
+      });
+      const result = await loadAllQDsFromTrash("RADARR");
+      expect(result.size).toBe(0);
+    });
+
+    test("should load multiple QD files and key by trash_id", async () => {
+      const mockQD1: TrashQualityDefinition = {
+        trash_id: "id-movie",
+        type: "movie",
+        qualities: [],
+      };
+      const mockQD2: TrashQualityDefinition = {
+        trash_id: "id-anime",
+        type: "anime",
+        qualities: [],
+      };
+
+      vi.spyOn(fs, "readdirSync").mockReturnValue(["movie.json", "anime.json"] as any);
+      vi.spyOn(util, "loadJsonFile").mockReturnValueOnce(mockQD1).mockReturnValueOnce(mockQD2);
+
+      const result = await loadAllQDsFromTrash("RADARR");
+
+      expect(result).toBeInstanceOf(Map);
+      expect(result.size).toBe(2);
+      expect(result.get("id-movie")).toEqual(mockQD1);
+      expect(result.get("id-anime")).toEqual(mockQD2);
+    });
+  });
+
   test("loadQPFromTrash - normal", async ({}) => {
     const results = await loadQPFromTrash("RADARR");
 
