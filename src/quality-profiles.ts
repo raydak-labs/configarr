@@ -259,6 +259,44 @@ export const isOrderOfConfigQualitiesEqual = (obj1: ConfigQualityProfileItem[], 
  * @param serverCache
  * @returns
  */
+
+/**
+ * Resolves the cutoff ID to use when upgrades are disabled.
+ * Prefers `untilQuality` when provided; falls back to the highest-priority
+ * allowed quality in the mapped list. Throws when no allowed quality exists.
+ */
+const getDisabledUpgradeCutoff = (
+  mappedQualities: MergedQualityProfileQualityItemResource[],
+  qualityToId: Map<string, number>,
+  untilQuality: string | undefined,
+  profileName: string,
+): number => {
+  if (untilQuality != null) {
+    const id = qualityToId.get(untilQuality);
+    if (id != null) return id;
+  }
+
+  // mappedQualities is in API order (reversed from config), so the last item is
+  // the highest-priority quality in user config.
+  const fallback = mappedQualities
+    .slice()
+    .reverse()
+    .find((e) => e.allowed);
+  const fallbackId = fallback?.id ?? fallback?.quality?.id;
+
+  if (fallbackId == null) {
+    throw new Error(`QualityProfile '${profileName}': no allowed quality found to use as cutoff when upgrade is disabled`);
+  }
+
+  if (untilQuality == null) {
+    logger.debug(
+      `QualityProfile '${profileName}': upgrade.until_quality not specified; using highest-priority allowed quality as cutoff (id=${fallbackId})`,
+    );
+  }
+
+  return fallbackId;
+};
+
 export const calculateQualityProfilesDiff = async (
   arrType: ArrType,
   cfMap: CFProcessing,
@@ -345,6 +383,10 @@ export const calculateQualityProfilesDiff = async (
       };
 
       if (value.upgrade.allowed) {
+        if (value.upgrade.until_quality == null) {
+          throw new Error(`QualityProfile '${name}': upgrade.until_quality is required when upgrade.allowed is true`);
+        }
+
         Object.assign<MergedQualityProfileResource, MergedQualityProfileResource | null | undefined>(newP, {
           cutoff: qualityToId.get(value.upgrade.until_quality),
           cutoffFormatScore: value.upgrade.until_score,
@@ -352,8 +394,10 @@ export const calculateQualityProfilesDiff = async (
           minUpgradeFormatScore: value.upgrade.min_format_score ?? 1,
         });
       } else {
+        const cutoffId = getDisabledUpgradeCutoff(mappedQualities, qualityToId, value.upgrade.until_quality, name);
+
         Object.assign<MergedQualityProfileResource, MergedQualityProfileResource | null | undefined>(newP, {
-          cutoff: qualityToId.get(mappedQualities.find((e) => e.allowed)?.quality?.name!),
+          cutoff: cutoffId,
           cutoffFormatScore: 1,
           minUpgradeFormatScore: 1,
           upgradeAllowed: false,
@@ -416,6 +460,10 @@ export const calculateQualityProfilesDiff = async (
 
       // Further diffs only necessary if upgrade is allowed
       if (value.upgrade.allowed) {
+        if (value.upgrade.until_quality == null) {
+          throw new Error(`QualityProfile '${name}': upgrade.until_quality is required when upgrade.allowed is true`);
+        }
+
         const upgradeUntil = qualityToId.get(value.upgrade.until_quality);
 
         if (upgradeUntil == null) {
@@ -445,6 +493,26 @@ export const calculateQualityProfilesDiff = async (
           changeList.push(
             `Min upgrade format score diff: server: ${serverMatch.cutoffFormatScore} - expected: ${configMinUpgradeFormatScore}`,
           );
+        }
+      } else {
+        const cutoffId = getDisabledUpgradeCutoff(mappedQualities, qualityToId, value.upgrade.until_quality, name);
+
+        if (serverMatch.cutoff !== cutoffId) {
+          updatedServerObject.cutoff = cutoffId;
+          diffExist = true;
+          changeList.push(`Cutoff diff for upgrade disabled: server: ${serverMatch.cutoff} - expected: ${cutoffId}`);
+        }
+
+        if (serverMatch.cutoffFormatScore !== 1) {
+          updatedServerObject.cutoffFormatScore = 1;
+          diffExist = true;
+          changeList.push(`CutoffFormatScore diff for upgrade disabled: server: ${serverMatch.cutoffFormatScore} - expected: 1`);
+        }
+
+        if (serverMatch.minUpgradeFormatScore !== 1) {
+          updatedServerObject.minUpgradeFormatScore = 1;
+          diffExist = true;
+          changeList.push(`MinUpgradeFormatScore diff for upgrade disabled: server: ${serverMatch.minUpgradeFormatScore} - expected: 1`);
         }
       }
     }

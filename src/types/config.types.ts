@@ -348,12 +348,19 @@ export type InputConfigQualityProfile = {
     enabled: boolean;
     except?: string[];
   };
-  upgrade?: {
-    allowed: boolean;
-    until_quality: string;
-    until_score: number;
-    min_format_score?: number; // default 1
-  };
+  upgrade?:
+    | {
+        allowed: true;
+        until_quality: string;
+        until_score: number;
+        min_format_score?: number; // default 1
+      }
+    | {
+        allowed: false;
+        until_quality?: string;
+        until_score?: number;
+        min_format_score?: number;
+      };
   min_format_score?: number;
   score_set?: keyof TrashScores;
   quality_sort?: string;
