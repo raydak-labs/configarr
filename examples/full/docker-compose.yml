@@ -24,6 +24,8 @@ services:
       - TZ=Etc/UTC
     volumes:
       - radarr:/config
+      - radarr-download1:/downloads/1
+      - radarr-download2:/downloads/2
       - ${PWD}/radarr.xml:/config/config.xml:rw
     ports:
       - 6501:7878
@@ -88,3 +90,5 @@ volumes:
   whisparr:
   readarr:
   lidarr:
+  radarr-download1:
+  radarr-download2:
