@@ -39,14 +39,15 @@ pkgs.stdenvNoCC.mkDerivation (finalAttrs: {
   nativeBuildInputs = [
     pkgs.makeBinaryWrapper
     pkgs.nodejs_24
-    pkgs.pnpm.configHook
+    pkgs.pnpm
+    pkgs.pnpmConfigHook
   ];
 
   pname = "configarr";
 
-  pnpmDeps = pkgs.pnpm.fetchDeps {
+  pnpmDeps = pkgs.fetchPnpmDeps {
     fetcherVersion = 1;
-    hash = "sha256-0P5gT29uLCmm10Xerk9ZVblEoauTEd9jzi0jseO3Ojc=";
+    hash = "sha256-qH2H7sJ3rMWutPUSpBtBTtIxQqwEUXFCyj+eoygdfjg=";
     inherit (finalAttrs) pname src version;
   };
 
@@ -54,8 +55,8 @@ pkgs.stdenvNoCC.mkDerivation (finalAttrs: {
     owner = "raydak-labs";
     repo = "configarr";
     rev = "v${finalAttrs.version}";
-    hash = "sha256-fgv6wiK5wh0jAczJWy3Iqs3OK81ckNr3bOZD32bTCQQ=";
+    hash = "sha256-Kd8EY+qTLv9AQGdLjqW2iU215g/ay9EKcMzTZej9dZk=";
   };
 
-  version = "1.17.2";
+  version = "1.24.0";
 })
