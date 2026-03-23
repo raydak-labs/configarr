@@ -133,6 +133,28 @@ env:
 
 When this variable is set, Configarr will perform standard git clones without the `--filter=blob:none` or `--sparse` options, which should work with older kernel versions.
 
+If your kernel is very old and the error still happens (for example `unable to get random bytes for temporary file: Function not implemented`), use the legacy-kernel image tag which is built on Debian slim instead of Alpine:
+
+```yaml
+services:
+  configarr:
+    image: ghcr.io/raydak-labs/configarr:<version>-legacy-kernel
+```
+
+Example:
+
+```yaml
+image: ghcr.io/raydak-labs/configarr:v1.23.0-legacy-kernel
+```
+
+You can also test an Alpine-pinned variant:
+
+```yaml
+image: ghcr.io/raydak-labs/configarr:v1.23.0-alpine3.22
+```
+
+This keeps Alpine but pins the base to `alpine3.22` for compatibility testing.
+
 Reference issues:
 
 - https://github.com/raydak-labs/configarr/issues/367
