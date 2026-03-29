@@ -66,3 +66,19 @@ ARG CONFIGARR_VERSION=dev
 ENV CONFIGARR_VERSION=${CONFIGARR_VERSION}
 # Run with dumb-init to not start node with PID=1, since Node.js was not designed to run as PID 1
 CMD ["dumb-init", "node", "index.js"]
+
+# Compatibility target pinned to Alpine 3.22.
+# Useful for testing old-kernel behavior with a fixed Alpine/git stack.
+FROM node:24.14.0-alpine3.22 AS prod-alpine-3-22
+WORKDIR /app
+
+RUN apk add --no-cache libstdc++ dumb-init git
+
+# Allow global git access independent of container user and directory user. See #240, #241
+RUN git config --global --add safe.directory '*'
+
+COPY --from=builder /app/bundle.cjs /app/index.js
+
+ARG CONFIGARR_VERSION=dev
+ENV CONFIGARR_VERSION=${CONFIGARR_VERSION}
+CMD ["dumb-init", "node", "index.js"]
