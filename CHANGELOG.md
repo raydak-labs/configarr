@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.24.1](https://github.com/raydak-labs/configarr/compare/v1.24.0...v1.24.1) (2026-03-29)
+
+### Bug Fixes
+
+- introduce alpine3.22 images ([#411](https://github.com/raydak-labs/configarr/issues/411)) ([7f6a899](https://github.com/raydak-labs/configarr/commit/7f6a899ffab8f962d34e58d98c7d3f8f68342ff5))
+
 ## [1.24.0](https://github.com/raydak-labs/configarr/compare/v1.23.0...v1.24.0) (2026-03-09)
 
 ### Features
