@@ -126,38 +126,6 @@ jobs:
             GITHUB_REPO=${{ steps.vars.outputs.repo }}
             GITHUB_SHA=${{ steps.vars.outputs.sha }}
 
-      - name: Docker meta for legacy-kernel image
-        id: meta_legacy
-        uses: docker/metadata-action@v5
-        with:
-          images: |
-            ghcr.io/raydak-labs/configarr
-            docker.io/configarr/configarr,enable=${{ steps.set_platforms.outputs.MANUAL_RUN == 'false' }}
-          tags: |
-            type=ref,event=branch,prefix=dev-,suffix=-legacy-kernel,enable=${{ steps.set_platforms.outputs.MANUAL_RUN == 'true' }}
-            type=schedule,suffix=-legacy-kernel,enable=${{ steps.set_platforms.outputs.MANUAL_RUN == 'false' }}
-            type=ref,event=branch,suffix=-legacy-kernel,enable=${{ steps.set_platforms.outputs.MANUAL_RUN == 'false' }}
-            type=semver,pattern={{version}},suffix=-legacy-kernel,enable=${{ steps.set_platforms.outputs.MANUAL_RUN == 'false' }}
-            type=semver,pattern={{major}}.{{minor}},suffix=-legacy-kernel,enable=${{ steps.set_platforms.outputs.MANUAL_RUN == 'false' }}
-            type=semver,pattern={{major}},suffix=-legacy-kernel,enable=${{ steps.set_platforms.outputs.MANUAL_RUN == 'false' }}
-
-      - name: Build and push legacy-kernel image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: ./Dockerfile
-          platforms: ${{ steps.set_platforms.outputs.platforms }}
-          push: ${{ steps.set_platforms.outputs.push }}
-          tags: ${{ steps.meta_legacy.outputs.tags }}
-          labels: ${{ steps.meta_legacy.outputs.labels }}
-          target: prod-legacy-kernel
-          build-args: |
-            CONFIGARR_VERSION=${{ steps.vars.outputs.version }}
-            BUILD_TIME=${{ steps.vars.outputs.build_time }}
-            GITHUB_RUN_ID=${{ steps.vars.outputs.run_id }}
-            GITHUB_REPO=${{ steps.vars.outputs.repo }}
-            GITHUB_SHA=${{ steps.vars.outputs.sha }}
-
       - name: Docker meta for alpine3.22 image
         id: meta_alpine322
         uses: docker/metadata-action@v5
