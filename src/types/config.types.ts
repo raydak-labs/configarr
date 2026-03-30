@@ -402,6 +402,11 @@ export type InputConfigIncludeItem = {
   // depends on source what this actually is. Can be the filename -> recyclarr or id in the files -> trash
   template: string;
   source?: "TRASH" | "RECYCLARR";
+  /**
+   * Optional preferred ratio (0.0 - 1.0) applied when this include resolves to a
+   * TRaSH quality definition. Has no effect for quality profile includes.
+   */
+  preferred_ratio?: number;
 };
 
 export type ConfigSchema = InputConfigSchema;

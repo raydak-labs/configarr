@@ -284,26 +284,109 @@ The anchor (`qb_base: &qb_base`) can live at any level, inside a different key (
 
 ## Quality Definition / Size
 
-Support has been added to allow configuring quality definitions manually if required.
-(Hint: Currently evaluation if the current function with `type: string` which represents the filename in the TRaSH-Guide should be deprecated in favor of the more consistent `trash_id`. See [Github Issue](https://github.com/raydak-labs/configarr/issues/155)).
+Quality definitions control the min/max/preferred file sizes for each quality level.
+There are three ways to configure them:
+
+### Method 1: Reference a TRaSH-Guides definition by type (classic)
+
+The `type` value must match the filename (without `.json`) in the TRaSH-Guides
+[`quality-size`](https://github.com/TRaSH-Guides/Guides/tree/master/docs/json) directory.
+
+**Radarr** — available `type` values:
+
+| `type`          | Description                               |
+| --------------- | ----------------------------------------- |
+| `movie`         | Standard movie sizes                      |
+| `anime`         | Anime movie sizes                         |
+| `sqp-streaming` | Streaming Preferred quality profile sizes |
+| `sqp-uhd`       | UHD Streaming quality profile sizes       |
+
+**Sonarr** — available `type` values:
+
+| `type`   | Description              |
+| -------- | ------------------------ |
+| `series` | Standard TV series sizes |
+| `anime`  | Anime series sizes       |
 
 ```yml
-# ...
+radarr:
+  instance1:
+    quality_definition:
+      type: movie # matches radarr/quality-size/movie.json
+      preferred_ratio: 0.5 # optional: 0.0 (min) to 1.0 (max), default uses TRaSH preferred
 
 sonarr:
   instance1:
-    # ...
+    quality_definition:
+      type: series # matches sonarr/quality-size/series.json
+```
+
+> **Hint:** `type` (filename-based) may be deprecated in favor of `trash_id` in a future version.
+> See [GitHub Issue #155](https://github.com/raydak-labs/configarr/issues/155).
+
+### Method 2: Include a quality definition via `include` (auto-detected)
+
+When you include a TRaSH JSON file with `source: TRASH`, Configarr automatically detects
+whether it is a quality profile or a quality definition and routes it accordingly.
+This works for both named trash_id references and URL templates.
+
+**By trash_id:**
+
+```yml
+radarr:
+  instance1:
+    include:
+      - template: aed34b9f60ee115dfa7918b742336277 # movie quality definition
+        source: TRASH
+        preferred_ratio: 0.5 # optional: only applies when include resolves to a QD
+
+sonarr:
+  instance1:
+    include:
+      - template: bef99584217af744e404ed44a33af589 # series quality definition
+        source: TRASH
+```
+
+**By URL:**
+
+```yml
+radarr:
+  instance1:
+    include:
+      - template: https://raw.githubusercontent.com/TRaSH-Guides/Guides/master/docs/json/radarr/quality-size/movie.json
+        source: TRASH
+        preferred_ratio: 0.5
+```
+
+**trash_id reference table:**
+
+| Arr    | `type`          | `trash_id`                         |
+| ------ | --------------- | ---------------------------------- |
+| Radarr | `movie`         | `aed34b9f60ee115dfa7918b742336277` |
+| Radarr | `anime`         | `c2aa9540a57d273a9e03a538efe0ca1b` |
+| Radarr | `sqp-streaming` | `8f1391784833965c476bb6aee95fe328` |
+| Radarr | `sqp-uhd`       | `da8c8c0268b2f304be588132831543d2` |
+| Sonarr | `series`        | `bef99584217af744e404ed44a33af589` |
+| Sonarr | `anime`         | `387e6278d8e06083d813358762e0ac63` |
+
+### Method 3: Manual quality sizes
+
+Override individual quality sizes directly — useful for fine-tuning without loading
+a full TRaSH definition. Can be combined with either method above (manual entries are
+applied last and take precedence for matching quality names).
+
+```yml
+sonarr:
+  instance1:
     quality_definition:
       qualities:
-        - quality: "HDTV-720p" # this must always match with the available name / identifier in the *arr
-          title: AdjustedName # optional
+        - quality: "HDTV-720p" # must match the name shown in the *arr UI
+          title: AdjustedName # optional: rename in UI
           min: 17.1
           preferred: 500
           max: 1000
 
-
-# other file template.yml
----
+# Or in a template file:
 quality_definition:
   qualities:
     - quality: "HDTV-1080p"
@@ -312,12 +395,14 @@ quality_definition:
       max: 1000
 ```
 
-Notes:
+**Notes:**
 
-- `preferredRatio` only applies to TRaSH/Recyclarr imported templates
-- works also with template and `include`
-- merged order is like: TRaSH/Recyclarr templates -> local templates -> config file
-- experimental, available since `v1.9.0`
+- `preferred_ratio` (0.0 – 1.0) interpolates between `min` and `max` to compute `preferred`.
+  It applies to `type`-based and `include`-based loading; it has no effect on manual `qualities`.
+- `preferred_ratio` on `include` items applies only to that specific include.
+- Merge order: TRaSH/Recyclarr templates → local templates → config file (`quality_definition.qualities` last).
+- Only supported for Radarr and Sonarr. Not available for Lidarr, Readarr, Whisparr.
+- Available since `v1.9.0`. Include-based QD detection available since `v1.x.0` (TBD).
 
 ## Media Naming
 
