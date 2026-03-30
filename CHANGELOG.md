@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.25.0](https://github.com/raydak-labs/configarr/compare/v1.24.1...v1.25.0) (2026-03-30)
+
+### Features
+
+- add support to include trash guide quality definitions by id ([#406](https://github.com/raydak-labs/configarr/issues/406)) ([c196221](https://github.com/raydak-labs/configarr/commit/c196221956e83b885d7228ad117986817c78ffe9))
+
+### Bug Fixes
+
+- prevent duplicate CF creates and fix error handling in manageCf ([7eff22e](https://github.com/raydak-labs/configarr/commit/7eff22efb9b20acbbd026fb47b3e13ea0ba0d3e0))
+
 ## [1.24.1](https://github.com/raydak-labs/configarr/compare/v1.24.0...v1.24.1) (2026-03-29)
 
 ### Bug Fixes
