@@ -94,7 +94,7 @@ jobs:
 
       - name: Docker meta for PMS
         id: meta_pms
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           # list of Docker images to use as base name for tags
           images: |
@@ -128,7 +128,7 @@ jobs:
 
       - name: Docker meta for alpine3.22 image
         id: meta_alpine322
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: |
             ghcr.io/raydak-labs/configarr
