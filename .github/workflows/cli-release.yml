@@ -38,7 +38,7 @@ jobs:
       - name: Inject enhanced GitHub environment variables
         uses: rlespinasse/github-slug-action@v5
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v5
         with:
           version: latest
 
