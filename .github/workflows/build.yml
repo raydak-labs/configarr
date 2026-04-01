@@ -110,7 +110,7 @@ jobs:
             type=semver,pattern={{major}},enable=${{ steps.set_platforms.outputs.MANUAL_RUN == 'false' }}
 
       - name: Build and push PMS
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: ./Dockerfile
@@ -142,7 +142,7 @@ jobs:
             type=semver,pattern={{major}},suffix=-alpine3.22,enable=${{ steps.set_platforms.outputs.MANUAL_RUN == 'false' }}
 
       - name: Build and push alpine3.22 image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: ./Dockerfile
