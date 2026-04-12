@@ -4,7 +4,7 @@ import { MergedCustomFormatResource } from "./__generated__/mergedTypes";
 import { getConfig } from "./config";
 import { logger } from "./logger";
 import { interpolateSize } from "./quality-definitions";
-import { CFIDToConfigGroup, ConfigarrCF, QualityDefinitionsRadarr, QualityDefinitionsSonarr } from "./types/common.types";
+import { ArrType, CFIDToConfigGroup, ConfigarrCF, QualityDefinitionsRadarr, QualityDefinitionsSonarr } from "./types/common.types";
 import { ConfigCustomFormat, ConfigQualityProfile, ConfigQualityProfileItem, InputConfigCustomFormatGroup } from "./types/config.types";
 import {
   TrashArrSupported,
@@ -330,7 +330,7 @@ export const loadNamingFromTrashRadarr = async (): Promise<TrashRadarrNaming | n
   return firstValue;
 };
 
-export const loadConflictsFromTrash = async (arrType: TrashArrSupported): Promise<TrashConflictsMapping> => {
+export const loadConflictsFromTrash = async (arrType: ArrType): Promise<TrashConflictsMapping> => {
   if (arrType !== "RADARR" && arrType !== "SONARR") {
     logger.debug(`Unsupported arrType: ${arrType}. Skipping TrashConflicts.`);
 
@@ -364,7 +364,7 @@ export const loadConflictsFromTrash = async (arrType: TrashArrSupported): Promis
   return conflictsMapping;
 };
 
-export const checkCustomFormatConflicts = (arrType: TrashArrSupported, cfTrashIds: Set<string>) => {
+export const checkCustomFormatConflicts = (arrType: ArrType, cfTrashIds: Set<string>) => {
   if (arrType !== "RADARR" && arrType !== "SONARR") {
     return;
   }
