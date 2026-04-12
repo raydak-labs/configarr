@@ -104,6 +104,7 @@ export type TrashCache = {
       anime: TrashQualityDefinition;
     };
     naming: TrashSonarrNaming | null;
+    conflicts: TrashConflictsMapping;
   };
   RADARR: {
     qualityProfiles: Map<string, TrashQP>;
@@ -113,6 +114,7 @@ export type TrashCache = {
       movie: TrashQualityDefinition;
     };
     naming: TrashRadarrNaming | null;
+    conflicts: TrashConflictsMapping;
   };
 };
 
@@ -154,3 +156,15 @@ export type TrashCustomFormatGroups = {
 };
 
 export type TrashCFGroupMapping = Map<string, TrashCustomFormatGroups>;
+
+// Conflict types for mutually exclusive custom formats
+export type TrashConflictEntry = {
+  name: string;
+  desc?: string;
+};
+
+export type TrashConflicts = {
+  custom_formats: Record<string, TrashConflictEntry>[];
+};
+
+export type TrashConflictsMapping = Map<number, Record<string, TrashConflictEntry>>;

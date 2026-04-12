@@ -11,6 +11,8 @@ import {
   TrashCache,
   TrashCF,
   TrashCFGroupMapping,
+  TrashConflicts,
+  TrashConflictsMapping,
   TrashCustomFormatGroups,
   TrashQP,
   TrashQualityDefinition,
@@ -44,6 +46,9 @@ const createCache = async () => {
   const sonarrQDSeries = await loadQualityDefinitionFromTrash("series", "SONARR");
   const sonarrQDAnime = await loadQualityDefinitionFromTrash("anime", "SONARR");
 
+  const radarrConflicts = await loadConflictsFromTrash("RADARR");
+  const sonarrConflicts = await loadConflictsFromTrash("SONARR");
+
   cache = {
     SONARR: {
       qualityProfiles: sonarrQP,
@@ -54,6 +59,7 @@ const createCache = async () => {
         series: sonarrQDSeries,
       },
       naming: sonarrNaming,
+      conflicts: sonarrConflicts,
     },
     RADARR: {
       qualityProfiles: radarrQP,
@@ -63,6 +69,7 @@ const createCache = async () => {
         movie: radarrQDMovie,
       },
       naming: radarrNaming,
+      conflicts: radarrConflicts,
     },
   };
 
@@ -321,6 +328,83 @@ export const loadNamingFromTrashRadarr = async (): Promise<TrashRadarrNaming | n
   logger.debug(`(RADARR) Available TRaSH-Guide file keys: ${Object.keys(firstValue.file)}`);
 
   return firstValue;
+};
+
+export const loadConflictsFromTrash = async (arrType: TrashArrSupported): Promise<TrashConflictsMapping> => {
+  if (arrType !== "RADARR" && arrType !== "SONARR") {
+    logger.debug(`Unsupported arrType: ${arrType}. Skipping TrashConflicts.`);
+
+    return new Map();
+  }
+
+  if (cacheReady) {
+    return cache[arrType].conflicts;
+  }
+
+  const conflictsMapping: TrashConflictsMapping = new Map();
+
+  const conflictsPath = arrType === "RADARR" ? trashRepoPaths.radarrConflicts : trashRepoPaths.sonarrConflicts;
+
+  try {
+    const conflictsFile = loadJsonFile<TrashConflicts>(conflictsPath);
+
+    if (conflictsFile && conflictsFile.custom_formats && conflictsFile.custom_formats.length > 0) {
+      conflictsFile.custom_formats.forEach((conflictGroup, index) => {
+        conflictsMapping.set(index, conflictGroup);
+      });
+
+      logger.debug(`(${arrType}) Loaded ${conflictsMapping.size} conflict groups from TRaSH-Guides`);
+    } else {
+      logger.debug(`(${arrType}) No conflicts defined in TRaSH-Guides`);
+    }
+  } catch (err: any) {
+    logger.debug(`(${arrType}) Failed loading TRaSH-Guides conflicts: ${err?.message ?? err}. Continuing without conflicts.`);
+  }
+
+  return conflictsMapping;
+};
+
+export const checkCustomFormatConflicts = (arrType: TrashArrSupported, cfTrashIds: Set<string>) => {
+  if (arrType !== "RADARR" && arrType !== "SONARR") {
+    return;
+  }
+
+  if (!cacheReady) {
+    logger.debug(`(${arrType}) Cache not ready. Cannot check conflicts.`);
+    return;
+  }
+
+  const conflicts = cache[arrType].conflicts;
+
+  if (conflicts.size === 0) {
+    logger.debug(`(${arrType}) No conflicts defined.`);
+    return;
+  }
+
+  if (cfTrashIds.size < 2) {
+    return;
+  }
+
+  let foundConflicts = false;
+
+  for (const [_, conflictGroup] of conflicts) {
+    const conflictingCfs: string[] = [];
+
+    for (const [trashId, entry] of Object.entries(conflictGroup)) {
+      if (cfTrashIds.has(trashId)) {
+        conflictingCfs.push(entry.name);
+      }
+    }
+
+    if (conflictingCfs.length > 1) {
+      foundConflicts = true;
+      logger.warn(`(${arrType}) Conflicting custom formats found: ${conflictingCfs.join(", ")}`);
+    }
+  }
+
+  if (!foundConflicts) {
+    logger.debug(`(${arrType}) No conflicts detected among selected custom formats.`);
+  }
 };
 
 // TODO merge two methods?

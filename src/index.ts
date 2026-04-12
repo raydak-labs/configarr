@@ -27,7 +27,7 @@ import { syncMetadataProfiles } from "./metadataProfiles/metadataProfileSyncer";
 import { cloneRecyclarrTemplateRepo } from "./recyclarr-importer";
 import { loadServerTags } from "./tags";
 import { getTelemetryInstance, Telemetry } from "./telemetry";
-import { cloneTrashRepo, loadQualityDefinitionFromTrash, transformTrashQDs } from "./trash-guide";
+import { checkCustomFormatConflicts, cloneTrashRepo, loadQualityDefinitionFromTrash, transformTrashQDs } from "./trash-guide";
 import { ArrType } from "./types/common.types";
 import { InputConfigArrInstance, InputConfigSchema } from "./types/config.types";
 import { TrashArrSupportedConst, TrashQualityDefinition, TrashQualityDefinitionQuality } from "./types/trashguide.types";
@@ -56,6 +56,8 @@ const pipeline = async (globalConfig: InputConfigSchema, instanceConfig: InputCo
 
   const idsToManage = calculateCFsToManage(config);
   logger.debug(Array.from(idsToManage), `CustomFormats to manage`);
+
+  checkCustomFormatConflicts(arrType, idsToManage);
 
   const mergedCFs = await loadCustomFormatDefinitions(idsToManage, arrType, config.customFormatDefinitions || []);
 
