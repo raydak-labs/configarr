@@ -19,6 +19,7 @@ import { calculateMediamanagementDiff, calculateNamingDiff } from "./media-manag
 import { calculateQualityDefinitionDiff, loadQualityDefinitionFromServer } from "./quality-definitions";
 import {
   calculateQualityProfilesDiff,
+  checkForConflictingCFs,
   deleteQualityProfile,
   getUnmanagedQualityProfiles,
   loadQualityProfilesFromServer,
@@ -27,9 +28,10 @@ import { syncMetadataProfiles } from "./metadataProfiles/metadataProfileSyncer";
 import { cloneRecyclarrTemplateRepo } from "./recyclarr-importer";
 import { loadServerTags } from "./tags";
 import { getTelemetryInstance, Telemetry } from "./telemetry";
-import { cloneTrashRepo, loadQualityDefinitionFromTrash, transformTrashQDs } from "./trash-guide";
+import { cloneTrashRepo, loadQualityDefinitionFromTrash, loadTrashCFConflicts, transformTrashQDs } from "./trash-guide";
 import { ArrType } from "./types/common.types";
 import { InputConfigArrInstance, InputConfigSchema } from "./types/config.types";
+import { TrashArrSupported } from "./types/trashguide.types";
 import { TrashArrSupportedConst, TrashQualityDefinition, TrashQualityDefinitionQuality } from "./types/trashguide.types";
 import { isInConstArray } from "./util";
 import { syncRootFolders } from "./rootFolder/rootFolderSyncer";
@@ -58,6 +60,12 @@ const pipeline = async (globalConfig: InputConfigSchema, instanceConfig: InputCo
   logger.debug(Array.from(idsToManage), `CustomFormats to manage`);
 
   const mergedCFs = await loadCustomFormatDefinitions(idsToManage, arrType, config.customFormatDefinitions || []);
+
+  // Check for conflicting CFs from TRaSH guides
+  if (isInConstArray(TrashArrSupportedConst, arrType)) {
+    const conflicts = await loadTrashCFConflicts(arrType as TrashArrSupported);
+    checkForConflictingCFs(mergedCFs, config, conflicts);
+  }
 
   const serverCFMapping = serverCache.cf.reduce((p, c) => {
     p.set(c.name!, c);

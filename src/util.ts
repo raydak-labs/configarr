@@ -30,11 +30,13 @@ export const trashRepoPaths = {
   sonarrQualitySize: `${trashRepoSonarrRoot}/quality-size`,
   sonarrQP: `${trashRepoSonarrRoot}/quality-profiles`,
   sonarrNaming: `${trashRepoSonarrRoot}/naming`,
+  sonarrConflicts: `${trashRepoSonarrRoot}/conflicts.json`,
   radarrCF: `${trashRepoRadarrRoot}/cf`,
   radarrCFGroups: `${trashRepoRadarrRoot}/cf-groups`,
   radarrQualitySize: `${trashRepoRadarrRoot}/quality-size`,
   radarrQP: `${trashRepoRadarrRoot}/quality-profiles`,
   radarrNaming: `${trashRepoRadarrRoot}/naming`,
+  radarrConflicts: `${trashRepoRadarrRoot}/conflicts.json`,
 };
 
 export const recyclarrRepoPaths = {

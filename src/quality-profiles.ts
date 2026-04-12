@@ -12,6 +12,7 @@ import { getEnvs } from "./env";
 import { logger } from "./logger";
 import { ArrType, CFProcessing } from "./types/common.types";
 import { ConfigQualityProfile, ConfigQualityProfileItem, MergedConfigInstance } from "./types/config.types";
+import type { TrashCFConflict } from "./types/trashguide.types";
 import { cloneWithJSON, loadJsonFile, notEmpty, zip } from "./util";
 
 export const deleteAllQualityProfiles = async () => {
@@ -679,4 +680,71 @@ export const getUnmanagedQualityProfiles = (
   const managedProfileNames = new Set(configQp.map((profile) => profile.name));
 
   return serverQP.filter((profile) => profile.name && !managedProfileNames.has(profile.name));
+};
+
+/**
+ * Detects and warns about mutually exclusive custom formats in quality profiles.
+ *
+ * @param cfMap - The CF mapping containing carrIdMapping for name resolution
+ * @param config - Merged config instance with custom_formats and quality_profiles
+ * @param conflicts - List of TRaSH conflict groups to check
+ */
+export const checkForConflictingCFs = (
+  cfMap: CFProcessing,
+  config: MergedConfigInstance,
+  conflicts: TrashCFConflict[] | undefined,
+): void => {
+  if (!conflicts || conflicts.length === 0) {
+    return;
+  }
+
+  // Build quality profile -> Set<trash_id> mapping from merged config
+  const profileToTrashIds = new Map<string, Set<string>>();
+
+  for (const { trash_ids, assign_scores_to } of config.custom_formats) {
+    if (!trash_ids || !assign_scores_to) {
+      continue;
+    }
+
+    for (const profile of assign_scores_to) {
+      let profileSet = profileToTrashIds.get(profile.name);
+
+      if (!profileSet) {
+        profileSet = new Set();
+        profileToTrashIds.set(profile.name, profileSet);
+      }
+
+      for (const trashId of trash_ids) {
+        profileSet.add(trashId);
+      }
+    }
+  }
+
+  // For each conflict group, find profiles containing 2+ conflicting CFs
+  for (const conflict of conflicts) {
+    const { trash_id: conflictId, name: conflictName, custom_formats: conflictingCFs } = conflict;
+
+    for (const [profileName, profileTrashIds] of profileToTrashIds.entries()) {
+      // Find how many CFs from this conflict group are in the profile
+      const matchedCFs = conflictingCFs.filter((cf) => profileTrashIds.has(cf.trash_id));
+
+      if (matchedCFs.length >= 2) {
+        // Resolve display names: TRaSH conflicts first, then carrIdMapping, then raw id
+        const cfNames = matchedCFs
+          .map((cf) => {
+            const carrConfig = cfMap.carrIdMapping.get(cf.trash_id);
+            return carrConfig?.carrConfig.name || cf.name || cf.trash_id;
+          })
+          .join(", ");
+
+        const cfIds = matchedCFs.map((cf) => cf.trash_id).join(", ");
+
+        logger.warn(
+          `QualityProfile '${profileName}': Conflicting CustomFormats detected [${cfNames}] (ids: [${cfIds}]). ` +
+            `TRaSH marks these as mutually exclusive in conflict group '${conflictName}' (id: ${conflictId}). ` +
+            `Sync continues unchanged.`,
+        );
+      }
+    }
+  }
 };

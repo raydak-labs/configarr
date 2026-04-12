@@ -10,6 +10,8 @@ import {
   TrashArrSupported,
   TrashCache,
   TrashCF,
+  TrashCFConflict,
+  TrashCFConflicts,
   TrashCFGroupMapping,
   TrashCustomFormatGroups,
   TrashQP,
@@ -44,6 +46,9 @@ const createCache = async () => {
   const sonarrQDSeries = await loadQualityDefinitionFromTrash("series", "SONARR");
   const sonarrQDAnime = await loadQualityDefinitionFromTrash("anime", "SONARR");
 
+  const radarrConflicts = await loadTrashCFConflicts("RADARR");
+  const sonarrConflicts = await loadTrashCFConflicts("SONARR");
+
   cache = {
     SONARR: {
       qualityProfiles: sonarrQP,
@@ -54,6 +59,7 @@ const createCache = async () => {
         series: sonarrQDSeries,
       },
       naming: sonarrNaming,
+      conflicts: sonarrConflicts,
     },
     RADARR: {
       qualityProfiles: radarrQP,
@@ -63,6 +69,7 @@ const createCache = async () => {
         movie: radarrQDMovie,
       },
       naming: radarrNaming,
+      conflicts: radarrConflicts,
     },
   };
 
@@ -321,6 +328,77 @@ export const loadNamingFromTrashRadarr = async (): Promise<TrashRadarrNaming | n
   logger.debug(`(RADARR) Available TRaSH-Guide file keys: ${Object.keys(firstValue.file)}`);
 
   return firstValue;
+};
+
+export const loadTrashCFConflicts = async (arrType: TrashArrSupported): Promise<TrashCFConflict[]> => {
+  if (arrType !== "RADARR" && arrType !== "SONARR") {
+    logger.debug(`Unsupported arrType: ${arrType}. Skipping TrashCFConflicts.`);
+    return [];
+  }
+
+  if (cacheReady) {
+    return cache[arrType].conflicts;
+  }
+
+  const conflicts: TrashCFConflict[] = [];
+
+  let conflictsPath: string;
+
+  if (arrType === "RADARR") {
+    conflictsPath = trashRepoPaths.radarrConflicts;
+  } else {
+    conflictsPath = trashRepoPaths.sonarrConflicts;
+  }
+
+  try {
+    const conflictsData = loadJsonFile<TrashCFConflicts>(conflictsPath);
+
+    if (!conflictsData || !Array.isArray(conflictsData.custom_formats)) {
+      logger.warn(`(${arrType}) Invalid conflicts.json format: expected { custom_formats: [...] }. Skipping conflicts.`);
+      return [];
+    }
+
+    for (const group of conflictsData.custom_formats) {
+      if (!group || typeof group !== "object") {
+        continue;
+      }
+
+      // Validate required fields
+      if (typeof group.trash_id !== "string" || typeof group.name !== "string" || !Array.isArray(group.custom_formats)) {
+        logger.warn(`(${arrType}) Skipping invalid conflict group: missing or invalid trash_id, name, or custom_formats`);
+        continue;
+      }
+
+      // Filter and validate custom_formats with type predicate
+      const customFormats = group.custom_formats.filter(
+        (cf): cf is { trash_id: string; name: string } =>
+          typeof cf === "object" && cf !== null && typeof cf.trash_id === "string" && typeof cf.name === "string",
+      );
+
+      if (customFormats.length < 2) {
+        // Conflict groups need at least 2 CFs to be meaningful
+        continue;
+      }
+
+      conflicts.push({
+        trash_id: group.trash_id,
+        name: group.name,
+        trash_description: typeof group.trash_description === "string" ? group.trash_description : undefined,
+        custom_formats: customFormats,
+      });
+    }
+
+    logger.debug(`(${arrType}) Loaded ${conflicts.length} TRaSH CF conflict groups`);
+    return conflicts;
+  } catch (err: unknown) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") {
+      logger.debug(`(${arrType}) conflicts.json not found. Skipping conflicts.`);
+    } else {
+      const message = err instanceof Error ? err.message : String(err);
+      logger.warn(`(${arrType}) Failed loading conflicts.json. Skipping conflicts: ${message}`);
+    }
+    return [];
+  }
 };
 
 // TODO merge two methods?
