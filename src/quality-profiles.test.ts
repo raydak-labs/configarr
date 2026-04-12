@@ -11,10 +11,13 @@ import {
 import { ServerCache } from "./cache";
 import {
   calculateQualityProfilesDiff,
+  checkForConflictingCFs,
   deleteAllQualityProfiles,
   deleteQualityProfile,
-  isOrderOfQualitiesEqual,
+  getUnmanagedQualityProfiles,
   isOrderOfConfigQualitiesEqual,
+  isOrderOfQualitiesEqual,
+  loadQualityProfilesFromServer,
   mapQualities,
   mapQualityProfiles,
 } from "./quality-profiles";
@@ -1436,6 +1439,310 @@ describe("QualityProfiles", async () => {
       const cfScore = profileScore?.get("Test CF");
 
       expect(cfScore?.score).toBe(25); // Should use default, ignoring score_set
+    });
+  });
+
+  describe("checkForConflictingCFs", () => {
+    beforeEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    test("should warn when same quality profile contains 2 conflicting ids from one group", () => {
+      const carrIdMapping = new Map([
+        [
+          "cf1-id",
+          {
+            carrConfig: {
+              configarr_id: "cf1-id",
+              name: "SDR",
+            },
+            requestConfig: {},
+          },
+        ],
+        [
+          "cf2-id",
+          {
+            carrConfig: {
+              configarr_id: "cf2-id",
+              name: "SDR (no WEBDL)",
+            },
+            requestConfig: {},
+          },
+        ],
+      ]);
+
+      const cfMap: CFProcessing = {
+        carrIdMapping,
+        cfNameToCarrConfig: new Map(),
+      };
+
+      const config: MergedConfigInstance = {
+        quality_profiles: [
+          {
+            name: "profile1",
+            min_format_score: 0,
+            qualities: [],
+            quality_sort: "top",
+            upgrade: { allowed: true, until_quality: "HDTV-1080p", until_score: 1000 },
+            score_set: "default",
+          },
+        ],
+        custom_formats: [
+          {
+            trash_ids: ["cf1-id", "cf2-id"],
+            assign_scores_to: [{ name: "profile1" }],
+          },
+        ],
+        customFormatDefinitions: [],
+        media_management: {},
+        media_naming: {},
+      };
+
+      const conflicts = [
+        {
+          trash_id: "sdr-conflict",
+          name: "SDR Conflict",
+          custom_formats: [
+            { trash_id: "cf1-id", name: "SDR" },
+            { trash_id: "cf2-id", name: "SDR (no WEBDL)" },
+          ],
+        },
+      ];
+
+      const logSpy = vi.spyOn(log.logger, "warn").mockImplementation(() => {});
+
+      checkForConflictingCFs(cfMap, config, conflicts);
+
+      expect(logSpy).toHaveBeenCalledTimes(1);
+      expect(logSpy).toHaveBeenCalledWith(expect.stringContaining("QualityProfile \'profile1\'"));
+      expect(logSpy).toHaveBeenCalledWith(expect.stringContaining("Conflicting CustomFormats detected [SDR, SDR (no WEBDL)]"));
+      expect(logSpy).toHaveBeenCalledWith(expect.stringContaining("conflict group \'SDR Conflict\'"));
+    });
+
+    test("should not warn when conflicting ids are split across different quality profiles", () => {
+      const carrIdMapping = new Map([
+        [
+          "cf1-id",
+          {
+            carrConfig: {
+              configarr_id: "cf1-id",
+              name: "SDR",
+            },
+            requestConfig: {},
+          },
+        ],
+        [
+          "cf2-id",
+          {
+            carrConfig: {
+              configarr_id: "cf2-id",
+              name: "SDR (no WEBDL)",
+            },
+            requestConfig: {},
+          },
+        ],
+      ]);
+
+      const cfMap: CFProcessing = {
+        carrIdMapping,
+        cfNameToCarrConfig: new Map(),
+      };
+
+      const config: MergedConfigInstance = {
+        quality_profiles: [
+          {
+            name: "profile1",
+            min_format_score: 0,
+            qualities: [],
+            quality_sort: "top",
+            upgrade: { allowed: true, until_quality: "HDTV-1080p", until_score: 1000 },
+            score_set: "default",
+          },
+          {
+            name: "profile2",
+            min_format_score: 0,
+            qualities: [],
+            quality_sort: "top",
+            upgrade: { allowed: true, until_quality: "HDTV-1080p", until_score: 1000 },
+            score_set: "default",
+          },
+        ],
+        custom_formats: [
+          {
+            trash_ids: ["cf1-id"],
+            assign_scores_to: [{ name: "profile1" }],
+          },
+          {
+            trash_ids: ["cf2-id"],
+            assign_scores_to: [{ name: "profile2" }],
+          },
+        ],
+        customFormatDefinitions: [],
+        media_management: {},
+        media_naming: {},
+      };
+
+      const conflicts = [
+        {
+          trash_id: "sdr-conflict",
+          name: "SDR Conflict",
+          custom_formats: [
+            { trash_id: "cf1-id", name: "SDR" },
+            { trash_id: "cf2-id", name: "SDR (no WEBDL)" },
+          ],
+        },
+      ];
+
+      const logSpy = vi.spyOn(log.logger, "warn").mockImplementation(() => {});
+
+      checkForConflictingCFs(cfMap, config, conflicts);
+
+      expect(logSpy).not.toHaveBeenCalled();
+    });
+
+    test("should not warn when only one id from group is selected", () => {
+      const carrIdMapping = new Map([
+        [
+          "cf1-id",
+          {
+            carrConfig: {
+              configarr_id: "cf1-id",
+              name: "SDR",
+            },
+            requestConfig: {},
+          },
+        ],
+      ]);
+
+      const cfMap: CFProcessing = {
+        carrIdMapping,
+        cfNameToCarrConfig: new Map(),
+      };
+
+      const config: MergedConfigInstance = {
+        quality_profiles: [
+          {
+            name: "profile1",
+            min_format_score: 0,
+            qualities: [],
+            quality_sort: "top",
+            upgrade: { allowed: true, until_quality: "HDTV-1080p", until_score: 1000 },
+            score_set: "default",
+          },
+        ],
+        custom_formats: [
+          {
+            trash_ids: ["cf1-id"],
+            assign_scores_to: [{ name: "profile1" }],
+          },
+        ],
+        customFormatDefinitions: [],
+        media_management: {},
+        media_naming: {},
+      };
+
+      const conflicts = [
+        {
+          trash_id: "sdr-conflict",
+          name: "SDR Conflict",
+          custom_formats: [
+            { trash_id: "cf1-id", name: "SDR" },
+            { trash_id: "cf2-id", name: "SDR (no WEBDL)" },
+          ],
+        },
+      ];
+
+      const logSpy = vi.spyOn(log.logger, "warn").mockImplementation(() => {});
+
+      checkForConflictingCFs(cfMap, config, conflicts);
+
+      expect(logSpy).not.toHaveBeenCalled();
+    });
+
+    test("warning uses fallback name/id if lookup data incomplete", () => {
+      const carrIdMapping = new Map(); // Empty - no name lookup
+      const cfMap: CFProcessing = {
+        carrIdMapping,
+        cfNameToCarrConfig: new Map(),
+      };
+
+      const config: MergedConfigInstance = {
+        quality_profiles: [
+          {
+            name: "profile1",
+            min_format_score: 0,
+            qualities: [],
+            quality_sort: "top",
+            upgrade: { allowed: true, until_quality: "HDTV-1080p", until_score: 1000 },
+            score_set: "default",
+          },
+        ],
+        custom_formats: [
+          {
+            trash_ids: ["cf1-id", "cf2-id"],
+            assign_scores_to: [{ name: "profile1" }],
+          },
+        ],
+        customFormatDefinitions: [],
+        media_management: {},
+        media_naming: {},
+      };
+
+      const conflicts = [
+        {
+          trash_id: "sdr-conflict",
+          name: "SDR Conflict",
+          custom_formats: [
+            { trash_id: "cf1-id", name: "SDR Override" },
+            { trash_id: "cf2-id", name: "SDR (no WEBDL)" },
+          ],
+        },
+      ];
+
+      const logSpy = vi.spyOn(log.logger, "warn").mockImplementation(() => {});
+
+      checkForConflictingCFs(cfMap, config, conflicts);
+
+      expect(logSpy).toHaveBeenCalledTimes(1);
+      expect(logSpy).toHaveBeenCalledWith(expect.stringContaining("[SDR Override, SDR (no WEBDL)]"));
+      expect(logSpy).toHaveBeenCalledWith(expect.stringContaining("(ids: [cf1-id, cf2-id])"));
+    });
+
+    test("should return early if conflicts list is empty", () => {
+      const carrIdMapping = new Map();
+      const cfMap: CFProcessing = {
+        carrIdMapping,
+        cfNameToCarrConfig: new Map(),
+      };
+
+      const config: MergedConfigInstance = {
+        quality_profiles: [
+          {
+            name: "profile1",
+            min_format_score: 0,
+            qualities: [],
+            quality_sort: "top",
+            upgrade: { allowed: true, until_quality: "HDTV-1080p", until_score: 1000 },
+            score_set: "default",
+          },
+        ],
+        custom_formats: [
+          {
+            trash_ids: ["cf1-id", "cf2-id"],
+            assign_scores_to: [{ name: "profile1" }],
+          },
+        ],
+        customFormatDefinitions: [],
+        media_management: {},
+        media_naming: {},
+      };
+
+      const logSpy = vi.spyOn(log.logger, "warn").mockImplementation(() => {});
+
+      checkForConflictingCFs(cfMap, config, []);
+      checkForConflictingCFs(cfMap, config, undefined as any);
+
+      expect(logSpy).not.toHaveBeenCalled();
     });
   });
 });
