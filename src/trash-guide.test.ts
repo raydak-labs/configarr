@@ -1,8 +1,16 @@
 import fs from "node:fs";
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { loadAllQDsFromTrash, loadQPFromTrash, transformTrashCFGroups, transformTrashQDs, transformTrashQPCFGroups } from "./trash-guide";
+import {
+  checkCustomFormatConflicts,
+  loadAllQDsFromTrash,
+  loadConflictsFromTrash,
+  loadQPFromTrash,
+  transformTrashCFGroups,
+  transformTrashQDs,
+  transformTrashQPCFGroups,
+} from "./trash-guide";
 import { InputConfigCustomFormatGroup } from "./types/config.types";
-import { TrashCFGroupMapping, TrashQualityDefinition, TrashQP } from "./types/trashguide.types";
+import { TrashCFGroupMapping, TrashConflicts, TrashQualityDefinition, TrashQP } from "./types/trashguide.types";
 import * as util from "./util";
 
 describe("TrashGuide", async () => {
@@ -655,6 +663,61 @@ describe("TrashGuide", async () => {
       const result = transformTrashQPCFGroups(mockTrashQP, mapping, true);
 
       expect(result).toHaveLength(0);
+    });
+  });
+
+  describe("loadConflictsFromTrash", () => {
+    test("should return empty map for unsupported arrType", async () => {
+      const result = await loadConflictsFromTrash("LIDARR");
+
+      expect(result).toBeInstanceOf(Map);
+      expect(result.size).toBe(0);
+    });
+
+    test("should load conflicts from conflicts.json", async () => {
+      const mockConflicts: TrashConflicts = {
+        custom_formats: [
+          {
+            "9c38ebb7384dada637be8899efa68e6f": { name: "SDR", desc: "" },
+            "25c12f78430a3a23413652cbd1d48d77": { name: "SDR (no WEBDL)", desc: "" },
+          },
+        ],
+      };
+
+      vi.spyOn(util, "loadJsonFile").mockReturnValue(mockConflicts);
+
+      const result = await loadConflictsFromTrash("RADARR");
+
+      expect(result).toBeInstanceOf(Map);
+      expect(result.size).toBe(1);
+    });
+
+    test("should return empty map when conflicts.json does not exist", async () => {
+      vi.spyOn(util, "loadJsonFile").mockImplementation(() => {
+        throw new Error("ENOENT: no such file or directory");
+      });
+
+      const result = await loadConflictsFromTrash("SONARR");
+
+      expect(result).toBeInstanceOf(Map);
+      expect(result.size).toBe(0);
+    });
+
+    test("should return empty map when conflicts.json has no custom_formats", async () => {
+      const mockConflicts: TrashConflicts = { custom_formats: [] };
+
+      vi.spyOn(util, "loadJsonFile").mockReturnValue(mockConflicts);
+
+      const result = await loadConflictsFromTrash("SONARR");
+
+      expect(result).toBeInstanceOf(Map);
+      expect(result.size).toBe(0);
+    });
+  });
+
+  describe("checkCustomFormatConflicts", () => {
+    test("should return early for unsupported arrType", () => {
+      expect(() => checkCustomFormatConflicts("LIDARR", new Set(["123"]))).not.toThrow();
     });
   });
 });
