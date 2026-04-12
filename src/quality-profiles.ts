@@ -12,6 +12,7 @@ import { getEnvs } from "./env";
 import { logger } from "./logger";
 import { ArrType, CFProcessing } from "./types/common.types";
 import { ConfigQualityProfile, ConfigQualityProfileItem, MergedConfigInstance } from "./types/config.types";
+import type { TrashCFConflict } from "./types/trashguide.types";
 import { cloneWithJSON, loadJsonFile, notEmpty, zip } from "./util";
 
 export const deleteAllQualityProfiles = async () => {
@@ -691,7 +692,7 @@ export const getUnmanagedQualityProfiles = (
 export const checkForConflictingCFs = (
   cfMap: CFProcessing,
   config: MergedConfigInstance,
-  conflicts: Array<{ trash_id: string; name: string; custom_formats: Array<{ trash_id: string; name: string }> }> | undefined,
+  conflicts: TrashCFConflict[] | undefined,
 ): void => {
   if (!conflicts || conflicts.length === 0) {
     return;

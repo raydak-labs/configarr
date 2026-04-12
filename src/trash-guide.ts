@@ -11,6 +11,7 @@ import {
   TrashCache,
   TrashCF,
   TrashCFConflict,
+  TrashCFConflicts,
   TrashCFGroupMapping,
   TrashCustomFormatGroups,
   TrashQP,
@@ -350,7 +351,7 @@ export const loadTrashCFConflicts = async (arrType: TrashArrSupported): Promise<
   }
 
   try {
-    const conflictsData = loadJsonFile<{ custom_formats?: unknown[] }>(conflictsPath);
+    const conflictsData = loadJsonFile<TrashCFConflicts>(conflictsPath);
 
     if (!conflictsData || !Array.isArray(conflictsData.custom_formats)) {
       logger.warn(`(${arrType}) Invalid conflicts.json format: expected { custom_formats: [...] }. Skipping conflicts.`);
@@ -362,29 +363,17 @@ export const loadTrashCFConflicts = async (arrType: TrashArrSupported): Promise<
         continue;
       }
 
-      const conflict = group as Record<string, unknown>;
-
-      if (typeof conflict.trash_id !== "string" || typeof conflict.name !== "string" || !Array.isArray(conflict.custom_formats)) {
+      // Validate required fields
+      if (typeof group.trash_id !== "string" || typeof group.name !== "string" || !Array.isArray(group.custom_formats)) {
         logger.warn(`(${arrType}) Skipping invalid conflict group: missing or invalid trash_id, name, or custom_formats`);
         continue;
       }
 
-      const customFormats: Array<{ trash_id: string; name: string }> = [];
-
-      for (const cf of conflict.custom_formats) {
-        if (!cf || typeof cf !== "object") {
-          continue;
-        }
-
-        const cfRecord = cf as Record<string, unknown>;
-
-        if (typeof cfRecord.trash_id === "string" && typeof cfRecord.name === "string") {
-          customFormats.push({
-            trash_id: cfRecord.trash_id,
-            name: cfRecord.name,
-          });
-        }
-      }
+      // Filter and validate custom_formats with type predicate
+      const customFormats = group.custom_formats.filter(
+        (cf): cf is { trash_id: string; name: string } =>
+          typeof cf === "object" && cf !== null && typeof cf.trash_id === "string" && typeof cf.name === "string",
+      );
 
       if (customFormats.length < 2) {
         // Conflict groups need at least 2 CFs to be meaningful
@@ -392,9 +381,9 @@ export const loadTrashCFConflicts = async (arrType: TrashArrSupported): Promise<
       }
 
       conflicts.push({
-        trash_id: conflict.trash_id,
-        name: conflict.name,
-        trash_description: typeof conflict.trash_description === "string" ? conflict.trash_description : undefined,
+        trash_id: group.trash_id,
+        name: group.name,
+        trash_description: typeof group.trash_description === "string" ? group.trash_description : undefined,
         custom_formats: customFormats,
       });
     }
@@ -406,7 +395,7 @@ export const loadTrashCFConflicts = async (arrType: TrashArrSupported): Promise<
       logger.debug(`(${arrType}) conflicts.json not found. Skipping conflicts.`);
     } else {
       const message = err instanceof Error ? err.message : String(err);
-      logger.warn(`(${arrType}) Failed loading confllicts.json. Skipping conflicts: ${message}`);
+      logger.warn(`(${arrType}) Failed loading conflicts.json. Skipping conflicts: ${message}`);
     }
     return [];
   }
