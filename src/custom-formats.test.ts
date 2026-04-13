@@ -75,6 +75,18 @@ describe("CustomFormats", () => {
   });
 
   describe("mergeCfSources", () => {
+    const mkCfPair = (id: string, name: string, specCount: number) => {
+      const specifications = Array.from({ length: specCount }, (_, i) => ({
+        name: `S${i}`,
+        implementation: "ReleaseGroupSpecification" as const,
+        negate: false,
+        required: false,
+        fields: { value: `^(${i})$` },
+      }));
+      const carrConfig = { configarr_id: id, name, specifications } as unknown as ConfigarrCF;
+      return { carrConfig, requestConfig: util.mapImportCfToRequestCf(carrConfig) };
+    };
+
     it("should merge multiple CF sources correctly", () => {
       const source1: CFIDToConfigGroup = new Map([["id1", { carrConfig: { configarr_id: "id1", name: "CF1" }, requestConfig: {} }]]);
 
@@ -89,20 +101,8 @@ describe("CustomFormats", () => {
     });
 
     it("should keep one cfNameToCarrConfig winner when two trash_ids share the same CF name", () => {
-      const mk = (id: string, name: string, specCount: number) => {
-        const specifications = Array.from({ length: specCount }, (_, i) => ({
-          name: `S${i}`,
-          implementation: "ReleaseGroupSpecification" as const,
-          negate: false,
-          required: false,
-          fields: { value: `^(${i})$` },
-        }));
-        const carrConfig = { configarr_id: id, name, specifications } as unknown as ConfigarrCF;
-        return { carrConfig, requestConfig: util.mapImportCfToRequestCf(carrConfig) };
-      };
-
-      const first = mk("id-a", "Dup", 3);
-      const second = mk("id-b", "Dup", 1);
+      const first = mkCfPair("id-a", "Dup", 3);
+      const second = mkCfPair("id-b", "Dup", 1);
       const source: CFIDToConfigGroup = new Map([
         ["id-a", { carrConfig: first.carrConfig, requestConfig: first.requestConfig }],
         ["id-b", { carrConfig: second.carrConfig, requestConfig: second.requestConfig }],
@@ -121,20 +121,9 @@ describe("CustomFormats", () => {
 
     it("should warn when two trash_ids share a name but have different specifications", () => {
       const warnSpy = vi.spyOn(logger, "warn").mockImplementation(() => {});
-      const mk = (id: string, name: string, specCount: number) => {
-        const specifications = Array.from({ length: specCount }, (_, i) => ({
-          name: `S${i}`,
-          implementation: "ReleaseGroupSpecification" as const,
-          negate: false,
-          required: false,
-          fields: { value: `^(${i})$` },
-        }));
-        const carrConfig = { configarr_id: id, name, specifications } as unknown as ConfigarrCF;
-        return { carrConfig, requestConfig: util.mapImportCfToRequestCf(carrConfig) };
-      };
 
-      const first = mk("id-a", "Dup", 2);
-      const second = mk("id-b", "Dup", 1);
+      const first = mkCfPair("id-a", "Dup", 2);
+      const second = mkCfPair("id-b", "Dup", 1);
       const source: CFIDToConfigGroup = new Map([
         ["id-a", { carrConfig: first.carrConfig, requestConfig: first.requestConfig }],
         ["id-b", { carrConfig: second.carrConfig, requestConfig: second.requestConfig }],

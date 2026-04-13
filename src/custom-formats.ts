@@ -223,9 +223,9 @@ export const mergeCfSources = (idsToManage: Set<string>, listOfCfs: (CFIDToConfi
 
       for (const test of idsToManage) {
         const value = c.get(test);
-        const cfName = value?.carrConfig.name!;
 
         if (value) {
+          const cfName = value.carrConfig.name!;
           if (p.carrIdMapping.has(test)) {
             logger.warn(`Overwriting CF with id '${test}' during merge.`);
           }

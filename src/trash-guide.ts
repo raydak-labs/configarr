@@ -407,7 +407,9 @@ export const loadTrashCFConflicts = async (arrType: TrashArrSupported): Promise<
 
       const keyCount = Object.keys(g.data).length;
       if (keyCount < 2) {
-        if (keyCount > 0) {
+        if (keyCount === 0) {
+          logger.debug(`(${arrType}) Skipping empty conflict group`);
+        } else {
           logger.warn(`(${arrType}) Skipping invalid conflict group: need at least 2 entries (string key -> { name, desc? })`);
         }
         continue;
