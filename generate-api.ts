@@ -65,11 +65,7 @@ const main = async () => {
     },
   });
 
-  unlinkSync(path.resolve(PATH_SONARR_DIR, "..ts"));
-  unlinkSync(path.resolve(PATH_RADARR_DIR, "..ts"));
-  unlinkSync(path.resolve(PATH_WHISPARR_DIR, "..ts"));
-  unlinkSync(path.resolve(PATH_READARR_DIR, "..ts"));
-  unlinkSync(path.resolve(PATH_LIDARR_DIR, "..ts"));
+  unlinkSync(path.resolve(PATH_TO_OUTPUT_DIR, "..ts"));
 };
 
 main();
