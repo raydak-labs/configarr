@@ -81,9 +81,12 @@ export const manageCf = async (
             updatedCFs.push(updatedCf);
           }
         } catch (err: any) {
-          logger.error(err?.response?.data ?? err?.message ?? err, `Failed updating CF ${tr.requestConfig.name}`);
+          const data = err?.response?.data;
+          const dataMessage = typeof data === "object" ? (data?.message ?? data?.errorMessage) : data;
+          const errorMessage = dataMessage ?? err?.message ?? String(err);
+          logger.error(errorMessage, `Failed updating CF ${tr.requestConfig.name}`);
           errorCFs.push(tr.carrConfig.configarr_id ?? tr.requestConfig.name ?? "unknown");
-          throw new Error(`Failed updating CF ${tr.requestConfig.name}`);
+          throw new Error(`Failed updating CF '${tr.requestConfig.name}'. Message: ${errorMessage}`, { cause: err });
         }
       } else {
         validCFs.push(tr.carrConfig);
@@ -100,9 +103,12 @@ export const manageCf = async (
           serverCfs.set(createResult.name!, createResult);
         }
       } catch (err: any) {
-        logger.error(err?.response?.data ?? err?.message ?? err, `Failed creating CF ${tr.requestConfig.name}`);
+        const data = err?.response?.data;
+        const dataMessage = typeof data === "object" ? (data?.message ?? data?.errorMessage) : data;
+        const errorMessage = dataMessage ?? err?.message ?? String(err);
+        logger.error(errorMessage, `Failed creating CF ${tr.requestConfig.name}`);
         errorCFs.push(tr.carrConfig.configarr_id ?? tr.requestConfig.name ?? "unknown");
-        throw new Error(`Failed creating CF '${tr.requestConfig.name}'. Message: ${err?.response?.data?.message ?? err?.message}`);
+        throw new Error(`Failed creating CF '${tr.requestConfig.name}'. Message: ${errorMessage}`, { cause: err });
       }
     }
   };
