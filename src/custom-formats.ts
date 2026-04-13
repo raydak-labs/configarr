@@ -37,12 +37,8 @@ export const loadServerCustomFormats = async (): Promise<MergedCustomFormatResou
   return cfOnServer;
 };
 
-export const manageCf = async (
-  cfProcessing: CFProcessing,
-  serverCfs: Map<string, MergedCustomFormatResource>,
-  cfsToManage: Set<string>,
-) => {
-  const { carrIdMapping: trashIdToObject } = cfProcessing;
+export const manageCf = async (cfProcessing: CFProcessing, serverCfs: Map<string, MergedCustomFormatResource>) => {
+  const { cfNameToCarrConfig } = cfProcessing;
   const api = getUnifiedClient();
 
   let updatedCFs: MergedCustomFormatResource[] = [];
@@ -50,23 +46,16 @@ export const manageCf = async (
   const validCFs: ConfigarrCF[] = [];
   let createCFs: MergedCustomFormatResource[] = [];
 
-  const manageSingle = async (carrId: string) => {
-    const tr = trashIdToObject.get(carrId);
-
-    if (!tr) {
-      logger.warn(`TrashID to manage ${carrId} does not exists`);
-      errorCFs.push(carrId);
-      return;
-    }
-
-    const existingCf = serverCfs.get(tr.carrConfig.name!);
+  const manageSingle = async (cfName: string, carrConfig: ConfigarrCF) => {
+    const requestConfig = mapImportCfToRequestCf(carrConfig);
+    const existingCf = serverCfs.get(cfName);
 
     if (existingCf) {
       // Update if necessary
-      const comparison = compareCustomFormats(existingCf, tr.requestConfig);
+      const comparison = compareCustomFormats(existingCf, requestConfig);
 
       if (!comparison.equal) {
-        logger.debug(`Found mismatch for ${tr.requestConfig.name}: ${comparison.changes}`);
+        logger.debug(`Found mismatch for ${requestConfig.name}: ${comparison.changes}`);
 
         try {
           if (getEnvs().DRY_RUN) {
@@ -75,30 +64,30 @@ export const manageCf = async (
           } else {
             const updatedCf = await api.updateCustomFormat(existingCf.id + "", {
               id: existingCf.id,
-              ...tr.requestConfig,
+              ...requestConfig,
             });
-            logger.debug(`Updated CF ${tr.requestConfig.name}`);
+            logger.debug(`Updated CF ${requestConfig.name}`);
             updatedCFs.push(updatedCf);
           }
         } catch (err: any) {
           const data = err?.response?.data;
           const dataMessage = typeof data === "object" ? (data?.message ?? data?.errorMessage) : data;
           const errorMessage = dataMessage ?? err?.message ?? String(err);
-          logger.error(errorMessage, `Failed updating CF ${tr.requestConfig.name}`);
-          errorCFs.push(tr.carrConfig.configarr_id ?? tr.requestConfig.name ?? "unknown");
-          throw new Error(`Failed updating CF '${tr.requestConfig.name}'. Message: ${errorMessage}`, { cause: err });
+          logger.error(errorMessage, `Failed updating CF ${requestConfig.name}`);
+          errorCFs.push(carrConfig.configarr_id ?? requestConfig.name ?? "unknown");
+          throw new Error(`Failed updating CF '${requestConfig.name}'. Message: ${errorMessage}`, { cause: err });
         }
       } else {
-        validCFs.push(tr.carrConfig);
+        validCFs.push(carrConfig);
       }
     } else {
       // Create
       try {
         if (getEnvs().DRY_RUN) {
-          logger.info(`Would create CF: ${tr.requestConfig.name}`);
+          logger.info(`Would create CF: ${requestConfig.name}`);
         } else {
-          const createResult = await api.createCustomFormat(tr.requestConfig);
-          logger.info(`Created CF ${tr.requestConfig.name}`);
+          const createResult = await api.createCustomFormat(requestConfig);
+          logger.info(`Created CF ${requestConfig.name}`);
           createCFs.push(createResult);
           serverCfs.set(createResult.name!, createResult);
         }
@@ -106,15 +95,15 @@ export const manageCf = async (
         const data = err?.response?.data;
         const dataMessage = typeof data === "object" ? (data?.message ?? data?.errorMessage) : data;
         const errorMessage = dataMessage ?? err?.message ?? String(err);
-        logger.error(errorMessage, `Failed creating CF ${tr.requestConfig.name}`);
-        errorCFs.push(tr.carrConfig.configarr_id ?? tr.requestConfig.name ?? "unknown");
-        throw new Error(`Failed creating CF '${tr.requestConfig.name}'. Message: ${errorMessage}`, { cause: err });
+        logger.error(errorMessage, `Failed creating CF ${requestConfig.name}`);
+        errorCFs.push(carrConfig.configarr_id ?? requestConfig.name ?? "unknown");
+        throw new Error(`Failed creating CF '${requestConfig.name}'. Message: ${errorMessage}`, { cause: err });
       }
     }
   };
 
-  for (const cf of cfsToManage) {
-    await manageSingle(cf);
+  for (const [cfName, carrConfig] of cfNameToCarrConfig) {
+    await manageSingle(cfName, carrConfig);
   }
 
   if (validCFs.length > 0) {
@@ -224,6 +213,8 @@ export const calculateCFsToManage = (yaml: ConfigCustomFormatList) => {
 };
 
 export const mergeCfSources = (idsToManage: Set<string>, listOfCfs: (CFIDToConfigGroup | null)[]): CFProcessing => {
+  const lastTrashIdByCfName = new Map<string, string>();
+
   return listOfCfs.reduce<CFProcessing>(
     (p, c) => {
       if (c == null) {
@@ -240,11 +231,18 @@ export const mergeCfSources = (idsToManage: Set<string>, listOfCfs: (CFIDToConfi
           }
 
           if (p.cfNameToCarrConfig.has(cfName)) {
-            logger.warn(`Overwriting CF with name '${cfName}' (ID: ${test}) during merge.`);
+            const prevCarr = p.cfNameToCarrConfig.get(cfName)!;
+            const prevTid = lastTrashIdByCfName.get(cfName)!;
+            const specsDiffer = !compareCustomFormats(mapImportCfToRequestCf(prevCarr), value.requestConfig).equal;
+            const specNote = specsDiffer ? " Definitions for those ids are not identical;" : "";
+            logger.warn(
+              `Overwriting CF with name '${cfName}': trash_id '${test}' wins over '${prevTid}' (later merge order).${specNote} Sync uses '${test}'.`,
+            );
           }
 
           p.carrIdMapping.set(test, value);
-          p.cfNameToCarrConfig.set(value.carrConfig.name!, value.carrConfig);
+          p.cfNameToCarrConfig.set(cfName, value.carrConfig);
+          lastTrashIdByCfName.set(cfName, test);
         }
       }
 

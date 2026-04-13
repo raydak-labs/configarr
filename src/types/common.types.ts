@@ -60,6 +60,7 @@ export type CFIDToConfigGroup = Map<string, CFConfigGroup>;
 
 export type CFProcessing = {
   carrIdMapping: CFIDToConfigGroup;
+  /** Last merge-order winner per CF `name` (same row Sonarr/Radarr); used by manageCf. */
   cfNameToCarrConfig: Map<string, ConfigarrCF>;
 };
 

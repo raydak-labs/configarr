@@ -1,12 +1,16 @@
 import fs from "node:fs";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import * as unifiedClient from "./clients/unified-client";
 import * as config from "./config";
-import { calculateCFsToManage, loadCustomFormatDefinitions, loadLocalCfs, mergeCfSources } from "./custom-formats";
+import * as env from "./env";
+import { calculateCFsToManage, loadCustomFormatDefinitions, loadLocalCfs, manageCf, mergeCfSources } from "./custom-formats";
 import { loadTrashCFs } from "./trash-guide";
-import { CFIDToConfigGroup } from "./types/common.types";
+import { CFIDToConfigGroup, CFProcessing, ConfigarrCF } from "./types/common.types";
 import { ConfigCustomFormatList } from "./types/config.types";
+import { MergedCustomFormatResource } from "./types/merged.types";
 import { TrashCF } from "./types/trashguide.types";
 import * as util from "./util";
+import { logger } from "./logger";
 
 describe("CustomFormats", () => {
   let customCF: TrashCF;
@@ -83,6 +87,64 @@ describe("CustomFormats", () => {
       expect(result.carrIdMapping.has("id1")).toBeTruthy();
       expect(result.carrIdMapping.has("id2")).toBeTruthy();
     });
+
+    it("should keep one cfNameToCarrConfig winner when two trash_ids share the same CF name", () => {
+      const mk = (id: string, name: string, specCount: number) => {
+        const specifications = Array.from({ length: specCount }, (_, i) => ({
+          name: `S${i}`,
+          implementation: "ReleaseGroupSpecification" as const,
+          negate: false,
+          required: false,
+          fields: { value: `^(${i})$` },
+        }));
+        const carrConfig = { configarr_id: id, name, specifications } as unknown as ConfigarrCF;
+        return { carrConfig, requestConfig: util.mapImportCfToRequestCf(carrConfig) };
+      };
+
+      const first = mk("id-a", "Dup", 3);
+      const second = mk("id-b", "Dup", 1);
+      const source: CFIDToConfigGroup = new Map([
+        ["id-a", { carrConfig: first.carrConfig, requestConfig: first.requestConfig }],
+        ["id-b", { carrConfig: second.carrConfig, requestConfig: second.requestConfig }],
+      ]);
+
+      const result = mergeCfSources(new Set(["id-a", "id-b"]), [source, null]);
+
+      expect(result.carrIdMapping.size).toBe(2);
+      expect(result.cfNameToCarrConfig.size).toBe(1);
+      expect(result.cfNameToCarrConfig.get("Dup")?.configarr_id).toBe("id-b");
+      expect(result.cfNameToCarrConfig.get("Dup")?.specifications?.length).toBe(1);
+      const winnerCarr = result.cfNameToCarrConfig.get("Dup")!;
+      const idB = result.carrIdMapping.get("id-b")!;
+      expect(util.compareCustomFormats(util.mapImportCfToRequestCf(winnerCarr), idB.requestConfig).equal).toBe(true);
+    });
+
+    it("should warn when two trash_ids share a name but have different specifications", () => {
+      const warnSpy = vi.spyOn(logger, "warn").mockImplementation(() => {});
+      const mk = (id: string, name: string, specCount: number) => {
+        const specifications = Array.from({ length: specCount }, (_, i) => ({
+          name: `S${i}`,
+          implementation: "ReleaseGroupSpecification" as const,
+          negate: false,
+          required: false,
+          fields: { value: `^(${i})$` },
+        }));
+        const carrConfig = { configarr_id: id, name, specifications } as unknown as ConfigarrCF;
+        return { carrConfig, requestConfig: util.mapImportCfToRequestCf(carrConfig) };
+      };
+
+      const first = mk("id-a", "Dup", 2);
+      const second = mk("id-b", "Dup", 1);
+      const source: CFIDToConfigGroup = new Map([
+        ["id-a", { carrConfig: first.carrConfig, requestConfig: first.requestConfig }],
+        ["id-b", { carrConfig: second.carrConfig, requestConfig: second.requestConfig }],
+      ]);
+
+      mergeCfSources(new Set(["id-a", "id-b"]), [source, null]);
+
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringMatching(/trash_id 'id-b' wins over 'id-a'.*Sync uses 'id-b'/));
+      warnSpy.mockRestore();
+    });
   });
 
   describe("calculateCFsToManage", () => {
@@ -148,6 +210,100 @@ describe("CustomFormats", () => {
 
       expect(result.carrIdMapping.size).toBe(1);
       expect(result.carrIdMapping.has("trash1")).toBeTruthy();
+    });
+  });
+
+  describe("manageCf", () => {
+    it("should update each CF name at most once when server already matches desired state", async () => {
+      vi.spyOn(env, "getEnvs").mockReturnValue({
+        DRY_RUN: false,
+      } as ReturnType<typeof env.getEnvs>);
+
+      const specifications = [
+        {
+          name: "S0",
+          implementation: "ReleaseGroupSpecification" as const,
+          negate: false,
+          required: false,
+          fields: { value: "^(0)$" },
+        },
+      ];
+      const carrConfigB = { configarr_id: "id-b", name: "Dup", specifications } as unknown as ConfigarrCF;
+      const requestConfigB = util.mapImportCfToRequestCf(carrConfigB);
+      const carrConfigA = {
+        configarr_id: "id-a",
+        name: "Dup",
+        specifications: [...specifications, { ...specifications[0], name: "S1" }],
+      } as unknown as ConfigarrCF;
+      const requestConfigA = util.mapImportCfToRequestCf(carrConfigA);
+
+      const cfProcessing: CFProcessing = {
+        carrIdMapping: new Map([
+          ["id-a", { carrConfig: carrConfigA, requestConfig: requestConfigA }],
+          ["id-b", { carrConfig: carrConfigB, requestConfig: requestConfigB }],
+        ]),
+        cfNameToCarrConfig: new Map([[carrConfigB.name!, carrConfigB]]),
+      };
+
+      const serverCf: MergedCustomFormatResource = { id: 1, name: "Dup", ...requestConfigB };
+      const serverCfs = new Map<string, MergedCustomFormatResource>([["Dup", serverCf]]);
+
+      const updateCustomFormat = vi.fn();
+      vi.spyOn(unifiedClient, "getUnifiedClient").mockReturnValue({
+        updateCustomFormat,
+        createCustomFormat: vi.fn(),
+      } as unknown as ReturnType<typeof unifiedClient.getUnifiedClient>);
+
+      const out = await manageCf(cfProcessing, serverCfs);
+
+      expect(updateCustomFormat).not.toHaveBeenCalled();
+      expect(out.errorCFs.length).toBe(0);
+    });
+
+    it("should apply a single update per CF name using cfNameToCarrConfig winner when server matches a non-winner trash_id body", async () => {
+      vi.spyOn(env, "getEnvs").mockReturnValue({ DRY_RUN: false } as ReturnType<typeof env.getEnvs>);
+
+      const specifications = [
+        {
+          name: "S0",
+          implementation: "ReleaseGroupSpecification" as const,
+          negate: false,
+          required: false,
+          fields: { value: "^(0)$" },
+        },
+      ];
+      const carrConfigB = { configarr_id: "id-b", name: "Dup", specifications } as unknown as ConfigarrCF;
+      const requestConfigB = util.mapImportCfToRequestCf(carrConfigB);
+      const carrConfigA = {
+        configarr_id: "id-a",
+        name: "Dup",
+        specifications: [...specifications, { ...specifications[0], name: "S1" }],
+      } as unknown as ConfigarrCF;
+      const requestConfigA = util.mapImportCfToRequestCf(carrConfigA);
+
+      const cfProcessing: CFProcessing = {
+        carrIdMapping: new Map([
+          ["id-a", { carrConfig: carrConfigA, requestConfig: requestConfigA }],
+          ["id-b", { carrConfig: carrConfigB, requestConfig: requestConfigB }],
+        ]),
+        cfNameToCarrConfig: new Map([[carrConfigB.name!, carrConfigB]]),
+      };
+
+      const serverCfStale: MergedCustomFormatResource = { id: 1, name: "Dup", ...requestConfigA };
+      const serverCfs = new Map<string, MergedCustomFormatResource>([["Dup", serverCfStale]]);
+
+      const updateCustomFormat = vi.fn().mockResolvedValue({ id: 1, name: "Dup", ...requestConfigB });
+      vi.spyOn(unifiedClient, "getUnifiedClient").mockReturnValue({
+        updateCustomFormat,
+        createCustomFormat: vi.fn(),
+      } as unknown as ReturnType<typeof unifiedClient.getUnifiedClient>);
+
+      await manageCf(cfProcessing, serverCfs);
+
+      expect(updateCustomFormat).toHaveBeenCalledTimes(1);
+      const updatePayload = updateCustomFormat.mock.calls[0]?.[1];
+      expect(updatePayload).toBeDefined();
+      expect(updatePayload).toMatchObject({ ...requestConfigB });
     });
   });
 });
