@@ -549,6 +549,8 @@ export interface EpisodeResource {
   seasonNumber?: number;
   title?: string | null;
   releaseDate?: DateOnly;
+  /** @format date-time */
+  lastSearchTime?: string | null;
   /** @format int32 */
   runtime?: number;
   overview?: string | null;
@@ -1128,6 +1130,13 @@ export interface Quality {
   resolution?: number;
 }
 
+export interface QualityDefinitionLimitsResource {
+  /** @format int32 */
+  min?: number;
+  /** @format int32 */
+  max?: number;
+}
+
 export interface QualityDefinitionResource {
   /** @format int32 */
   id?: number;
@@ -1169,6 +1178,8 @@ export interface QualityProfileResource {
   minFormatScore?: number;
   /** @format int32 */
   cutoffFormatScore?: number;
+  /** @format int32 */
+  minUpgradeFormatScore?: number;
   formatItems?: ProfileFormatItemResource[] | null;
 }
 

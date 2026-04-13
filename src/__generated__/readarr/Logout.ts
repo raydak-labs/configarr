@@ -10,7 +10,7 @@
  * ---------------------------------------------------------------
  */
 
-import { HttpClient, RequestParams } from "./../ky-client";
+import { HttpClient, RequestParams } from "./../../ky-client";
 
 export class Logout<SecurityDataType = unknown> {
   http: HttpClient<SecurityDataType>;

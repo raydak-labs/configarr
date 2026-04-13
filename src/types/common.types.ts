@@ -1,4 +1,4 @@
-import { MergedCustomFormatResource, MergedCustomFormatSpecificationSchema } from "../__generated__/mergedTypes";
+import { MergedCustomFormatResource, MergedCustomFormatSpecificationSchema } from "./merged.types";
 import { InputConfigArrInstance } from "./config.types";
 import { TrashCF, TrashCFSpF } from "./trashguide.types";
 

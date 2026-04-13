@@ -10,7 +10,7 @@
  * ---------------------------------------------------------------
  */
 
-import { ContentType, HttpClient, RequestParams } from "./../ky-client";
+import { ContentType, HttpClient, RequestParams } from "./../../ky-client";
 import {
   AutoTaggingResource,
   BackupResource,
@@ -54,6 +54,7 @@ import {
   NamingConfigResource,
   NotificationResource,
   ParseResource,
+  QualityDefinitionLimitsResource,
   QualityDefinitionResource,
   QualityProfileResource,
   QueueBulkResource,
@@ -1067,6 +1068,10 @@ export class Api<SecurityDataType = unknown> {
       episodeIds?: number[];
       /** @format int32 */
       episodeFileId?: number;
+      /** @default false */
+      includeSeries?: boolean;
+      /** @default false */
+      includeEpisodeFile?: boolean;
       /** @default false */
       includeImages?: boolean;
     },
@@ -3012,6 +3017,22 @@ export class Api<SecurityDataType = unknown> {
       body: data,
       secure: true,
       type: ContentType.Json,
+      ...params,
+    });
+  /**
+   * No description
+   *
+   * @tags QualityDefinition
+   * @name V3QualitydefinitionLimitsList
+   * @request GET:/api/v3/qualitydefinition/limits
+   * @secure
+   */
+  v3QualitydefinitionLimitsList = (params: RequestParams = {}) =>
+    this.http.request<QualityDefinitionLimitsResource, any>({
+      path: `/api/v3/qualitydefinition/limits`,
+      method: "GET",
+      secure: true,
+      format: "json",
       ...params,
     });
   /**

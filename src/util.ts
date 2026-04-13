@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, rmSync } from "node:fs";
 import path from "node:path";
 import simpleGit, { CheckRepoActions } from "simple-git";
-import { MergedCustomFormatResource } from "./__generated__/mergedTypes";
+import { MergedCustomFormatResource } from "./types/merged.types";
 import { getHelpers } from "./env";
 import { logger } from "./logger";
 import { ConfigarrCF, ImportCF, UserFriendlyField } from "./types/common.types";

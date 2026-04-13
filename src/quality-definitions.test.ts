@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { MergedQualityDefinitionResource } from "./__generated__/mergedTypes";
+import { MergedQualityDefinitionResource } from "./types/merged.types";
 import { calculateQualityDefinitionDiff, interpolateSize } from "./quality-definitions";
 import { TrashQualityDefinition } from "./types/trashguide.types";
 

@@ -1,5 +1,5 @@
 import path from "node:path";
-import { MergedQualityDefinitionResource } from "./__generated__/mergedTypes";
+import { MergedQualityDefinitionResource } from "./types/merged.types";
 import { getUnifiedClient } from "./clients/unified-client";
 import { getEnvs } from "./env";
 import { logger } from "./logger";

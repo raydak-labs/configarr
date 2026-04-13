@@ -1,5 +1,5 @@
 import { InputConfigRootFolder } from "../types/config.types";
-import { MergedRootFolderResource } from "../__generated__/mergedTypes";
+import { MergedRootFolderResource } from "../types/merged.types";
 
 // Shared types for root folder operations
 export interface RootFolderDiff<TConfig extends InputConfigRootFolder = InputConfigRootFolder> {

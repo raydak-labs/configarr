@@ -10,7 +10,7 @@
  * ---------------------------------------------------------------
  */
 
-import { HttpClient, RequestParams } from "./../ky-client";
+import { HttpClient, RequestParams } from "./../../ky-client";
 import { CalendarReleaseType } from "./data-contracts";
 
 export class Feed<SecurityDataType = unknown> {

@@ -4,7 +4,7 @@ import { getBuildInfo, getEnvs, initEnvs } from "./env";
 initEnvs();
 
 import fs from "node:fs";
-import { MergedCustomFormatResource, MergedQualityProfileResource } from "./__generated__/mergedTypes";
+import { MergedCustomFormatResource, MergedQualityProfileResource } from "./types/merged.types";
 import { ServerCache } from "./cache";
 import { configureApi, getUnifiedClient, unsetApi } from "./clients/unified-client";
 import { getConfig, mergeConfigsAndTemplates } from "./config";

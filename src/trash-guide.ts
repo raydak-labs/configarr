@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { MergedCustomFormatResource } from "./__generated__/mergedTypes";
+import { MergedCustomFormatResource } from "./types/merged.types";
 import { getConfig } from "./config";
 import { logger } from "./logger";
 import { interpolateSize } from "./quality-definitions";

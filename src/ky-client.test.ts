@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import kyDefault, { HTTPError, NormalizedOptions } from "ky";
-import { HttpClient } from "./__generated__/ky-client";
+import { HttpClient } from "./ky-client";
 
 vi.mock("ky", async (importOriginal) => {
   const actual = await importOriginal<typeof import("ky")>();
