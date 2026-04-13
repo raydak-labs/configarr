@@ -1,4 +1,4 @@
-import { KyHttpClient } from "../__generated__/ky-client";
+import { KyHttpClient } from "../ky-client";
 import { Api } from "../__generated__/readarr/Api";
 import {
   CustomFormatResource,

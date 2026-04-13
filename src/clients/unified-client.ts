@@ -1,4 +1,4 @@
-import { MergedCustomFormatResource, MergedQualityDefinitionResource, MergedQualityProfileResource } from "../__generated__/mergedTypes";
+import { MergedCustomFormatResource, MergedQualityDefinitionResource, MergedQualityProfileResource } from "../types/merged.types";
 import { logger } from "../logger";
 import { ArrType } from "../types/common.types";
 import type { DownloadClientResource } from "../types/download-client.types";

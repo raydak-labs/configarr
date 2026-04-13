@@ -1,7 +1,7 @@
 import { getUnifiedClient } from "./clients/unified-client";
 import { logger } from "./logger";
 import { InputConfigDelayProfile } from "./types/config.types";
-import { MergedDelayProfileResource, MergedTagResource } from "./__generated__/mergedTypes";
+import { MergedDelayProfileResource, MergedTagResource } from "./types/merged.types";
 
 export const deleteAdditionalDelayProfiles = async () => {
   const api = getUnifiedClient();

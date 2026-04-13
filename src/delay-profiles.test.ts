@@ -1,5 +1,5 @@
 import { describe, expect, test, vi } from "vitest";
-import { MergedDelayProfileResource } from "./__generated__/mergedTypes";
+import { MergedDelayProfileResource } from "./types/merged.types";
 
 // Hoist the mock to ensure it runs before imports
 const mockGetDelayProfiles = vi.hoisted(() => vi.fn());

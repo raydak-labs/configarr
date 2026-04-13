@@ -1,8 +1,8 @@
 // Copied and modified from here: https://github.com/acacode/swagger-typescript-api/pull/690
 import type { BeforeRequestHook, Hooks, KyInstance, Options as KyOptions, NormalizedOptions } from "ky";
 import ky, { HTTPError } from "ky";
-import { logger } from "../logger";
-import { createConnectionErrorParts } from "../clients/unified-client";
+import { logger } from "./logger";
+import { createConnectionErrorParts } from "./clients/unified-client";
 
 function toErrorMessage(value: unknown): string {
   if (value === null) return "null";

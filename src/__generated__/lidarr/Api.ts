@@ -10,7 +10,7 @@
  * ---------------------------------------------------------------
  */
 
-import { ContentType, HttpClient, RequestParams } from "./../ky-client";
+import { ContentType, HttpClient, RequestParams } from "./../../ky-client";
 import {
   AlbumResource,
   AlbumResourcePagingResource,

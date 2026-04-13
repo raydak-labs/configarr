@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import type { MergedTagResource } from "../__generated__/mergedTypes";
+import type { MergedTagResource } from "../types/merged.types";
 import type { DownloadClientResource, TagResource } from "../__generated__/radarr/data-contracts";
 import { DownloadProtocol } from "../__generated__/radarr/data-contracts";
 import { ServerCache } from "../cache";

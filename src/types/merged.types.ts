@@ -7,7 +7,7 @@ import {
   QualityProfileResource as RadarrQualityProfileResource,
   RootFolderResource as RadarrRootFolderResource,
   TagResource as RadarrTagResource,
-} from "./radarr/data-contracts";
+} from "../__generated__/radarr/data-contracts";
 import {
   QualityDefinitionResource as QDRSonarr,
   CustomFormatResource as SonarrCustomFormatResource,
@@ -16,7 +16,7 @@ import {
   QualityProfileQualityItemResource as SonarrQualityProfileQualityItemResource,
   QualityProfileResource as SonarrQualityProfileResource,
   RootFolderResource as SonarrRootFolderResource,
-} from "./sonarr/data-contracts";
+} from "../__generated__/sonarr/data-contracts";
 
 // Those types are only to make the API client unified usable.
 // Sonarr and Radarr slightly differ in API fields and therefore at the moment we can ignore those changes.
@@ -58,7 +58,7 @@ export type MergedQualityProfileResource = OmitTyped<QPRMerged, "items"> &
 
 export type MergedCustomFormatSpecificationSchema = RadarrCustomFormatSpecificationSchema & SonarrCustomFormatSpecificationSchema;
 export type MergedRootFolderResource = SonarrRootFolderResource & RadarrRootFolderResource;
-export type MergedDelayProfileResource = import("./sonarr/data-contracts").DelayProfileResource &
-  import("./radarr/data-contracts").DelayProfileResource;
+export type MergedDelayProfileResource = import("../__generated__/sonarr/data-contracts").DelayProfileResource &
+  import("../__generated__/radarr/data-contracts").DelayProfileResource;
 
 export type MergedTagResource = RadarrTagResource;

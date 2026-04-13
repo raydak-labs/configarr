@@ -17,7 +17,7 @@ const main = async () => {
     singleHttpClient: true,
     // @ts-ignore little hack to have one single client (we are deleting the weird created file for the http-client)
     fileNames: {
-      httpClient: "../ky-client",
+      httpClient: "../../ky-client",
     },
   });
 
@@ -28,7 +28,7 @@ const main = async () => {
     singleHttpClient: true,
     // @ts-ignore little hack to have one single client (we are deleting the weird created file for the http-client)
     fileNames: {
-      httpClient: "../ky-client",
+      httpClient: "../../ky-client",
     },
   });
 
@@ -39,7 +39,7 @@ const main = async () => {
     singleHttpClient: true,
     // @ts-ignore little hack to have one single client (we are deleting the weird created file for the http-client)
     fileNames: {
-      httpClient: "../ky-client",
+      httpClient: "../../ky-client",
     },
   });
 
@@ -50,7 +50,7 @@ const main = async () => {
     singleHttpClient: true,
     // @ts-ignore little hack to have one single client (we are deleting the weird created file for the http-client)
     fileNames: {
-      httpClient: "../ky-client",
+      httpClient: "../../ky-client",
     },
   });
 
@@ -61,7 +61,7 @@ const main = async () => {
     singleHttpClient: true,
     // @ts-ignore little hack to have one single client (we are deleting the weird created file for the http-client)
     fileNames: {
-      httpClient: "../ky-client",
+      httpClient: "../../ky-client",
     },
   });
 

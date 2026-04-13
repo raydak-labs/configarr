@@ -1,4 +1,4 @@
-import { MergedRootFolderResource } from "../__generated__/mergedTypes";
+import { MergedRootFolderResource } from "../types/merged.types";
 import { ServerCache } from "../cache";
 import { getUnifiedClient, IArrClient } from "../clients/unified-client";
 import { getEnvs } from "../env";

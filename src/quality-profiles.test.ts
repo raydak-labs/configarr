@@ -7,7 +7,7 @@ import {
   MergedQualityDefinitionResource,
   MergedQualityProfileQualityItemResource,
   MergedQualityProfileResource,
-} from "./__generated__/mergedTypes";
+} from "./types/merged.types";
 import { ServerCache } from "./cache";
 import {
   calculateQualityProfilesDiff,

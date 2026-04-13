@@ -1,6 +1,6 @@
 import path from "path";
 import { describe, expect, test } from "vitest";
-import { MergedCustomFormatResource } from "./__generated__/mergedTypes";
+import { MergedCustomFormatResource } from "./types/merged.types";
 import { TrashCF, TrashCFSpF } from "./types/trashguide.types";
 import { cloneWithJSON, compareCustomFormats, loadJsonFile, mapImportCfToRequestCf, toCarrCF, zip } from "./util";
 

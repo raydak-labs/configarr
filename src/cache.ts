@@ -3,7 +3,7 @@ import {
   MergedQualityDefinitionResource,
   MergedQualityProfileResource,
   MergedTagResource,
-} from "./__generated__/mergedTypes";
+} from "./types/merged.types";
 import { ArrClientLanguageResource } from "./clients/unified-client";
 import { logger } from "./logger";
 import type { DownloadClientResource } from "./types/download-client.types";

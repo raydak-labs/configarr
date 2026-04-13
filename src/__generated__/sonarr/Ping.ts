@@ -10,7 +10,7 @@
  * ---------------------------------------------------------------
  */
 
-import { HttpClient, RequestParams } from "./../ky-client";
+import { HttpClient, RequestParams } from "./../../ky-client";
 import { PingResource } from "./data-contracts";
 
 export class Ping<SecurityDataType = unknown> {
