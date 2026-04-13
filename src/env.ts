@@ -59,6 +59,18 @@ const schema = z.object({
     .transform((x) => x === "true")
     .pipe(z.boolean())
     .default(false),
+  CONFIGARR_ENFORCE_CONFIG_VALIDATION: z
+    .string()
+    .toLowerCase()
+    .transform((x) => x === "true")
+    .pipe(z.boolean())
+    .default(false),
+  CONFIGARR_ENFORCE_EXTERNAL_VALIDATION: z
+    .string()
+    .toLowerCase()
+    .transform((x) => x === "true")
+    .pipe(z.boolean())
+    .default(false),
   TELEMETRY_ENABLED: z
     .string()
     .toLowerCase()
