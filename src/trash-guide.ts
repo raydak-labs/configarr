@@ -14,6 +14,7 @@ import {
   InputConfigCustomFormatGroup,
   InputConfigIncludeItem,
 } from "./types/config.types";
+import { validateExternal } from "./validation";
 import {
   TrashArrSupported,
   TrashCache,
@@ -21,10 +22,14 @@ import {
   TrashCFConflict,
   TrashCFGroupMapping,
   TrashCFGItem,
+  TrashCFSchema,
   TrashCustomFormatGroups,
+  TrashCustomFormatGroupsSchema,
   TrashQP,
+  TrashQPSchema,
   TrashQualityDefinition,
   TrashQualityDefinitionQuality,
+  TrashQualityDefinitionSchema,
   TrashRadarrNaming,
   TrashSonarrNaming,
 } from "./types/trashguide.types";
@@ -127,7 +132,8 @@ export const loadTrashCFs = async (arrType: TrashArrSupported): Promise<CFIDToCo
   for (const file of files) {
     const name = `${pathForFiles}/${file}`;
 
-    const cf = loadJsonFile<TrashCF>(path.resolve(name));
+    const rawCf = loadJsonFile(path.resolve(name));
+    const cf = validateExternal(TrashCFSchema, rawCf, `trash-cf/${arrType}/${file}`) as TrashCF;
 
     const carrConfig = toCarrCF(cf);
 
@@ -168,7 +174,8 @@ export const loadTrashCustomFormatGroups = async (arrType: TrashArrSupported): P
   for (const file of files) {
     const name = `${pathForFiles}/${file}`;
 
-    const cfGroup = loadJsonFile<TrashCustomFormatGroups>(path.resolve(name));
+    const rawGroup = loadJsonFile(path.resolve(name));
+    const cfGroup = validateExternal(TrashCustomFormatGroupsSchema, rawGroup, `trash-cf-group/${arrType}/${file}`) as TrashCustomFormatGroups;
 
     cfGroupMapping.set(cfGroup.trash_id, cfGroup);
   }
@@ -198,7 +205,8 @@ export const loadQualityDefinitionFromTrash = async (
     throw new Error(`(${arrType}) QualityDefinition type not found: '${qdType}' for '${arrType}'`);
   }
 
-  return loadJsonFile(filePath);
+  const rawQd = loadJsonFile(filePath);
+  return validateExternal(TrashQualityDefinitionSchema, rawQd, `trash-qd/${arrType}/${qdType}`) as TrashQualityDefinition;
 };
 
 export const loadAllQDsFromTrash = async (arrType: TrashArrSupported): Promise<Map<string, TrashQualityDefinition>> => {
@@ -212,7 +220,8 @@ export const loadAllQDsFromTrash = async (arrType: TrashArrSupported): Promise<M
     const files = fs.readdirSync(trashPath).filter((fn) => fn.endsWith(".json"));
     for (const item of files) {
       try {
-        const qd = loadJsonFile<TrashQualityDefinition>(`${trashPath}/${item}`);
+        const rawQd = loadJsonFile(`${trashPath}/${item}`);
+        const qd = validateExternal(TrashQualityDefinitionSchema, rawQd, `trash-qd/${arrType}/${item}`) as TrashQualityDefinition;
         map.set(qd.trash_id, qd);
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : String(err);
@@ -244,7 +253,8 @@ export const loadQPFromTrash = async (arrType: TrashArrSupported) => {
     }
 
     for (const item of files) {
-      const importTrashQP = loadJsonFile<TrashQP>(`${trashPath}/${item}`);
+      const rawQP = loadJsonFile(`${trashPath}/${item}`);
+      const importTrashQP = validateExternal(TrashQPSchema, rawQP, `trash-qp/${arrType}/${item}`) as TrashQP;
 
       map.set(importTrashQP.trash_id, importTrashQP);
     }
