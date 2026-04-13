@@ -40,10 +40,15 @@ import {
   MergedConfigInstance,
 } from "./types/config.types";
 import { RemotePathConfigSchema } from "./remotePaths/remotePath.types";
-import { TrashCFGroupMapping, TrashQP, TrashQualityDefinition, TrashQualityDefinitionQuality } from "./types/trashguide.types";
+import {
+  TrashCFGroupMapping,
+  TrashQP,
+  TrashQualityDefinition,
+  TrashQualityDefinitionQuality,
+  TrashQualityDefinitionSchema,
+} from "./types/trashguide.types";
 import { isUrl, loadTemplateFromUrl } from "./url-template-importer";
 import { cloneWithJSON } from "./util";
-import { z } from "zod";
 
 let config: ConfigSchema;
 let secrets: any;
@@ -442,20 +447,6 @@ const includeTrashTemplate = (
   logger.info(`Loaded ${numberOfCfsLoaded.size} default CFs from CF-Groups for TRaSH-Guide profile '${template.name}'`);
   mergedTemplates.custom_formats.push(...requiredCFsFromCFGroups);
 };
-
-const TrashQualityDefinitionQualitySchema = z.object({
-  quality: z.string(),
-  title: z.string().optional(),
-  min: z.number(),
-  preferred: z.number(),
-  max: z.number(),
-});
-
-const TrashQualityDefinitionSchema = z.object({
-  trash_id: z.string(),
-  type: z.string(),
-  qualities: z.array(TrashQualityDefinitionQualitySchema).min(1),
-});
 
 export const isTrashQualityDefinition = (json: unknown): json is TrashQualityDefinition => {
   const result = TrashQualityDefinitionSchema.safeParse(json);
