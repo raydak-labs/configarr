@@ -38,10 +38,12 @@ import {
   InputConfigMetadataProfile,
   InputConfigRemotePath,
   InputConfigSchema,
+  InputConfigSchemaSchema,
   MediaNamingType,
   MergedConfigInstance,
 } from "./types/config.types";
 import { RemotePathConfigSchema } from "./remotePaths/remotePath.types";
+import { validateConfig as validateConfigData } from "./validation";
 import {
   TrashCFGroupMapping,
   TrashQP,
@@ -112,10 +114,12 @@ export const getConfig = (): ConfigSchema => {
 
   const file = readFileSync(configLocation, "utf8");
 
-  const inputConfig = yaml.parse(file, {
+  const rawConfig = yaml.parse(file, {
     customTags: [secretsTag, envTag, fileTag],
     merge: helpers.enableMerge,
-  }) as InputConfigSchema;
+  });
+
+  const inputConfig = validateConfigData(InputConfigSchemaSchema, rawConfig, "config file") as InputConfigSchema;
 
   config = transformConfig(inputConfig);
 
