@@ -4,6 +4,14 @@ import ky, { HTTPError } from "ky";
 import { logger } from "../logger";
 import { createConnectionErrorParts } from "../clients/unified-client";
 
+function toErrorMessage(value: unknown): string {
+  if (value === null) return "null";
+  if (value === undefined) return "undefined";
+  if (typeof value === "string") return value;
+  if (typeof value === "object") return JSON.stringify(value);
+  return String(value);
+}
+
 type KyResponse<Data> = Response & {
   json<T extends Data = Data>(): Promise<T>;
 };
@@ -208,46 +216,53 @@ export class HttpClient<SecurityDataType = unknown> {
         const { response, request } = error;
 
         if (response) {
-          // The request was made and the server responded with a status code
-          // that falls out of the range of 2xx
           const contentType = response.headers.get("content-type");
 
           if (contentType && contentType.includes("application/json")) {
-            // Process JSON data
-            const errorJson = await response.json();
+            let errorJson: unknown;
+            try {
+              errorJson = await response.json();
+            } catch {
+              const message = `HTTP Error: ${response.status} ${response.statusText}. Failed to read response body.`;
+              logger.error(message);
+              throw new Error(message, { cause: error });
+            }
 
             let errorMessage = "unknown error";
 
             if (Array.isArray(errorJson)) {
-              errorMessage = errorJson.map((e) => e.message || e.errorMessage).join(", ");
-            } else {
-              errorMessage = errorJson.message || errorJson.errorMessage || errorMessage;
+              const messages = (errorJson as Array<Record<string, unknown>>)
+                .map((e) => {
+                  const msg = e["message"] ?? e["errorMessage"];
+                  return typeof msg === "string" && msg ? msg : undefined;
+                })
+                .filter((m): m is string => m !== undefined);
+              errorMessage = messages.length > 0 ? messages.join(", ") : JSON.stringify(errorJson);
+            } else if (errorJson && typeof errorJson === "object") {
+              const errObj = errorJson as Record<string, unknown>;
+              const msg = errObj["message"] ?? errObj["errorMessage"];
+              if (typeof msg === "string" && msg) errorMessage = msg;
             }
 
             logger.error(errorJson, `Failed executing request: '${errorMessage}'`);
-
-            throw new Error(errorJson);
+            throw new Error(errorMessage, { cause: error });
           } else {
-            // Handle non-JSON response - use enhanced error message
-            logger.error(`HTTP Error: ${response.status} ${response.statusText}. ${enhancedMessage || ""}`);
+            const messageParts = [`HTTP Error: ${response.status} ${response.statusText}`];
+            if (enhancedMessage) messageParts.push(enhancedMessage);
+            const message = messageParts.join(". ");
+            logger.error(message);
+            throw new Error(message, { cause: error });
           }
         } else if (request) {
-          // The request was made but no response was received
-          // `request` is an instance of XMLHttpRequest in the browser and an instance of
-          // http.ClientRequest in node.js
-          try {
-            const errorJson = await request.json();
-            logger.error(errorJson, `Failed during request (probably some connection issues?). ${enhancedMessage || ""}`);
-          } catch (jsonError) {
-            logger.error(`Failed during request (probably some connection issues?). ${enhancedMessage || ""}`);
-          }
-          throw error;
+          const message = `Request failed (no response). ${enhancedMessage || "Probably connection issues."}`;
+          logger.error(message);
+          throw new Error(message, { cause: error });
         } else {
-          // Something happened in setting up the request that triggered an Error
-          logger.error(`No request/response information. Unknown error. ${enhancedMessage || ""}`);
+          const message = `Request setup failed: ${enhancedMessage || "Unknown error"}`;
+          logger.error(message);
+          throw new Error(message, { cause: error });
         }
       } else if (error instanceof TypeError) {
-        // Use enhanced message for TypeError but preserve original detailed handling
         let errorMessage = "Probably some connection issues. If not, feel free to open an issue with details to improve handling.";
 
         if (error.cause && error.cause instanceof Error) {
@@ -258,19 +273,17 @@ export class HttpClient<SecurityDataType = unknown> {
           }
         }
 
-        // Add the enhanced message if it provides additional context
         if (enhancedMessage && !errorMessage.includes(enhancedMessage)) {
           errorMessage += ` ${enhancedMessage}`;
         }
 
         logger.error(errorMessage);
+        throw new Error(errorMessage, { cause: error });
       } else {
-        logger.error(
-          `An not expected error happened. Feel free to open an issue with details to improve handling. ${enhancedMessage || ""}`,
-        );
+        const message = `Unexpected error: ${enhancedMessage || toErrorMessage(error)}`;
+        logger.error(message);
+        throw new Error(message);
       }
-
-      throw error;
     }
   };
 }
