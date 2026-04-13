@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.26.0](https://github.com/raydak-labs/configarr/compare/v1.25.0...v1.26.0) (2026-04-13)
+
+### Features
+
+- warn on TRaSH CF conflicts ([e5e7387](https://github.com/raydak-labs/configarr/commit/e5e738759a173e68152b53583ecbd846acf9aaa2))
+
+### Bug Fixes
+
+- address review findings in CF conflict handling ([92e807a](https://github.com/raydak-labs/configarr/commit/92e807a335cee08e675e0fed435ec66fa17f7a22))
+- adjust conflicting cf names with different ids ([65c369d](https://github.com/raydak-labs/configarr/commit/65c369d9877e67534325a05ee7933d8309b44733))
+- **deps:** update dependencies (non-major) ([#418](https://github.com/raydak-labs/configarr/issues/418)) ([50fff41](https://github.com/raydak-labs/configarr/commit/50fff41915bee98cd73b68aae025cca55dae9947))
+- improve trash conflicts.json handling ([763ebef](https://github.com/raydak-labs/configarr/commit/763ebef84438f0fc13b76e6b8a6e0b9877704eff))
+
+### (internal) Refactorings
+
+- **internal:** move ky-client + mergedTypes from **generated** ([55acfd1](https://github.com/raydak-labs/configarr/commit/55acfd1ed7f2d0e19c6d158be5c122da69ce10d2))
+- try improving error messages ([e5fcf78](https://github.com/raydak-labs/configarr/commit/e5fcf785b7094c5844a13d63141247a11502eb7a))
+
 ## [1.25.0](https://github.com/raydak-labs/configarr/compare/v1.24.1...v1.25.0) (2026-03-30)
 
 ### Features
