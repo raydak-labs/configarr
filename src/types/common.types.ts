@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { MergedCustomFormatResource, MergedCustomFormatSpecificationSchema } from "./merged.types";
 import { InputConfigArrInstance } from "./config.types";
 import { TrashCF, TrashCFSpF } from "./trashguide.types";
@@ -10,7 +11,7 @@ type RequireAtLeastOne<T> = {
 
 /** Used in the UI of Sonarr/Radarr to import. Trash JSON are based on that so users can copy&paste stuff */
 export type UserFriendlyField = {
-  name?: string | null; // TODO validate if this can really appear? As Input
+  name?: string | null;
   value?: any;
 } & Pick<MergedCustomFormatSpecificationSchema, "negate" | "required">;
 
@@ -44,12 +45,43 @@ export type ImportCF = OmitTyped<MergedCustomFormatResource, "specifications"> &
   specifications?: TCM[] | null;
 } & Required<Pick<MergedCustomFormatResource, "name">>;
 
+// Schema for ImportCF — validates key structural constraint (name required).
+// Uses z.any() with refinement since the underlying types come from generated API code.
+export const ImportCFSchema: z.ZodType<ImportCF> = z.any().refine((v) => v != null && typeof v === "object" && typeof v.name === "string", {
+  message: "ImportCF must be an object with a string 'name' field",
+});
+
 export type ConfigarrCFMeta = {
   configarr_id: string;
   configarr_scores?: TrashCF["trash_scores"];
 };
 
+export const ConfigarrCFMetaSchema = z.object({
+  configarr_id: z.string(),
+  configarr_scores: z
+    .object({
+      default: z.number().optional(),
+      "anime-sonarr": z.number().optional(),
+      "anime-radarr": z.number().optional(),
+      "sqp-1-1080p": z.number().optional(),
+      "sqp-1-2160p": z.number().optional(),
+      "sqp-2": z.number().optional(),
+      "sqp-3": z.number().optional(),
+      "sqp-4": z.number().optional(),
+      "sqp-5": z.number().optional(),
+      "french-vostfr": z.number().optional(),
+      german: z.number().optional(),
+    })
+    .optional(),
+});
+
 export type ConfigarrCF = ConfigarrCFMeta & ImportCF;
+
+export const ConfigarrCFSchema: z.ZodType<ConfigarrCF> = z
+  .any()
+  .refine((v) => v != null && typeof v === "object" && typeof v.configarr_id === "string" && typeof v.name === "string", {
+    message: "ConfigarrCF must be an object with 'configarr_id' and 'name' string fields",
+  });
 
 type CFConfigGroup = {
   carrConfig: ConfigarrCF;
