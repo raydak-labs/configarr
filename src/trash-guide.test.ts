@@ -692,21 +692,15 @@ describe("TrashGuide", async () => {
       expect(result).toEqual([]);
     });
 
-    test("should skip conflict groups with less than 2 CFs", async () => {
+    test("should skip conflict groups with fewer than 2 valid trash_ids", async () => {
       const mockConflicts = {
         custom_formats: [
           {
-            trash_id: "group1",
-            name: "Single CF",
-            custom_formats: [{ trash_id: "cf1", name: "CF1" }],
+            aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa: { name: "Only one", desc: "" },
           },
           {
-            trash_id: "group2",
-            name: "Valid Group",
-            custom_formats: [
-              { trash_id: "cf2", name: "CF2" },
-              { trash_id: "cf3", name: "CF3" },
-            ],
+            bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb: { name: "CF2", desc: "" },
+            cccccccccccccccccccccccccccccccc: { name: "CF3", desc: "" },
           },
         ],
       };
@@ -716,30 +710,22 @@ describe("TrashGuide", async () => {
       const result = await loadTrashCFConflicts("RADARR");
 
       expect(result).toHaveLength(1);
-      expect(result[0]?.trash_id).toBe("group2");
+      expect(result[0]?.trash_id).toBe("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb+cccccccccccccccccccccccccccccccc");
       expect(result[0]?.custom_formats).toHaveLength(2);
     });
 
-    test("should skip invalid conflict entries", async () => {
+    test("should skip null and empty groups but load valid ones", async () => {
       const mockConflicts = {
         custom_formats: [
           {
-            trash_id: "group1",
-            name: "Valid Group",
-            custom_formats: [
-              { trash_id: "cf1", name: "CF1" },
-              { trash_id: "cf2", name: "CF2" },
-            ],
+            aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa: { name: "CF1", desc: "" },
+            bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb: { name: "CF2", desc: "" },
           },
           null,
-          { missing_fields: true },
+          {},
           {
-            trash_id: "group2",
-            name: "Valid Group 2",
-            custom_formats: [
-              { trash_id: "cf3", name: "CF3" },
-              { trash_id: "cf4", name: "CF4" },
-            ],
+            cccccccccccccccccccccccccccccccc: { name: "CF3", desc: "" },
+            dddddddddddddddddddddddddddddddd: { name: "CF4", desc: "" },
           },
         ],
       };
@@ -749,21 +735,16 @@ describe("TrashGuide", async () => {
       const result = await loadTrashCFConflicts("RADARR");
 
       expect(result).toHaveLength(2);
-      expect(result[0]?.trash_id).toBe("group1");
-      expect(result[1]?.trash_id).toBe("group2");
+      expect(result[0]?.trash_id).toBe("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa+bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb");
+      expect(result[1]?.trash_id).toBe("cccccccccccccccccccccccccccccccc+dddddddddddddddddddddddddddddddd");
     });
 
-    test("should load valid conflict group with multiple CFs", async () => {
+    test("should normalize one group (desc join and trash_id sort order)", async () => {
       const mockConflicts = {
         custom_formats: [
           {
-            trash_id: "sdr-conflict",
-            name: "SDR Conflict Group",
-            trash_description: "SDR vs SDR (no WEBDL)",
-            custom_formats: [
-              { trash_id: "sdr-cf1", name: "SDR" },
-              { trash_id: "sdr-cf2", name: "SDR (no WEBDL)" },
-            ],
+            aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa: { name: "First alpha id", desc: "alpha" },
+            bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb: { name: "Second name", desc: "beta" },
           },
         ],
       };
@@ -773,24 +754,52 @@ describe("TrashGuide", async () => {
       const result = await loadTrashCFConflicts("RADARR");
 
       expect(result).toHaveLength(1);
-      expect(result[0]?.trash_id).toBe("sdr-conflict");
-      expect(result[0]?.name).toBe("SDR Conflict Group");
-      expect(result[0]?.trash_description).toBe("SDR vs SDR (no WEBDL)");
-      expect(result[0]?.custom_formats).toHaveLength(2);
-      expect(result[0]?.custom_formats[0]).toEqual({ trash_id: "sdr-cf1", name: "SDR" });
-      expect(result[0]?.custom_formats[1]).toEqual({ trash_id: "sdr-cf2", name: "SDR (no WEBDL)" });
+      expect(result[0]?.trash_id).toBe("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa+bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb");
+      expect(result[0]?.name).toBe("First alpha id vs Second name");
+      expect(result[0]?.trash_description).toBe("alpha beta");
+      expect(result[0]?.custom_formats).toEqual([
+        { trash_id: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", name: "First alpha id" },
+        { trash_id: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", name: "Second name" },
+      ]);
+    });
+
+    test("should load conflicts.json matching TRaSH upstream sample", async () => {
+      const mockConflicts = {
+        $schema: "../../../schemas/conflicts.schema.json",
+        custom_formats: [
+          {
+            "9c38ebb7384dada637be8899efa68e6f": { name: "SDR", desc: "" },
+            "25c12f78430a3a23413652cbd1d48d77": { name: "SDR (no WEBDL)", desc: "" },
+          },
+          {
+            dc98083864ea246d05a42df0d05f81cc: { name: "x265 (HD)", desc: "a" },
+            "839bea857ed2c0a8e084f3cbdbd65ecb": { name: "x265 (no HDR/DV)", desc: "b" },
+          },
+        ],
+      };
+
+      vi.spyOn(util, "loadJsonFile").mockReturnValue(mockConflicts);
+
+      const result = await loadTrashCFConflicts("RADARR");
+
+      expect(result).toHaveLength(2);
+      expect(result[0]?.trash_id).toBe("25c12f78430a3a23413652cbd1d48d77+9c38ebb7384dada637be8899efa68e6f");
+      expect(result[0]?.name).toBe("SDR (no WEBDL) vs SDR");
+      expect(result[0]?.custom_formats).toEqual([
+        { trash_id: "25c12f78430a3a23413652cbd1d48d77", name: "SDR (no WEBDL)" },
+        { trash_id: "9c38ebb7384dada637be8899efa68e6f", name: "SDR" },
+      ]);
+      expect(result[1]?.trash_id).toBe("839bea857ed2c0a8e084f3cbdbd65ecb+dc98083864ea246d05a42df0d05f81cc");
+      expect(result[1]?.name).toBe("x265 (no HDR/DV) vs x265 (HD)");
+      expect(result[1]?.trash_description).toBe("b a");
     });
 
     test("should return cached conflicts when cache is ready", async () => {
       const mockConflicts = {
         custom_formats: [
           {
-            trash_id: "group1",
-            name: "Valid Group",
-            custom_formats: [
-              { trash_id: "cf1", name: "CF1" },
-              { trash_id: "cf2", name: "CF2" },
-            ],
+            aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa: { name: "CF1", desc: "" },
+            bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb: { name: "CF2", desc: "" },
           },
         ],
       };

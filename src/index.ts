@@ -72,7 +72,7 @@ const pipeline = async (globalConfig: InputConfigSchema, instanceConfig: InputCo
     return p;
   }, new Map<string, MergedCustomFormatResource>());
 
-  const cfUpdateResult = await manageCf(mergedCFs, serverCFMapping, idsToManage);
+  const cfUpdateResult = await manageCf(mergedCFs, serverCFMapping);
 
   // add missing CFs to list because we need it for further steps
   // serverCFs.push(...cfUpdateResult.createCFs);

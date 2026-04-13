@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { z } from "zod";
 import { MergedCustomFormatResource } from "./types/merged.types";
 import { getConfig } from "./config";
 import { logger } from "./logger";
@@ -11,7 +12,6 @@ import {
   TrashCache,
   TrashCF,
   TrashCFConflict,
-  TrashCFConflicts,
   TrashCFGroupMapping,
   TrashCustomFormatGroups,
   TrashQP,
@@ -330,6 +330,41 @@ export const loadNamingFromTrashRadarr = async (): Promise<TrashRadarrNaming | n
   return firstValue;
 };
 
+/** Matches TRaSH conflicts.schema.json (object values: name required, desc optional, no extra keys). */
+const trashConflictCfEntrySchema = z
+  .object({
+    name: z.string(),
+    desc: z.string().optional(),
+  })
+  .strict();
+
+const trashConflictGroupRecordSchema = z.record(z.string(), trashConflictCfEntrySchema);
+
+const trashConflictsFileSchema = z
+  .object({
+    $schema: z.string().optional(),
+    custom_formats: z.array(z.unknown()),
+  })
+  .strict();
+
+const normalizeTrashConflictGroup = (group: z.infer<typeof trashConflictGroupRecordSchema>): TrashCFConflict => {
+  const entries = Object.entries(group).map(([trash_id, rec]) => ({
+    trash_id,
+    name: rec.name,
+    desc: rec.desc,
+  }));
+  entries.sort((a, b) => a.trash_id.localeCompare(b.trash_id));
+  const custom_formats = entries.map(({ trash_id, name }) => ({ trash_id, name }));
+  const descriptions = entries.map((e) => e.desc).filter((d): d is string => typeof d === "string" && d.length > 0);
+
+  return {
+    trash_id: custom_formats.map((cf) => cf.trash_id).join("+"),
+    name: custom_formats.map((cf) => cf.name).join(" vs "),
+    trash_description: descriptions.length > 0 ? descriptions.join(" ") : undefined,
+    custom_formats,
+  };
+};
+
 export const loadTrashCFConflicts = async (arrType: TrashArrSupported): Promise<TrashCFConflict[]> => {
   if (arrType !== "RADARR" && arrType !== "SONARR") {
     logger.debug(`Unsupported arrType: ${arrType}. Skipping TrashCFConflicts.`);
@@ -351,41 +386,36 @@ export const loadTrashCFConflicts = async (arrType: TrashArrSupported): Promise<
   }
 
   try {
-    const conflictsData = loadJsonFile<TrashCFConflicts>(conflictsPath);
+    const raw = loadJsonFile<unknown>(conflictsPath);
+    const fileParsed = trashConflictsFileSchema.safeParse(raw);
 
-    if (!conflictsData || !Array.isArray(conflictsData.custom_formats)) {
-      logger.warn(`(${arrType}) Invalid conflicts.json format: expected { custom_formats: [...] }. Skipping conflicts.`);
+    if (!fileParsed.success) {
+      logger.warn(`(${arrType}) Invalid conflicts.json: ${fileParsed.error.issues.map((i) => i.message).join("; ")}. Skipping conflicts.`);
       return [];
     }
 
-    for (const group of conflictsData.custom_formats) {
-      if (!group || typeof group !== "object") {
+    for (const group of fileParsed.data.custom_formats) {
+      if (group === null || typeof group !== "object" || Array.isArray(group)) {
         continue;
       }
 
-      // Validate required fields
-      if (typeof group.trash_id !== "string" || typeof group.name !== "string" || !Array.isArray(group.custom_formats)) {
-        logger.warn(`(${arrType}) Skipping invalid conflict group: missing or invalid trash_id, name, or custom_formats`);
+      const g = trashConflictGroupRecordSchema.safeParse(group);
+      if (!g.success) {
+        logger.warn(`(${arrType}) Skipping invalid conflict group: ${g.error.issues.map((i) => i.message).join("; ")}`);
         continue;
       }
 
-      // Filter and validate custom_formats with type predicate
-      const customFormats = group.custom_formats.filter(
-        (cf): cf is { trash_id: string; name: string } =>
-          typeof cf === "object" && cf !== null && typeof cf.trash_id === "string" && typeof cf.name === "string",
-      );
-
-      if (customFormats.length < 2) {
-        // Conflict groups need at least 2 CFs to be meaningful
+      const keyCount = Object.keys(g.data).length;
+      if (keyCount < 2) {
+        if (keyCount === 0) {
+          logger.debug(`(${arrType}) Skipping empty conflict group`);
+        } else {
+          logger.warn(`(${arrType}) Skipping invalid conflict group: need at least 2 entries (string key -> { name, desc? })`);
+        }
         continue;
       }
 
-      conflicts.push({
-        trash_id: group.trash_id,
-        name: group.name,
-        trash_description: typeof group.trash_description === "string" ? group.trash_description : undefined,
-        custom_formats: customFormats,
-      });
+      conflicts.push(normalizeTrashConflictGroup(g.data));
     }
 
     logger.debug(`(${arrType}) Loaded ${conflicts.length} TRaSH CF conflict groups`);
