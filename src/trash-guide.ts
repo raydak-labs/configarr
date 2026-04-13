@@ -167,7 +167,11 @@ export const loadTrashCustomFormatGroups = async (arrType: TrashArrSupported): P
     const name = `${pathForFiles}/${file}`;
 
     const rawGroup = loadJsonFile(path.resolve(name));
-    const cfGroup = validateExternal(TrashCustomFormatGroupsSchema, rawGroup, `trash-cf-group/${arrType}/${file}`) as TrashCustomFormatGroups;
+    const cfGroup = validateExternal(
+      TrashCustomFormatGroupsSchema,
+      rawGroup,
+      `trash-cf-group/${arrType}/${file}`,
+    ) as TrashCustomFormatGroups;
 
     cfGroupMapping.set(cfGroup.trash_id, cfGroup);
   }
