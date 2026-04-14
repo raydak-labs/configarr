@@ -27,6 +27,13 @@ export type InputConfigSchema = {
    * @temporary This option will be removed in a future version
    */
   compatibilityTrashGuide20260219Enabled?: boolean;
+  /**
+   * Silences warnings emitted when a Quality Profile contains CustomFormats that TRaSH-Guides
+   * marks as mutually exclusive in `conflicts.json`. Sync behavior itself is not changed — only
+   * the log output is suppressed. Useful when conflicting CFs are intentionally configured.
+   * @default false
+   */
+  silenceTrashConflictWarnings?: boolean;
 
   sonarr?: Record<string, InputConfigArrInstance>;
   sonarrEnabled?: boolean;
