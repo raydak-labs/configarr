@@ -62,7 +62,7 @@ const pipeline = async (globalConfig: InputConfigSchema, instanceConfig: InputCo
   const mergedCFs = await loadCustomFormatDefinitions(idsToManage, arrType, config.customFormatDefinitions || []);
 
   // Check for conflicting CFs from TRaSH guides
-  if (isInConstArray(TrashArrSupportedConst, arrType)) {
+  if (isInConstArray(TrashArrSupportedConst, arrType) && !globalConfig.silenceTrashConflictWarnings) {
     const conflicts = await loadTrashCFConflicts(arrType as TrashArrSupported);
     checkForConflictingCFs(mergedCFs, config, conflicts);
   }
