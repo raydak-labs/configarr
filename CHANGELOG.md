@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.27.0](https://github.com/raydak-labs/configarr/compare/v1.26.0...v1.27.0) (2026-04-14)
+
+### Features
+
+- add silenceTrashConflictWarnings config option ([b42072b](https://github.com/raydak-labs/configarr/commit/b42072bcff7d4532ba0ab42b749fbf1321fac0d9))
+
 ## [1.26.0](https://github.com/raydak-labs/configarr/compare/v1.25.0...v1.26.0) (2026-04-13)
 
 ### Features
