@@ -223,6 +223,27 @@ telemetry: true
 
 **Note:** Telemetry is disabled by default and is completely opt-in. See [Telemetry](./telemetry.md)
 
+### TRaSH CustomFormat conflicts <span className="theme-doc-version-badge badge badge--secondary configarr-badge">1.26.0</span> {#trash-cf-conflicts}
+
+Configarr parses `conflicts.json` from TRaSH-Guides and logs a warning when a Quality Profile
+is configured with two or more CustomFormats that TRaSH marks as mutually exclusive. Sync
+behavior is **not** changed — the warning is informational only, so you can review whether
+the combination is intentional.
+
+The check runs automatically for Radarr and Sonarr instances whenever `conflicts.json` is
+available in the TRaSH-Guides repository.
+
+#### Silence conflict warnings <span className="theme-doc-version-badge badge badge--secondary configarr-badge">1.27.0</span> {#silence-trash-conflict-warnings}
+
+If you intentionally configure conflicting CustomFormats (or simply want quieter logs), set
+the top-level flag to skip the check:
+
+```yaml
+silenceTrashConflictWarnings: true
+```
+
+Default is `false`. Sync behavior is identical either way — only the warning log is suppressed.
+
 ### Sharing download client config with YAML anchors <span className="theme-doc-version-badge badge badge--secondary configarr-badge">1.23.0</span> {#yaml-anchors}
 
 You can avoid repeating the same download client settings by using **YAML anchors** and **merge keys**:
