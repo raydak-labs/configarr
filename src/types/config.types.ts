@@ -1,5 +1,296 @@
-import { ConfigarrCF } from "./common.types";
-import { TrashCF, TrashQualityDefinitionQuality, TrashScores } from "./trashguide.types";
+import { z } from "zod";
+import { ConfigarrCFSchema } from "./common.types";
+import { TrashCFSchema, TrashQualityDefinitionQualitySchema, TrashScores, TrashQualityDefinitionQuality } from "./trashguide.types";
+
+// ============================================================================
+// Zod Schemas — used for runtime validation only.
+// Types are defined manually below to preserve exact TypeScript semantics
+// (especially around optional vs. undefined in Required<> and keyof).
+// ============================================================================
+
+export const CustomFormatDefinitionsSchema = z.array(z.union([TrashCFSchema, ConfigarrCFSchema]));
+
+const ScoreAssignmentSchema = z.object({
+  name: z.string(),
+  score: z.number().optional(),
+  use_default_score: z.boolean().optional(),
+});
+
+export const InputConfigIncludeItemSchema = z.object({
+  template: z.string(),
+  source: z.enum(["TRASH", "RECYCLARR"]).optional(),
+  preferred_ratio: z.number().min(0).max(1).optional(),
+});
+
+export const InputConfigQualityProfileItemSchema = z.object({
+  name: z.string(),
+  qualities: z.array(z.string()).optional(),
+  enabled: z.boolean().optional(),
+});
+
+export const InputConfigQualityProfileSchema = z.object({
+  name: z.string(),
+  reset_unmatched_scores: z
+    .object({
+      enabled: z.boolean(),
+      except: z.array(z.string()).optional(),
+    })
+    .optional(),
+  upgrade: z
+    .union([
+      z.object({
+        allowed: z.literal(true),
+        until_quality: z.string(),
+        until_score: z.number(),
+        min_format_score: z.number().optional(),
+      }),
+      z.object({
+        allowed: z.literal(false),
+        until_quality: z.string().optional(),
+        until_score: z.number().optional(),
+        min_format_score: z.number().optional(),
+      }),
+    ])
+    .optional(),
+  min_format_score: z.number().optional(),
+  score_set: z.string().optional(),
+  quality_sort: z.string().optional(),
+  language: z.string().optional(),
+  qualities: z.array(InputConfigQualityProfileItemSchema).optional(),
+});
+
+export const InputConfigCustomFormatSchema = z.object({
+  trash_ids: z.array(z.string()).optional(),
+  quality_profiles: z.array(ScoreAssignmentSchema).optional(),
+  assign_scores_to: z.array(ScoreAssignmentSchema).optional(),
+});
+
+export const InputConfigCustomFormatGroupSchema = z.object({
+  trash_guide: z
+    .array(
+      z.object({
+        id: z.string(),
+        include_unrequired: z.boolean().optional(),
+      }),
+    )
+    .optional(),
+  assign_scores_to: z
+    .array(
+      z.object({
+        name: z.string(),
+        score: z.number().optional(),
+      }),
+    )
+    .optional(),
+});
+
+const MonitorSchema = z.enum(["all", "future", "missing", "existing", "latest", "first", "none", "unknown"]);
+
+export const InputConfigRootFolderLidarrSchema = z.object({
+  path: z.string(),
+  name: z.string(),
+  metadata_profile: z.string(),
+  quality_profile: z.string(),
+  monitor: MonitorSchema.optional(),
+  monitor_new_album: z.enum(["all", "none", "new"]).optional(),
+  tags: z.array(z.string()).optional(),
+});
+
+export const InputConfigRootFolderReadarrSchema = z.object({
+  path: z.string(),
+  name: z.string(),
+  metadata_profile: z.string(),
+  quality_profile: z.string(),
+  monitor: MonitorSchema.optional(),
+  monitor_new_items: z.enum(["all", "none", "new"]).optional(),
+  tags: z.array(z.string()).optional(),
+  is_calibre_library: z.boolean().optional(),
+  calibre_host: z.string().optional(),
+  calibre_port: z.number().optional(),
+  calibre_url_base: z.string().optional(),
+  calibre_username: z.string().optional(),
+  calibre_password: z.string().optional(),
+  calibre_library: z.string().optional(),
+  calibre_output_format: z.string().optional(),
+  calibre_output_profile: z.string().optional(),
+  calibre_use_ssl: z.boolean().optional(),
+});
+
+export const InputConfigRootFolderGenericSchema = z.string();
+
+export const InputConfigRootFolderSchema = z.union([
+  InputConfigRootFolderGenericSchema,
+  InputConfigRootFolderLidarrSchema,
+  InputConfigRootFolderReadarrSchema,
+]);
+
+export const InputConfigDownloadClientConfigSchema = z.object({
+  download_client_working_folders: z.string().optional(),
+  enable_completed_download_handling: z.boolean().optional(),
+  auto_redownload_failed: z.boolean().optional(),
+  auto_redownload_failed_from_interactive_search: z.boolean().optional(),
+  check_for_finished_download_interval: z.number().optional(),
+});
+
+export const InputConfigRemotePathSchema = z.object({
+  host: z.string(),
+  remote_path: z.string(),
+  local_path: z.string(),
+});
+
+export const InputConfigDelayProfileSchema = z.object({
+  enableUsenet: z.boolean().optional(),
+  enableTorrent: z.boolean().optional(),
+  preferredProtocol: z.string().optional(),
+  usenetDelay: z.number().optional(),
+  torrentDelay: z.number().optional(),
+  bypassIfHighestQuality: z.boolean().optional(),
+  bypassIfAboveCustomFormatScore: z.boolean().optional(),
+  minimumCustomFormatScore: z.number().optional(),
+  order: z.number().optional(),
+  tags: z.array(z.string()).optional(),
+});
+
+export const InputConfigDownloadClientSchema = z.object({
+  name: z.string(),
+  type: z.string(),
+  enable: z.boolean().optional(),
+  priority: z.number().optional(),
+  remove_completed_downloads: z.boolean().optional(),
+  remove_failed_downloads: z.boolean().optional(),
+  fields: z.record(z.string(), z.any()).optional(),
+  tags: z.array(z.union([z.string(), z.number()])).optional(),
+});
+
+export const MediaManagementTypeSchema = z.object({}).passthrough();
+export const UiConfigTypeSchema = z.object({}).passthrough();
+export const MediaNamingApiTypeSchema = z.object({}).passthrough();
+
+export const MediaNamingTypeSchema = z.object({
+  folder: z.string().optional(),
+  movie: z
+    .object({
+      rename: z.boolean().optional(),
+      standard: z.string().optional(),
+    })
+    .optional(),
+  series: z.string().optional(),
+  season: z.string().optional(),
+  episodes: z
+    .object({
+      rename: z.boolean().optional(),
+      standard: z.string().optional(),
+      daily: z.string().optional(),
+      anime: z.string().optional(),
+    })
+    .optional(),
+});
+
+const DeleteUnmanagedSchema = z.object({
+  enabled: z.boolean(),
+  ignore: z.array(z.string()).optional(),
+});
+
+export const InputConfigLidarrMetadataProfileSchema = z.object({
+  name: z.string(),
+  primary_types: z.array(z.string()).optional(),
+  secondary_types: z.array(z.string()).optional(),
+  release_statuses: z.array(z.string()).optional(),
+});
+
+export const InputConfigReadarrMetadataProfileSchema = z.object({
+  name: z.string(),
+  min_popularity: z.number().optional(),
+  skip_missing_date: z.boolean().optional(),
+  skip_missing_isbn: z.boolean().optional(),
+  skip_parts_and_sets: z.boolean().optional(),
+  skip_secondary_series: z.boolean().optional(),
+  allowed_languages: z.array(z.string()).nullable().optional(),
+  min_pages: z.number().nullable().optional(),
+  must_not_contain: z.array(z.string()).optional(),
+});
+
+export const InputConfigMetadataProfileSchema = z.union([InputConfigLidarrMetadataProfileSchema, InputConfigReadarrMetadataProfileSchema]);
+
+export const InputConfigArrInstanceSchema = z.object({
+  base_url: z.string(),
+  api_key: z.string(),
+  enabled: z.boolean().optional(),
+  delete_unmanaged_custom_formats: DeleteUnmanagedSchema.optional(),
+  delete_unmanaged_quality_profiles: DeleteUnmanagedSchema.optional(),
+  quality_definition: z
+    .object({
+      type: z.string().optional(),
+      preferred_ratio: z.number().min(0).max(1).optional(),
+      qualities: z.array(TrashQualityDefinitionQualitySchema).optional(),
+    })
+    .optional(),
+  include: z.array(InputConfigIncludeItemSchema).optional(),
+  custom_format_groups: z.array(InputConfigCustomFormatGroupSchema).optional(),
+  custom_formats: z.array(InputConfigCustomFormatSchema).optional(),
+  quality_profiles: z.array(InputConfigQualityProfileSchema),
+  media_management: MediaManagementTypeSchema.optional(),
+  ui_config: UiConfigTypeSchema.optional(),
+  media_naming_api: MediaNamingApiTypeSchema.optional(),
+  renameQualityProfiles: z.array(z.object({ from: z.string(), to: z.string() })).optional(),
+  cloneQualityProfiles: z.array(z.object({ from: z.string(), to: z.string() })).optional(),
+  media_naming: MediaNamingTypeSchema.optional(),
+  metadata_profiles: z.array(InputConfigMetadataProfileSchema).optional(),
+  delete_unmanaged_metadata_profiles: DeleteUnmanagedSchema.optional(),
+  root_folders: z.array(InputConfigRootFolderSchema).optional(),
+  delay_profiles: z
+    .object({
+      default: InputConfigDelayProfileSchema.optional(),
+      additional: z.array(InputConfigDelayProfileSchema).optional(),
+    })
+    .optional(),
+  download_clients: z
+    .object({
+      data: z.array(InputConfigDownloadClientSchema).optional(),
+      update_password: z.boolean().optional(),
+      delete_unmanaged: DeleteUnmanagedSchema.optional(),
+      config: InputConfigDownloadClientConfigSchema.optional(),
+      remote_paths: z.array(InputConfigRemotePathSchema).optional(),
+      delete_unmanaged_remote_paths: z.boolean().optional(),
+    })
+    .optional(),
+  customFormatDefinitions: CustomFormatDefinitionsSchema.optional(),
+});
+
+export const InputConfigSchemaSchema = z.object({
+  trashGuideUrl: z.string().optional(),
+  trashRevision: z.string().optional(),
+  recyclarrConfigUrl: z.string().optional(),
+  recyclarrRevision: z.string().optional(),
+  localCustomFormatsPath: z.string().optional(),
+  localConfigTemplatesPath: z.string().optional(),
+  enableFullGitClone: z.boolean().optional(),
+  telemetry: z.boolean().optional(),
+  customFormatDefinitions: CustomFormatDefinitionsSchema.optional(),
+  compatibilityTrashGuide20260219Enabled: z.boolean().optional(),
+
+  sonarr: z.record(z.string(), InputConfigArrInstanceSchema).optional(),
+  sonarrEnabled: z.boolean().optional(),
+
+  radarr: z.record(z.string(), InputConfigArrInstanceSchema).optional(),
+  radarrEnabled: z.boolean().optional(),
+
+  whisparr: z.record(z.string(), InputConfigArrInstanceSchema).optional(),
+  whisparrEnabled: z.boolean().optional(),
+
+  readarr: z.record(z.string(), InputConfigArrInstanceSchema).optional(),
+  readarrEnabled: z.boolean().optional(),
+
+  lidarr: z.record(z.string(), InputConfigArrInstanceSchema).optional(),
+  lidarrEnabled: z.boolean().optional(),
+});
+
+// ============================================================================
+// Types — manually defined to preserve exact TypeScript semantics.
+// ============================================================================
+
+import type { ConfigarrCF } from "./common.types";
+import type { TrashCF } from "./trashguide.types";
 
 export type CustomFormatDefinitions = (TrashCF | ConfigarrCF)[];
 
@@ -10,22 +301,9 @@ export type InputConfigSchema = {
   recyclarrRevision?: string;
   localCustomFormatsPath?: string;
   localConfigTemplatesPath?: string;
-  // @experimental since v1.12.0
   enableFullGitClone?: boolean;
-  /**
-   * Enable anonymous telemetry tracking of feature usage
-   * @default false
-   */
   telemetry?: boolean;
   customFormatDefinitions?: CustomFormatDefinitions;
-  /**
-   * Enable compatibility mode for TRaSH-Guides changes from Feb 2026.
-   * When true: Uses old behavior for both CF groups (exclude semantics) and quality ordering (with reversal).
-   * When false (default): Uses new behavior - CF groups use include semantics, quality ordering matches display order.
-   * @see https://github.com/TRaSH-Guides/Guides/commit/2994a7979d8036a7908a92e2cd286054fd4fcc1b
-   * @default false
-   * @temporary This option will be removed in a future version
-   */
   compatibilityTrashGuide20260219Enabled?: boolean;
   /**
    * Silences warnings emitted when a Quality Profile contains CustomFormats that TRaSH-Guides
@@ -53,9 +331,7 @@ export type InputConfigSchema = {
 
 export type InputConfigCustomFormat = {
   trash_ids?: string[];
-  /**
-   * @deprecated replaced with assign_scores_to
-   */
+  /** @deprecated replaced with assign_scores_to */
   quality_profiles?: { name: string; score?: number; use_default_score?: boolean }[];
   assign_scores_to?: { name: string; score?: number; use_default_score?: boolean }[];
 };
@@ -83,7 +359,6 @@ export type InputConfigRootFolderReadarr = {
   monitor?: "all" | "future" | "missing" | "existing" | "latest" | "first" | "none" | "unknown";
   monitor_new_items?: "all" | "none" | "new";
   tags?: string[];
-  // Calibre integration (optional)
   is_calibre_library?: boolean;
   calibre_host?: string;
   calibre_port?: number;
@@ -101,35 +376,13 @@ export type InputConfigRootFolderGeneric = string;
 export type InputConfigRootFolder = InputConfigRootFolderGeneric | InputConfigRootFolderLidarr | InputConfigRootFolderReadarr;
 
 export type InputConfigDownloadClientConfig = {
-  /**
-   * Folders where download clients store downloads
-   */
   download_client_working_folders?: string;
-  /**
-   * Enable completed download handling
-   * @default true
-   */
   enable_completed_download_handling?: boolean;
-  /**
-   * Automatically redownload failed downloads
-   * @default false
-   */
   auto_redownload_failed?: boolean;
-  /**
-   * Automatically redownload failed downloads from interactive search
-   * @default false
-   */
   auto_redownload_failed_from_interactive_search?: boolean;
-  /**
-   * Radarr only: Check interval for finished downloads (in minutes)
-   */
   check_for_finished_download_interval?: number;
 };
 
-/**
- * Configuration for a single remote path mapping
- * @experimental since v1.20.0
- */
 export interface InputConfigRemotePath {
   host: string;
   remote_path: string;
@@ -139,127 +392,49 @@ export interface InputConfigRemotePath {
 export type InputConfigArrInstance = {
   base_url: string;
   api_key: string;
-  /**
-   * since v1.11.0
-   */
   enabled?: boolean;
-  /**
-   * since v1.12.0
-   * Deletes all CustomFormats which are not defined in any qualityprofile
-   */
   delete_unmanaged_custom_formats?: {
     enabled: boolean;
-    /**
-     * Names of custom formats to ignore deleting
-     */
     ignore?: string[];
   };
-  /**
-   * since v1.18.0
-   * Deletes all unmanaged Quality Profile
-   */
   delete_unmanaged_quality_profiles?: {
     enabled: boolean;
-    /**
-     * Names of quality profiles to ignore deleting
-     */
     ignore?: string[];
   };
   quality_definition?: {
     type?: string;
-    preferred_ratio?: number; // 0.0 - 1.0
-    // @experimental
+    preferred_ratio?: number;
     qualities?: TrashQualityDefinitionQuality[];
   };
   include?: InputConfigIncludeItem[];
-  /**
-   * @experimental since v1.12.0
-   */
   custom_format_groups?: InputConfigCustomFormatGroup[];
   custom_formats?: InputConfigCustomFormat[];
-  // TODO this is not correct. The profile can be added partly -> InputConfigQualityProfile
   quality_profiles: ConfigQualityProfile[];
-  /* @experimental */
   media_management?: MediaManagementType;
-  /* @experimental */
   ui_config?: UiConfigType;
-  /* @experimental */
   media_naming_api?: MediaNamingApiType;
   renameQualityProfiles?: { from: string; to: string }[];
   cloneQualityProfiles?: { from: string; to: string }[];
-
-  // this is recyclarr specific: https://recyclarr.dev/wiki/yaml/config-reference/media-naming/
   media_naming?: MediaNamingType;
-
-  /**
-   * Optional metadata profiles (Lidarr / Readarr only).
-   * Kept close to each Arr application's native MetadataProfileResource.
-   */
   metadata_profiles?: InputConfigMetadataProfile[];
-
-  /**
-   * Deletes all metadata profiles that are present on the server but not defined
-   * in this configuration. Can be further narrowed using the ignore list.
-   */
   delete_unmanaged_metadata_profiles?: {
     enabled: boolean;
-    /**
-     * Names of metadata profiles that should never be deleted automatically.
-     * Can be specified as an array of strings.
-     */
     ignore?: string[];
   };
-
-  /**
-   * @experimental since v1.14.0
-   */
   root_folders?: InputConfigRootFolder[];
-  /**
-   * @experimental since v1.14.0
-   */
   delay_profiles?: {
     default?: InputConfigDelayProfile;
     additional?: InputConfigDelayProfile[];
   };
-  /**
-   * @experimental since v1.19.0
-   * Download clients configuration
-   */
   download_clients?: {
-    /**
-     * Array of download client configurations
-     */
     data?: InputConfigDownloadClient[];
-    /**
-     * Always update password fields even when they match the server (to ensure passwords are current)
-     * @default false
-     */
     update_password?: boolean;
-    /**
-     * Delete unmanaged download clients
-     * @default false
-     */
     delete_unmanaged?: {
       enabled: boolean;
-      /**
-       * Names of download clients to ignore deleting
-       */
       ignore?: string[];
     };
-    /**
-     * Global download client configuration
-     */
     config?: InputConfigDownloadClientConfig;
-    /**
-     * Remote path mappings for download clients
-     * @experimental since v1.20.0
-     */
     remote_paths?: InputConfigRemotePath[];
-    /**
-     * Delete unmanaged remote path mappings
-     * @experimental since v1.20.0
-     * @default false
-     */
     delete_unmanaged_remote_paths?: boolean;
   };
 } & Pick<InputConfigSchema, "customFormatDefinitions">;
@@ -278,42 +453,13 @@ export type InputConfigDelayProfile = {
 };
 
 export type InputConfigDownloadClient = {
-  /**
-   * Download client name (must be unique)
-   */
   name: string;
-  /**
-   * Download client type/implementation (e.g., "qbittorrent", "transmission", "sabnzbd")
-   */
   type: string;
-  /**
-   * Whether the download client is enabled
-   * @default true
-   */
   enable?: boolean;
-  /**
-   * Download client priority
-   * @default 1
-   */
   priority?: number;
-  /**
-   * Remove completed downloads
-   * @default true
-   */
   remove_completed_downloads?: boolean;
-  /**
-   * Remove failed downloads
-   * @default true
-   */
   remove_failed_downloads?: boolean;
-  /**
-   * Field configuration (host, port, username, password, etc.)
-   */
   fields?: Record<string, any>;
-  /**
-   * Tags to apply to this download client (can be tag names or IDs)
-   * Tag names will be automatically resolved to IDs, creating new tags if needed
-   */
   tags?: (string | number)[];
 };
 
@@ -325,20 +471,16 @@ export type UiConfigType = {
   // APIs not consistent across different *arrs. Keeping empty or generic
 };
 
-// HINT: Experimental
 export type MediaNamingApiType = {
   // APIs not consistent across different *arrs. Keeping empty or generic
 };
 
 export type MediaNamingType = {
-  // radarr
   folder?: string;
   movie?: {
     rename?: boolean;
     standard?: string;
   };
-
-  // sonarr
   series?: string;
   season?: string;
   episodes?: {
@@ -360,7 +502,7 @@ export type InputConfigQualityProfile = {
         allowed: true;
         until_quality: string;
         until_score: number;
-        min_format_score?: number; // default 1
+        min_format_score?: number;
       }
     | {
         allowed: false;
@@ -381,7 +523,12 @@ export type InputConfigQualityProfileItem = {
   enabled?: boolean;
 };
 
-// Lidarr-specific metadata profile config
+export type InputConfigIncludeItem = {
+  template: string;
+  source?: "TRASH" | "RECYCLARR";
+  preferred_ratio?: number;
+};
+
 export type InputConfigLidarrMetadataProfile = {
   name: string;
   primary_types?: string[];
@@ -389,7 +536,6 @@ export type InputConfigLidarrMetadataProfile = {
   release_statuses?: string[];
 };
 
-// Readarr-specific metadata profile config
 export type InputConfigReadarrMetadataProfile = {
   name: string;
   min_popularity?: number;
@@ -402,19 +548,9 @@ export type InputConfigReadarrMetadataProfile = {
   must_not_contain?: string[];
 };
 
-// Union type for backward compatibility
 export type InputConfigMetadataProfile = InputConfigLidarrMetadataProfile | InputConfigReadarrMetadataProfile;
 
-export type InputConfigIncludeItem = {
-  // depends on source what this actually is. Can be the filename -> recyclarr or id in the files -> trash
-  template: string;
-  source?: "TRASH" | "RECYCLARR";
-  /**
-   * Optional preferred ratio (0.0 - 1.0) applied when this include resolves to a
-   * TRaSH quality definition. Has no effect for quality profile includes.
-   */
-  preferred_ratio?: number;
-};
+// --- Derived types ---
 
 export type ConfigSchema = InputConfigSchema;
 
@@ -426,10 +562,6 @@ export type ConfigArrInstance = OmitTyped<InputConfigArrInstance, "custom_format
   include?: ConfigIncludeItem[];
   custom_formats: ConfigCustomFormat[];
   quality_profiles: ConfigQualityProfile[];
-  /**
-   * Metadata profiles are kept in configuration shape; they are translated to
-   * the concrete Arr application's MetadataProfileResource in the feature layer.
-   */
   metadata_profiles?: InputConfigMetadataProfile[];
 };
 
@@ -444,6 +576,5 @@ export type ConfigIncludeItem = OmitTyped<InputConfigIncludeItem, "source"> & {
   source: InputConfigIncludeItem["source"];
 };
 
-// TODO maybe reduce
 export type InputConfigInstance = OmitTyped<InputConfigArrInstance, "api_key" | "base_url">;
 export type MergedConfigInstance = OmitTyped<ConfigArrInstance, "api_key" | "base_url" | "include">;
