@@ -118,7 +118,7 @@ export type TrashCache = {
   };
 };
 
-type TrashCFGItem = {
+export type TrashCFGItem = {
   name: string;
   trash_id: string;
   /**
@@ -128,7 +128,7 @@ type TrashCFGItem = {
   /**
    * Selection if should be added even if required is false
    */
-  default?: boolean;
+  default?: boolean | string;
 };
 
 export type TrashCustomFormatGroups = {
@@ -139,7 +139,7 @@ export type TrashCustomFormatGroups = {
    * If this group should be added in always for TRaSH-Guide profiles
    * Should also be an boolean in theory but is an string in the guide
    */
-  default?: string;
+  default?: string | boolean;
   custom_formats: TrashCFGItem[];
   quality_profiles?: {
     /**

@@ -34,6 +34,12 @@ export type InputConfigSchema = {
    * @default false
    */
   silenceTrashConflictWarnings?: boolean;
+  /**
+   * Suppresses warnings when `custom_format_groups` excludes a CF that TRaSH marks as `required` in the cf-group JSON.
+   * Sync behavior unchanged — only log output affected.
+   * @default false
+   */
+  silenceRequiredCfGroupExclusionWarnings?: boolean;
 
   sonarr?: Record<string, InputConfigArrInstance>;
   sonarrEnabled?: boolean;
@@ -60,8 +66,18 @@ export type InputConfigCustomFormat = {
   assign_scores_to?: { name: string; score?: number; use_default_score?: boolean }[];
 };
 
+/** One TRaSH cf-group reference under `custom_format_groups[].trash_guide`. */
+export type InputConfigCfGroupTrashGuideItem = {
+  id: string;
+  include_unrequired?: boolean;
+  /** If set, only these CF `trash_id`s are taken from the group (must exist in the group JSON). */
+  include?: { id: string }[];
+  /** Remove these CF `trash_id`s from the selection; wins over `include` when both list the same id. */
+  exclude?: { id: string }[];
+};
+
 export type InputConfigCustomFormatGroup = {
-  trash_guide?: { id: string; include_unrequired?: boolean }[];
+  trash_guide?: InputConfigCfGroupTrashGuideItem[];
   assign_scores_to?: { name: string; score?: number }[];
 };
 
@@ -176,6 +192,12 @@ export type InputConfigArrInstance = {
    * @experimental since v1.12.0
    */
   custom_format_groups?: InputConfigCustomFormatGroup[];
+  /**
+   * Controls TRaSH quality-profile include behavior for default CF groups.
+   * When true (default), default group loading includes optional CFs marked `default: true`.
+   * When false, only `required: true` CFs are auto-loaded from default groups.
+   */
+  includeDefaultOptionalTrashGroupCfs?: boolean;
   custom_formats?: InputConfigCustomFormat[];
   // TODO this is not correct. The profile can be added partly -> InputConfigQualityProfile
   quality_profiles: ConfigQualityProfile[];

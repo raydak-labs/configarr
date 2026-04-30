@@ -6,13 +6,20 @@ import { getConfig } from "./config";
 import { logger } from "./logger";
 import { interpolateSize } from "./quality-definitions";
 import { CFIDToConfigGroup, ConfigarrCF, QualityDefinitionsRadarr, QualityDefinitionsSonarr } from "./types/common.types";
-import { ConfigCustomFormat, ConfigQualityProfile, ConfigQualityProfileItem, InputConfigCustomFormatGroup } from "./types/config.types";
+import {
+  ConfigCustomFormat,
+  ConfigQualityProfile,
+  ConfigQualityProfileItem,
+  InputConfigCfGroupTrashGuideItem,
+  InputConfigCustomFormatGroup,
+} from "./types/config.types";
 import {
   TrashArrSupported,
   TrashCache,
   TrashCF,
   TrashCFConflict,
   TrashCFGroupMapping,
+  TrashCFGItem,
   TrashCustomFormatGroups,
   TrashQP,
   TrashQualityDefinition,
@@ -468,25 +475,91 @@ export const transformTrashQPCFs = (data: TrashQP): ConfigCustomFormat => {
   return { assign_scores_to: [{ name: data.name }], trash_ids: Object.values(data.formatItems) };
 };
 
+const isCfDefaultSelected = (cf: Pick<TrashCFGItem, "default">): boolean => {
+  return cf.default === true || cf.default === "true";
+};
+
+const isTrashGroupDefaultEnabled = (cfGroup: Pick<TrashCustomFormatGroups, "default">): boolean => {
+  return cfGroup.default === true || cfGroup.default === "true";
+};
+
+const cfIncludedInExplicitGroupExpansion = (cf: TrashCFGItem, includeUnrequired: boolean): boolean => {
+  if (includeUnrequired) {
+    return true;
+  }
+  return cf.required === true || isCfDefaultSelected(cf);
+};
+
+const dedupeIds = (ids: string[]): string[] => [...new Set(ids)];
+
+function selectCustomFormatsForGroupExpansion(
+  mapping: TrashCustomFormatGroups,
+  guideItem: InputConfigCfGroupTrashGuideItem,
+  silenceRequiredExclusionWarnings: boolean,
+): string[] {
+  const cfById = new Map(mapping.custom_formats.map((cf) => [cf.trash_id, cf]));
+  const includeUnrequired = guideItem.include_unrequired === true;
+
+  const excludeIds = dedupeIds(guideItem.exclude?.map((e) => e.id) ?? []);
+
+  for (const id of excludeIds) {
+    const cf = cfById.get(id);
+    if (cf?.required === true) {
+      if (!silenceRequiredExclusionWarnings) {
+        logger.warn(`Custom format group '${mapping.name}' (${mapping.trash_id}): exclude removes required CF '${cf.name}' (${id}).`);
+      } else {
+        logger.debug(
+          `Custom format group '${mapping.name}' (${mapping.trash_id}): exclude removes required CF '${cf.name}' (${id}) (silenced).`,
+        );
+      }
+    } else if (!cf) {
+      logger.debug(`Custom format group '${mapping.name}' (${mapping.trash_id}): exclude lists unknown CF trash_id '${id}'.`);
+    }
+  }
+
+  const includeIds = dedupeIds(guideItem.include?.map((e) => e.id) ?? []);
+
+  let selectedIds: string[];
+
+  if (guideItem.include !== undefined) {
+    selectedIds = [];
+    for (const id of includeIds) {
+      const cf = cfById.get(id);
+      if (!cf) {
+        logger.warn(`Custom format group '${mapping.name}' (${mapping.trash_id}): include references unknown CF trash_id '${id}'.`);
+        continue;
+      }
+      selectedIds.push(id);
+    }
+  } else {
+    selectedIds = mapping.custom_formats.filter((cf) => cfIncludedInExplicitGroupExpansion(cf, includeUnrequired)).map((cf) => cf.trash_id);
+  }
+
+  const excludeSet = new Set(excludeIds);
+  const finalSet = new Set(selectedIds.filter((id) => !excludeSet.has(id)));
+
+  return mapping.custom_formats.map((cf) => cf.trash_id).filter((id) => finalSet.has(id));
+}
+
 export const transformTrashQPCFGroups = (
   template: TrashQP,
   trashCFGroupMapping: TrashCFGroupMapping,
   useExcludeSemantics: boolean = false,
+  includeDefaultOptionalCfs: boolean = true,
 ): ConfigCustomFormat[] => {
   const profileName = template.name;
   const results: ConfigCustomFormat[] = [];
 
   // Traverse each CF group and check for default=true
   for (const [_, cfGroup] of trashCFGroupMapping) {
-    // Check if the default prop is truthy (string "true")
-    if (cfGroup.default === "true") {
+    if (isTrashGroupDefaultEnabled(cfGroup)) {
       if (useExcludeSemantics) {
         // OLD BEHAVIOR: Check if template is excluded via exclude field
         const isExcluded = cfGroup.quality_profiles?.exclude?.[profileName] != null;
 
         if (!isExcluded) {
           // Include all required and default CFs from this group
-          const cfsToInclude = cfGroup.custom_formats.filter((cf) => cf.required || cf.default === true);
+          const cfsToInclude = cfGroup.custom_formats.filter((cf) => cf.required || (includeDefaultOptionalCfs && isCfDefaultSelected(cf)));
 
           if (cfsToInclude.length > 0) {
             logger.debug(
@@ -507,7 +580,7 @@ export const transformTrashQPCFGroups = (
 
         if (isIncluded) {
           // Include all required and default CFs from this group
-          const cfsToInclude = cfGroup.custom_formats.filter((cf) => cf.required || cf.default === true);
+          const cfsToInclude = cfGroup.custom_formats.filter((cf) => cf.required || (includeDefaultOptionalCfs && isCfDefaultSelected(cf)));
 
           if (cfsToInclude.length > 0) {
             logger.debug(
@@ -548,15 +621,29 @@ export const transformTrashQDs = (data: TrashQualityDefinition, ratio: number | 
   return transformQualities;
 };
 
-export const transformTrashCFGroups = (trashCFGroupMapping: TrashCFGroupMapping, groups: InputConfigCustomFormatGroup[]) => {
+export type TransformTrashCFGroupsOptions = {
+  silenceRequiredCfGroupExclusionWarnings?: boolean;
+};
+
+export const transformTrashCFGroups = (
+  trashCFGroupMapping: TrashCFGroupMapping,
+  groups: InputConfigCustomFormatGroup[],
+  options: TransformTrashCFGroupsOptions = {},
+) => {
+  const silenceRequiredExclusionWarnings = options.silenceRequiredCfGroupExclusionWarnings === true;
   return groups.reduce<ConfigCustomFormat[]>((p, c) => {
-    c.trash_guide?.forEach(({ id: trashId, include_unrequired }) => {
+    c.trash_guide?.forEach((guideItem) => {
+      const trashId = guideItem.id;
       const mapping = trashCFGroupMapping.get(trashId);
 
       if (mapping == null) {
         logger.warn(`Trash CustomFormat Group: ${trashId} is unknown.`);
       } else {
-        const groupCfs = mapping.custom_formats.filter((e) => e.required || include_unrequired === true).map((e) => e.trash_id);
+        const groupCfs = selectCustomFormatsForGroupExpansion(mapping, guideItem, silenceRequiredExclusionWarnings);
+
+        if (groupCfs.length === 0) {
+          return;
+        }
 
         const customFormatEntry = {
           trash_ids: groupCfs,

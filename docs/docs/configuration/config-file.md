@@ -686,29 +686,47 @@ Notes:
 
 Support has been added to allow using the TRaSH-Guide custom format groups: [see here](https://github.com/TRaSH-Guides/Guides/tree/master/docs/json/sonarr/cf-groups).
 Those are logically bundled together CustomFormats which will be applied together.
-TRaSH-Guide is using them in an interactive manner with Notifiarr therefore there are also non required CustomFormats.
-Configarr will only load required ones (`required: true`).
+TRaSH-Guide describes optional CFs and defaults per [cf-groups](https://github.com/TRaSH-Guides/Guides/blob/master/CONTRIBUTING.md#cf-groups).
 
-If you need some optional ones just add them with the existing `custom_formats` mapping.
-Also the `quality_profiles` mapping in the JSON file is ignored because it does not make sense in Configarr.
+**When you reference a group** (`custom_format_groups`), Configarr expands TRaSH IDs into CF assignments like this:
 
-```yml
+- **Default expansion** (no `include` key): includes each CF in the group where `required: true` **or** `default: true` / `"true"` (same idea as TRaSH default-checked optional CFs).
+- **`include_unrequired: true`**: includes **every** CF listed in the group JSON for that group reference (full group contents).
+- **`include`**: optional allow-list of `{ id: <CF trash_id> }`. Only those CFs are taken from the group (they must exist in the group). Mutually exclusive with “default expansion” for that reference — if `include` is set (even `[]`), only listed IDs are used.
+- **`exclude`**: optional list of `{ id: <CF trash_id> }` removed after selection. If the same `trash_id` appears in both `include` and `exclude`, **`exclude` wins**.
+- Listing an **`exclude`** id that TRaSH marks as **`required: true`** logs a **warning** by default (you intentionally omit that CF). Set top-level `silenceRequiredCfGroupExclusionWarnings: true` to suppress that warning (sync behavior unchanged).
+
+The **`quality_profiles`** block inside TRaSH cf-group JSON **does not apply** to `custom_format_groups` in config — it is only used when Configarr auto-applies **default** groups for included TRaSH quality profiles.
+For that automatic path, you can set `includeDefaultOptionalTrashGroupCfs: false` on an instance to include only TRaSH `required: true` CFs (skip optional `default: true` CFs).
+
+```yaml
+# Optional: suppress warnings when excluding required CFs from a group (see above)
+silenceRequiredCfGroupExclusionWarnings: false
+
 # ...
 
 sonarr:
   instance1:
     # ...
 
+    # Optional per-instance behavior for TRASH profile includes:
+    # true (default): auto-load required + default optional CFs from default TRaSH groups
+    # false: auto-load only required CFs from default TRaSH groups
+    includeDefaultOptionalTrashGroupCfs: true
+
     # (experimental) since v1.12.0
     # allows using the cf-groups from TRaSH-Guide.
     custom_format_groups:
       - trash_guide:
-          - id: c4735e1d02e8738044ad4ad1bf58670c # Multiple CFs, only where required=true are loaded
-            #include_unrequired: true # if you want to load all set this to true
+          - id: c4735e1d02e8738044ad4ad1bf58670c
+            # include_unrequired: true   # load every CF in this group
+            # include:                   # or restrict to specific CF trash_ids
+            #   - id: abc...
+            # exclude:                   # drop CFs after selection (wins over include)
+            #   - id: def...
         assign_scores_to:
           - name: MyProfile
-            # (experimental) since v1.16.0
-            #score: 0 # optional score to assign to all custom formats in this group. You can still override custom format scores via custom_formats
+            # score: 0 # optional score for all CFs from this group row; override per CF via custom_formats
 ```
 
 Notes:
