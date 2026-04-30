@@ -70,7 +70,7 @@ export type InputConfigCustomFormat = {
 export type InputConfigCfGroupTrashGuideItem = {
   id: string;
   include_unrequired?: boolean;
-  /** If set, only these CF `trash_id`s are taken from the group (must exist in the group JSON). */
+  /** If set, these CF `trash_id`s are added to the group base selection (must exist in the group JSON). */
   include?: { id: string }[];
   /** Remove these CF `trash_id`s from the selection; wins over `include` when both list the same id. */
   exclude?: { id: string }[];
@@ -96,7 +96,7 @@ export type InputConfigTrashCfGroupConfig = {
   include_unrequired?: boolean;
   /**
    * @experimental
-   * allow-list CF ids for TRaSH auto-group loading.
+   * add specific CF ids on top of TRaSH auto-group base selection.
    */
   include_cfs?: { id: string }[];
   /**
@@ -477,7 +477,7 @@ export type InputConfigIncludeItem = {
   /**
    * @experimental
    * TRaSH quality-profile include only:
-   * explicit allow-list of CF trash IDs from matched default groups.
+   * add CF trash IDs on top of matched default-group selection.
    */
   trash_cfgroup_include_cfs?: { id: string }[];
   /**

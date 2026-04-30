@@ -543,7 +543,7 @@ describe("mergeConfigsAndTemplates", () => {
     const ids = result.config.custom_formats.flatMap((cf) => cf.trash_ids || []);
     expect(ids).toContain("cf-optional");
     expect(ids).not.toContain("cf-required");
-    expect(ids).not.toContain("cf-optional-default");
+    expect(ids).toContain("cf-optional-default");
   });
 
   test("should auto-detect QD JSON from TRASH URL and apply it to quality_definition", async () => {

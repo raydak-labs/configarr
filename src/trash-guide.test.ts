@@ -302,7 +302,7 @@ describe("TrashGuide", async () => {
     expect(result[0]!.trash_ids).toEqual(["cf1"]);
   });
 
-  test("transformTrashCFGroups - include allow-list only picks listed ids", async () => {
+  test("transformTrashCFGroups - include adds to base selection (does not replace)", async () => {
     const mapping: TrashCFGroupMapping = new Map();
     mapping.set("id1", {
       name: "name1",
@@ -321,7 +321,7 @@ describe("TrashGuide", async () => {
     ];
 
     const result = transformTrashCFGroups(mapping, groups);
-    expect(result[0]!.trash_ids).toEqual(["cf2"]);
+    expect(result[0]!.trash_ids).toEqual(["cf1", "cf2"]);
   });
 
   test("transformTrashCFGroups - exclude wins over include for same id", async () => {
@@ -414,7 +414,7 @@ describe("TrashGuide", async () => {
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("include references unknown CF trash_id"));
   });
 
-  test("transformTrashCFGroups - include empty list yields no CFs", async () => {
+  test("transformTrashCFGroups - include empty list keeps base selection", async () => {
     const mapping: TrashCFGroupMapping = new Map();
     mapping.set("id1", {
       name: "name1",
@@ -430,7 +430,7 @@ describe("TrashGuide", async () => {
     ];
 
     const result = transformTrashCFGroups(mapping, groups);
-    expect(result).toHaveLength(0);
+    expect(result[0]!.trash_ids).toEqual(["cf1"]);
   });
 
   test("transformTrashCFGroups - include_unrequired plus exclude keeps exclude precedence", async () => {

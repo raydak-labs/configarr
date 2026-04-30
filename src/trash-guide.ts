@@ -515,15 +515,19 @@ const applyAutoGroupSelectionOverrides = (
   let selected: TrashCFGItem[] = includeUnrequired ? cfGroup.custom_formats : baseSelection;
 
   if (options.includeCfs !== undefined) {
-    selected = includeIds
-      .map((id) => {
-        const cf = cfById.get(id);
-        if (!cf) {
-          logger.warn(`Auto TRaSH CF-group '${cfGroup.name}' (${cfGroup.trash_id}): include references unknown CF trash_id '${id}'.`);
-        }
-        return cf ?? null;
-      })
-      .filter(notEmpty);
+    const selectedIds = new Set(selected.map((cf) => cf.trash_id));
+    for (const id of includeIds) {
+      const cf = cfById.get(id);
+      if (!cf) {
+        logger.warn(`Auto TRaSH CF-group '${cfGroup.name}' (${cfGroup.trash_id}): include references unknown CF trash_id '${id}'.`);
+        continue;
+      }
+      if (selectedIds.has(id)) {
+        continue;
+      }
+      selected.push(cf);
+      selectedIds.add(id);
+    }
   }
 
   const excludeSet = new Set(excludeIds);
@@ -571,24 +575,25 @@ function selectCustomFormatsForGroupExpansion(
 
   const includeIds = dedupeIds(guideItem.include?.map((e) => e.id) ?? []);
 
-  let selectedIds: string[];
+  const selectedIds = mapping.custom_formats
+    .filter((cf) => cfIncludedInExplicitGroupExpansion(cf, includeUnrequired))
+    .map((cf) => cf.trash_id);
+  const selectedSet = new Set(selectedIds);
 
-  if (guideItem.include !== undefined) {
-    selectedIds = [];
-    for (const id of includeIds) {
-      const cf = cfById.get(id);
-      if (!cf) {
-        logger.warn(`Custom format group '${mapping.name}' (${mapping.trash_id}): include references unknown CF trash_id '${id}'.`);
-        continue;
-      }
-      selectedIds.push(id);
+  for (const id of includeIds) {
+    const cf = cfById.get(id);
+    if (!cf) {
+      logger.warn(`Custom format group '${mapping.name}' (${mapping.trash_id}): include references unknown CF trash_id '${id}'.`);
+      continue;
     }
-  } else {
-    selectedIds = mapping.custom_formats.filter((cf) => cfIncludedInExplicitGroupExpansion(cf, includeUnrequired)).map((cf) => cf.trash_id);
+    if (selectedSet.has(id)) {
+      continue;
+    }
+    selectedSet.add(id);
   }
 
   const excludeSet = new Set(excludeIds);
-  const finalSet = new Set(selectedIds.filter((id) => !excludeSet.has(id)));
+  const finalSet = new Set([...selectedSet].filter((id) => !excludeSet.has(id)));
 
   return mapping.custom_formats.map((cf) => cf.trash_id).filter((id) => finalSet.has(id));
 }

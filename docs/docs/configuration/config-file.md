@@ -693,7 +693,7 @@ TRaSH-Guide describes optional CFs and defaults per [cf-groups](https://github.c
 
 - **Default expansion** (no `include` key): includes each CF in the group where `required: true` **or** `default: true` / `"true"` (same idea as TRaSH default-checked optional CFs).
 - **`include_unrequired: true`**: includes **every** CF listed in the group JSON for that group reference (full group contents).
-- **`include`**: optional allow-list of `{ id: <CF trash_id> }`. Only those CFs are taken from the group (they must exist in the group). Mutually exclusive with “default expansion” for that reference — if `include` is set (even `[]`), only listed IDs are used.
+- **`include`**: optional additive list of `{ id: <CF trash_id> }`. Listed IDs are added on top of the base selection (they must exist in the group). This is mainly useful to add non-default optional CFs without enabling full `include_unrequired`.
 - **`exclude`**: optional list of `{ id: <CF trash_id> }` removed after selection. If the same `trash_id` appears in both `include` and `exclude`, **`exclude` wins**.
 - Listing an **`exclude`** id that TRaSH marks as **`required: true`** logs a **warning** by default (you intentionally omit that CF). Set top-level `silenceRequiredCfGroupExclusionWarnings: true` to suppress that warning (sync behavior unchanged).
 
@@ -714,29 +714,27 @@ Precedence:
 
 1. Base auto selection from TRaSH default groups (`required`, plus optional `default` CFs when enabled)
 2. `trash_cfgroup_include_unrequired` (if true, start from all CFs in matched groups)
-3. `trash_cfgroup_include_cfs` (if provided, allow-list mode)
+3. `trash_cfgroup_include_cfs` (if provided, additive merge on top of current selection)
 4. `trash_cfgroup_exclude_cfs` (always last, wins over include)
 
 If a required CF is excluded, Configarr logs a warning by default (same warning control via `silenceRequiredCfGroupExclusionWarnings`).
 
 <MermaidPanZoom
-  id="trash-auto-cf-group-overrides"
-  chart={`
-flowchart LR
+id="trash-auto-cf-group-overrides"
+chart={`flowchart LR
   A["TRASH include"] --> B["Resolve defaults"]
   B --> C["Base selection\\nrequired + optional default"]
   C --> D{"include_unrequired?"}
   D -->|yes| E["All CFs from groups"]
   D -->|no| F{"include_cfs given?"}
   E --> F
-  F -->|yes| G["Allow-list only"]
+  F -->|yes| G["Add include_cfs IDs"]
   F -->|no| H["Apply exclude_cfs\\n(exclude wins)"]
   G --> H
   H --> I{"Excluded CF required?"}
   I -->|yes| J["Warn or silence"]
   I -->|no| K["Final CF set"]
-  J --> K
-`}
+  J --> K`}
 />
 
 ```yaml
@@ -768,7 +766,7 @@ sonarr:
       - trash_guide:
           - id: c4735e1d02e8738044ad4ad1bf58670c
             # include_unrequired: true   # load every CF in this group
-            # include:                   # or restrict to specific CF trash_ids
+            # include:                   # add specific CF trash_ids
             #   - id: abc...
             # exclude:                   # drop CFs after selection (wins over include)
             #   - id: def...
