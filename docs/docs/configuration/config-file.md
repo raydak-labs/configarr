@@ -8,6 +8,7 @@ keywords: [configarr configuration, yaml config, secrets management, custom form
 import CodeBlock from "@theme/CodeBlock";
 import ConfigFileSample from "!!raw-loader!./\_include/config-file-sample.yml";
 import ExampleUnamanagedCustomFormats from "!!raw-loader!./\_include/unmanaged-customformats.yml";
+import MermaidPanZoom from "@site/src/components/MermaidPanZoom";
 
 # Configuration Files
 
@@ -718,18 +719,25 @@ Precedence:
 
 If a required CF is excluded, Configarr logs a warning by default (same warning control via `silenceRequiredCfGroupExclusionWarnings`).
 
-```mermaid
-flowchart TD
-  includeTrash["TRASH include item"]
-  matchGroups["Match default CF groups for profile"]
-  baseSel["Base select: required (+ optional default if enabled)"]
-  unrequired["include_unrequired? -> use all CFs"]
-  includeList["include_cfs provided? -> allow-list"]
-  excludeList["exclude_cfs -> remove IDs"]
-  result["Auto CF group output for this include"]
-
-  includeTrash --> matchGroups --> baseSel --> unrequired --> includeList --> excludeList --> result
-```
+<MermaidPanZoom
+  id="trash-auto-cf-group-overrides"
+  chart={`
+flowchart LR
+  A["TRASH include"] --> B["Resolve defaults"]
+  B --> C["Base selection\\nrequired + optional default"]
+  C --> D{"include_unrequired?"}
+  D -->|yes| E["All CFs from groups"]
+  D -->|no| F{"include_cfs given?"}
+  E --> F
+  F -->|yes| G["Allow-list only"]
+  F -->|no| H["Apply exclude_cfs\\n(exclude wins)"]
+  G --> H
+  H --> I{"Excluded CF required?"}
+  I -->|yes| J["Warn or silence"]
+  I -->|no| K["Final CF set"]
+  J --> K
+`}
+/>
 
 ```yaml
 # Optional: suppress warnings when excluding required CFs from a group (see above)
