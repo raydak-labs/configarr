@@ -470,7 +470,7 @@ describe("mergeConfigsAndTemplates", () => {
 
     const disabledInput: InputConfigArrInstance = {
       ...enabledInput,
-      trash_cfgroup_include_optional: false,
+      trash_cfgroup_config: { include_optional: false },
     };
 
     const enabledResult = await mergeConfigsAndTemplates({}, enabledInput, "SONARR");

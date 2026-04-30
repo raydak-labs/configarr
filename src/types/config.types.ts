@@ -81,6 +81,31 @@ export type InputConfigCustomFormatGroup = {
   assign_scores_to?: { name: string; score?: number }[];
 };
 
+export type InputConfigTrashCfGroupConfig = {
+  /**
+   * @experimental
+   * include optional `default:true` CFs in TRaSH auto-group loading.
+   * @default true
+   */
+  include_optional?: boolean;
+  /**
+   * @experimental
+   * include all CFs from matched TRaSH groups.
+   * @default false
+   */
+  include_unrequired?: boolean;
+  /**
+   * @experimental
+   * allow-list CF ids for TRaSH auto-group loading.
+   */
+  include_cfs?: { id: string }[];
+  /**
+   * @experimental
+   * deny-list CF ids for TRaSH auto-group loading (wins over include).
+   */
+  exclude_cfs?: { id: string }[];
+};
+
 export type InputConfigRootFolderLidarr = {
   path: string;
   name: string;
@@ -193,37 +218,11 @@ export type InputConfigArrInstance = {
    */
   custom_format_groups?: InputConfigCustomFormatGroup[];
   /**
-   * Controls TRaSH quality-profile include behavior for default CF groups.
-   * When true (default), default group loading includes optional CFs marked `default: true`.
-   * When false, only `required: true` CFs are auto-loaded from default groups.
-   */
-  includeDefaultOptionalTrashGroupCfs?: boolean;
-  /**
    * @experimental
-   * Instance-level default for TRaSH quality-profile include auto-group behavior.
-   * If true, include optional `default:true` CFs in auto-loaded default groups.
-   * Per-include `trash_cfgroup_include_optional` overrides this.
+   * Instance-level defaults for TRaSH auto CF-group loading.
+   * Can be overridden per include item with `trash_cfgroup_*` fields.
    */
-  trash_cfgroup_include_optional?: boolean;
-  /**
-   * @experimental
-   * Instance-level default for TRaSH quality-profile include auto-group behavior.
-   * If true, include all CFs from matched default groups.
-   * Per-include `trash_cfgroup_include_unrequired` overrides this.
-   */
-  trash_cfgroup_include_unrequired?: boolean;
-  /**
-   * @experimental
-   * Instance-level default allow-list for auto-loaded TRaSH default groups.
-   * Per-include `trash_cfgroup_include_cfs` overrides this.
-   */
-  trash_cfgroup_include_cfs?: { id: string }[];
-  /**
-   * @experimental
-   * Instance-level default deny-list for auto-loaded TRaSH default groups.
-   * Per-include `trash_cfgroup_exclude_cfs` overrides this.
-   */
-  trash_cfgroup_exclude_cfs?: { id: string }[];
+  trash_cfgroup_config?: InputConfigTrashCfGroupConfig;
   custom_formats?: InputConfigCustomFormat[];
   // TODO this is not correct. The profile can be added partly -> InputConfigQualityProfile
   quality_profiles: ConfigQualityProfile[];

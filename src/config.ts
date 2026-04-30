@@ -748,10 +748,10 @@ export const mergeConfigsAndTemplates = async (
   // When false/undefined: use new "include" semantics (apply only to included)
   const useExcludeSemantics = globalConfig.compatibilityTrashGuide20260219Enabled === true;
   const autoTrashCfGroupDefaults: TransformTrashQPCFGroupsOptions = {
-    includeDefaultOptionalCfs: instanceConfig.trash_cfgroup_include_optional ?? instanceConfig.includeDefaultOptionalTrashGroupCfs ?? true,
-    includeUnrequired: instanceConfig.trash_cfgroup_include_unrequired ?? false,
-    includeCfs: instanceConfig.trash_cfgroup_include_cfs,
-    excludeCfs: instanceConfig.trash_cfgroup_exclude_cfs,
+    includeDefaultOptionalCfs: instanceConfig.trash_cfgroup_config?.include_optional ?? true,
+    includeUnrequired: instanceConfig.trash_cfgroup_config?.include_unrequired ?? false,
+    includeCfs: instanceConfig.trash_cfgroup_config?.include_cfs,
+    excludeCfs: instanceConfig.trash_cfgroup_config?.exclude_cfs,
     silenceRequiredExclusionWarnings: globalConfig.silenceRequiredCfGroupExclusionWarnings === true,
   };
   const cfGroupOptions: TransformTrashCFGroupsOptions = {

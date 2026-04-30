@@ -250,6 +250,15 @@ radarr:
         trash_cfgroup_exclude_cfs:
           - id: dc98083864ea246d05a42df0d05f81cc # remove x265 (HD)
 
+    # Experimental defaults for all TRASH profile includes in this instance
+    trash_cfgroup_config:
+      include_optional: true
+      include_unrequired: false
+      include_cfs:
+        - id: dc98083864ea246d05a42df0d05f81cc # x265 (HD)
+      exclude_cfs:
+        - id: 839bea857ed2c0a8e084f3cbdbd65ecb # x265 (no HDR/DV)
+
     quality_profiles:
       - name: ExampleInConfigProfile
         reset_unmatched_scores:

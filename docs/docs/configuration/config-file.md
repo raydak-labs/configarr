@@ -706,7 +706,7 @@ This feature is **experimental** and may change in future releases.
 When using `include` with `source: TRASH` (quality profile JSON), Configarr auto-loads CFs from TRaSH default CF-groups.
 You can now influence this behavior:
 
-- **Instance-level defaults** (apply to all TRASH profile includes in that instance)
+- **Instance-level defaults** under `trash_cfgroup_config` (apply to all TRASH profile includes in that instance)
 - **Include-item overrides** (apply only to one include entry)
 
 Precedence:
@@ -742,16 +742,17 @@ sonarr:
     # ...
 
     # Experimental instance-level defaults for TRASH auto CF-group loading
-    # optional: true (default)
-    trash_cfgroup_include_optional: true
-    # optional: false (default)
-    trash_cfgroup_include_unrequired: false
-    # optional: [] (default)
-    trash_cfgroup_include_cfs:
-      - id: example-cf-id
-    # optional: [] (default)
-    trash_cfgroup_exclude_cfs:
-      - id: example-cf-id
+    trash_cfgroup_config:
+      # optional: true (default)
+      include_optional: true
+      # optional: false (default)
+      include_unrequired: false
+      # optional: [] (default)
+      include_cfs:
+        - id: example-cf-id
+      # optional: [] (default)
+      exclude_cfs:
+        - id: example-cf-id
 
     # (experimental) since v1.12.0
     # allows using the cf-groups from TRaSH-Guide.
