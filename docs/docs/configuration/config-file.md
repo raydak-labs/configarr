@@ -697,7 +697,39 @@ TRaSH-Guide describes optional CFs and defaults per [cf-groups](https://github.c
 - Listing an **`exclude`** id that TRaSH marks as **`required: true`** logs a **warning** by default (you intentionally omit that CF). Set top-level `silenceRequiredCfGroupExclusionWarnings: true` to suppress that warning (sync behavior unchanged).
 
 The **`quality_profiles`** block inside TRaSH cf-group JSON **does not apply** to `custom_format_groups` in config — it is only used when Configarr auto-applies **default** groups for included TRaSH quality profiles.
-For that automatic path, you can set `includeDefaultOptionalTrashGroupCfs: false` on an instance to include only TRaSH `required: true` CFs (skip optional `default: true` CFs).
+For that automatic path, you can configure defaults on instance-level and override per TRASH include item.
+
+### TRASH Auto CF-Group Overrides (Experimental) {#trash-auto-cf-group-overrides}
+
+This feature is **experimental** and may change in future releases.
+
+When using `include` with `source: TRASH` (quality profile JSON), Configarr auto-loads CFs from TRaSH default CF-groups.
+You can now influence this behavior:
+
+- **Instance-level defaults** (apply to all TRASH profile includes in that instance)
+- **Include-item overrides** (apply only to one include entry)
+
+Precedence:
+
+1. Base auto selection from TRaSH default groups (`required`, plus optional `default` CFs when enabled)
+2. `trash_cfgroup_include_unrequired` (if true, start from all CFs in matched groups)
+3. `trash_cfgroup_include_cfs` (if provided, allow-list mode)
+4. `trash_cfgroup_exclude_cfs` (always last, wins over include)
+
+If a required CF is excluded, Configarr logs a warning by default (same warning control via `silenceRequiredCfGroupExclusionWarnings`).
+
+```mermaid
+flowchart TD
+  includeTrash["TRASH include item"]
+  matchGroups["Match default CF groups for profile"]
+  baseSel["Base select: required (+ optional default if enabled)"]
+  unrequired["include_unrequired? -> use all CFs"]
+  includeList["include_cfs provided? -> allow-list"]
+  excludeList["exclude_cfs -> remove IDs"]
+  result["Auto CF group output for this include"]
+
+  includeTrash --> matchGroups --> baseSel --> unrequired --> includeList --> excludeList --> result
+```
 
 ```yaml
 # Optional: suppress warnings when excluding required CFs from a group (see above)
@@ -709,10 +741,17 @@ sonarr:
   instance1:
     # ...
 
-    # Optional per-instance behavior for TRASH profile includes:
-    # true (default): auto-load required + default optional CFs from default TRaSH groups
-    # false: auto-load only required CFs from default TRaSH groups
-    includeDefaultOptionalTrashGroupCfs: true
+    # Experimental instance-level defaults for TRASH auto CF-group loading
+    # optional: true (default)
+    trash_cfgroup_include_optional: true
+    # optional: false (default)
+    trash_cfgroup_include_unrequired: false
+    # optional: [] (default)
+    trash_cfgroup_include_cfs:
+      - id: example-cf-id
+    # optional: [] (default)
+    trash_cfgroup_exclude_cfs:
+      - id: example-cf-id
 
     # (experimental) since v1.12.0
     # allows using the cf-groups from TRaSH-Guide.
@@ -727,6 +766,17 @@ sonarr:
         assign_scores_to:
           - name: MyProfile
             # score: 0 # optional score for all CFs from this group row; override per CF via custom_formats
+
+    include:
+      - template: 2b90e905c99490edc7c7a5787443748b
+        source: TRASH
+        # Experimental per-include overrides (override instance defaults)
+        trash_cfgroup_include_optional: false
+        trash_cfgroup_include_unrequired: false
+        trash_cfgroup_include_cfs:
+          - id: some-cf-id
+        trash_cfgroup_exclude_cfs:
+          - id: another-cf-id
 ```
 
 Notes:

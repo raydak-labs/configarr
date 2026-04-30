@@ -12,6 +12,7 @@ import {
   ConfigQualityProfileItem,
   InputConfigCfGroupTrashGuideItem,
   InputConfigCustomFormatGroup,
+  InputConfigIncludeItem,
 } from "./types/config.types";
 import {
   TrashArrSupported,
@@ -492,6 +493,57 @@ const cfIncludedInExplicitGroupExpansion = (cf: TrashCFGItem, includeUnrequired:
 
 const dedupeIds = (ids: string[]): string[] => [...new Set(ids)];
 
+export type TransformTrashQPCFGroupsOptions = {
+  includeDefaultOptionalCfs?: boolean;
+  includeUnrequired?: boolean;
+  includeCfs?: InputConfigIncludeItem["trash_cfgroup_include_cfs"];
+  excludeCfs?: InputConfigIncludeItem["trash_cfgroup_exclude_cfs"];
+  silenceRequiredExclusionWarnings?: boolean;
+};
+
+const applyAutoGroupSelectionOverrides = (
+  cfGroup: TrashCustomFormatGroups,
+  baseSelection: TrashCFGItem[],
+  options: TransformTrashQPCFGroupsOptions,
+): TrashCFGItem[] => {
+  const includeUnrequired = options.includeUnrequired === true;
+  const includeIds = dedupeIds((options.includeCfs || []).map((e) => e.id));
+  const excludeIds = dedupeIds((options.excludeCfs || []).map((e) => e.id));
+
+  const cfById = new Map(cfGroup.custom_formats.map((cf) => [cf.trash_id, cf]));
+
+  let selected: TrashCFGItem[] = includeUnrequired ? cfGroup.custom_formats : baseSelection;
+
+  if (options.includeCfs !== undefined) {
+    selected = includeIds
+      .map((id) => {
+        const cf = cfById.get(id);
+        if (!cf) {
+          logger.warn(`Auto TRaSH CF-group '${cfGroup.name}' (${cfGroup.trash_id}): include references unknown CF trash_id '${id}'.`);
+        }
+        return cf ?? null;
+      })
+      .filter(notEmpty);
+  }
+
+  const excludeSet = new Set(excludeIds);
+  for (const id of excludeSet) {
+    const cf = cfById.get(id);
+    if (cf?.required === true) {
+      if (options.silenceRequiredExclusionWarnings) {
+        logger.debug(
+          `Auto TRaSH CF-group '${cfGroup.name}' (${cfGroup.trash_id}): exclude removes required CF '${cf.name}' (${id}) (silenced).`,
+        );
+      } else {
+        logger.warn(`Auto TRaSH CF-group '${cfGroup.name}' (${cfGroup.trash_id}): exclude removes required CF '${cf.name}' (${id}).`);
+      }
+    }
+  }
+
+  selected = selected.filter((cf) => !excludeSet.has(cf.trash_id));
+  return selected;
+};
+
 function selectCustomFormatsForGroupExpansion(
   mapping: TrashCustomFormatGroups,
   guideItem: InputConfigCfGroupTrashGuideItem,
@@ -545,10 +597,11 @@ export const transformTrashQPCFGroups = (
   template: TrashQP,
   trashCFGroupMapping: TrashCFGroupMapping,
   useExcludeSemantics: boolean = false,
-  includeDefaultOptionalCfs: boolean = true,
+  options: TransformTrashQPCFGroupsOptions = {},
 ): ConfigCustomFormat[] => {
   const profileName = template.name;
   const results: ConfigCustomFormat[] = [];
+  const includeDefaultOptionalCfs = options.includeDefaultOptionalCfs !== false;
 
   // Traverse each CF group and check for default=true
   for (const [_, cfGroup] of trashCFGroupMapping) {
@@ -559,7 +612,10 @@ export const transformTrashQPCFGroups = (
 
         if (!isExcluded) {
           // Include all required and default CFs from this group
-          const cfsToInclude = cfGroup.custom_formats.filter((cf) => cf.required || (includeDefaultOptionalCfs && isCfDefaultSelected(cf)));
+          const baseCfsToInclude = cfGroup.custom_formats.filter(
+            (cf) => cf.required || (includeDefaultOptionalCfs && isCfDefaultSelected(cf)),
+          );
+          const cfsToInclude = applyAutoGroupSelectionOverrides(cfGroup, baseCfsToInclude, options);
 
           if (cfsToInclude.length > 0) {
             logger.debug(
@@ -580,7 +636,10 @@ export const transformTrashQPCFGroups = (
 
         if (isIncluded) {
           // Include all required and default CFs from this group
-          const cfsToInclude = cfGroup.custom_formats.filter((cf) => cf.required || (includeDefaultOptionalCfs && isCfDefaultSelected(cf)));
+          const baseCfsToInclude = cfGroup.custom_formats.filter(
+            (cf) => cf.required || (includeDefaultOptionalCfs && isCfDefaultSelected(cf)),
+          );
+          const cfsToInclude = applyAutoGroupSelectionOverrides(cfGroup, baseCfsToInclude, options);
 
           if (cfsToInclude.length > 0) {
             logger.debug(

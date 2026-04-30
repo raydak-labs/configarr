@@ -638,7 +638,7 @@ describe("TrashGuide", async () => {
         },
       });
 
-      const result = transformTrashQPCFGroups(mockTrashQP, mapping, false, false);
+      const result = transformTrashQPCFGroups(mockTrashQP, mapping, false, { includeDefaultOptionalCfs: false });
 
       expect(result).toHaveLength(1);
       expect(result[0]?.trash_ids).toEqual(["cf1"]);

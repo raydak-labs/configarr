@@ -470,7 +470,7 @@ describe("mergeConfigsAndTemplates", () => {
 
     const disabledInput: InputConfigArrInstance = {
       ...enabledInput,
-      includeDefaultOptionalTrashGroupCfs: false,
+      trash_cfgroup_include_optional: false,
     };
 
     const enabledResult = await mergeConfigsAndTemplates({}, enabledInput, "SONARR");
@@ -483,6 +483,67 @@ describe("mergeConfigsAndTemplates", () => {
     expect(enabledIds).toContain("cf-optional-default");
     expect(disabledIds).toContain("cf-required");
     expect(disabledIds).not.toContain("cf-optional-default");
+  });
+
+  test("should apply include-level TRASH CF-group overrides", async () => {
+    const trashTemplate: TrashQP = {
+      trash_id: "test-trash-id",
+      name: "TRASH Profile",
+      trash_score_set: "default",
+      upgradeAllowed: true,
+      cutoff: "HDTV-1080p",
+      minFormatScore: 0,
+      cutoffFormatScore: 1000,
+      items: [{ name: "HDTV-1080p", allowed: true }],
+      formatItems: {},
+    };
+
+    const groupRequired = { name: "cf-required", trash_id: "cf-required", required: true };
+    const groupOptionalDefault = { name: "cf-optional-default", trash_id: "cf-optional-default", required: false, default: true };
+    const groupOptional = { name: "cf-optional", trash_id: "cf-optional", required: false };
+
+    vi.spyOn(reclarrImporter, "loadRecyclarrTemplates").mockReturnValue(new Map());
+    vi.spyOn(localImporter, "loadLocalRecyclarrTemplate").mockReturnValue(new Map());
+    vi.spyOn(trashGuide, "loadQPFromTrash").mockReturnValue(Promise.resolve(new Map([["trash-template", trashTemplate]])));
+    vi.spyOn(trashGuide, "loadAllQDsFromTrash").mockReturnValue(Promise.resolve(new Map()));
+    vi.spyOn(trashGuide, "loadTrashCustomFormatGroups").mockReturnValue(
+      Promise.resolve(
+        new Map([
+          [
+            "group1",
+            {
+              name: "group1",
+              trash_id: "group1",
+              default: "true",
+              custom_formats: [groupRequired, groupOptionalDefault, groupOptional],
+              quality_profiles: { include: { "TRASH Profile": "test-trash-id" } },
+            },
+          ],
+        ]),
+      ),
+    );
+
+    const inputConfig: InputConfigArrInstance = {
+      include: [
+        {
+          template: "trash-template",
+          source: "TRASH",
+          trash_cfgroup_include_unrequired: true,
+          trash_cfgroup_include_cfs: [{ id: "cf-required" }, { id: "cf-optional" }],
+          trash_cfgroup_exclude_cfs: [{ id: "cf-required" }],
+        },
+      ],
+      custom_formats: [],
+      quality_profiles: [],
+      api_key: "test",
+      base_url: "http://sonarr:8989",
+    };
+
+    const result = await mergeConfigsAndTemplates({}, inputConfig, "SONARR");
+    const ids = result.config.custom_formats.flatMap((cf) => cf.trash_ids || []);
+    expect(ids).toContain("cf-optional");
+    expect(ids).not.toContain("cf-required");
+    expect(ids).not.toContain("cf-optional-default");
   });
 
   test("should auto-detect QD JSON from TRASH URL and apply it to quality_definition", async () => {

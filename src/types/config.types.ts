@@ -198,6 +198,32 @@ export type InputConfigArrInstance = {
    * When false, only `required: true` CFs are auto-loaded from default groups.
    */
   includeDefaultOptionalTrashGroupCfs?: boolean;
+  /**
+   * @experimental
+   * Instance-level default for TRaSH quality-profile include auto-group behavior.
+   * If true, include optional `default:true` CFs in auto-loaded default groups.
+   * Per-include `trash_cfgroup_include_optional` overrides this.
+   */
+  trash_cfgroup_include_optional?: boolean;
+  /**
+   * @experimental
+   * Instance-level default for TRaSH quality-profile include auto-group behavior.
+   * If true, include all CFs from matched default groups.
+   * Per-include `trash_cfgroup_include_unrequired` overrides this.
+   */
+  trash_cfgroup_include_unrequired?: boolean;
+  /**
+   * @experimental
+   * Instance-level default allow-list for auto-loaded TRaSH default groups.
+   * Per-include `trash_cfgroup_include_cfs` overrides this.
+   */
+  trash_cfgroup_include_cfs?: { id: string }[];
+  /**
+   * @experimental
+   * Instance-level default deny-list for auto-loaded TRaSH default groups.
+   * Per-include `trash_cfgroup_exclude_cfs` overrides this.
+   */
+  trash_cfgroup_exclude_cfs?: { id: string }[];
   custom_formats?: InputConfigCustomFormat[];
   // TODO this is not correct. The profile can be added partly -> InputConfigQualityProfile
   quality_profiles: ConfigQualityProfile[];
@@ -436,6 +462,31 @@ export type InputConfigIncludeItem = {
    * TRaSH quality definition. Has no effect for quality profile includes.
    */
   preferred_ratio?: number;
+  /**
+   * @experimental
+   * TRaSH quality-profile include only:
+   * include optional `default:true` CFs from default groups.
+   * Defaults to instance-level setting, then true.
+   */
+  trash_cfgroup_include_optional?: boolean;
+  /**
+   * @experimental
+   * TRaSH quality-profile include only:
+   * include all CFs from matched default groups.
+   */
+  trash_cfgroup_include_unrequired?: boolean;
+  /**
+   * @experimental
+   * TRaSH quality-profile include only:
+   * explicit allow-list of CF trash IDs from matched default groups.
+   */
+  trash_cfgroup_include_cfs?: { id: string }[];
+  /**
+   * @experimental
+   * TRaSH quality-profile include only:
+   * explicit deny-list of CF trash IDs from matched default groups (wins over include).
+   */
+  trash_cfgroup_exclude_cfs?: { id: string }[];
 };
 
 export type ConfigSchema = InputConfigSchema;

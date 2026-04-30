@@ -17,6 +17,7 @@ import {
   loadTrashCustomFormatGroups,
   transformTrashCFGroups,
   TransformTrashCFGroupsOptions,
+  TransformTrashQPCFGroupsOptions,
   transformTrashQDs,
   transformTrashQPCFGroups,
   transformTrashQPCFs,
@@ -267,6 +268,11 @@ export const transformConfig = (input: InputConfigSchema): ConfigSchema => {
 export const parseIncludes = (input: InputConfigIncludeItem): ConfigIncludeItem => ({
   template: input.template,
   source: input.source ?? "RECYCLARR",
+  preferred_ratio: input.preferred_ratio,
+  trash_cfgroup_include_optional: input.trash_cfgroup_include_optional,
+  trash_cfgroup_include_unrequired: input.trash_cfgroup_include_unrequired,
+  trash_cfgroup_include_cfs: input.trash_cfgroup_include_cfs,
+  trash_cfgroup_exclude_cfs: input.trash_cfgroup_exclude_cfs,
 });
 
 /**
@@ -420,15 +426,13 @@ const includeTrashTemplate = (
   {
     mergedTemplates,
     trashCFGroupMapping,
-    customFormatGroups,
     useExcludeSemantics,
-    includeDefaultOptionalTrashGroupCfs,
+    autoTrashCfGroupOptions,
   }: {
     mergedTemplates: MappedMergedTemplates;
     trashCFGroupMapping: TrashCFGroupMapping;
-    customFormatGroups: InputConfigCustomFormatGroup[];
     useExcludeSemantics: boolean;
-    includeDefaultOptionalTrashGroupCfs: boolean;
+    autoTrashCfGroupOptions: TransformTrashQPCFGroupsOptions;
   },
 ) => {
   // useExcludeSemantics=true means use old TRaSH-Guides behavior (before Feb 2026)
@@ -437,12 +441,7 @@ const includeTrashTemplate = (
   mergedTemplates.custom_formats.push(transformTrashQPCFs(template));
 
   // For TrashGuide profiles, check and include default CF groups
-  const requiredCFsFromCFGroups = transformTrashQPCFGroups(
-    template,
-    trashCFGroupMapping,
-    useExcludeSemantics,
-    includeDefaultOptionalTrashGroupCfs,
-  );
+  const requiredCFsFromCFGroups = transformTrashQPCFGroups(template, trashCFGroupMapping, useExcludeSemantics, autoTrashCfGroupOptions);
 
   const numberOfCfsLoaded = requiredCFsFromCFGroups.reduce((p, c) => {
     (c.trash_ids || []).forEach((id) => p.add(id));
@@ -500,7 +499,7 @@ const includeTemplateOrderDefault = async (
     trashCFGroupMapping,
     useExcludeSemantics,
     cfGroupOptions,
-    includeDefaultOptionalTrashGroupCfs,
+    autoTrashCfGroupDefaults,
   }: {
     recyclarr: Map<string, MappedTemplates>;
     local: Map<string, MappedTemplates>;
@@ -509,10 +508,18 @@ const includeTemplateOrderDefault = async (
     trashCFGroupMapping: TrashCFGroupMapping;
     useExcludeSemantics: boolean;
     cfGroupOptions?: TransformTrashCFGroupsOptions;
-    includeDefaultOptionalTrashGroupCfs: boolean;
+    autoTrashCfGroupDefaults: TransformTrashQPCFGroupsOptions;
   },
   { mergedTemplates }: { mergedTemplates: MappedMergedTemplates },
 ) => {
+  const resolveAutoTrashCfGroupOptions = (includeItem: InputConfigIncludeItem): TransformTrashQPCFGroupsOptions => ({
+    includeDefaultOptionalCfs: includeItem.trash_cfgroup_include_optional ?? autoTrashCfGroupDefaults.includeDefaultOptionalCfs ?? true,
+    includeUnrequired: includeItem.trash_cfgroup_include_unrequired ?? autoTrashCfGroupDefaults.includeUnrequired ?? false,
+    includeCfs: includeItem.trash_cfgroup_include_cfs ?? autoTrashCfGroupDefaults.includeCfs,
+    excludeCfs: includeItem.trash_cfgroup_exclude_cfs ?? autoTrashCfGroupDefaults.excludeCfs,
+    silenceRequiredExclusionWarnings: autoTrashCfGroupDefaults.silenceRequiredExclusionWarnings,
+  });
+
   const mappedIncludes = include.reduce<{
     local: InputConfigIncludeItem[];
     recyclarr: InputConfigIncludeItem[];
@@ -595,9 +602,8 @@ const includeTemplateOrderDefault = async (
         includeTrashTemplate(resolvedTemplate as TrashQP, {
           mergedTemplates,
           trashCFGroupMapping,
-          customFormatGroups: [],
           useExcludeSemantics,
-          includeDefaultOptionalTrashGroupCfs,
+          autoTrashCfGroupOptions: resolveAutoTrashCfGroupOptions(e),
         });
       }
     } else {
@@ -621,9 +627,8 @@ const includeTemplateOrderDefault = async (
     includeTrashTemplate(resolvedTemplate, {
       mergedTemplates,
       trashCFGroupMapping,
-      customFormatGroups: [],
       useExcludeSemantics,
-      includeDefaultOptionalTrashGroupCfs,
+      autoTrashCfGroupOptions: resolveAutoTrashCfGroupOptions(e),
     });
   });
   mappedIncludes.recyclarr.forEach((e) => {
@@ -742,7 +747,13 @@ export const mergeConfigsAndTemplates = async (
   // When true: use old "exclude" semantics (apply to all except excluded)
   // When false/undefined: use new "include" semantics (apply only to included)
   const useExcludeSemantics = globalConfig.compatibilityTrashGuide20260219Enabled === true;
-  const includeDefaultOptionalTrashGroupCfs = instanceConfig.includeDefaultOptionalTrashGroupCfs !== false;
+  const autoTrashCfGroupDefaults: TransformTrashQPCFGroupsOptions = {
+    includeDefaultOptionalCfs: instanceConfig.trash_cfgroup_include_optional ?? instanceConfig.includeDefaultOptionalTrashGroupCfs ?? true,
+    includeUnrequired: instanceConfig.trash_cfgroup_include_unrequired ?? false,
+    includeCfs: instanceConfig.trash_cfgroup_include_cfs,
+    excludeCfs: instanceConfig.trash_cfgroup_exclude_cfs,
+    silenceRequiredExclusionWarnings: globalConfig.silenceRequiredCfGroupExclusionWarnings === true,
+  };
   const cfGroupOptions: TransformTrashCFGroupsOptions = {
     silenceRequiredCfGroupExclusionWarnings: globalConfig.silenceRequiredCfGroupExclusionWarnings === true,
   };
@@ -757,7 +768,7 @@ export const mergeConfigsAndTemplates = async (
         trashCFGroupMapping,
         useExcludeSemantics,
         cfGroupOptions,
-        includeDefaultOptionalTrashGroupCfs,
+        autoTrashCfGroupDefaults,
       },
       {
         mergedTemplates,
