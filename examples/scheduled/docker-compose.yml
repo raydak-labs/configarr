@@ -1,6 +1,6 @@
 services:
   radarr:
-    image: lscr.io/linuxserver/radarr:6.0.4
+    image: lscr.io/linuxserver/radarr:6.1.1
     networks:
       - configarr-full
     environment:
