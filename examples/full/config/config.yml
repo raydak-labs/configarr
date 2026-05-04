@@ -235,8 +235,29 @@ radarr:
       #### Custom
       - template: radarr-cf
       - template: radarr-quality
-      # - template: 2b90e905c99490edc7c7a5787443748b
-      #   source: TRASH
+      # Example: include one TRaSH profile and override auto CF-group behavior for this include only (trash_cfgroup_* since v1.28.0)
+      - template: 2b90e905c99490edc7c7a5787443748b # [SQP-1] UHD Remux + WEB (2160p)
+        source: TRASH
+        # include optional default CFs from matched default groups
+        trash_cfgroup_include_optional: true
+        # include all group CFs (required + optional), then refine via include/exclude below
+        trash_cfgroup_include_unrequired: true
+        # add CFs by TRaSH CF trash_id (additive, does not replace base selection)
+        trash_cfgroup_include_cfs:
+          - id: dc98083864ea246d05a42df0d05f81cc # x265 (HD)
+          - id: 839bea857ed2c0a8e084f3cbdbd65ecb # x265 (no HDR/DV)
+        # deny-list still wins over include list
+        trash_cfgroup_exclude_cfs:
+          - id: dc98083864ea246d05a42df0d05f81cc # remove x265 (HD)
+
+    # Experimental defaults for all TRaSH profile includes in this instance (since v1.28.0)
+    trash_cfgroup_config:
+      include_optional: true
+      include_unrequired: false
+      include_cfs:
+        - id: dc98083864ea246d05a42df0d05f81cc # x265 (HD)
+      exclude_cfs:
+        - id: 839bea857ed2c0a8e084f3cbdbd65ecb # x265 (no HDR/DV)
 
     quality_profiles:
       - name: ExampleInConfigProfile

@@ -8,6 +8,7 @@ keywords: [configarr configuration, yaml config, secrets management, custom form
 import CodeBlock from "@theme/CodeBlock";
 import ConfigFileSample from "!!raw-loader!./\_include/config-file-sample.yml";
 import ExampleUnamanagedCustomFormats from "!!raw-loader!./\_include/unmanaged-customformats.yml";
+import MermaidPanZoom from "@site/src/components/MermaidPanZoom";
 
 # Configuration Files
 
@@ -50,6 +51,7 @@ Configarr supports multiple types of templates:
    - You must also check all CF-Groups because they will be also included automatically (this is desired by the TRaSH-Guide)
      - [TRaSH-Guides Radarr CF Groups](https://github.com/TRaSH-Guides/Guides/tree/master/docs/json/radarr/cf-groups)
      - [TRaSH-Guides Sonarr CF Groups](https://github.com/TRaSH-Guides/Guides/tree/master/docs/json/sonarr/cf-groups)
+     - Finer control over auto-loaded default CF-groups (`trash_cfgroup_*`, warning suppression, expanded `custom_format_groups` semantics) requires [**v1.28.0**](https://github.com/raydak-labs/configarr/releases/tag/v1.28.0) or newer — see [CustomFormatGroups](#custom-format-groups).
      - [Github PR/Explanation](https://github.com/TRaSH-Guides/Guides/pull/2455#discussion_r2297832409)
      - [Discord Discussion/Explanation](https://discord.com/channels/492590071455940612/1409911784386596894)
 
@@ -682,38 +684,118 @@ Notes:
 
 - **experimental**, available since `v1.18.0`
 
-## CustomFormatGroups {#custom-format-groups}
+## CustomFormatGroups <span className="theme-doc-version-badge badge badge--secondary configarr-badge">1.12.0</span> {#custom-format-groups}
 
 Support has been added to allow using the TRaSH-Guide custom format groups: [see here](https://github.com/TRaSH-Guides/Guides/tree/master/docs/json/sonarr/cf-groups).
 Those are logically bundled together CustomFormats which will be applied together.
-TRaSH-Guide is using them in an interactive manner with Notifiarr therefore there are also non required CustomFormats.
-Configarr will only load required ones (`required: true`).
+TRaSH-Guide describes optional CFs and defaults per [cf-groups](https://github.com/TRaSH-Guides/Guides/blob/master/CONTRIBUTING.md#cf-groups).
 
-If you need some optional ones just add them with the existing `custom_formats` mapping.
-Also the `quality_profiles` mapping in the JSON file is ignored because it does not make sense in Configarr.
+:::info Version notes
 
-```yml
+Listing TRaSH cf-groups under `custom_format_groups` has been supported since **`v1.12.0`** (experimental). The **expanded TRaSH cf-group handling** in this section—including additive `include`, default/`include_unrequired`/`exclude` behavior, `silenceRequiredCfGroupExclusionWarnings`, and `trash_cfgroup_*` auto-group overrides—requires [**v1.28.0**](https://github.com/raydak-labs/configarr/releases/tag/v1.28.0) or newer.
+
+:::
+
+**When you reference a group** (`custom_format_groups`), Configarr expands TRaSH IDs into CF assignments like this:
+
+- **Default expansion** (no `include` key): includes each CF in the group where `required: true` **or** `default: true` / `"true"` (same idea as TRaSH default-checked optional CFs).
+- **`include_unrequired: true`**: includes **every** CF listed in the group JSON for that group reference (full group contents).
+- **`include`**: optional additive list of `{ id: <CF trash_id> }`. Listed IDs are added on top of the base selection (they must exist in the group). This is mainly useful to add non-default optional CFs without enabling full `include_unrequired`.
+- **`exclude`**: optional list of `{ id: <CF trash_id> }` removed after selection. If the same `trash_id` appears in both `include` and `exclude`, **`exclude` wins**.
+- Listing an **`exclude`** id that TRaSH marks as **`required: true`** logs a **warning** by default (you intentionally omit that CF). Set top-level `silenceRequiredCfGroupExclusionWarnings: true` to suppress that warning (sync behavior unchanged).
+
+The **`quality_profiles`** block inside TRaSH cf-group JSON **does not apply** to `custom_format_groups` in config — it is only used when Configarr auto-applies **default** groups for included TRaSH quality profiles.
+For that automatic path, you can configure defaults at the instance level and override per TRaSH include item.
+
+### TRaSH Auto CF-Group Overrides <span className="theme-doc-version-badge badge badge--secondary configarr-badge">1.28.0</span> (Experimental) {#trash-auto-cf-group-overrides}
+
+This feature is **experimental**, shipped in [**v1.28.0**](https://github.com/raydak-labs/configarr/releases/tag/v1.28.0), and may change in future releases.
+
+When using `include` with `source: TRASH` (quality profile JSON), Configarr auto-loads CFs from TRaSH default CF-groups.
+You can now influence this behavior:
+
+- **Instance-level defaults** under `trash_cfgroup_config` (apply to all TRaSH profile includes in that instance)
+- **Include-item overrides** (apply only to one include entry)
+
+Precedence:
+
+1. Base auto selection from TRaSH default groups (`required`, plus optional `default` CFs when enabled)
+2. `trash_cfgroup_include_unrequired` (if true, start from all CFs in matched groups)
+3. `trash_cfgroup_include_cfs` (if provided, additive merge on top of current selection)
+4. `trash_cfgroup_exclude_cfs` (always last, wins over include)
+
+If a required CF is excluded, Configarr logs a warning by default (same warning control via `silenceRequiredCfGroupExclusionWarnings`).
+
+<MermaidPanZoom
+id="trash-auto-cf-group-overrides"
+chart={`flowchart LR
+  A["TRaSH include"] --> B["Resolve defaults"]
+  B --> C["Base selection\\nrequired + optional default"]
+  C --> D{"include_unrequired?"}
+  D -->|yes| E["All CFs from groups"]
+  D -->|no| F{"include_cfs given?"}
+  E --> F
+  F -->|yes| G["Add include_cfs IDs"]
+  F -->|no| H["Apply exclude_cfs\\n(exclude wins)"]
+  G --> H
+  H --> I{"Excluded CF required?"}
+  I -->|yes| J["Warn or silence"]
+  I -->|no| K["Final CF set"]
+  J --> K`}
+/>
+
+```yaml
+# Optional: suppress warnings when excluding required CFs from a group (see above)
+silenceRequiredCfGroupExclusionWarnings: false
+
 # ...
 
 sonarr:
   instance1:
     # ...
 
-    # (experimental) since v1.12.0
+    # Experimental instance-level defaults for TRaSH auto CF-group loading
+    trash_cfgroup_config:
+      # optional: true (default)
+      include_optional: true
+      # optional: false (default)
+      include_unrequired: false
+      # optional: [] (default)
+      include_cfs:
+        - id: example-cf-id
+      # optional: [] (default)
+      exclude_cfs:
+        - id: example-cf-id
+
+    # (experimental) custom_format_groups since v1.12.0; expanded cf-group options below since v1.28.0
     # allows using the cf-groups from TRaSH-Guide.
     custom_format_groups:
       - trash_guide:
-          - id: c4735e1d02e8738044ad4ad1bf58670c # Multiple CFs, only where required=true are loaded
-            #include_unrequired: true # if you want to load all set this to true
+          - id: c4735e1d02e8738044ad4ad1bf58670c
+            # include_unrequired: true   # load every CF in this group
+            # include:                   # add specific CF trash_ids
+            #   - id: abc...
+            # exclude:                   # drop CFs after selection (wins over include)
+            #   - id: def...
         assign_scores_to:
           - name: MyProfile
-            # (experimental) since v1.16.0
-            #score: 0 # optional score to assign to all custom formats in this group. You can still override custom format scores via custom_formats
+            # score: 0 # optional score for all CFs from this group row; override per CF via custom_formats
+
+    include:
+      - template: 2b90e905c99490edc7c7a5787443748b
+        source: TRASH
+        # Experimental per-include overrides (override instance defaults)
+        trash_cfgroup_include_optional: false
+        trash_cfgroup_include_unrequired: false
+        trash_cfgroup_include_cfs:
+          - id: some-cf-id
+        trash_cfgroup_exclude_cfs:
+          - id: another-cf-id
 ```
 
 Notes:
 
-- **experimental**, available since `v1.12.0`
+- **experimental** — `custom_format_groups` since `v1.12.0`; expanded TRaSH cf-group behavior and `trash_cfgroup_*` overrides in this section since **`v1.28.0`**.
 
 ### TRaSH-Guides Breaking Changes (Feb 2026) {#trash-guides-breaking-changes-2026-02}
 

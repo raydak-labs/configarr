@@ -82,3 +82,46 @@
   font-size: 75%;
   padding: 2px 4px;
 }
+
+.cf-group-panzoom {
+  border: 1px solid var(--ifm-color-emphasis-300);
+  border-radius: 8px;
+  padding: 0.75rem;
+  margin: 1rem 0;
+}
+
+.cf-group-panzoom__controls {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.cf-group-panzoom__controls button {
+  border: 1px solid var(--ifm-color-emphasis-300);
+  color: var(--ifm-font-color-base);
+  background: var(--ifm-background-surface-color);
+  border-radius: 6px;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.875rem;
+  cursor: pointer;
+  line-height: 1.4;
+}
+
+.cf-group-panzoom__controls button:hover {
+  background: var(--ifm-color-emphasis-200);
+}
+
+.cf-group-panzoom__canvas {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--ifm-color-emphasis-200);
+  border-radius: 6px;
+  width: 100%;
+  height: 180px;
+  background: var(--ifm-background-surface-color);
+  cursor: grab;
+}
+
+.cf-group-panzoom__canvas:active {
+  cursor: grabbing;
+}

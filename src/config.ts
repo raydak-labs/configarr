@@ -16,6 +16,8 @@ import {
   loadQPFromTrash,
   loadTrashCustomFormatGroups,
   transformTrashCFGroups,
+  TransformTrashCFGroupsOptions,
+  TransformTrashQPCFGroupsOptions,
   transformTrashQDs,
   transformTrashQPCFGroups,
   transformTrashQPCFs,
@@ -266,6 +268,11 @@ export const transformConfig = (input: InputConfigSchema): ConfigSchema => {
 export const parseIncludes = (input: InputConfigIncludeItem): ConfigIncludeItem => ({
   template: input.template,
   source: input.source ?? "RECYCLARR",
+  preferred_ratio: input.preferred_ratio,
+  trash_cfgroup_include_optional: input.trash_cfgroup_include_optional,
+  trash_cfgroup_include_unrequired: input.trash_cfgroup_include_unrequired,
+  trash_cfgroup_include_cfs: input.trash_cfgroup_include_cfs,
+  trash_cfgroup_exclude_cfs: input.trash_cfgroup_exclude_cfs,
 });
 
 /**
@@ -322,9 +329,10 @@ const expandAndAppendCustomFormatGroups = (
   customFormatGroups: InputConfigCustomFormatGroup[] | undefined,
   trashCFGroupMapping: TrashCFGroupMapping,
   mergedTemplates: MappedMergedTemplates,
+  cfGroupOptions?: TransformTrashCFGroupsOptions,
 ) => {
   if (!customFormatGroups || customFormatGroups.length === 0) return;
-  const expanded = transformTrashCFGroups(trashCFGroupMapping, customFormatGroups);
+  const expanded = transformTrashCFGroups(trashCFGroupMapping, customFormatGroups, cfGroupOptions);
   if (expanded.length > 0) {
     logger.debug(`Expanded and appended ${expanded.length} custom formats from customFormatGroups`);
     mergedTemplates.custom_formats.push(...expanded);
@@ -336,14 +344,16 @@ const includeRecyclarrTemplate = (
   {
     mergedTemplates,
     trashCFGroupMapping,
+    cfGroupOptions,
   }: {
     mergedTemplates: MappedMergedTemplates;
     trashCFGroupMapping: TrashCFGroupMapping;
+    cfGroupOptions?: TransformTrashCFGroupsOptions;
   },
 ) => {
   // First expand and append group custom formats
   if (template.custom_format_groups) {
-    expandAndAppendCustomFormatGroups(template.custom_format_groups, trashCFGroupMapping, mergedTemplates);
+    expandAndAppendCustomFormatGroups(template.custom_format_groups, trashCFGroupMapping, mergedTemplates, cfGroupOptions);
   }
   // Then push direct custom formats after, so they always win
   if (template.custom_formats) {
@@ -416,13 +426,13 @@ const includeTrashTemplate = (
   {
     mergedTemplates,
     trashCFGroupMapping,
-    customFormatGroups,
     useExcludeSemantics,
+    autoTrashCfGroupOptions,
   }: {
     mergedTemplates: MappedMergedTemplates;
     trashCFGroupMapping: TrashCFGroupMapping;
-    customFormatGroups: InputConfigCustomFormatGroup[];
     useExcludeSemantics: boolean;
+    autoTrashCfGroupOptions: TransformTrashQPCFGroupsOptions;
   },
 ) => {
   // useExcludeSemantics=true means use old TRaSH-Guides behavior (before Feb 2026)
@@ -431,7 +441,7 @@ const includeTrashTemplate = (
   mergedTemplates.custom_formats.push(transformTrashQPCFs(template));
 
   // For TrashGuide profiles, check and include default CF groups
-  const requiredCFsFromCFGroups = transformTrashQPCFGroups(template, trashCFGroupMapping, useExcludeSemantics);
+  const requiredCFsFromCFGroups = transformTrashQPCFGroups(template, trashCFGroupMapping, useExcludeSemantics, autoTrashCfGroupOptions);
 
   const numberOfCfsLoaded = requiredCFsFromCFGroups.reduce((p, c) => {
     (c.trash_ids || []).forEach((id) => p.add(id));
@@ -488,6 +498,8 @@ const includeTemplateOrderDefault = async (
     trashQD,
     trashCFGroupMapping,
     useExcludeSemantics,
+    cfGroupOptions,
+    autoTrashCfGroupDefaults,
   }: {
     recyclarr: Map<string, MappedTemplates>;
     local: Map<string, MappedTemplates>;
@@ -495,9 +507,19 @@ const includeTemplateOrderDefault = async (
     trashQD: Map<string, TrashQualityDefinition>;
     trashCFGroupMapping: TrashCFGroupMapping;
     useExcludeSemantics: boolean;
+    cfGroupOptions?: TransformTrashCFGroupsOptions;
+    autoTrashCfGroupDefaults: TransformTrashQPCFGroupsOptions;
   },
   { mergedTemplates }: { mergedTemplates: MappedMergedTemplates },
 ) => {
+  const resolveAutoTrashCfGroupOptions = (includeItem: InputConfigIncludeItem): TransformTrashQPCFGroupsOptions => ({
+    includeDefaultOptionalCfs: includeItem.trash_cfgroup_include_optional ?? autoTrashCfGroupDefaults.includeDefaultOptionalCfs ?? true,
+    includeUnrequired: includeItem.trash_cfgroup_include_unrequired ?? autoTrashCfGroupDefaults.includeUnrequired ?? false,
+    includeCfs: includeItem.trash_cfgroup_include_cfs ?? autoTrashCfGroupDefaults.includeCfs,
+    excludeCfs: includeItem.trash_cfgroup_exclude_cfs ?? autoTrashCfGroupDefaults.excludeCfs,
+    silenceRequiredExclusionWarnings: autoTrashCfGroupDefaults.silenceRequiredExclusionWarnings,
+  });
+
   const mappedIncludes = include.reduce<{
     local: InputConfigIncludeItem[];
     recyclarr: InputConfigIncludeItem[];
@@ -580,12 +602,12 @@ const includeTemplateOrderDefault = async (
         includeTrashTemplate(resolvedTemplate as TrashQP, {
           mergedTemplates,
           trashCFGroupMapping,
-          customFormatGroups: [],
           useExcludeSemantics,
+          autoTrashCfGroupOptions: resolveAutoTrashCfGroupOptions(e),
         });
       }
     } else {
-      includeRecyclarrTemplate(resolvedTemplate as MappedTemplates, { mergedTemplates, trashCFGroupMapping });
+      includeRecyclarrTemplate(resolvedTemplate as MappedTemplates, { mergedTemplates, trashCFGroupMapping, cfGroupOptions });
     }
   }
 
@@ -605,8 +627,8 @@ const includeTemplateOrderDefault = async (
     includeTrashTemplate(resolvedTemplate, {
       mergedTemplates,
       trashCFGroupMapping,
-      customFormatGroups: [],
       useExcludeSemantics,
+      autoTrashCfGroupOptions: resolveAutoTrashCfGroupOptions(e),
     });
   });
   mappedIncludes.recyclarr.forEach((e) => {
@@ -615,7 +637,7 @@ const includeTemplateOrderDefault = async (
       logger.warn(`Unknown 'recyclarr' template requested: '${e.template}'`);
       return;
     }
-    includeRecyclarrTemplate(resolvedTemplate, { mergedTemplates, trashCFGroupMapping });
+    includeRecyclarrTemplate(resolvedTemplate, { mergedTemplates, trashCFGroupMapping, cfGroupOptions });
   });
   mappedIncludes.local.forEach((e) => {
     const resolvedTemplate = local.get(e.template);
@@ -623,7 +645,7 @@ const includeTemplateOrderDefault = async (
       logger.warn(`Unknown 'local' template requested: '${e.template}'`);
       return;
     }
-    includeRecyclarrTemplate(resolvedTemplate, { mergedTemplates, trashCFGroupMapping });
+    includeRecyclarrTemplate(resolvedTemplate, { mergedTemplates, trashCFGroupMapping, cfGroupOptions });
   });
 };
 
@@ -725,6 +747,16 @@ export const mergeConfigsAndTemplates = async (
   // When true: use old "exclude" semantics (apply to all except excluded)
   // When false/undefined: use new "include" semantics (apply only to included)
   const useExcludeSemantics = globalConfig.compatibilityTrashGuide20260219Enabled === true;
+  const autoTrashCfGroupDefaults: TransformTrashQPCFGroupsOptions = {
+    includeDefaultOptionalCfs: instanceConfig.trash_cfgroup_config?.include_optional ?? true,
+    includeUnrequired: instanceConfig.trash_cfgroup_config?.include_unrequired ?? false,
+    includeCfs: instanceConfig.trash_cfgroup_config?.include_cfs,
+    excludeCfs: instanceConfig.trash_cfgroup_config?.exclude_cfs,
+    silenceRequiredExclusionWarnings: globalConfig.silenceRequiredCfGroupExclusionWarnings === true,
+  };
+  const cfGroupOptions: TransformTrashCFGroupsOptions = {
+    silenceRequiredCfGroupExclusionWarnings: globalConfig.silenceRequiredCfGroupExclusionWarnings === true,
+  };
   if (instanceConfig.include) {
     await includeTemplateOrderDefault(
       instanceConfig.include,
@@ -735,6 +767,8 @@ export const mergeConfigsAndTemplates = async (
         trashQD: trashQDTemplates,
         trashCFGroupMapping,
         useExcludeSemantics,
+        cfGroupOptions,
+        autoTrashCfGroupDefaults,
       },
       {
         mergedTemplates,
@@ -744,7 +778,7 @@ export const mergeConfigsAndTemplates = async (
 
   // Now handle instanceConfig custom_format_groups before direct custom_formats
   if (instanceConfig.custom_format_groups) {
-    expandAndAppendCustomFormatGroups(instanceConfig.custom_format_groups, trashCFGroupMapping, mergedTemplates);
+    expandAndAppendCustomFormatGroups(instanceConfig.custom_format_groups, trashCFGroupMapping, mergedTemplates, cfGroupOptions);
   }
   if (instanceConfig.custom_formats) {
     mergedTemplates.custom_formats.push(...instanceConfig.custom_formats);

@@ -22,10 +22,12 @@ const config: Config = {
 
   onBrokenLinks: "throw",
   markdown: {
+    mermaid: true,
     hooks: {
       onBrokenMarkdownLinks: "warn",
     },
   },
+  themes: ["@docusaurus/theme-mermaid"],
   // Even if you don't use internationalization, you can use this field to set
   // useful metadata like html lang. For example, if your site is Chinese, you
   // may want to replace "en" with "zh-Hans".

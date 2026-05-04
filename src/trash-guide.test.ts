@@ -11,6 +11,7 @@ import {
 import { InputConfigCustomFormatGroup } from "./types/config.types";
 import { TrashCFGroupMapping, TrashQualityDefinition, TrashQP } from "./types/trashguide.types";
 import * as util from "./util";
+import { logger } from "./logger";
 
 describe("TrashGuide", async () => {
   beforeEach(() => {
@@ -256,6 +257,233 @@ describe("TrashGuide", async () => {
     expect(result[0]!.assign_scores_to![0]?.score).toBe(0);
   });
 
+  test("transformTrashCFGroups - includes optional CF when default is true (TRaSH semantics)", async () => {
+    const mapping: TrashCFGroupMapping = new Map();
+    mapping.set("id1", {
+      name: "name1",
+      trash_id: "id1",
+      custom_formats: [
+        { name: "cf1", trash_id: "cf1", required: true },
+        { name: "cf2", trash_id: "cf2", required: false, default: true },
+        { name: "cf3", trash_id: "cf3", required: false },
+      ],
+    });
+
+    const groups: InputConfigCustomFormatGroup[] = [
+      {
+        trash_guide: [{ id: "id1" }],
+        assign_scores_to: [{ name: "qp1" }],
+      },
+    ];
+
+    const result = transformTrashCFGroups(mapping, groups);
+    expect(result[0]!.trash_ids).toEqual(["cf1", "cf2"]);
+  });
+
+  test("transformTrashCFGroups - optional CF default may be string true", async () => {
+    const mapping: TrashCFGroupMapping = new Map();
+    mapping.set("id1", {
+      name: "name1",
+      trash_id: "id1",
+      custom_formats: [
+        { name: "cf1", trash_id: "cf1", required: false, default: "true" },
+        { name: "cf2", trash_id: "cf2", required: false },
+      ],
+    });
+
+    const groups: InputConfigCustomFormatGroup[] = [
+      {
+        trash_guide: [{ id: "id1" }],
+        assign_scores_to: [{ name: "qp1" }],
+      },
+    ];
+
+    const result = transformTrashCFGroups(mapping, groups);
+    expect(result[0]!.trash_ids).toEqual(["cf1"]);
+  });
+
+  test("transformTrashCFGroups - include adds to base selection (does not replace)", async () => {
+    const mapping: TrashCFGroupMapping = new Map();
+    mapping.set("id1", {
+      name: "name1",
+      trash_id: "id1",
+      custom_formats: [
+        { name: "cf1", trash_id: "cf1", required: true },
+        { name: "cf2", trash_id: "cf2", required: false, default: true },
+      ],
+    });
+
+    const groups: InputConfigCustomFormatGroup[] = [
+      {
+        trash_guide: [{ id: "id1", include: [{ id: "cf2" }] }],
+        assign_scores_to: [{ name: "qp1" }],
+      },
+    ];
+
+    const result = transformTrashCFGroups(mapping, groups);
+    expect(result[0]!.trash_ids).toEqual(["cf1", "cf2"]);
+  });
+
+  test("transformTrashCFGroups - exclude wins over include for same id", async () => {
+    const mapping: TrashCFGroupMapping = new Map();
+    mapping.set("id1", {
+      name: "name1",
+      trash_id: "id1",
+      custom_formats: [
+        { name: "cf1", trash_id: "cf1", required: false, default: true },
+        { name: "cf2", trash_id: "cf2", required: true },
+      ],
+    });
+
+    const groups: InputConfigCustomFormatGroup[] = [
+      {
+        trash_guide: [{ id: "id1", include: [{ id: "cf1" }, { id: "cf2" }], exclude: [{ id: "cf2" }] }],
+        assign_scores_to: [{ name: "qp1" }],
+      },
+    ];
+
+    const result = transformTrashCFGroups(mapping, groups);
+    expect(result[0]!.trash_ids).toEqual(["cf1"]);
+  });
+
+  test("transformTrashCFGroups - warns when excluding required CF", async () => {
+    const warnSpy = vi.spyOn(logger, "warn");
+    const mapping: TrashCFGroupMapping = new Map();
+    mapping.set("id1", {
+      name: "name1",
+      trash_id: "id1",
+      custom_formats: [
+        { name: "cf1", trash_id: "cf1", required: true },
+        { name: "cf2", trash_id: "cf2", required: false, default: true },
+      ],
+    });
+
+    const groups: InputConfigCustomFormatGroup[] = [
+      {
+        trash_guide: [{ id: "id1", exclude: [{ id: "cf1" }] }],
+        assign_scores_to: [{ name: "qp1" }],
+      },
+    ];
+
+    const result = transformTrashCFGroups(mapping, groups);
+    expect(result[0]!.trash_ids).toEqual(["cf2"]);
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("exclude removes required CF"));
+  });
+
+  test("transformTrashCFGroups - silence flag suppresses required-exclusion warn", async () => {
+    const warnSpy = vi.spyOn(logger, "warn");
+    const debugSpy = vi.spyOn(logger, "debug");
+    const mapping: TrashCFGroupMapping = new Map();
+    mapping.set("id1", {
+      name: "name1",
+      trash_id: "id1",
+      custom_formats: [{ name: "cf1", trash_id: "cf1", required: true }],
+    });
+
+    const groups: InputConfigCustomFormatGroup[] = [
+      {
+        trash_guide: [{ id: "id1", exclude: [{ id: "cf1" }] }],
+        assign_scores_to: [{ name: "qp1" }],
+      },
+    ];
+
+    const result = transformTrashCFGroups(mapping, groups, { silenceRequiredCfGroupExclusionWarnings: true });
+    expect(result).toHaveLength(0);
+    expect(warnSpy.mock.calls.some((c) => String(c[0]).includes("exclude removes required CF"))).toBe(false);
+    expect(debugSpy.mock.calls.some((c) => String(c[0]).includes("(silenced)"))).toBe(true);
+  });
+
+  test("transformTrashCFGroups - include with unknown id logs warn and skips id", async () => {
+    const warnSpy = vi.spyOn(logger, "warn");
+    const mapping: TrashCFGroupMapping = new Map();
+    mapping.set("id1", {
+      name: "name1",
+      trash_id: "id1",
+      custom_formats: [{ name: "cf1", trash_id: "cf1", required: true }],
+    });
+
+    const groups: InputConfigCustomFormatGroup[] = [
+      {
+        trash_guide: [{ id: "id1", include: [{ id: "cf1" }, { id: "nope" }] }],
+        assign_scores_to: [{ name: "qp1" }],
+      },
+    ];
+
+    const result = transformTrashCFGroups(mapping, groups);
+    expect(result[0]!.trash_ids).toEqual(["cf1"]);
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("include references unknown CF trash_id"));
+  });
+
+  test("transformTrashCFGroups - include empty list keeps base selection", async () => {
+    const mapping: TrashCFGroupMapping = new Map();
+    mapping.set("id1", {
+      name: "name1",
+      trash_id: "id1",
+      custom_formats: [{ name: "cf1", trash_id: "cf1", required: true }],
+    });
+
+    const groups: InputConfigCustomFormatGroup[] = [
+      {
+        trash_guide: [{ id: "id1", include: [] }],
+        assign_scores_to: [{ name: "qp1" }],
+      },
+    ];
+
+    const result = transformTrashCFGroups(mapping, groups);
+    expect(result[0]!.trash_ids).toEqual(["cf1"]);
+  });
+
+  test("transformTrashCFGroups - include_unrequired plus exclude keeps exclude precedence", async () => {
+    const mapping: TrashCFGroupMapping = new Map();
+    mapping.set("id1", {
+      name: "name1",
+      trash_id: "id1",
+      custom_formats: [
+        { name: "cf1", trash_id: "cf1", required: true },
+        { name: "cf2", trash_id: "cf2", required: false },
+        { name: "cf3", trash_id: "cf3", required: false },
+      ],
+    });
+
+    const groups: InputConfigCustomFormatGroup[] = [
+      {
+        trash_guide: [{ id: "id1", include_unrequired: true, exclude: [{ id: "cf2" }] }],
+        assign_scores_to: [{ name: "qp1" }],
+      },
+    ];
+
+    const result = transformTrashCFGroups(mapping, groups);
+    expect(result[0]!.trash_ids).toEqual(["cf1", "cf3"]);
+  });
+
+  test("transformTrashCFGroups - duplicate ids in include/exclude are deduped", async () => {
+    const mapping: TrashCFGroupMapping = new Map();
+    mapping.set("id1", {
+      name: "name1",
+      trash_id: "id1",
+      custom_formats: [
+        { name: "cf1", trash_id: "cf1", required: true },
+        { name: "cf2", trash_id: "cf2", required: false, default: true },
+      ],
+    });
+
+    const groups: InputConfigCustomFormatGroup[] = [
+      {
+        trash_guide: [
+          {
+            id: "id1",
+            include: [{ id: "cf1" }, { id: "cf1" }, { id: "cf2" }],
+            exclude: [{ id: "cf2" }, { id: "cf2" }],
+          },
+        ],
+        assign_scores_to: [{ name: "qp1" }],
+      },
+    ];
+
+    const result = transformTrashCFGroups(mapping, groups);
+    expect(result[0]!.trash_ids).toEqual(["cf1"]);
+  });
+
   describe("transformTrashQPCFGroups - new include semantics (default)", () => {
     const mockTrashQP: TrashQP = {
       trash_id: "profile123",
@@ -391,6 +619,29 @@ describe("TrashGuide", async () => {
       expect(result).toHaveLength(1);
       expect(result[0]?.trash_ids).toEqual(["cf1", "cf2"]);
       expect(result[0]?.assign_scores_to).toEqual([{ name: "Test Profile" }]);
+    });
+
+    test("should include only required CFs when optional default CF loading is disabled", () => {
+      const mapping: TrashCFGroupMapping = new Map();
+      mapping.set("group1", {
+        name: "Default Group 1",
+        trash_id: "group1",
+        default: "true",
+        custom_formats: [
+          { name: "cf1", trash_id: "cf1", required: true },
+          { name: "cf2", trash_id: "cf2", required: false, default: true },
+        ],
+        quality_profiles: {
+          include: {
+            "Test Profile": "profile123",
+          },
+        },
+      });
+
+      const result = transformTrashQPCFGroups(mockTrashQP, mapping, false, { includeDefaultOptionalCfs: false });
+
+      expect(result).toHaveLength(1);
+      expect(result[0]?.trash_ids).toEqual(["cf1"]);
     });
 
     test("should skip groups without default=true even if in include list", () => {
