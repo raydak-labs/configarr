@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.28.0](https://github.com/raydak-labs/configarr/compare/v1.27.0...v1.28.0) (2026-05-04)
+
+### Features
+
+- improve handling of TRaSH CF groups ([#433](https://github.com/raydak-labs/configarr/issues/433)) ([4726d4e](https://github.com/raydak-labs/configarr/commit/4726d4e03e79ea267745a52565a361c194afdf07))
+
+### Bug Fixes
+
+- **deps:** update dependencies (non-major) ([#437](https://github.com/raydak-labs/configarr/issues/437)) ([4ee499d](https://github.com/raydak-labs/configarr/commit/4ee499d4431502561ed738e0117c77704d721c01))
+- **deps:** update docusaurus monorepo to v3.10.0 ([#438](https://github.com/raydak-labs/configarr/issues/438)) ([7d780cd](https://github.com/raydak-labs/configarr/commit/7d780cd9a136e7758924473b5221764151dfef27))
+
 ## [1.27.0](https://github.com/raydak-labs/configarr/compare/v1.26.0...v1.27.0) (2026-04-14)
 
 ### Features
