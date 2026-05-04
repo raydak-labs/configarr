@@ -14,12 +14,32 @@ type PanzoomInstance = {
   zoomWithWheel: (event: WheelEvent) => void;
 };
 
+function appendParsedSvg(container: HTMLElement, svgMarkup: string): SVGSVGElement | null {
+  const doc = new DOMParser().parseFromString(svgMarkup, "image/svg+xml");
+  if (doc.querySelector("parsererror")) {
+    return null;
+  }
+  const root =
+    doc.documentElement?.tagName.toLowerCase() === "svg"
+      ? doc.documentElement
+      : doc.querySelector("svg");
+  if (!root) {
+    return null;
+  }
+  const svg = document.importNode(root, true) as SVGSVGElement;
+  container.replaceChildren(svg);
+  return svg;
+}
+
 export default function MermaidPanZoom({ id, chart, className }: MermaidPanZoomProps): React.JSX.Element {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const pzRef = useRef<PanzoomInstance | null>(null);
 
   useEffect(() => {
     let cancelled = false;
+    const wheelHandler = (event: WheelEvent): void => {
+      pzRef.current?.zoomWithWheel(event);
+    };
 
     const init = async (): Promise<void> => {
       const mermaid = (await import("mermaid")).default;
@@ -38,9 +58,10 @@ export default function MermaidPanZoom({ id, chart, className }: MermaidPanZoomP
       const { svg } = await mermaid.render(`configarr-mermaid-${id}`, chart);
       if (cancelled || !wrapperRef.current) return;
 
-      wrapperRef.current.innerHTML = svg;
-      const svgEl = wrapperRef.current.querySelector("svg");
-      if (!svgEl) return;
+      const svgEl = appendParsedSvg(wrapperRef.current, svg);
+      if (!svgEl) {
+        return;
+      }
 
       svgEl.style.transformOrigin = "0 0";
 
@@ -52,18 +73,20 @@ export default function MermaidPanZoom({ id, chart, className }: MermaidPanZoomP
         cursor: "grab",
       });
 
-      wrapperRef.current.addEventListener("wheel", pzRef.current.zoomWithWheel);
+      wrapperRef.current.addEventListener("wheel", wheelHandler, { passive: false });
     };
 
     void init();
 
     return () => {
       cancelled = true;
-      if (wrapperRef.current) {
-        wrapperRef.current.removeEventListener("wheel", pzRef.current?.zoomWithWheel as EventListener);
+      const host = wrapperRef.current;
+      if (host) {
+        host.removeEventListener("wheel", wheelHandler);
       }
       pzRef.current?.destroy();
       pzRef.current = null;
+      host?.replaceChildren();
     };
   }, [id, chart]);
 

@@ -698,7 +698,7 @@ TRaSH-Guide describes optional CFs and defaults per [cf-groups](https://github.c
 - Listing an **`exclude`** id that TRaSH marks as **`required: true`** logs a **warning** by default (you intentionally omit that CF). Set top-level `silenceRequiredCfGroupExclusionWarnings: true` to suppress that warning (sync behavior unchanged).
 
 The **`quality_profiles`** block inside TRaSH cf-group JSON **does not apply** to `custom_format_groups` in config — it is only used when Configarr auto-applies **default** groups for included TRaSH quality profiles.
-For that automatic path, you can configure defaults on instance-level and override per TRASH include item.
+For that automatic path, you can configure defaults at the instance level and override per TRaSH include item.
 
 ### TRASH Auto CF-Group Overrides (Experimental) {#trash-auto-cf-group-overrides}
 
@@ -722,7 +722,7 @@ If a required CF is excluded, Configarr logs a warning by default (same warning 
 <MermaidPanZoom
 id="trash-auto-cf-group-overrides"
 chart={`flowchart LR
-  A["TRASH include"] --> B["Resolve defaults"]
+  A["TRaSH include"] --> B["Resolve defaults"]
   B --> C["Base selection\\nrequired + optional default"]
   C --> D{"include_unrequired?"}
   D -->|yes| E["All CFs from groups"]
@@ -747,7 +747,7 @@ sonarr:
   instance1:
     # ...
 
-    # Experimental instance-level defaults for TRASH auto CF-group loading
+    # Experimental instance-level defaults for TRaSH auto CF-group loading
     trash_cfgroup_config:
       # optional: true (default)
       include_optional: true
