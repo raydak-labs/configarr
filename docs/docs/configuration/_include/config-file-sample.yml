@@ -21,6 +21,9 @@
 # Default is false.
 #silenceTrashConflictWarnings: true
 
+# since v1.28.0. Optional. Silence warnings when custom_format_groups excludes a CF that TRaSH marks as required.
+#silenceRequiredCfGroupExclusionWarnings: true
+
 # Optional: Enable anonymous telemetry tracking of feature usage
 # Default is false. Set to true to help improve Configarr by sharing anonymous usage statistics.
 telemetry: true
@@ -168,7 +171,7 @@ sonarr:
     #    check_for_finished_download_interval: 5
     #    # Note: auto_redownload_failed_from_interactive_search is not available in Whisparr
 
-    # (experimental) since v1.12.0
+    # (experimental) custom_format_groups since v1.12.0; expanded cf-group options since v1.28.0
     # allows using the cf-groups from TRaSH-Guide.
     custom_format_groups:
       - trash_guide:

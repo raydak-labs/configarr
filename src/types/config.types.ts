@@ -37,6 +37,7 @@ export type InputConfigSchema = {
   /**
    * Suppresses warnings when `custom_format_groups` excludes a CF that TRaSH marks as `required` in the cf-group JSON.
    * Sync behavior unchanged — only log output affected.
+   * @since v1.28.0
    * @default false
    */
   silenceRequiredCfGroupExclusionWarnings?: boolean;
@@ -81,6 +82,10 @@ export type InputConfigCustomFormatGroup = {
   assign_scores_to?: { name: string; score?: number }[];
 };
 
+/**
+ * @experimental
+ * @since v1.28.0
+ */
 export type InputConfigTrashCfGroupConfig = {
   /**
    * @experimental
@@ -214,11 +219,12 @@ export type InputConfigArrInstance = {
   };
   include?: InputConfigIncludeItem[];
   /**
-   * @experimental since v1.12.0
+   * @experimental since v1.12.0 (expanded cf-group semantics since v1.28.0)
    */
   custom_format_groups?: InputConfigCustomFormatGroup[];
   /**
    * @experimental
+   * @since v1.28.0
    * Instance-level defaults for TRaSH auto CF-group loading.
    * Can be overridden per include item with `trash_cfgroup_*` fields.
    */
@@ -463,6 +469,7 @@ export type InputConfigIncludeItem = {
   preferred_ratio?: number;
   /**
    * @experimental
+   * @since v1.28.0
    * TRaSH quality-profile include only:
    * include optional `default:true` CFs from default groups.
    * Defaults to instance-level setting, then true.
@@ -470,18 +477,21 @@ export type InputConfigIncludeItem = {
   trash_cfgroup_include_optional?: boolean;
   /**
    * @experimental
+   * @since v1.28.0
    * TRaSH quality-profile include only:
    * include all CFs from matched default groups.
    */
   trash_cfgroup_include_unrequired?: boolean;
   /**
    * @experimental
+   * @since v1.28.0
    * TRaSH quality-profile include only:
    * add CF trash IDs on top of matched default-group selection.
    */
   trash_cfgroup_include_cfs?: { id: string }[];
   /**
    * @experimental
+   * @since v1.28.0
    * TRaSH quality-profile include only:
    * explicit deny-list of CF trash IDs from matched default groups (wins over include).
    */

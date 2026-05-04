@@ -161,6 +161,7 @@ Each feature (quality profiles, custom formats, metadata profiles, root folders)
 
 ## Important Notes
 
+- **Never edit `CHANGELOG.md` manually** — it is created and maintained by CI/CD (e.g. release automation). Do not add, remove, or rewrite changelog entries by hand; describe user-facing changes in PRs/commits so the pipeline can record them.
 - **Never commit without passing all checks**: build, test, lint, typecheck
 - **Always use pnpm** - not npm or yarn
 - **Backward compatibility** - Maintain existing APIs when refactoring

@@ -51,6 +51,7 @@ Configarr supports multiple types of templates:
    - You must also check all CF-Groups because they will be also included automatically (this is desired by the TRaSH-Guide)
      - [TRaSH-Guides Radarr CF Groups](https://github.com/TRaSH-Guides/Guides/tree/master/docs/json/radarr/cf-groups)
      - [TRaSH-Guides Sonarr CF Groups](https://github.com/TRaSH-Guides/Guides/tree/master/docs/json/sonarr/cf-groups)
+     - Finer control over auto-loaded default CF-groups (`trash_cfgroup_*`, warning suppression, expanded `custom_format_groups` semantics) requires [**v1.28.0**](https://github.com/raydak-labs/configarr/releases/tag/v1.28.0) or newer — see [CustomFormatGroups](#custom-format-groups).
      - [Github PR/Explanation](https://github.com/TRaSH-Guides/Guides/pull/2455#discussion_r2297832409)
      - [Discord Discussion/Explanation](https://discord.com/channels/492590071455940612/1409911784386596894)
 
@@ -683,11 +684,17 @@ Notes:
 
 - **experimental**, available since `v1.18.0`
 
-## CustomFormatGroups {#custom-format-groups}
+## CustomFormatGroups <span className="theme-doc-version-badge badge badge--secondary configarr-badge">1.12.0</span> {#custom-format-groups}
 
 Support has been added to allow using the TRaSH-Guide custom format groups: [see here](https://github.com/TRaSH-Guides/Guides/tree/master/docs/json/sonarr/cf-groups).
 Those are logically bundled together CustomFormats which will be applied together.
 TRaSH-Guide describes optional CFs and defaults per [cf-groups](https://github.com/TRaSH-Guides/Guides/blob/master/CONTRIBUTING.md#cf-groups).
+
+:::info Version notes
+
+Listing TRaSH cf-groups under `custom_format_groups` has been supported since **`v1.12.0`** (experimental). The **expanded TRaSH cf-group handling** in this section—including additive `include`, default/`include_unrequired`/`exclude` behavior, `silenceRequiredCfGroupExclusionWarnings`, and `trash_cfgroup_*` auto-group overrides—requires [**v1.28.0**](https://github.com/raydak-labs/configarr/releases/tag/v1.28.0) or newer.
+
+:::
 
 **When you reference a group** (`custom_format_groups`), Configarr expands TRaSH IDs into CF assignments like this:
 
@@ -700,14 +707,14 @@ TRaSH-Guide describes optional CFs and defaults per [cf-groups](https://github.c
 The **`quality_profiles`** block inside TRaSH cf-group JSON **does not apply** to `custom_format_groups` in config — it is only used when Configarr auto-applies **default** groups for included TRaSH quality profiles.
 For that automatic path, you can configure defaults at the instance level and override per TRaSH include item.
 
-### TRASH Auto CF-Group Overrides (Experimental) {#trash-auto-cf-group-overrides}
+### TRaSH Auto CF-Group Overrides <span className="theme-doc-version-badge badge badge--secondary configarr-badge">1.28.0</span> (Experimental) {#trash-auto-cf-group-overrides}
 
-This feature is **experimental** and may change in future releases.
+This feature is **experimental**, shipped in [**v1.28.0**](https://github.com/raydak-labs/configarr/releases/tag/v1.28.0), and may change in future releases.
 
 When using `include` with `source: TRASH` (quality profile JSON), Configarr auto-loads CFs from TRaSH default CF-groups.
 You can now influence this behavior:
 
-- **Instance-level defaults** under `trash_cfgroup_config` (apply to all TRASH profile includes in that instance)
+- **Instance-level defaults** under `trash_cfgroup_config` (apply to all TRaSH profile includes in that instance)
 - **Include-item overrides** (apply only to one include entry)
 
 Precedence:
@@ -760,7 +767,7 @@ sonarr:
       exclude_cfs:
         - id: example-cf-id
 
-    # (experimental) since v1.12.0
+    # (experimental) custom_format_groups since v1.12.0; expanded cf-group options below since v1.28.0
     # allows using the cf-groups from TRaSH-Guide.
     custom_format_groups:
       - trash_guide:
@@ -788,7 +795,7 @@ sonarr:
 
 Notes:
 
-- **experimental**, available since `v1.12.0`
+- **experimental** — `custom_format_groups` since `v1.12.0`; expanded TRaSH cf-group behavior and `trash_cfgroup_*` overrides in this section since **`v1.28.0`**.
 
 ### TRaSH-Guides Breaking Changes (Feb 2026) {#trash-guides-breaking-changes-2026-02}
 

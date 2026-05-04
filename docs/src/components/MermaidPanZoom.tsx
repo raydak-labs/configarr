@@ -19,10 +19,7 @@ function appendParsedSvg(container: HTMLElement, svgMarkup: string): SVGSVGEleme
   if (doc.querySelector("parsererror")) {
     return null;
   }
-  const root =
-    doc.documentElement?.tagName.toLowerCase() === "svg"
-      ? doc.documentElement
-      : doc.querySelector("svg");
+  const root = doc.documentElement?.tagName.toLowerCase() === "svg" ? doc.documentElement : doc.querySelector("svg");
   if (!root) {
     return null;
   }
