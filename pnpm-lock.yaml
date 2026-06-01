@@ -44,7 +44,7 @@ importers:
         version: 1.59.1
       '@release-it/conventional-changelog':
         specifier: 10.0.6
-        version: 10.0.6(conventional-commits-filter@5.0.0)(conventional-commits-parser@6.4.0)(release-it@19.2.4(@types/node@24.12.2)(magicast@0.5.2))
+        version: 10.0.6(conventional-commits-filter@5.0.0)(conventional-commits-parser@6.2.1)(release-it@19.2.4(@types/node@24.12.2)(magicast@0.5.2))
       '@types/node':
         specifier: 24.12.2
         version: 24.12.2
@@ -61,8 +61,8 @@ importers:
         specifier: 19.2.4
         version: 19.2.4(@types/node@24.12.2)(magicast@0.5.2)
       swagger-typescript-api:
-        specifier: 13.7.2
-        version: 13.7.2(magicast@0.5.2)
+        specifier: 13.12.0
+        version: 13.12.0(magicast@0.5.2)
       typescript:
         specifier: 6.0.3
         version: 6.0.3
@@ -123,8 +123,8 @@ packages:
       '@biomejs/wasm-web':
         optional: true
 
-  '@biomejs/wasm-nodejs@2.4.13':
-    resolution: {integrity: sha512-BA64wwPmk5NUz+kP+jrHa8dnIjZSqeX6Q+Q9CC5skZ9c1AqkdS+3vR1QQUzqJ4btbxLPoYVSe1OiTYil7nr8YQ==}
+  '@biomejs/wasm-nodejs@2.4.16':
+    resolution: {integrity: sha512-3BSGXHJ25Is+9gRgV+Gwz7YdMktrMOBP+Vw3RwXy3Y/CHqXbbNSyhaMt6VFk1J/WAGutdYfBy+NzhlvOftwd+g==}
 
   '@conventional-changelog/git-client@2.6.0':
     resolution: {integrity: sha512-T+uPDciKf0/ioNNDpMGc8FDsehJClZP0yR3Q5MN6wE/Y/1QZ7F+80OgznnTCOlMEG4AV0LvH2UJi3C/nBnaBUg==}
@@ -1305,8 +1305,8 @@ packages:
   destr@2.0.5:
     resolution: {integrity: sha512-ugFTXCtDZunbzasqBxrK93Ik/DRYsO6S/fedkWEMKqt04xZ4csmnmwGDBAb07QWNaGMAmnTIemsYZCksjATwsA==}
 
-  dompurify@3.3.3:
-    resolution: {integrity: sha512-Oj6pzI2+RqBfFG+qOaOLbFXLQ90ARpcGG6UePL82bJLtdsa6CYJD7nmiU8MW9nQNOtCHV3lZ/Bzq1X0QYbBZCA==}
+  dompurify@3.4.7:
+    resolution: {integrity: sha512-2jBxDJY4RR06tQNy4w5FlFH7kfxsQZlufd0sbv+chfHCxeJwrFw2baUDsSwvBISD4K4RDbd0PTfy3uNXsR6siA==}
 
   dot-prop@5.3.0:
     resolution: {integrity: sha512-QM8q3zDe58hqUqjraQOmzZ1LIH9SWQJTlEKCH4kJ2oQvLZk7RbQXvtDM2XEq3fwkV9CCvvH4LA0AV+ogFsBM2Q==}
@@ -1725,11 +1725,6 @@ packages:
     engines: {node: ^18 || >=20}
     hasBin: true
 
-  nanoid@5.1.6:
-    resolution: {integrity: sha512-c7+7RQ+dMB5dPwwCp4ee1/iV/q2P6aK1mTZcfr1BTuVlyW9hJYiMPybJCcnBlQtuSmTIWNeazm/zqNoZSSElBg==}
-    engines: {node: ^18 || >=20}
-    hasBin: true
-
   neo-async@2.6.2:
     resolution: {integrity: sha512-Yd3UES5mWCSqR+qNT93S3UoYUkqAZ9lLg8a7g9rimsWmYGK8cVToA4/sF3RrshdyV3sAGMXVUmpMYOw+dLpOuw==}
 
@@ -2133,8 +2128,8 @@ packages:
   swagger-schema-official@2.0.0-bab6bed:
     resolution: {integrity: sha512-rCC0NWGKr/IJhtRuPq/t37qvZHI/mH4I4sxflVM+qgVe5Z2uOCivzWaVbuioJaB61kvm5UvB7b49E+oBY0M8jA==}
 
-  swagger-typescript-api@13.7.2:
-    resolution: {integrity: sha512-LQ6LJ6c7HM2/inzly0whDTwme3yAQa6VAHVLh+lBr6ZqDmKt6Zmdu8zFZM793qxX6Rm/WX5uu9GhjeC71KLUiA==}
+  swagger-typescript-api@13.12.0:
+    resolution: {integrity: sha512-tE9bHjN3luZeVJEitha7R7PSgYRjPa7+G1491MMVZxkmnUaOZspHg/G9+++OsY3+S6pz4v1aiLPt4mwsyRjZgg==}
     engines: {node: '>=20'}
     hasBin: true
 
@@ -2389,8 +2384,8 @@ packages:
     resolution: {integrity: sha512-CzhO+pFNo8ajLM2d2IW/R93ipy99LWjtwblvC1RsoSUMZgyLbYFr221TnSNT7GjGdYui6P459mw9JH/g/zW2ug==}
     engines: {node: '>=18'}
 
-  yummies@7.19.2:
-    resolution: {integrity: sha512-3a8C0lsYP3c1sMsnQiPffS/X6hj1T0oIWOV/P6515ytGY5scAtcgaIg4mv8pe3856vyoTjagllvixdMxnitNUg==}
+  yummies@7.19.4:
+    resolution: {integrity: sha512-OO7jPtnYW+D8DX/1P1vQsWGZZjpQljuW2oEHc3RJ1a8e6SiWOtIUCL8sTwkLO6kaf7NfocRr/ld48vXZnO2hOg==}
     peerDependencies:
       mobx: ^6.12.4
       react: ^18 || ^19
@@ -2439,11 +2434,11 @@ snapshots:
 
   '@bcoe/v8-coverage@1.0.2': {}
 
-  '@biomejs/js-api@4.0.0(@biomejs/wasm-nodejs@2.4.13)':
+  '@biomejs/js-api@4.0.0(@biomejs/wasm-nodejs@2.4.16)':
     optionalDependencies:
-      '@biomejs/wasm-nodejs': 2.4.13
+      '@biomejs/wasm-nodejs': 2.4.16
 
-  '@biomejs/wasm-nodejs@2.4.13': {}
+  '@biomejs/wasm-nodejs@2.4.16': {}
 
   '@conventional-changelog/git-client@2.6.0(conventional-commits-filter@5.0.0)(conventional-commits-parser@6.2.1)':
     dependencies:
@@ -2931,9 +2926,9 @@ snapshots:
     dependencies:
       playwright: 1.59.1
 
-  '@release-it/conventional-changelog@10.0.6(conventional-commits-filter@5.0.0)(conventional-commits-parser@6.4.0)(release-it@19.2.4(@types/node@24.12.2)(magicast@0.5.2))':
+  '@release-it/conventional-changelog@10.0.6(conventional-commits-filter@5.0.0)(conventional-commits-parser@6.2.1)(release-it@19.2.4(@types/node@24.12.2)(magicast@0.5.2))':
     dependencies:
-      '@conventional-changelog/git-client': 2.6.0(conventional-commits-filter@5.0.0)(conventional-commits-parser@6.4.0)
+      '@conventional-changelog/git-client': 2.6.0(conventional-commits-filter@5.0.0)(conventional-commits-parser@6.2.1)
       concat-stream: 2.0.0
       conventional-changelog: 7.2.0(conventional-commits-filter@5.0.0)
       conventional-changelog-angular: 8.3.1
@@ -3336,7 +3331,7 @@ snapshots:
 
   destr@2.0.5: {}
 
-  dompurify@3.3.3:
+  dompurify@3.4.7:
     optionalDependencies:
       '@types/trusted-types': 2.0.7
 
@@ -3780,8 +3775,6 @@ snapshots:
   nanoid@3.3.11: {}
 
   nanoid@5.1.11: {}
-
-  nanoid@5.1.6: {}
 
   neo-async@2.6.2: {}
 
@@ -4265,25 +4258,25 @@ snapshots:
 
   swagger-schema-official@2.0.0-bab6bed: {}
 
-  swagger-typescript-api@13.7.2(magicast@0.5.2):
+  swagger-typescript-api@13.12.0(magicast@0.5.2):
     dependencies:
       '@apidevtools/swagger-parser': 12.1.0(openapi-types@12.1.3)
-      '@biomejs/js-api': 4.0.0(@biomejs/wasm-nodejs@2.4.13)
-      '@biomejs/wasm-nodejs': 2.4.13
+      '@biomejs/js-api': 4.0.0(@biomejs/wasm-nodejs@2.4.16)
+      '@biomejs/wasm-nodejs': 2.4.16
       '@types/swagger-schema-official': 2.0.25
       c12: 3.3.3(magicast@0.5.2)
       citty: 0.2.1
       consola: 3.4.2
       es-toolkit: 1.44.0
       eta: 3.5.0
-      nanoid: 5.1.6
+      nanoid: 5.1.11
       openapi-types: 12.1.3
       swagger-schema-official: 2.0.0-bab6bed
       swagger2openapi: 7.0.8
       type-fest: 5.4.4
       typescript: 6.0.3
       yaml: 2.8.3
-      yummies: 7.19.2
+      yummies: 7.19.4
     transitivePeerDependencies:
       - '@biomejs/wasm-bundler'
       - '@biomejs/wasm-web'
@@ -4485,12 +4478,12 @@ snapshots:
 
   yoctocolors@2.1.2: {}
 
-  yummies@7.19.2:
+  yummies@7.19.4:
     dependencies:
       class-variance-authority: 0.7.1
       clsx: 2.1.1
       dayjs: 1.11.20
-      dompurify: 3.3.3
+      dompurify: 3.4.7
       nanoid: 5.1.11
       tailwind-merge: 3.5.0
 
