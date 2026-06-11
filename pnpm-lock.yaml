@@ -15,8 +15,8 @@ importers:
         specifier: 3.3.3
         version: 3.3.3
       ky:
-        specifier: 1.14.3
-        version: 1.14.3
+        specifier: 2.0.2
+        version: 2.0.2
       pino:
         specifier: 10.3.1
         version: 10.3.1
@@ -1624,9 +1624,9 @@ packages:
   jsonfile@6.1.0:
     resolution: {integrity: sha512-5dgndWOriYSm5cnYaJNhalLNDKOqFwyDB/rr1E9ZsGciGvKPs8R2xYGCacuf3z6K1YKDz182fd+fY3cn3pMqXQ==}
 
-  ky@1.14.3:
-    resolution: {integrity: sha512-9zy9lkjac+TR1c2tG+mkNSVlyOpInnWdSMiue4F+kq8TwJSgv6o8jhLRg8Ho6SnZ9wOYUq/yozts9qQCfk7bIw==}
-    engines: {node: '>=18'}
+  ky@2.0.2:
+    resolution: {integrity: sha512-/GmXpo9F9W+f8n4Ivr2iH+7h7wL7jLbLKWkMlpflcCRb6kGjBfTlASEXaZ9qUgNTn4VgS0P2pwxxzQ4EM6Ulgg==}
+    engines: {node: '>=22'}
 
   lodash.capitalize@4.2.1:
     resolution: {integrity: sha512-kZzYOKspf8XVX5AvmQF94gQW0lejFVgb80G85bU4ZWzoJ6C03PQg3coYAUpSTpQWelrZELd3XWgHzw4Ck5kaIw==}
@@ -3704,7 +3704,7 @@ snapshots:
     optionalDependencies:
       graceful-fs: 4.2.11
 
-  ky@1.14.3: {}
+  ky@2.0.2: {}
 
   lodash.capitalize@4.2.1: {}
 
