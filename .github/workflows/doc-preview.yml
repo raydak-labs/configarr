@@ -7,6 +7,8 @@ on:
       - docs/**
   workflow_dispatch:
 
+permissions: {}
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -16,21 +18,22 @@ jobs:
       deployments: write
       pull-requests: write
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Inject enhanced GitHub environment variables
-        uses: rlespinasse/github-slug-action@v5
+        uses: rlespinasse/github-slug-action@e6f261660910b273384c5c42b17a0217881b217a # v5
 
-      - uses: pnpm/action-setup@v5
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5
         with:
           version: latest
 
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
         with:
           node-version: lts/*
-          cache: pnpm
+          package-manager-cache: false
 
       - name: Install & build
         working-directory: docs
@@ -38,18 +41,22 @@ jobs:
           pnpm i
           pnpm build
 
+      - name: Set deploy branch
+        id: deploy_branch
+        env:
+          DEPLOY_BRANCH: ${{ env.GITHUB_REF_SLUG_URL }}
+        run: echo "value=${DEPLOY_BRANCH}" >> "$GITHUB_OUTPUT"
+
       - name: Deploy
-        uses: cloudflare/wrangler-action@v3
+        uses: cloudflare/wrangler-action@9acf94ace14e7dc412b076f2c5c20b8ce93c79cd # v3
         id: cloudflare-deploy
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy ./docs/build --project-name=configarr-preview --branch=${{ env.GITHUB_REF_SLUG_URL }}
-          # Optional: Enable this if you want to have GitHub Deployments triggered
-          #gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+          command: pages deploy ./docs/build --project-name=configarr-preview --branch=${{ steps.deploy_branch.outputs.value }}
 
       - name: Comment PR
-        uses: thollander/actions-comment-pull-request@v3
+        uses: thollander/actions-comment-pull-request@65f9e5c9a1f2cd378bd74b2e057c9736982a8e74 # v3
         if: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'main' }}
         with:
           message: |
