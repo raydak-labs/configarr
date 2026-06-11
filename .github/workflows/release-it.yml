@@ -32,7 +32,7 @@ jobs:
           git config user.email "raydak-releaser@users.noreply.github.com"
           git config user.name "raydak-releaser[bot]"
 
-      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5
+      - uses: pnpm/action-setup@0e279bb959325dab635dd2c09392533439d90093 # v6
         with:
           version: latest
 
