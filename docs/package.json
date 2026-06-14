@@ -19,11 +19,11 @@
     "@docusaurus/preset-classic": "3.10.0",
     "@docusaurus/theme-mermaid": "3.10.0",
     "@mdx-js/react": "3.1.1",
-    "@panzoom/panzoom": "^4.6.2",
+    "@panzoom/panzoom": "4.6.2",
     "clsx": "2.1.1",
     "docusaurus-lunr-search": "3.6.1",
     "lunr": "2.3.9",
-    "mermaid": "^11.14.0",
+    "mermaid": "11.14.0",
     "prism-react-renderer": "2.4.1",
     "raw-loader": "4.0.2",
     "react": "19.2.5",
@@ -48,6 +48,6 @@
     ]
   },
   "engines": {
-    "node": "^24"
+    "node": "v24.16.0"
   }
 }
