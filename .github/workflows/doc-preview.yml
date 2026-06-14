@@ -37,8 +37,10 @@ jobs:
 
       - name: Install & build
         working-directory: docs
+        env:
+          PNPM_CONFIG_IGNORE_WORKSPACE: "true"
         run: |
-          pnpm i
+          pnpm install --frozen-lockfile
           pnpm build
 
       - name: Set deploy branch
@@ -53,6 +55,7 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          packageManager: npm
           command: pages deploy ./docs/build --project-name=configarr-preview --branch=${{ steps.deploy_branch.outputs.value }}
 
       - name: Comment PR
