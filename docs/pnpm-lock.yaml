@@ -21,7 +21,7 @@ importers:
         specifier: 3.1.1
         version: 3.1.1(@types/react@18.3.12)(react@19.2.5)
       '@panzoom/panzoom':
-        specifier: ^4.6.2
+        specifier: 4.6.2
         version: 4.6.2
       clsx:
         specifier: 2.1.1
@@ -33,7 +33,7 @@ importers:
         specifier: 2.3.9
         version: 2.3.9
       mermaid:
-        specifier: ^11.14.0
+        specifier: 11.14.0
         version: 11.14.0
       prism-react-renderer:
         specifier: 2.4.1
@@ -1710,6 +1710,7 @@ packages:
 
   '@ungap/structured-clone@1.2.0':
     resolution: {integrity: sha512-zuVdFrMJiuCDQUMCzQaD6KL28MjnqqN8XnAqiEq9PNm/hCPTSGfrXCOfwj1ow4LFb/tNymJPwsNbVePc1xFqrQ==}
+    deprecated: Potential CWE-502 - Update to 1.3.1 or higher
 
   '@upsetjs/venn.js@2.0.0':
     resolution: {integrity: sha512-WbBhLrooyePuQ1VZxrJjtLvTc4NVfpOyKx0sKqioq9bX1C1m7Jgykkn8gLrtwumBioXIqam8DLxp88Adbue6Hw==}
@@ -9229,7 +9230,7 @@ snapshots:
   esast-util-from-js@2.0.1:
     dependencies:
       '@types/estree-jsx': 1.0.5
-      acorn: 8.14.0
+      acorn: 8.16.0
       esast-util-from-estree: 2.0.0
       vfile-message: 4.0.2
 
