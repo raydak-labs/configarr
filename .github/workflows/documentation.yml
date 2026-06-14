@@ -33,8 +33,10 @@ jobs:
 
       - name: Install & build
         working-directory: docs
+        env:
+          PNPM_CONFIG_IGNORE_WORKSPACE: "true"
         run: |
-          pnpm i
+          pnpm install --frozen-lockfile
           pnpm build
 
       - name: Upload static files as artifact
