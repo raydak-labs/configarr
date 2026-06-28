@@ -33,7 +33,7 @@ describe("HttpClient error handling", () => {
     vi.clearAllMocks();
     mockKyFn = vi.fn();
     vi.mocked(kyDefault.create).mockReturnValue(mockKyFn as any);
-    client = new HttpClient({ prefixUrl: "http://localhost:7878" });
+    client = new HttpClient({ prefix: "http://localhost:7878" });
   });
 
   describe("JSON error responses", () => {

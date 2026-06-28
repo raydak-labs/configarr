@@ -33,7 +33,7 @@ export class ReadarrClient implements IArrClient<
       headers: {
         "X-Api-Key": apiKey,
       },
-      prefixUrl: baseUrl,
+      prefix: baseUrl,
     });
 
     this.api = new Api(httpClient);

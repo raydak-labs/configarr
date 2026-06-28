@@ -43,7 +43,7 @@ export class WhisparrClient implements IArrClient<
       headers: {
         "X-Api-Key": apiKey,
       },
-      prefixUrl: baseUrl,
+      prefix: baseUrl,
     });
 
     this.api = new Api(httpClient);
