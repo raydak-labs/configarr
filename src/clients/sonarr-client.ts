@@ -33,7 +33,7 @@ export class SonarrClient implements IArrClient<QualityProfileResource, QualityD
       headers: {
         "X-Api-Key": apiKey,
       },
-      prefixUrl: baseUrl,
+      prefix: baseUrl,
     });
 
     this.api = new Api(httpClient);

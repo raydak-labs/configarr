@@ -67,7 +67,7 @@ export class HttpClient<SecurityDataType = unknown> {
   private format?: ResponseFormat;
 
   constructor({ securityWorker, secure, format, ...options }: ApiConfig<SecurityDataType> = {}) {
-    this.ky = ky.create({ ...options, prefixUrl: options.prefixUrl || "" });
+    this.ky = ky.create({ ...options, prefix: options.prefix || "" });
     this.secure = secure;
     this.format = format;
     this.securityWorker = securityWorker;
@@ -142,7 +142,7 @@ export class HttpClient<SecurityDataType = unknown> {
 
     let hooks: Hooks | undefined;
     if (secure && this.securityWorker) {
-      const securityWorker: BeforeRequestHook = async (request, options) => {
+      const securityWorker: BeforeRequestHook = async ({ request, options }) => {
         const secureOptions = await this.securityWorker!(this.securityData);
         if (secureOptions && typeof secureOptions === "object") {
           let { headers } = options;
