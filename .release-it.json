@@ -7,7 +7,7 @@
   "github": {
     "release": true,
     "comments": {
-      "submit": false
+      "submit": true
     }
   },
   "plugins": {

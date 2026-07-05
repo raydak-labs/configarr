@@ -10,6 +10,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      issues: write
+      pull-requests: write
     steps:
       - name: Generate a token
         id: generate_token
@@ -19,6 +21,8 @@ jobs:
           private-key: ${{ secrets.RELEASER_PRIVATE_KEY }}
           permission-contents: write
           permission-metadata: read
+          permission-issues: write
+          permission-pull-requests: write
 
       - name: Checkout code
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -42,6 +46,12 @@ jobs:
           cache: pnpm
 
       - run: pnpm install
+
+      - name: Configure git push credentials
+        env:
+          GH_TOKEN: ${{ steps.generate_token.outputs.token }}
+        run: |
+          git config --local http.https://github.com/.extraheader "AUTHORIZATION: basic $(printf '%s' "x-access-token:${GH_TOKEN}" | base64 | tr -d '\n')"
 
       - run: pnpm release-it --ci
         env:
