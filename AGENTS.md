@@ -169,6 +169,16 @@ Each feature (quality profiles, custom formats, metadata profiles, root folders)
 - **Logging** - Use the `logger` instance for consistent logging
 - **Error handling** - Graceful degradation, informative error messages
 
+## Commit Message Conventions
+
+`release-it` + `@release-it/conventional-changelog` (see `.release-it.json`) auto-generate `CHANGELOG.md` and GitHub Release notes from commit messages. Only `feat`, `fix`, and `refactor` (as "(internal) Refactorings") produce changelog entries — every other type is silently omitted. Pick the type based on whether a **user** of configarr would care:
+
+- `feat:` / `fix:` — user-facing changes only: new features, behavior changes, bugs that affected the running application.
+- `ci:` or `chore(ci):` — GitHub Actions workflows, release pipeline, zizmor, etc. Never `fix(ci):` or `feat(ci):`, even when fixing a real bug in a workflow — it's not user-facing and would add a bogus entry to the changelog.
+- `docs:` — documentation-only changes.
+- `chore:` — tooling/maintenance with no functional impact (dependency bumps are already handled by Renovate as `chore(deps):` / `fix(deps):`).
+- `test:` / `style:` — test-only or formatting-only changes.
+
 ## Resources
 
 - **Documentation**: https://configarr.de
