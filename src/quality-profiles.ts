@@ -13,7 +13,7 @@ import { logger } from "./logger";
 import { ArrType, CFProcessing } from "./types/common.types";
 import { ConfigQualityProfile, ConfigQualityProfileItem, MergedConfigInstance } from "./types/config.types";
 import type { TrashCFConflict } from "./types/trashguide.types";
-import { cloneWithJSON, loadJsonFile, notEmpty, zip } from "./util";
+import { ANY_LANGUAGE_NAME, cloneWithJSON, loadJsonFile, notEmpty, zip } from "./util";
 
 export const deleteAllQualityProfiles = async () => {
   const api = getUnifiedClient();
@@ -334,6 +334,13 @@ export const calculateQualityProfilesDiff = async (
       if (profileLanguage == null) {
         logger.warn(`Profile language '${value.language}' not found in server. Ignoring.`);
         // profileLanguage = languageMap.get("Any");
+      }
+    } else if (arrType === "RADARR") {
+      // Radarr quality profiles always carry a language; default unmanaged/omitted language to "Any"
+      profileLanguage = languageMap.get(ANY_LANGUAGE_NAME);
+
+      if (profileLanguage == null) {
+        logger.warn(`Default language '${ANY_LANGUAGE_NAME}' not found in server. Ignoring.`);
       }
     }
 

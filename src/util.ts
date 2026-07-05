@@ -209,6 +209,9 @@ export const cloneWithJSON = <T>(input: T): T => {
 
 export const ROOT_PATH = path.resolve(process.cwd());
 
+/** Name of the built-in "any language" entry Radarr/Whisparr use as their quality-profile language default. */
+export const ANY_LANGUAGE_NAME = "Any";
+
 export const loadJsonFile = <T = object>(filePath: string) => {
   const file = readFileSync(filePath, { encoding: "utf-8" });
   return JSON.parse(file) as T;
