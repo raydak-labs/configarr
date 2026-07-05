@@ -39,8 +39,8 @@
     "@types/node": "24.13.2",
     "@vitest/coverage-v8": "4.1.9",
     "esbuild": "0.28.1",
-    "prettier": "3.8.4",
-    "release-it": "20.2.0",
+    "prettier": "3.9.4",
+    "release-it": "20.2.1",
     "swagger-typescript-api": "13.12.3",
     "typescript": "6.0.3",
     "vitest": "4.1.9"
