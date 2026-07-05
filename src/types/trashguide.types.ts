@@ -103,36 +103,22 @@ export type TrashQP = {
 export const TrashArrSupportedConst = ["RADARR", "SONARR"] as const satisfies readonly ArrType[];
 export type TrashArrSupported = (typeof TrashArrSupportedConst)[number];
 
-export type TrashRadarrNaming = {
-  folder: {
-    [key: string]: string;
-  };
-  file: {
-    [key: string]: string;
-  };
-};
+export const TrashRadarrNamingSchema = z.object({
+  folder: z.record(z.string(), z.string()),
+  file: z.record(z.string(), z.string()),
+});
+export type TrashRadarrNaming = z.infer<typeof TrashRadarrNamingSchema>;
 
-export type TrashSonarrNaming = {
-  season: {
-    [key: string]: string;
-  };
-  series: {
-    [key: string]: string;
-  };
-  episodes: {
-    standard: {
-      [key: string]: string;
-    };
-
-    daily: {
-      [key: string]: string;
-    };
-
-    anime: {
-      [key: string]: string;
-    };
-  };
-};
+export const TrashSonarrNamingSchema = z.object({
+  season: z.record(z.string(), z.string()),
+  series: z.record(z.string(), z.string()),
+  episodes: z.object({
+    standard: z.record(z.string(), z.string()),
+    daily: z.record(z.string(), z.string()),
+    anime: z.record(z.string(), z.string()),
+  }),
+});
+export type TrashSonarrNaming = z.infer<typeof TrashSonarrNamingSchema>;
 
 export type TrashCache = {
   SONARR: {

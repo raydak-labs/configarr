@@ -14,7 +14,7 @@ import {
   InputConfigCustomFormatGroup,
   InputConfigIncludeItem,
 } from "./types/config.types";
-import { validateExternal } from "./validation";
+import { ValidationError, validateExternal } from "./validation";
 import {
   TrashArrSupported,
   TrashCache,
@@ -31,7 +31,9 @@ import {
   TrashQualityDefinitionQuality,
   TrashQualityDefinitionSchema,
   TrashRadarrNaming,
+  TrashRadarrNamingSchema,
   TrashSonarrNaming,
+  TrashSonarrNamingSchema,
 } from "./types/trashguide.types";
 import { cloneGitRepo, loadJsonFile, mapImportCfToRequestCf, notEmpty, toCarrCF, trashRepoPaths } from "./util";
 
@@ -279,7 +281,7 @@ export const loadQPFromTrash = async (arrType: TrashArrSupported) => {
 /**
  * HINT: for now we only support one naming file per arrType
  */
-const loadNamingFromTrash = async <T>(arrType: TrashArrSupported): Promise<T | null> => {
+const loadNamingFromTrash = async <T>(arrType: TrashArrSupported, schema: z.ZodType<T>): Promise<T | null> => {
   let trashPath = arrType === "RADARR" ? trashRepoPaths.radarrNaming : trashRepoPaths.sonarrNaming;
 
   const map = new Map<string, T>();
@@ -292,7 +294,8 @@ const loadNamingFromTrash = async <T>(arrType: TrashArrSupported): Promise<T | n
     }
 
     for (const item of files) {
-      const importTrashQP = loadJsonFile<T>(`${trashPath}/${item}`);
+      const rawNaming = loadJsonFile(`${trashPath}/${item}`);
+      const importTrashQP = validateExternal(schema, rawNaming, `trash-naming/${arrType}/${item}`) as T;
 
       map.set(item, importTrashQP);
     }
@@ -320,17 +323,17 @@ export const loadNamingFromTrashSonarr = async (): Promise<TrashSonarrNaming | n
     return cache["SONARR"].naming;
   }
 
-  const firstValue = await loadNamingFromTrash<TrashSonarrNaming>("SONARR");
+  const firstValue = await loadNamingFromTrash<TrashSonarrNaming>("SONARR", TrashSonarrNamingSchema);
 
   if (firstValue == null) {
     return firstValue;
   }
 
-  logger.debug(`(SONARR) Available TRaSH-Guide season keys: ${Object.keys(firstValue.season)}`);
-  logger.debug(`(SONARR) Available TRaSH-Guide series keys: ${Object.keys(firstValue.series)}`);
-  logger.debug(`(SONARR) Available TRaSH-Guide standard episode keys: ${Object.keys(firstValue.episodes.standard)}`);
-  logger.debug(`(SONARR) Available TRaSH-Guide daily episode keys: ${Object.keys(firstValue.episodes.daily)}`);
-  logger.debug(`(SONARR) Available TRaSH-Guide anime episode keys: ${Object.keys(firstValue.episodes.anime)}`);
+  logger.debug(`(SONARR) Available TRaSH-Guide season keys: ${Object.keys(firstValue.season ?? {})}`);
+  logger.debug(`(SONARR) Available TRaSH-Guide series keys: ${Object.keys(firstValue.series ?? {})}`);
+  logger.debug(`(SONARR) Available TRaSH-Guide standard episode keys: ${Object.keys(firstValue.episodes?.standard ?? {})}`);
+  logger.debug(`(SONARR) Available TRaSH-Guide daily episode keys: ${Object.keys(firstValue.episodes?.daily ?? {})}`);
+  logger.debug(`(SONARR) Available TRaSH-Guide anime episode keys: ${Object.keys(firstValue.episodes?.anime ?? {})}`);
 
   return firstValue;
 };
@@ -340,14 +343,14 @@ export const loadNamingFromTrashRadarr = async (): Promise<TrashRadarrNaming | n
     return cache["RADARR"].naming;
   }
 
-  const firstValue = await loadNamingFromTrash<TrashRadarrNaming>("RADARR");
+  const firstValue = await loadNamingFromTrash<TrashRadarrNaming>("RADARR", TrashRadarrNamingSchema);
 
   if (firstValue == null) {
     return firstValue;
   }
 
-  logger.debug(`(RADARR) Available TRaSH-Guide folder keys: ${Object.keys(firstValue.folder)}`);
-  logger.debug(`(RADARR) Available TRaSH-Guide file keys: ${Object.keys(firstValue.file)}`);
+  logger.debug(`(RADARR) Available TRaSH-Guide folder keys: ${Object.keys(firstValue.folder ?? {})}`);
+  logger.debug(`(RADARR) Available TRaSH-Guide file keys: ${Object.keys(firstValue.file ?? {})}`);
 
   return firstValue;
 };
@@ -412,7 +415,10 @@ export const loadTrashCFConflicts = async (arrType: TrashArrSupported): Promise<
     const fileParsed = trashConflictsFileSchema.safeParse(raw);
 
     if (!fileParsed.success) {
-      logger.warn(`(${arrType}) Invalid conflicts.json: ${fileParsed.error.issues.map((i) => i.message).join("; ")}. Skipping conflicts.`);
+      // Throws in strict mode (CONFIGARR_ENFORCE_EXTERNAL_VALIDATION=true); otherwise
+      // logs the same warning validateExternal always uses and we fall through below.
+      validateExternal(trashConflictsFileSchema, raw, `trash-conflicts/${arrType}`);
+      logger.warn(`(${arrType}) Skipping conflicts.`);
       return [];
     }
 
@@ -443,7 +449,9 @@ export const loadTrashCFConflicts = async (arrType: TrashArrSupported): Promise<
     logger.debug(`(${arrType}) Loaded ${conflicts.length} TRaSH CF conflict groups`);
     return conflicts;
   } catch (err: unknown) {
-    if ((err as NodeJS.ErrnoException).code === "ENOENT") {
+    if (err instanceof ValidationError) {
+      throw err;
+    } else if ((err as NodeJS.ErrnoException).code === "ENOENT") {
       logger.debug(`(${arrType}) conflicts.json not found. Skipping conflicts.`);
     } else {
       const message = err instanceof Error ? err.message : String(err);
