@@ -1,3 +1,4 @@
+import path from "node:path";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import yaml from "yaml";
 import {
@@ -19,6 +20,7 @@ import {
   InputConfigArrInstance,
   InputConfigCustomFormat,
   InputConfigSchema,
+  InputConfigSchemaSchema,
 } from "./types/config.types";
 import { TrashQP, TrashQualityDefinition } from "./types/trashguide.types";
 import { cloneWithJSON } from "./util";
@@ -1719,5 +1721,34 @@ describe("isTrashQualityDefinition", () => {
         qualities: [{ quality: "SDTV", min: 2, preferred: 50, max: 100 }, { quality: "HDTV-720p" }],
       }),
     ).toBe(false);
+  });
+});
+
+describe("InputConfigSchemaSchema (regression)", () => {
+  // Guards against the Zod schema silently drifting from what real, working configs actually
+  // look like - it's a hand-maintained duplicate of the manual types with no compiler link
+  // between them. Caught 3 real mismatches this way already (see git history for this test).
+  test("accepts examples/full's config.yml as valid, unmodified", async () => {
+    const actualFs = await vi.importActual<typeof import("node:fs")>("node:fs");
+    const filePath = path.resolve(__dirname, "../examples/full/config/config.yml");
+    const file = actualFs.readFileSync(filePath, "utf8");
+
+    const stubSecretTag = {
+      identify: (value: unknown) => value instanceof String,
+      tag: "!secret",
+      resolve: () => "placeholder-secret",
+    };
+
+    const rawConfig = yaml.parse(file, { customTags: [stubSecretTag] });
+
+    const result = InputConfigSchemaSchema.safeParse(rawConfig);
+
+    if (!result.success) {
+      throw new Error(
+        `examples/full/config/config.yml no longer matches InputConfigSchemaSchema:\n${result.error.issues
+          .map((i) => `${i.path.join(".")}: ${i.message}`)
+          .join("\n")}`,
+      );
+    }
   });
 });

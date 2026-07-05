@@ -6,6 +6,7 @@ import {
   loadNamingFromTrashSonarr,
   loadQPFromTrash,
   loadTrashCFConflicts,
+  loadTrashCustomFormatGroups,
   transformTrashCFGroups,
   transformTrashQDs,
   transformTrashQPCFGroups,
@@ -105,6 +106,59 @@ describe("TrashGuide", async () => {
     const results = await loadQPFromTrash("RADARR");
 
     console.log(results.keys());
+  });
+
+  describe("loadQPFromTrash (regression)", () => {
+    // Real TRaSH-Guide quality-profile JSON commonly omits trash_score_set - TrashQPSchema
+    // used to require it, which crashed/rejected every profile in the real repo.
+    test("accepts a real-shaped profile with no trash_score_set", async () => {
+      const mockQP = {
+        trash_id: "base-profile-id",
+        name: "Base Profile",
+        language: "Any",
+        upgradeAllowed: true,
+        cutoff: "WEB 2160p",
+        minFormatScore: 0,
+        cutoffFormatScore: 10000,
+        items: [{ name: "WEB 2160p", allowed: true, items: ["WEBDL-2160p"] }],
+        formatItems: { "IMAX Enhanced": "9f6cbff8cfe4ebbc1bde14c7b7bec0de" },
+      };
+
+      vi.spyOn(fs, "readdirSync").mockReturnValue(["base-profile.json"] as any);
+      vi.spyOn(util, "loadJsonFile").mockReturnValue(mockQP);
+      const warnSpy = vi.spyOn(logger, "warn");
+
+      const result = await loadQPFromTrash("RADARR");
+
+      expect(result.get("base-profile-id")).toEqual(mockQP);
+      expect(warnSpy).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("loadTrashCustomFormatGroups (regression)", () => {
+    // Real TRaSH-Guide CF-group JSON uses `default` as either a string ("true") or a
+    // boolean - TrashCustomFormatGroupsSchema/TrashCFGItemSchema used to only accept one
+    // or the other for each, rejecting real, currently-shipped group files.
+    test("accepts group- and item-level default as either string or boolean", async () => {
+      const mockGroup = {
+        name: "Streaming Services",
+        trash_id: "group-id",
+        default: "true",
+        custom_formats: [
+          { name: "AMZN", trash_id: "cf-1", required: false, default: true },
+          { name: "NF", trash_id: "cf-2", required: false, default: "true" },
+        ],
+      };
+
+      vi.spyOn(fs, "readdirSync").mockReturnValue(["group.json"] as any);
+      vi.spyOn(util, "loadJsonFile").mockReturnValue(mockGroup);
+      const warnSpy = vi.spyOn(logger, "warn");
+
+      const result = await loadTrashCustomFormatGroups("RADARR");
+
+      expect(result.get("group-id")).toEqual(mockGroup);
+      expect(warnSpy).not.toHaveBeenCalled();
+    });
   });
 
   test("transformTrashQDs - diff preferred size with ratio", async ({}) => {
