@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.29.1](https://github.com/raydak-labs/configarr/compare/v1.29.0...v1.29.1) (2026-07-05)
+
+### Bug Fixes
+
+- **ci:** give gh release create a repo context in CLI Release ([3d63479](https://github.com/raydak-labs/configarr/commit/3d63479e667da06cb0aeb9105492a3aa13e63bf3))
+- **ci:** replace non-functional release-it comment feature with github-release-commenter ([4c230c0](https://github.com/raydak-labs/configarr/commit/4c230c05154d23d9317be3b3f747689d5479c6e0)), closes [#123](https://github.com/raydak-labs/configarr/issues/123)
+
 ## [1.29.0](https://github.com/raydak-labs/configarr/compare/v1.28.0...v1.29.0) (2026-07-05)
 
 ### Features
