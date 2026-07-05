@@ -1,0 +1,16 @@
+name: Release Comment
+
+on:
+  release:
+    types: [published]
+
+permissions: {}
+
+jobs:
+  comment:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: write
+    steps:
+      - uses: apexskier/github-release-commenter@e7813a9625eabd79a875b4bc4046cfcae377ab34 # v1.4.1
