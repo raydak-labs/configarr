@@ -800,6 +800,10 @@ export const mergeConfigsAndTemplates = async (
     mergedTemplates.media_management = { ...mergedTemplates.media_management, ...instanceConfig.media_management };
   }
 
+  if (instanceConfig.ui_config && Object.keys(instanceConfig.ui_config).length > 0) {
+    mergedTemplates.ui_config = { ...mergedTemplates.ui_config, ...instanceConfig.ui_config };
+  }
+
   if (instanceConfig.media_naming && Object.keys(instanceConfig.media_naming).length > 0) {
     mergedTemplates.media_naming_api = {
       ...mergedTemplates.media_naming_api,

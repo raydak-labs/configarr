@@ -748,6 +748,23 @@ describe("custom_formats ordering", () => {
     expect(ids).toEqual(["cf-group"]);
   });
 
+  test("should merge ui_config from instance config into merged config", async () => {
+    vi.spyOn(localImporter, "loadLocalRecyclarrTemplate").mockReturnValue(new Map());
+
+    const uiConfig = { theme: "dark", firstDayOfWeek: 0 };
+
+    const inputConfig: InputConfigArrInstance = {
+      quality_profiles: [],
+      ui_config: uiConfig,
+      api_key: "test",
+      base_url: "http://sonarr:8989",
+    };
+
+    const result = await mergeConfigsAndTemplates({}, inputConfig, "LIDARR");
+
+    expect(result.config.ui_config).toEqual(uiConfig);
+  });
+
   test("should propagate silenceRequiredCfGroupExclusionWarnings to include and instance custom_format_groups", async () => {
     const loggerWarnSpy = vi.spyOn(logger, "warn");
 
