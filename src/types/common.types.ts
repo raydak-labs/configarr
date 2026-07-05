@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { MergedCustomFormatResource, MergedCustomFormatSpecificationSchema } from "./merged.types";
 import { InputConfigArrInstance } from "./config.types";
-import { TrashCF, TrashCFSpF, TrashScoresSchema } from "./trashguide.types";
+import { TrashCF, TrashCFSpF } from "./trashguide.types";
 
 export type DynamicImportType<T> = { default: T };
 
@@ -45,21 +45,10 @@ export type ImportCF = OmitTyped<MergedCustomFormatResource, "specifications"> &
   specifications?: TCM[] | null;
 } & Required<Pick<MergedCustomFormatResource, "name">>;
 
-// Schema for ImportCF — validates key structural constraint (name required).
-// Uses z.any() with refinement since the underlying types come from generated API code.
-export const ImportCFSchema: z.ZodType<ImportCF> = z.any().refine((v) => v != null && typeof v === "object" && typeof v.name === "string", {
-  message: "ImportCF must be an object with a string 'name' field",
-});
-
 export type ConfigarrCFMeta = {
   configarr_id: string;
   configarr_scores?: TrashCF["trash_scores"];
 };
-
-export const ConfigarrCFMetaSchema = z.object({
-  configarr_id: z.string(),
-  configarr_scores: TrashScoresSchema.optional(),
-});
 
 export type ConfigarrCF = ConfigarrCFMeta & ImportCF;
 
