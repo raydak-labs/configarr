@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.29.0](https://github.com/raydak-labs/configarr/compare/v1.28.0...v1.29.0) (2026-07-05)
+
+### Features
+
+- **ci:** comment on released PRs/issues via release-it's github.comments ([91df62d](https://github.com/raydak-labs/configarr/commit/91df62da1d6c0a226a9e5280177e9ec9ad6ec5ba))
+
+### Bug Fixes
+
+- **ci:** restore git push credentials for release-it ([0d4f02e](https://github.com/raydak-labs/configarr/commit/0d4f02e565c466d113dc6f280a9736bd2dc18168))
+- **config:** propagate ui_config through mergeConfigsAndTemplates ([492cedd](https://github.com/raydak-labs/configarr/commit/492ceddb5cc43bd0c116550a76b95726a7d3b765)), closes [#470](https://github.com/raydak-labs/configarr/issues/470)
+- **deps:** pin dependencies ([#450](https://github.com/raydak-labs/configarr/issues/450)) ([acb5ba5](https://github.com/raydak-labs/configarr/commit/acb5ba5609c995663c9ff4d1332fc8279822aa99))
+- **deps:** update dependencies (non-major) ([#451](https://github.com/raydak-labs/configarr/issues/451)) ([29ee8f3](https://github.com/raydak-labs/configarr/commit/29ee8f3798ebe810d78ebb9818fd4c81bc8ebedd))
+- **deps:** update dependency ky to v2 ([#444](https://github.com/raydak-labs/configarr/issues/444)) ([3f519e5](https://github.com/raydak-labs/configarr/commit/3f519e5e8a0c85c88d0112899be427248d59b4fd))
+- **deps:** update dependency mermaid to v11.16.0 ([#466](https://github.com/raydak-labs/configarr/issues/466)) ([53246ac](https://github.com/raydak-labs/configarr/commit/53246acfff330dda075a7ef61e915e529ab93d2b))
+- **deps:** update docusaurus monorepo to v3.10.1 ([#452](https://github.com/raydak-labs/configarr/issues/452)) ([775b419](https://github.com/raydak-labs/configarr/commit/775b4196ba32dea20da83f9f5e6357e1a0dc6d81))
+
 ## [1.28.0](https://github.com/raydak-labs/configarr/compare/v1.27.0...v1.28.0) (2026-05-04)
 
 ### Features
