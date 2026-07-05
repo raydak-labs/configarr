@@ -61,7 +61,9 @@ export type TrashCFSpF = z.infer<typeof TrashCFSpFSchema>;
 export const TrashQPSchema = z.object({
   trash_id: z.string(),
   name: z.string(),
-  trash_score_set: z.string(),
+  // Real TRaSH-Guide profile JSON commonly omits this (meaning "no score-set adjustment");
+  // downstream code (trash-guide.ts's transformTrashQPToTemplate) already tolerates undefined here.
+  trash_score_set: z.string().optional(),
   language: z.string().optional(),
   upgradeAllowed: z.boolean(),
   cutoff: z.string(),

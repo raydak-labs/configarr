@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { MergedCustomFormatResource, MergedCustomFormatSpecificationSchema } from "./merged.types";
 import { InputConfigArrInstance } from "./config.types";
-import { TrashCF, TrashCFSpF } from "./trashguide.types";
+import { TrashCF, TrashCFSpF, TrashScoresSchema } from "./trashguide.types";
 
 export type DynamicImportType<T> = { default: T };
 
@@ -58,21 +58,7 @@ export type ConfigarrCFMeta = {
 
 export const ConfigarrCFMetaSchema = z.object({
   configarr_id: z.string(),
-  configarr_scores: z
-    .object({
-      default: z.number().optional(),
-      "anime-sonarr": z.number().optional(),
-      "anime-radarr": z.number().optional(),
-      "sqp-1-1080p": z.number().optional(),
-      "sqp-1-2160p": z.number().optional(),
-      "sqp-2": z.number().optional(),
-      "sqp-3": z.number().optional(),
-      "sqp-4": z.number().optional(),
-      "sqp-5": z.number().optional(),
-      "french-vostfr": z.number().optional(),
-      german: z.number().optional(),
-    })
-    .optional(),
+  configarr_scores: TrashScoresSchema.optional(),
 });
 
 export type ConfigarrCF = ConfigarrCFMeta & ImportCF;

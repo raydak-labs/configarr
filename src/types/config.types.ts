@@ -36,21 +36,17 @@ export const InputConfigQualityProfileSchema = z.object({
       except: z.array(z.string()).optional(),
     })
     .optional(),
+  // Not a discriminated union on `allowed`: real-world configs (e.g. examples/full)
+  // omit `allowed` entirely and rely on its runtime-truthy default of "disabled"
+  // (see quality-profiles.ts). The until_quality-required-when-allowed=true invariant
+  // is enforced there too, with a clearer error message than Zod could give here.
   upgrade: z
-    .union([
-      z.object({
-        allowed: z.literal(true),
-        until_quality: z.string(),
-        until_score: z.number(),
-        min_format_score: z.number().optional(),
-      }),
-      z.object({
-        allowed: z.literal(false),
-        until_quality: z.string().optional(),
-        until_score: z.number().optional(),
-        min_format_score: z.number().optional(),
-      }),
-    ])
+    .object({
+      allowed: z.boolean().optional(),
+      until_quality: z.string().optional(),
+      until_score: z.number().optional(),
+      min_format_score: z.number().optional(),
+    })
     .optional(),
   min_format_score: z.number().optional(),
   score_set: z.string().optional(),
@@ -228,7 +224,9 @@ export const InputConfigArrInstanceSchema = z.object({
   include: z.array(InputConfigIncludeItemSchema).optional(),
   custom_format_groups: z.array(InputConfigCustomFormatGroupSchema).optional(),
   custom_formats: z.array(InputConfigCustomFormatSchema).optional(),
-  quality_profiles: z.array(InputConfigQualityProfileSchema),
+  // Optional at the input stage: an instance can rely entirely on `include` templates
+  // for its profiles without declaring any directly (see examples/full's sonarr instance).
+  quality_profiles: z.array(InputConfigQualityProfileSchema).optional(),
   media_management: MediaManagementTypeSchema.optional(),
   ui_config: UiConfigTypeSchema.optional(),
   media_naming_api: MediaNamingApiTypeSchema.optional(),
