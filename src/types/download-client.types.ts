@@ -57,11 +57,7 @@ export type DownloadClientField =
  * in client-facing code.
  */
 export type DownloadClientTagResource =
-  | RadarrDownloadClientTagResource
-  | SonarrDownloadClientTagResource
-  | LidarrTagResource
-  | ReadarrTagResource
-  | WhisparrTagResource;
+  RadarrDownloadClientTagResource | SonarrDownloadClientTagResource | LidarrTagResource | ReadarrTagResource | WhisparrTagResource;
 
 export interface ValidationResult {
   valid: boolean;
