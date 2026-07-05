@@ -43,6 +43,12 @@ jobs:
 
       - run: pnpm install
 
+      - name: Configure git push credentials
+        env:
+          GH_TOKEN: ${{ steps.generate_token.outputs.token }}
+        run: |
+          git config --local http.https://github.com/.extraheader "AUTHORIZATION: basic $(printf '%s' "x-access-token:${GH_TOKEN}" | base64 | tr -d '\n')"
+
       - run: pnpm release-it --ci
         env:
           GITHUB_TOKEN: ${{ steps.generate_token.outputs.token }}
