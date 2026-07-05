@@ -11,7 +11,7 @@ import {
 } from "../__generated__/radarr/data-contracts";
 import { logger } from "../logger";
 import type { DownloadClientResource } from "../types/download-client.types";
-import { cloneWithJSON } from "../util";
+import { ANY_LANGUAGE_NAME, cloneWithJSON } from "../util";
 import { IArrClient, logConnectionError, validateClientParams } from "./unified-client";
 
 export class RadarrClient implements IArrClient<QualityProfileResource, QualityDefinitionResource, CustomFormatResource, LanguageResource> {
@@ -64,7 +64,7 @@ export class RadarrClient implements IArrClient<QualityProfileResource, QualityD
     }
 
     if (profile.language == null) {
-      cloned.language = this.languageMap.get("Any");
+      cloned.language = this.languageMap.get(ANY_LANGUAGE_NAME);
     }
 
     return this.api.v3QualityprofileCreate(cloned);

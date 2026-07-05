@@ -442,6 +442,105 @@ describe("QualityProfiles", async () => {
     expect(diff.noChanges.length).toBe(0);
   });
 
+  test("calculateQualityProfilesDiff - should default to Any language when not configured and server differs (radarr)", async ({}) => {
+    const cfMap: CFProcessing = { carrIdMapping: new Map(), cfNameToCarrConfig: new Map() };
+
+    const fromConfig: ConfigQualityProfileItem[] = [{ name: "HDTV-1080p", enabled: false }];
+
+    const resources: MergedQualityDefinitionResource[] = [
+      { id: 1, title: "HDTV-1080p", weight: 2, quality: { id: 1, name: "HDTV-1080p" } },
+    ];
+
+    const profile: ConfigQualityProfile = {
+      name: "hi",
+      min_format_score: 2,
+      qualities: fromConfig,
+      quality_sort: "top",
+      upgrade: { allowed: true, until_quality: "HDTV-1080p", until_score: 1000 },
+      score_set: "default",
+      // language intentionally omitted
+    };
+
+    const config: MergedConfigInstance = {
+      custom_formats: [],
+      quality_profiles: [profile],
+      customFormatDefinitions: [],
+      media_management: {},
+      media_naming: {},
+    };
+
+    const serverProfile = cloneWithJSON(sampleQualityProfile);
+    serverProfile.name = "hi";
+    serverProfile.formatItems = [];
+    serverProfile.minUpgradeFormatScore = 3;
+    serverProfile.minFormatScore = 2;
+    serverProfile.cutoff = 1;
+    serverProfile.items = [{ allowed: false, items: [], quality: { id: 1, name: "HDTV-1080p" } }];
+    serverProfile.language = { id: 1, name: "English" };
+
+    const serverQP: MergedQualityProfileResource[] = [serverProfile];
+    const serverQD: MergedQualityDefinitionResource[] = resources;
+    const serverCF: MergedCustomFormatResource[] = [cloneWithJSON(sampleCustomFormat)];
+
+    const serverCache = new ServerCache(serverQD, serverQP, serverCF, [{ id: 0, name: "Any" }]);
+
+    const diff = await calculateQualityProfilesDiff("RADARR", cfMap, config, serverCache);
+    expect(diff.changedQPs.length).toBe(1);
+    expect(diff.changedQPs[0]!.language).toEqual({ id: 0, name: "Any" });
+  });
+
+  test("calculateQualityProfilesDiff - should warn when default Any language is missing from server (radarr)", async ({}) => {
+    const cfMap: CFProcessing = { carrIdMapping: new Map(), cfNameToCarrConfig: new Map() };
+
+    const fromConfig: ConfigQualityProfileItem[] = [{ name: "HDTV-1080p", enabled: false }];
+
+    const resources: MergedQualityDefinitionResource[] = [
+      { id: 1, title: "HDTV-1080p", weight: 2, quality: { id: 1, name: "HDTV-1080p" } },
+    ];
+
+    const profile: ConfigQualityProfile = {
+      name: "hi",
+      min_format_score: 2,
+      qualities: fromConfig,
+      quality_sort: "top",
+      upgrade: { allowed: true, until_quality: "HDTV-1080p", until_score: 1000 },
+      score_set: "default",
+      // language intentionally omitted
+    };
+
+    const config: MergedConfigInstance = {
+      custom_formats: [],
+      quality_profiles: [profile],
+      customFormatDefinitions: [],
+      media_management: {},
+      media_naming: {},
+    };
+
+    const serverProfile = cloneWithJSON(sampleQualityProfile);
+    serverProfile.name = "hi";
+    serverProfile.formatItems = [];
+    serverProfile.minUpgradeFormatScore = 3;
+    serverProfile.minFormatScore = 2;
+    serverProfile.cutoff = 1;
+    serverProfile.items = [{ allowed: false, items: [], quality: { id: 1, name: "HDTV-1080p" } }];
+    serverProfile.language = { id: 1, name: "English" };
+
+    const serverQP: MergedQualityProfileResource[] = [serverProfile];
+    const serverQD: MergedQualityDefinitionResource[] = resources;
+    const serverCF: MergedCustomFormatResource[] = [cloneWithJSON(sampleCustomFormat)];
+
+    // No "Any" language present on the server
+    const serverCache = new ServerCache(serverQD, serverQP, serverCF, [{ id: 1, name: "English" }]);
+
+    const logSpy = vi.spyOn(log.logger, "warn").mockImplementation(() => {});
+
+    const diff = await calculateQualityProfilesDiff("RADARR", cfMap, config, serverCache);
+
+    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining("Any"));
+    expect(diff.changedQPs.length).toBe(0);
+    expect(diff.noChanges.length).toBe(1);
+  });
+
   test("calculateQualityProfilesDiff - should not diff for language (radarr)", async ({}) => {
     const cfMap: CFProcessing = { carrIdMapping: new Map(), cfNameToCarrConfig: new Map() };
 
