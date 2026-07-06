@@ -18,3 +18,7 @@ export interface InstanceDiffReport {
   instanceName: string;
   entries: DiffEntry[];
 }
+
+export interface DiffFormatter {
+  format(report: InstanceDiffReport): void | Promise<void>;
+}
