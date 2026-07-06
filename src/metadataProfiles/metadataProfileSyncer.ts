@@ -23,12 +23,16 @@ function createMetadataProfileSync(arrType: ArrType): BaseMetadataProfileSync | 
  * Sync metadata profiles - handles add/update and deletion in one unified call
  * Takes the full config object to handle all scenarios
  */
-export async function syncMetadataProfiles(arrType: ArrType, config: MergedConfigInstance, serverCache: ServerCache): Promise<void> {
+export async function syncMetadataProfiles(
+  arrType: ArrType,
+  config: MergedConfigInstance,
+  serverCache: ServerCache,
+): Promise<MetadataProfileSyncResult> {
   const sync = createMetadataProfileSync(arrType);
 
   if (sync == null) {
-    return;
+    return { added: 0, removed: 0, updated: 0, diffEntries: [] };
   }
 
-  await sync.syncMetadataProfiles(config, serverCache);
+  return sync.syncMetadataProfiles(config, serverCache);
 }

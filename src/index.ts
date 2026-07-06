@@ -11,7 +11,7 @@ import { getConfig, mergeConfigsAndTemplates } from "./config";
 import { calculateCFsToManage, deleteCustomFormat, loadCustomFormatDefinitions, loadServerCustomFormats, manageCf } from "./custom-formats";
 import { calculateDelayProfilesDiff, deleteAdditionalDelayProfiles, mapToServerDelayProfile } from "./delay-profiles";
 import { syncDownloadClients } from "./downloadClients/downloadClientSyncer";
-import { syncDownloadClientConfig } from "./downloadClientConfig/downloadClientConfigSyncer";
+import { downloadClientConfigDiffToDiffEntries, syncDownloadClientConfig } from "./downloadClientConfig/downloadClientConfigSyncer";
 import { syncRemotePaths } from "./remotePaths/remotePathSyncer";
 import { syncUiConfig, uiConfigDiffToDiffEntries } from "./uiConfigs/uiConfigSyncer";
 import { logger, logHeading, logInstanceHeading } from "./logger";
@@ -286,9 +286,11 @@ const pipeline = async (
   }
 
   // Handle metadata profiles (Lidarr / Readarr) - unified sync with optional deletion
-  await syncMetadataProfiles(arrType, config, serverCache);
+  const metadataProfileResult = await syncMetadataProfiles(arrType, config, serverCache);
+  diffCollector.add(metadataProfileResult.diffEntries);
 
-  await syncRootFolders(arrType, config.root_folders, serverCache);
+  const rootFolderResult = await syncRootFolders(arrType, config.root_folders, serverCache);
+  diffCollector.add(rootFolderResult.diffEntries);
 
   // Handle delay profiles
   if (
@@ -341,7 +343,8 @@ const pipeline = async (
   // Download Clients
   if (config.download_clients?.data || config.download_clients?.delete_unmanaged?.enabled) {
     try {
-      await syncDownloadClients(arrType, config, serverCache);
+      const downloadClientsResult = await syncDownloadClients(arrType, config, serverCache);
+      diffCollector.add(downloadClientsResult.diffEntries);
     } catch (err: any) {
       logger.error(`Failed to sync download clients: ${err.message}`);
     }
@@ -350,7 +353,8 @@ const pipeline = async (
   // Download Client Configuration
   if (config.download_clients?.config) {
     try {
-      await syncDownloadClientConfig(arrType, config, serverCache);
+      const downloadClientConfigResult = await syncDownloadClientConfig(arrType, config, serverCache);
+      diffCollector.add(downloadClientConfigDiffToDiffEntries(downloadClientConfigResult));
     } catch (err: any) {
       logger.error(`Failed to sync download client config: ${err.message}`);
     }
