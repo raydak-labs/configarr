@@ -13,9 +13,14 @@ import { calculateDelayProfilesDiff, deleteAdditionalDelayProfiles, mapToServerD
 import { syncDownloadClients } from "./downloadClients/downloadClientSyncer";
 import { syncDownloadClientConfig } from "./downloadClientConfig/downloadClientConfigSyncer";
 import { syncRemotePaths } from "./remotePaths/remotePathSyncer";
-import { syncUiConfig } from "./uiConfigs/uiConfigSyncer";
+import { syncUiConfig, uiConfigDiffToDiffEntries } from "./uiConfigs/uiConfigSyncer";
 import { logger, logHeading, logInstanceHeading } from "./logger";
-import { calculateMediamanagementDiff, calculateNamingDiff } from "./media-management";
+import {
+  calculateMediamanagementDiff,
+  calculateNamingDiff,
+  mediamanagementDiffToDiffEntries,
+  namingDiffToDiffEntries,
+} from "./media-management";
 import { calculateQualityDefinitionDiff, loadQualityDefinitionFromServer, qualityDefinitionsToDiffEntries } from "./quality-definitions";
 import { DiffCollector } from "./diffReport/diffCollector";
 import { ConsoleDiffFormatter } from "./diffReport/formatters/consoleFormatter";
@@ -83,6 +88,7 @@ const pipeline = async (
   }, new Map<string, MergedCustomFormatResource>());
 
   const cfUpdateResult = await manageCf(mergedCFs, serverCFMapping);
+  diffCollector.add(cfUpdateResult.diffEntries);
 
   // add missing CFs to list because we need it for further steps
   // serverCFs.push(...cfUpdateResult.createCFs);
@@ -109,6 +115,8 @@ const pipeline = async (
     const cfsToDelete = serverCache.cf.filter((e) => (e.name && mm.get(e.name)) !== true);
 
     if (cfsToDelete.length > 0) {
+      diffCollector.add(cfsToDelete.map((e) => ({ resourceType: "CustomFormat", name: e.name!, action: "delete" as const })));
+
       if (getEnvs().DRY_RUN) {
         logger.info(`DryRun: Would delete CF: ${cfsToDelete.map((e) => e.name).join(", ")}`);
       } else {
@@ -184,6 +192,8 @@ const pipeline = async (
   const namingDiff = await calculateNamingDiff(config.media_naming_api);
 
   if (namingDiff) {
+    diffCollector.add(namingDiffToDiffEntries(namingDiff));
+
     if (getEnvs().DRY_RUN) {
       logger.info("DryRun: Would update MediaNaming.");
     } else {
@@ -196,6 +206,8 @@ const pipeline = async (
   const managementDiff = await calculateMediamanagementDiff(config.media_management);
 
   if (managementDiff) {
+    diffCollector.add(mediamanagementDiffToDiffEntries(managementDiff));
+
     if (getEnvs().DRY_RUN) {
       logger.info("DryRun: Would update MediaManagement.");
     } else {
@@ -205,7 +217,8 @@ const pipeline = async (
     }
   }
 
-  await syncUiConfig(arrType, config.ui_config);
+  const uiConfigResult = await syncUiConfig(arrType, config.ui_config);
+  diffCollector.add(uiConfigDiffToDiffEntries(uiConfigResult));
 
   const serverQP = await loadQualityProfilesFromServer();
   serverCache.qp = serverQP;

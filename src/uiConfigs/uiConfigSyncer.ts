@@ -1,4 +1,5 @@
 import { getSpecificClient } from "../clients/unified-client";
+import { DiffEntry } from "../diffReport/diffReport.types";
 import { logger } from "../logger";
 import { ArrType } from "../types/common.types";
 import type { UiConfigType } from "../types/config.types";
@@ -20,7 +21,7 @@ export async function syncUiConfig(arrType: ArrType, uiConfig: UiConfigType | un
   // If ui_config is undefined/not present, skip management entirely
   if (uiConfig === undefined) {
     logger.debug(`No UI config specified for ${arrType}`);
-    return { updated: false, arrType };
+    return { updated: false, arrType, fieldChanges: [] };
   }
 
   try {
@@ -39,7 +40,7 @@ export async function syncUiConfig(arrType: ArrType, uiConfig: UiConfigType | un
 
     if (equal) {
       logger.info(`UI config for ${arrType} is already up-to-date`);
-      return { updated: false, arrType };
+      return { updated: false, arrType, fieldChanges: [] };
     }
 
     logger.info(`UI config changes detected for ${arrType}: ${changes.length} differences`);
@@ -48,7 +49,7 @@ export async function syncUiConfig(arrType: ArrType, uiConfig: UiConfigType | un
     // Respect dry-run mode
     if (getEnvs().DRY_RUN) {
       logger.info(`DryRun: Would update UI config for ${arrType}`);
-      return { updated: true, arrType };
+      return { updated: true, arrType, fieldChanges: changes };
     }
 
     // Validate server config has required id field
@@ -64,10 +65,17 @@ export async function syncUiConfig(arrType: ArrType, uiConfig: UiConfigType | un
 
     await client.updateUiConfig(serverConfigRecord.id.toString(), updatedConfig);
     logger.info(`Successfully updated UI config for ${arrType}`);
-    return { updated: true, arrType };
+    return { updated: true, arrType, fieldChanges: changes };
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     logger.error(`Failed to sync UI config for ${arrType}: ${errorMessage}`);
     throw new Error(`UI config sync failed for ${arrType}: ${errorMessage}`);
   }
+}
+
+export function uiConfigDiffToDiffEntries(result: UiConfigSyncResult): DiffEntry[] {
+  if (!result.updated) {
+    return [];
+  }
+  return [{ resourceType: "UiConfig", name: result.arrType, action: "update", fieldChanges: result.fieldChanges }];
 }

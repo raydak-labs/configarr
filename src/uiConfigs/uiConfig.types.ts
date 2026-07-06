@@ -1,4 +1,5 @@
 import { ArrType } from "../types/common.types";
+import { FieldChange } from "../diffReport/diffReport.types";
 
 /**
  * Result of a UI config sync operation
@@ -6,6 +7,7 @@ import { ArrType } from "../types/common.types";
 export interface UiConfigSyncResult {
   updated: boolean;
   arrType: ArrType;
+  fieldChanges: FieldChange[];
 }
 
 /**

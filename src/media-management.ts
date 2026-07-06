@@ -1,4 +1,5 @@
 import { getUnifiedClient } from "./clients/unified-client";
+import { DiffEntry, FieldChange } from "./diffReport/diffReport.types";
 import { logger } from "./logger";
 import { MediaManagementType, MediaNamingApiType } from "./types/config.types";
 import { compareMediamanagement, compareNaming } from "./util";
@@ -70,3 +71,11 @@ export const calculateMediamanagementDiff = async (mediaManagement?: MediaManage
     },
   };
 };
+
+export function namingDiffToDiffEntries(namingDiff: { changes: FieldChange[] }): DiffEntry[] {
+  return [{ resourceType: "MediaNaming", name: "MediaNaming", action: "update", fieldChanges: namingDiff.changes }];
+}
+
+export function mediamanagementDiffToDiffEntries(managementDiff: { changes: FieldChange[] }): DiffEntry[] {
+  return [{ resourceType: "MediaManagement", name: "MediaManagement", action: "update", fieldChanges: managementDiff.changes }];
+}

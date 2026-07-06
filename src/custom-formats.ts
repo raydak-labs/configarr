@@ -3,6 +3,7 @@ import path from "node:path";
 import { MergedCustomFormatResource } from "./types/merged.types";
 import { getUnifiedClient } from "./clients/unified-client";
 import { getConfig } from "./config";
+import { DiffEntry } from "./diffReport/diffReport.types";
 import { getEnvs } from "./env";
 import { logger } from "./logger";
 import { loadTrashCFs } from "./trash-guide";
@@ -45,6 +46,7 @@ export const manageCf = async (cfProcessing: CFProcessing, serverCfs: Map<string
   let errorCFs: string[] = [];
   const validCFs: ConfigarrCF[] = [];
   let createCFs: MergedCustomFormatResource[] = [];
+  const diffEntries: DiffEntry[] = [];
 
   const manageSingle = async (cfName: string, carrConfig: ConfigarrCF) => {
     const requestConfig = mapImportCfToRequestCf(carrConfig);
@@ -56,6 +58,7 @@ export const manageCf = async (cfProcessing: CFProcessing, serverCfs: Map<string
 
       if (!comparison.equal) {
         logger.debug(comparison.changes, `Found mismatch for ${requestConfig.name}`);
+        diffEntries.push({ resourceType: "CustomFormat", name: requestConfig.name!, action: "update", fieldChanges: comparison.changes });
 
         try {
           if (getEnvs().DRY_RUN) {
@@ -82,6 +85,8 @@ export const manageCf = async (cfProcessing: CFProcessing, serverCfs: Map<string
       }
     } else {
       // Create
+      diffEntries.push({ resourceType: "CustomFormat", name: requestConfig.name!, action: "create" });
+
       try {
         if (getEnvs().DRY_RUN) {
           logger.info(`Would create CF: ${requestConfig.name}`);
@@ -116,7 +121,7 @@ export const manageCf = async (cfProcessing: CFProcessing, serverCfs: Map<string
     `Created CFs: ${createCFs.length}, Updated CFs: ${updatedCFs.length}, Untouched CFs: ${validCFs.length}, Error CFs: ${errorCFs.length}`,
   );
 
-  return { createCFs, updatedCFs, validCFs, errorCFs };
+  return { createCFs, updatedCFs, validCFs, errorCFs, diffEntries };
 };
 
 export const loadLocalCfs = async (): Promise<CFIDToConfigGroup> => {
