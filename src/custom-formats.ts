@@ -55,7 +55,7 @@ export const manageCf = async (cfProcessing: CFProcessing, serverCfs: Map<string
       const comparison = compareCustomFormats(existingCf, requestConfig);
 
       if (!comparison.equal) {
-        logger.debug(`Found mismatch for ${requestConfig.name}: ${comparison.changes}`);
+        logger.debug(comparison.changes, `Found mismatch for ${requestConfig.name}`);
 
         try {
           if (getEnvs().DRY_RUN) {

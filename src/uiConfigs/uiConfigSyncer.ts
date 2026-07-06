@@ -43,7 +43,7 @@ export async function syncUiConfig(arrType: ArrType, uiConfig: UiConfigType | un
     }
 
     logger.info(`UI config changes detected for ${arrType}: ${changes.length} differences`);
-    logger.debug(`UI config changes: ${changes.join(", ")}`);
+    logger.debug(changes, `UI config changes for ${arrType}`);
 
     // Respect dry-run mode
     if (getEnvs().DRY_RUN) {
