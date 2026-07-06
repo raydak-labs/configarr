@@ -133,6 +133,41 @@ describe("TrashGuide", async () => {
       expect(result.get("base-profile-id")).toEqual(mockQP);
       expect(warnSpy).not.toHaveBeenCalled();
     });
+
+    // TrashScoresSchema's key list had drifted 8 keys behind what TRaSH-Guides actually
+    // ships (audited directly against the real cloned repo) - profiles using one of the
+    // missing score-sets got rejected/warned on, silently losing their intended CF scoring.
+    test.each([
+      "sqp-1-web-1080p",
+      "sqp-1-web-2160p",
+      "sqp-4-ma-hybrid",
+      "french-multi-vf",
+      "french-multi-vo",
+      "french-anime-multi",
+      "french-anime-vostfr",
+      "german-anime",
+    ])("accepts real-shaped score set '%s'", async (scoreSet) => {
+      const mockQP = {
+        trash_id: "profile-id",
+        name: "Profile",
+        trash_score_set: scoreSet,
+        upgradeAllowed: true,
+        cutoff: "WEB 2160p",
+        minFormatScore: 0,
+        cutoffFormatScore: 10000,
+        items: [],
+        formatItems: {},
+      };
+
+      vi.spyOn(fs, "readdirSync").mockReturnValue(["profile.json"] as any);
+      vi.spyOn(util, "loadJsonFile").mockReturnValue(mockQP);
+      const warnSpy = vi.spyOn(logger, "warn");
+
+      const result = await loadQPFromTrash("RADARR");
+
+      expect(result.get("profile-id")).toEqual(mockQP);
+      expect(warnSpy).not.toHaveBeenCalled();
+    });
   });
 
   describe("loadTrashCustomFormatGroups (regression)", () => {

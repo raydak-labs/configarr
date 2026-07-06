@@ -19,18 +19,30 @@ export const TrashQualityDefinitionSchema = z.object({
 });
 export type TrashQualityDefinition = z.infer<typeof TrashQualityDefinitionSchema>;
 
+// Keys audited directly against the real, currently-shipped TRaSH-Guides data (both
+// custom-formats' trash_scores and quality-profiles' trash_score_set) - this list had
+// drifted 8 keys behind what TRaSH-Guides actually ships, silently losing the intended
+// score for any CF assigned via one of the missing score-sets (falls back to "default").
 export const TrashScoresSchema = z.object({
   default: z.number().optional(),
   "anime-sonarr": z.number().optional(),
   "anime-radarr": z.number().optional(),
   "sqp-1-1080p": z.number().optional(),
   "sqp-1-2160p": z.number().optional(),
+  "sqp-1-web-1080p": z.number().optional(),
+  "sqp-1-web-2160p": z.number().optional(),
   "sqp-2": z.number().optional(),
   "sqp-3": z.number().optional(),
   "sqp-4": z.number().optional(),
+  "sqp-4-ma-hybrid": z.number().optional(),
   "sqp-5": z.number().optional(),
   "french-vostfr": z.number().optional(),
+  "french-multi-vf": z.number().optional(),
+  "french-multi-vo": z.number().optional(),
+  "french-anime-multi": z.number().optional(),
+  "french-anime-vostfr": z.number().optional(),
   german: z.number().optional(),
+  "german-anime": z.number().optional(),
 });
 export type TrashScores = z.infer<typeof TrashScoresSchema>;
 
@@ -63,7 +75,10 @@ export const TrashQPSchema = z.object({
   name: z.string(),
   // Real TRaSH-Guide profile JSON commonly omits this (meaning "no score-set adjustment");
   // downstream code (trash-guide.ts's transformTrashQPToTemplate) already tolerates undefined here.
-  trash_score_set: z.string().optional(),
+  // .keyof() derives from TrashScoresSchema instead of z.string() so this stays a single
+  // source of truth with InputConfigQualityProfileSchema.score_set - both are ultimately
+  // "one of TrashScores' known keys, or unset".
+  trash_score_set: TrashScoresSchema.keyof().optional(),
   language: z.string().optional(),
   upgradeAllowed: z.boolean(),
   cutoff: z.string(),
@@ -78,27 +93,7 @@ export const TrashQPSchema = z.object({
   ),
   formatItems: z.record(z.string(), z.string()),
 });
-
-type TrashQPItem = {
-  name: string;
-  allowed: boolean;
-  items?: string[];
-};
-
-export type TrashQP = {
-  trash_id: string;
-  name: string;
-  trash_score_set: keyof Required<TrashScores>;
-  language?: string;
-  upgradeAllowed: boolean;
-  cutoff: string;
-  minFormatScore: number;
-  cutoffFormatScore: number;
-  items: TrashQPItem[];
-  formatItems: {
-    [key: string]: string;
-  };
-};
+export type TrashQP = z.infer<typeof TrashQPSchema>;
 
 export const TrashArrSupportedConst = ["RADARR", "SONARR"] as const satisfies readonly ArrType[];
 export type TrashArrSupported = (typeof TrashArrSupportedConst)[number];

@@ -236,7 +236,11 @@ export const getSecrets = () => {
 
 // 2024-09-30: Recyclarr assign_scores_to adjustments
 export const transformConfig = (input: InputConfigSchema): ConfigSchema => {
-  const mappedCustomFormats = (arrInput: Record<string, InputConfigArrInstance> = {}): Record<string, ConfigArrInstance> => {
+  // Only normalizes custom_formats/include - quality_profiles isn't resolved to the fully
+  // defaulted ConfigQualityProfile shape until mergeConfigsAndTemplates runs per-instance, so
+  // this returns InputConfigArrInstance (with those two fields upgraded to their Config*
+  // counterparts, which still satisfy the Input* shape), not ConfigArrInstance.
+  const mappedCustomFormats = (arrInput: Record<string, InputConfigArrInstance> = {}): Record<string, InputConfigArrInstance> => {
     return Object.entries(arrInput).reduce(
       (p, [key, value]) => {
         const mappedCustomFormats = (value.custom_formats || []).map<ConfigCustomFormat>((cf) => {
@@ -260,7 +264,7 @@ export const transformConfig = (input: InputConfigSchema): ConfigSchema => {
         p[key] = { ...value, include: value.include?.map(parseIncludes), custom_formats: mappedCustomFormats };
         return p;
       },
-      {} as Record<string, ConfigArrInstance>,
+      {} as Record<string, InputConfigArrInstance>,
     );
   };
 
@@ -331,6 +335,11 @@ export const validateConfig = (input: InputConfigInstance): MergedConfigInstance
       trash_ids: e.trash_ids,
       assign_scores_to: e.assign_scores_to ?? e.quality_profiles ?? [],
     })),
+    // Boundary assertion: by this point mergeConfigsAndTemplates has merged each profile from
+    // potentially multiple sources (instance config, recyclarr/trash templates), and the
+    // combination is assumed complete enough - see the TODO above, this isn't independently
+    // verified field-by-field.
+    quality_profiles: (input.quality_profiles ?? []) as ConfigQualityProfile[],
   };
 };
 
@@ -788,7 +797,10 @@ export const mergeConfigsAndTemplates = async (
   }
 
   if (instanceConfig.quality_profiles) {
-    mergedTemplates.quality_profiles.push(...instanceConfig.quality_profiles);
+    // Boundary assertion: user-authored quality_profiles are documented/conventionally expected
+    // to be fully specified (see examples/full), unlike template-sourced profiles which start
+    // partial and get filled in by the merge/reduce steps below. Not independently verified here.
+    mergedTemplates.quality_profiles.push(...(instanceConfig.quality_profiles as ConfigQualityProfile[]));
   }
 
   if (instanceConfig.media_management && Object.keys(instanceConfig.media_management).length > 0) {
