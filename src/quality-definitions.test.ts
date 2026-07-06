@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { MergedQualityDefinitionResource } from "./types/merged.types";
-import { calculateQualityDefinitionDiff, interpolateSize } from "./quality-definitions";
+import { calculateQualityDefinitionDiff, interpolateSize, qualityDefinitionsToDiffEntries } from "./quality-definitions";
 import { TrashQualityDefinition } from "./types/trashguide.types";
 
 describe("QualityDefinitions", async () => {
@@ -95,6 +95,25 @@ describe("QualityDefinitions", async () => {
 
     expect(result.changeMap.size).toBe(0);
     expect(result.restData.length).toBe(2);
+  });
+
+  test("calculateQualityDefinitionDiff - min size diff produces a structured FieldChange", async ({}) => {
+    const clone: TrashQualityDefinition = JSON.parse(JSON.stringify(client));
+    clone.qualities[0]!.min = 3;
+
+    const result = calculateQualityDefinitionDiff(server, clone.qualities);
+
+    expect(result.changeMap.get("SDTV")).toEqual([{ field: "minSize", from: 2, to: 3 }]);
+  });
+
+  test("qualityDefinitionsToDiffEntries - converts a changeMap into DiffEntry[]", () => {
+    const changeMap = new Map([["SDTV", [{ field: "minSize", from: 2, to: 3 }]]]);
+
+    const entries = qualityDefinitionsToDiffEntries(changeMap);
+
+    expect(entries).toEqual([
+      { resourceType: "QualityDefinitions", name: "SDTV", action: "update", fieldChanges: [{ field: "minSize", from: 2, to: 3 }] },
+    ]);
   });
 
   test("interpolateSize - expected values", async ({}) => {

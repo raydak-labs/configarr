@@ -16,7 +16,10 @@ import { syncRemotePaths } from "./remotePaths/remotePathSyncer";
 import { syncUiConfig } from "./uiConfigs/uiConfigSyncer";
 import { logger, logHeading, logInstanceHeading } from "./logger";
 import { calculateMediamanagementDiff, calculateNamingDiff } from "./media-management";
-import { calculateQualityDefinitionDiff, loadQualityDefinitionFromServer } from "./quality-definitions";
+import { calculateQualityDefinitionDiff, loadQualityDefinitionFromServer, qualityDefinitionsToDiffEntries } from "./quality-definitions";
+import { DiffCollector } from "./diffReport/diffCollector";
+import { ConsoleDiffFormatter } from "./diffReport/formatters/consoleFormatter";
+import { InstanceDiffReport } from "./diffReport/diffReport.types";
 import {
   calculateQualityProfilesDiff,
   checkForConflictingCFs,
@@ -36,8 +39,14 @@ import { TrashArrSupportedConst, TrashQualityDefinition, TrashQualityDefinitionQ
 import { isInConstArray } from "./util";
 import { syncRootFolders } from "./rootFolder/rootFolderSyncer";
 
-const pipeline = async (globalConfig: InputConfigSchema, instanceConfig: InputConfigArrInstance, arrType: ArrType) => {
+const pipeline = async (
+  globalConfig: InputConfigSchema,
+  instanceConfig: InputConfigArrInstance,
+  arrType: ArrType,
+  instanceName: string,
+): Promise<InstanceDiffReport> => {
   const api = getUnifiedClient();
+  const diffCollector = new DiffCollector();
 
   const system = await api.getSystemStatus();
   logger.info(`System status: ${JSON.stringify(system)}`);
@@ -153,6 +162,8 @@ const pipeline = async (globalConfig: InputConfigSchema, instanceConfig: InputCo
     const { changeMap, restData } = calculateQualityDefinitionDiff(serverCache.qd, mergedQDs);
 
     if (changeMap.size > 0) {
+      diffCollector.add(qualityDefinitionsToDiffEntries(changeMap));
+
       if (getEnvs().DRY_RUN) {
         logger.info("DryRun: Would update QualityDefinitions.");
       } else {
@@ -343,6 +354,8 @@ const pipeline = async (globalConfig: InputConfigSchema, instanceConfig: InputCo
   } else {
     logger.debug(`[DEBUG] No remote paths to sync for ${arrType}. download_clients: ${JSON.stringify(config.download_clients)}`);
   }
+
+  return { arrType, instanceName, entries: diffCollector.getEntries() };
 };
 
 const runArrType = async (
@@ -355,10 +368,11 @@ const runArrType = async (
     failure: 0,
     skipped: 0,
   };
+  const reports: InstanceDiffReport[] = [];
 
   if (!arrEntry || typeof arrEntry !== "object" || Object.keys(arrEntry).length === 0) {
     logHeading(`No ${arrType} instances defined.`);
-    return status;
+    return { status, reports };
   }
 
   logHeading(`Processing ${arrType} ...`);
@@ -374,7 +388,9 @@ const runArrType = async (
 
     try {
       await configureApi(arrType, instance.base_url, instance.api_key);
-      await pipeline(globalConfig, instance, arrType);
+      const report = await pipeline(globalConfig, instance, arrType, instanceName);
+      new ConsoleDiffFormatter().format(report);
+      reports.push(report);
       status.success++;
     } catch (err: any) {
       logger.error(
@@ -394,7 +410,7 @@ const runArrType = async (
     logger.info("");
   }
 
-  return status;
+  return { status, reports };
 };
 
 const run = async () => {
@@ -417,6 +433,8 @@ const run = async () => {
   const totalStatus: string[] = [];
 
   const disabledArrs: string[] = [];
+
+  const allReports: InstanceDiffReport[] = [];
 
   const arrTypes = [
     { type: "SONARR", enabled: globalConfig.sonarrEnabled, config: globalConfig.sonarr },
@@ -444,7 +462,8 @@ const run = async () => {
   for (const { type, enabled, config } of arrTypes) {
     if (enabled == null || enabled) {
       const result = await runArrType(type as ArrType, globalConfig, config);
-      totalStatus.push(`${type}: (${result.success}/${result.failure}/${result.skipped})`);
+      totalStatus.push(`${type}: (${result.status.success}/${result.status.failure}/${result.status.skipped})`);
+      allReports.push(...result.reports);
     } else {
       logger.debug(`${type} disabled in config`);
       disabledArrs.push(type);
