@@ -2,7 +2,7 @@ import path from "path";
 import { describe, expect, test } from "vitest";
 import { MergedCustomFormatResource } from "./types/merged.types";
 import { TrashCF, TrashCFSpF } from "./types/trashguide.types";
-import { cloneWithJSON, compareCustomFormats, loadJsonFile, mapImportCfToRequestCf, toCarrCF, zip } from "./util";
+import { cloneWithJSON, compareCustomFormats, compareObjectsCarr, loadJsonFile, mapImportCfToRequestCf, toCarrCF, zip } from "./util";
 
 const exampleCFImplementations = {
   name: "TestSpec",
@@ -260,5 +260,59 @@ describe("compareImportCFs - general", async () => {
 describe("zip function", async () => {
   test("should work for empty inputs", async () => {
     expect(zip([], [])).toEqual([]);
+  });
+});
+
+describe("compareObjectsCarr", () => {
+  test("returns FieldChange[] with field/from/to for a scalar mismatch", () => {
+    const server = { name: "SDTV", minSize: 2 };
+    const local = { name: "SDTV", minSize: 5 };
+
+    const result = compareObjectsCarr(server, local);
+
+    expect(result.equal).toBe(false);
+    expect(result.changes).toEqual([{ field: "minSize", from: 2, to: 5 }]);
+  });
+
+  test("captures ALL differing sub-fields per array element, not just the first", () => {
+    const server = { items: [{ name: "a", score: 1, enabled: true }] };
+    const local = { items: [{ name: "a", score: 2, enabled: false }] };
+
+    const result = compareObjectsCarr(server, local);
+
+    expect(result.equal).toBe(false);
+    expect(result.changes).toEqual([
+      { field: "items[0].score", from: 1, to: 2 },
+      { field: "items[0].enabled", from: true, to: false },
+    ]);
+  });
+
+  test("detects a mismatch on the second array element even when the first element already matched", () => {
+    const server = { items: [{ score: 1 }, { score: 10 }] };
+    const local = { items: [{ score: 1 }, { score: 20 }] };
+
+    const result = compareObjectsCarr(server, local);
+
+    expect(result.equal).toBe(false);
+    expect(result.changes).toEqual([{ field: "items[1].score", from: 10, to: 20 }]);
+  });
+
+  test("builds dotted paths for nested objects", () => {
+    const server = { upgrade: { until_score: 5 } };
+    const local = { upgrade: { until_score: 10 } };
+
+    const result = compareObjectsCarr(server, local);
+
+    expect(result.changes).toEqual([{ field: "upgrade.until_score", from: 5, to: 10 }]);
+  });
+
+  test("equal objects return equal: true and no changes", () => {
+    const server = { name: "SDTV", minSize: 2 };
+    const local = { name: "SDTV", minSize: 2 };
+
+    const result = compareObjectsCarr(server, local);
+
+    expect(result.equal).toBe(true);
+    expect(result.changes).toEqual([]);
   });
 });
