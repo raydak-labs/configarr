@@ -126,6 +126,44 @@ export function compareMediamanagement(serverObject: any, localObject: any): Ret
   return compareObjectsCarr(serverObject, localObject);
 }
 
+// Detects a pure reorder: same length, not already in the same order, but every element in one
+// array has a matching element (by count) in the other. Duplicate-aware so a real count change
+// (e.g. two "a"s becoming one "a" and one extra "b") isn't mistaken for a reorder.
+function isPureReorder(serverArray: unknown[], localArray: unknown[]): boolean {
+  if (serverArray.length !== localArray.length) {
+    return false;
+  }
+
+  const isSameOrder = serverArray.every((item, i) => JSON.stringify(item) === JSON.stringify(localArray[i]));
+  if (isSameOrder) {
+    return false;
+  }
+
+  const countElements = (arr: unknown[]) => {
+    const counts = new Map<string, number>();
+    for (const item of arr) {
+      const key = JSON.stringify(item);
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
+    return counts;
+  };
+
+  const serverCounts = countElements(serverArray);
+  const localCounts = countElements(localArray);
+
+  if (serverCounts.size !== localCounts.size) {
+    return false;
+  }
+
+  for (const [key, count] of serverCounts) {
+    if (localCounts.get(key) !== count) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 export function compareObjectsCarr(serverObject: any, localObject: any, parent?: string): { equal: boolean; changes: FieldChange[] } {
   const changes: FieldChange[] = [];
 
@@ -153,6 +191,11 @@ export function compareObjectsCarr(serverObject: any, localObject: any, parent?:
           }
 
           if (arrayLengthMismatch) {
+            changes.push({ field: path, from: serverProperty, to: localProperty });
+            continue;
+          }
+
+          if (isPureReorder(serverProperty, localProperty)) {
             changes.push({ field: path, from: serverProperty, to: localProperty });
             continue;
           }
