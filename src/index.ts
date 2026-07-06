@@ -26,6 +26,7 @@ import {
   deleteQualityProfile,
   getUnmanagedQualityProfiles,
   loadQualityProfilesFromServer,
+  qualityProfilesToDiffEntries,
 } from "./quality-profiles";
 import { syncMetadataProfiles } from "./metadataProfiles/metadataProfileSyncer";
 import { cloneRecyclarrTemplateRepo } from "./recyclarr-importer";
@@ -212,7 +213,9 @@ const pipeline = async (
   logger.info(`Server objects: QualityProfiles ${serverQP.length}`);
 
   // calculate diff from server <-> what we want to be there
-  const { changedQPs, create, noChanges } = await calculateQualityProfilesDiff(arrType, mergedCFs, config, serverCache);
+  const { changedQPs, create, noChanges, changes: qpChanges } = await calculateQualityProfilesDiff(arrType, mergedCFs, config, serverCache);
+
+  diffCollector.add(qualityProfilesToDiffEntries(create, changedQPs, qpChanges));
 
   if (getEnvs().DEBUG_CREATE_FILES) {
     create.concat(changedQPs).forEach((e, i) => {

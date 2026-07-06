@@ -8,6 +8,7 @@ import {
 } from "./types/merged.types";
 import { ServerCache } from "./cache";
 import { ArrClientLanguageResource, getUnifiedClient } from "./clients/unified-client";
+import { DiffEntry, FieldChange } from "./diffReport/diffReport.types";
 import { getEnvs } from "./env";
 import { logger } from "./logger";
 import { ArrType, CFProcessing } from "./types/common.types";
@@ -307,6 +308,7 @@ export const calculateQualityProfilesDiff = async (
   changedQPs: MergedQualityProfileResource[];
   create: MergedQualityProfileResource[];
   noChanges: string[];
+  changes: Map<string, FieldChange[]>;
 }> => {
   // TODO maybe improve?
   const scoring = mapQualityProfiles(cfMap, config);
@@ -319,7 +321,7 @@ export const calculateQualityProfilesDiff = async (
   const changedQPs: MergedQualityProfileResource[] = [];
   const noChangedQPs: string[] = [];
 
-  const changes = new Map<string, string[]>();
+  const changes = new Map<string, FieldChange[]>();
 
   for (const [name, value] of qpMerged.entries()) {
     const serverMatch = qpServerMap.get(name);
@@ -421,8 +423,8 @@ export const calculateQualityProfilesDiff = async (
       continue;
     }
 
-    const changeList: string[] = [];
-    changes.set(serverMatch.name!, changeList);
+    const fieldChanges: FieldChange[] = [];
+    changes.set(serverMatch.name!, fieldChanges);
 
     const updatedServerObject: MergedQualityProfileResource = JSON.parse(JSON.stringify(serverMatch));
 
@@ -433,7 +435,7 @@ export const calculateQualityProfilesDiff = async (
       logger.debug(`QualityProfile quality order mismatch.`);
       diffExist = true;
 
-      changeList.push(`QualityProfile quality order does not match`);
+      fieldChanges.push({ field: "items", from: serverMatch.items, to: mappedQualities });
       updatedServerObject.items = mappedQualities;
     }
 
@@ -454,7 +456,7 @@ export const calculateQualityProfilesDiff = async (
       if (serverMatch.minFormatScore !== value.min_format_score) {
         updatedServerObject.minFormatScore = value.min_format_score;
         diffExist = true;
-        changeList.push(`MinFormatScore diff: server: ${serverMatch.minFormatScore} - expected: ${value.min_format_score}`);
+        fieldChanges.push({ field: "minFormatScore", from: serverMatch.minFormatScore, to: value.min_format_score });
       }
     }
 
@@ -463,7 +465,7 @@ export const calculateQualityProfilesDiff = async (
         updatedServerObject.upgradeAllowed = value.upgrade.allowed;
         diffExist = true;
 
-        changeList.push(`UpgradeAllowed diff: server: ${serverMatch.upgradeAllowed} - expected: ${value.upgrade.allowed}`);
+        fieldChanges.push({ field: "upgradeAllowed", from: serverMatch.upgradeAllowed, to: value.upgrade.allowed });
       }
 
       // Further diffs only necessary if upgrade is allowed
@@ -481,14 +483,14 @@ export const calculateQualityProfilesDiff = async (
         if (serverMatch.cutoff !== upgradeUntil) {
           updatedServerObject.cutoff = upgradeUntil;
           diffExist = true;
-          changeList.push(`Upgrade until quality diff: server: ${serverMatch.cutoff} - expected: ${upgradeUntil}`);
+          fieldChanges.push({ field: "cutoff", from: serverMatch.cutoff, to: upgradeUntil });
         }
 
         if (serverMatch.cutoffFormatScore !== value.upgrade.until_score) {
           updatedServerObject.cutoffFormatScore = value.upgrade.until_score;
           diffExist = true;
 
-          changeList.push(`Upgrade until score diff: server: ${serverMatch.cutoffFormatScore} - expected: ${value.upgrade.until_score}`);
+          fieldChanges.push({ field: "cutoffFormatScore", from: serverMatch.cutoffFormatScore, to: value.upgrade.until_score });
         }
 
         const configMinUpgradeFormatScore = value.upgrade.min_format_score ?? 1;
@@ -498,9 +500,11 @@ export const calculateQualityProfilesDiff = async (
           updatedServerObject.minUpgradeFormatScore = configMinUpgradeFormatScore;
           diffExist = true;
 
-          changeList.push(
-            `Min upgrade format score diff: server: ${serverMatch.cutoffFormatScore} - expected: ${configMinUpgradeFormatScore}`,
-          );
+          fieldChanges.push({
+            field: "minUpgradeFormatScore",
+            from: serverMatch.minUpgradeFormatScore,
+            to: configMinUpgradeFormatScore,
+          });
         }
       } else {
         const cutoffId = getDisabledUpgradeCutoff(mappedQualities, qualityToId, value.upgrade.until_quality, name);
@@ -508,19 +512,19 @@ export const calculateQualityProfilesDiff = async (
         if (serverMatch.cutoff !== cutoffId) {
           updatedServerObject.cutoff = cutoffId;
           diffExist = true;
-          changeList.push(`Cutoff diff for upgrade disabled: server: ${serverMatch.cutoff} - expected: ${cutoffId}`);
+          fieldChanges.push({ field: "cutoff", from: serverMatch.cutoff, to: cutoffId });
         }
 
         if (serverMatch.cutoffFormatScore !== 1) {
           updatedServerObject.cutoffFormatScore = 1;
           diffExist = true;
-          changeList.push(`CutoffFormatScore diff for upgrade disabled: server: ${serverMatch.cutoffFormatScore} - expected: 1`);
+          fieldChanges.push({ field: "cutoffFormatScore", from: serverMatch.cutoffFormatScore, to: 1 });
         }
 
         if (serverMatch.minUpgradeFormatScore !== 1) {
           updatedServerObject.minUpgradeFormatScore = 1;
           diffExist = true;
-          changeList.push(`MinUpgradeFormatScore diff for upgrade disabled: server: ${serverMatch.minUpgradeFormatScore} - expected: 1`);
+          fieldChanges.push({ field: "minUpgradeFormatScore", from: serverMatch.minUpgradeFormatScore, to: 1 });
         }
       }
     }
@@ -528,7 +532,7 @@ export const calculateQualityProfilesDiff = async (
     if (profileLanguage != null && serverMatch.language?.name !== profileLanguage.name) {
       updatedServerObject.language = profileLanguage;
       diffExist = true;
-      changeList.push(`Language diff: server: ${serverMatch.language?.name} - expected: ${profileLanguage?.name}`);
+      fieldChanges.push({ field: "language", from: serverMatch.language?.name, to: profileLanguage?.name });
     }
 
     // CFs matching. Hint: make sure to execute the method with updated CFs. Otherwise if we create CFs and update existing profiles those could be missing.
@@ -547,7 +551,7 @@ export const calculateQualityProfilesDiff = async (
         if (scoreValue.score == null) {
           if (value.reset_unmatched_scores?.enabled && !resetScoreExceptions.has(scoreKey) && serverCF?.score !== 0) {
             scoringDiff = true;
-            changeList.push(`CF resetting score '${scoreValue.name}': server ${serverCF?.score} - client: 0`);
+            fieldChanges.push({ field: `customFormats.${scoreValue.name}`, from: serverCF?.score, to: 0 });
             newCFFormats.push({ ...serverCF, score: 0 });
           } else {
             newCFFormats.push({ ...serverCF });
@@ -555,7 +559,7 @@ export const calculateQualityProfilesDiff = async (
         } else {
           if (serverCF?.score !== scoreValue.score) {
             scoringDiff = true;
-            changeList.push(`CF diff ${scoreValue.name}: server: ${serverCF?.score} - expected: ${scoreValue.score}`);
+            fieldChanges.push({ field: `customFormats.${scoreValue.name}`, from: serverCF?.score, to: scoreValue.score });
             newCFFormats.push({ ...serverCF, score: scoreValue.score });
           } else {
             newCFFormats.push({ ...serverCF });
@@ -569,7 +573,7 @@ export const calculateQualityProfilesDiff = async (
 
         if (value.reset_unmatched_scores?.enabled && !resetScoreExceptions.has(c.name!) && cfScore !== 0) {
           scoringDiff = true;
-          changeList.push(`CF resetting score '${cfName}': server ${cfScore} - client: 0`);
+          fieldChanges.push({ field: `customFormats.${cfName}`, from: cfScore, to: 0 });
           p.push({ ...c, score: 0 });
         } else {
           p.push(c);
@@ -586,7 +590,7 @@ export const calculateQualityProfilesDiff = async (
     }
 
     logger.debug(
-      `QualityProfile (${value.name}) - In Sync: ${changeList.length <= 0}, CF Changes: ${scoringDiff}, Some other diff: ${diffExist}`,
+      `QualityProfile (${value.name}) - In Sync: ${fieldChanges.length <= 0}, CF Changes: ${scoringDiff}, Some other diff: ${diffExist}`,
     );
 
     if (scoringDiff || diffExist) {
@@ -595,8 +599,8 @@ export const calculateQualityProfilesDiff = async (
       noChangedQPs.push(value.name);
     }
 
-    if (changeList.length > 0) {
-      logger.debug(changeList, `ChangeList for QualityProfile '${value.name}'`);
+    if (fieldChanges.length > 0) {
+      logger.debug(fieldChanges, `ChangeList for QualityProfile '${value.name}'`);
     }
   }
 
@@ -613,7 +617,8 @@ export const calculateQualityProfilesDiff = async (
     const serverProfileCFMap = new Map(unmanagedServerQp.formatItems!.map((obj) => [obj.name!, obj]));
     const scoringForQP = scoring.get(unmanagedServerQp.name!);
     let scoringDiff = false;
-    const changeList: string[] = [];
+    const fieldChanges: FieldChange[] = [];
+    changes.set(unmanagedServerQp.name!, fieldChanges);
 
     if (scoringForQP != null) {
       const newCFFormats: MergedProfileFormatItemResource[] = [];
@@ -628,7 +633,7 @@ export const calculateQualityProfilesDiff = async (
         } else {
           if (serverCF?.score !== scoreValue.score) {
             scoringDiff = true;
-            changeList.push(`CF diff '${scoreValue.name}': server: '${serverCF?.score}' - expected: '${scoreValue.score}'`);
+            fieldChanges.push({ field: `customFormats.${scoreValue.name}`, from: serverCF?.score, to: scoreValue.score });
             newCFFormats.push({ ...serverCF, score: scoreValue.score });
           } else {
             newCFFormats.push({ ...serverCF });
@@ -645,7 +650,9 @@ export const calculateQualityProfilesDiff = async (
       logger.debug(`No custom format scoring for unmanaged QualityProfile '${unmanagedServerQp.name!}' found`);
     }
 
-    logger.debug(`Unmanaged QualityProfile (${unmanagedServerQp.name}) - In Sync: ${changeList.length <= 0}, CF Changes: ${scoringDiff}}`);
+    logger.debug(
+      `Unmanaged QualityProfile (${unmanagedServerQp.name}) - In Sync: ${fieldChanges.length <= 0}, CF Changes: ${scoringDiff}}`,
+    );
 
     if (scoringDiff) {
       changedQPs.push(unmanagedServerQp);
@@ -653,13 +660,36 @@ export const calculateQualityProfilesDiff = async (
       noChangedQPs.push(unmanagedServerQp.name!);
     }
 
-    if (changeList.length > 0) {
-      logger.debug(changeList, `ChangeList for unmanaged QualityProfile '${unmanagedServerQp.name}'`);
+    if (fieldChanges.length > 0) {
+      logger.debug(fieldChanges, `ChangeList for unmanaged QualityProfile '${unmanagedServerQp.name}'`);
     }
   }
 
-  return { create: createQPs, changedQPs: changedQPs, noChanges: noChangedQPs };
+  return { create: createQPs, changedQPs: changedQPs, noChanges: noChangedQPs, changes };
 };
+
+export function qualityProfilesToDiffEntries(
+  create: MergedQualityProfileResource[],
+  changedQPs: MergedQualityProfileResource[],
+  changes: Map<string, FieldChange[]>,
+): DiffEntry[] {
+  const entries: DiffEntry[] = create.map((qp) => ({
+    resourceType: "QualityProfile",
+    name: qp.name!,
+    action: "create" as const,
+  }));
+
+  for (const qp of changedQPs) {
+    entries.push({
+      resourceType: "QualityProfile",
+      name: qp.name!,
+      action: "update",
+      fieldChanges: changes.get(qp.name!) ?? [],
+    });
+  }
+
+  return entries;
+}
 
 export const filterInvalidQualityProfiles = (profiles: ConfigQualityProfile[]): ConfigQualityProfile[] => {
   return profiles.filter((p) => {
