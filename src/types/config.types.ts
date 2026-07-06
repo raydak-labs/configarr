@@ -1,502 +1,379 @@
-import { ConfigarrCF } from "./common.types";
-import { TrashCF, TrashQualityDefinitionQuality, TrashScores } from "./trashguide.types";
+import { z } from "zod";
+import { ConfigarrCF, ConfigarrCFSchema } from "./common.types";
+import { TrashCF, TrashCFSchema, TrashQualityDefinitionQualitySchema, TrashScoresSchema } from "./trashguide.types";
 
+// ============================================================================
+// Each type below is derived from its Zod schema (type X = z.infer<typeof XSchema>)
+// so the compiler enforces that they can never drift apart - a field missing from
+// a schema becomes a compile error at every place the code reads it, instead of
+// silently disappearing at runtime (Zod strips unrecognized keys on a successful
+// parse). Two kinds of exception keep a manually-written type instead:
+//   - ImportCF/ConfigarrCF (common.types.ts) extend generated __generated__ API
+//     client types, which aren't reasonably re-modeled in Zod.
+//   - The "Derived types" section at the end (ConfigArrInstance, ConfigQualityProfile,
+//     etc.) is the merged/output shape produced by this app's own code (transformConfig,
+//     mergeConfigsAndTemplates) - never parsed from external bytes, so there's nothing
+//     to validate and no schema for it.
+// ============================================================================
+
+export const CustomFormatDefinitionsSchema = z.array(z.union([TrashCFSchema, ConfigarrCFSchema]));
 export type CustomFormatDefinitions = (TrashCF | ConfigarrCF)[];
 
-export type InputConfigSchema = {
-  trashGuideUrl?: string;
-  trashRevision?: string;
-  recyclarrConfigUrl?: string;
-  recyclarrRevision?: string;
-  localCustomFormatsPath?: string;
-  localConfigTemplatesPath?: string;
-  // @experimental since v1.12.0
-  enableFullGitClone?: boolean;
-  /**
-   * Enable anonymous telemetry tracking of feature usage
-   * @default false
-   */
-  telemetry?: boolean;
-  customFormatDefinitions?: CustomFormatDefinitions;
-  /**
-   * Enable compatibility mode for TRaSH-Guides changes from Feb 2026.
-   * When true: Uses old behavior for both CF groups (exclude semantics) and quality ordering (with reversal).
-   * When false (default): Uses new behavior - CF groups use include semantics, quality ordering matches display order.
-   * @see https://github.com/TRaSH-Guides/Guides/commit/2994a7979d8036a7908a92e2cd286054fd4fcc1b
-   * @default false
-   * @temporary This option will be removed in a future version
-   */
-  compatibilityTrashGuide20260219Enabled?: boolean;
-  /**
-   * Silences warnings emitted when a Quality Profile contains CustomFormats that TRaSH-Guides
-   * marks as mutually exclusive in `conflicts.json`. Sync behavior itself is not changed — only
-   * the log output is suppressed. Useful when conflicting CFs are intentionally configured.
-   * @default false
-   */
-  silenceTrashConflictWarnings?: boolean;
-  /**
-   * Suppresses warnings when `custom_format_groups` excludes a CF that TRaSH marks as `required` in the cf-group JSON.
-   * Sync behavior unchanged — only log output affected.
-   * @since v1.28.0
-   * @default false
-   */
-  silenceRequiredCfGroupExclusionWarnings?: boolean;
+const ScoreAssignmentSchema = z.object({
+  name: z.string(),
+  score: z.number().optional(),
+  use_default_score: z.boolean().optional(),
+});
 
-  sonarr?: Record<string, InputConfigArrInstance>;
-  sonarrEnabled?: boolean;
+export const InputConfigIncludeItemSchema = z.object({
+  // depends on source what this actually is. Can be the filename -> recyclarr or id in the files -> trash
+  template: z.string(),
+  source: z.enum(["TRASH", "RECYCLARR"]).optional(),
+  // Optional preferred ratio (0.0 - 1.0) applied when this include resolves to a
+  // TRaSH quality definition. Has no effect for quality profile includes.
+  preferred_ratio: z.number().min(0).max(1).optional(),
+  // @experimental @since v1.28.0 - TRaSH quality-profile include only: include optional
+  // `default:true` CFs from default groups. Defaults to instance-level setting, then true.
+  trash_cfgroup_include_optional: z.boolean().optional(),
+  // @experimental @since v1.28.0 - TRaSH quality-profile include only: include all CFs
+  // from matched default groups.
+  trash_cfgroup_include_unrequired: z.boolean().optional(),
+  // @experimental @since v1.28.0 - TRaSH quality-profile include only: add CF trash IDs
+  // on top of matched default-group selection.
+  trash_cfgroup_include_cfs: z.array(z.object({ id: z.string() })).optional(),
+  // @experimental @since v1.28.0 - TRaSH quality-profile include only: explicit deny-list
+  // of CF trash IDs from matched default groups (wins over include).
+  trash_cfgroup_exclude_cfs: z.array(z.object({ id: z.string() })).optional(),
+});
+export type InputConfigIncludeItem = z.infer<typeof InputConfigIncludeItemSchema>;
 
-  radarr?: Record<string, InputConfigArrInstance>;
-  radarrEnabled?: boolean;
+export const InputConfigQualityProfileItemSchema = z.object({
+  name: z.string(),
+  qualities: z.array(z.string()).optional(),
+  enabled: z.boolean().optional(),
+});
+export type InputConfigQualityProfileItem = z.infer<typeof InputConfigQualityProfileItemSchema>;
 
-  whisparr?: Record<string, InputConfigArrInstance>;
-  whisparrEnabled?: boolean;
+export const InputConfigQualityProfileSchema = z.object({
+  name: z.string(),
+  reset_unmatched_scores: z
+    .object({
+      enabled: z.boolean(),
+      except: z.array(z.string()).optional(),
+    })
+    .optional(),
+  // Not a discriminated union on `allowed`: real-world configs (e.g. examples/full)
+  // omit `allowed` entirely and rely on its runtime-truthy default of "disabled"
+  // (see quality-profiles.ts). The until_quality-required-when-allowed=true invariant
+  // is enforced there too, with a clearer error message than Zod could give here.
+  upgrade: z
+    .object({
+      allowed: z.boolean().optional(),
+      until_quality: z.string().optional(),
+      until_score: z.number().optional(),
+      min_format_score: z.number().optional(),
+    })
+    .optional(),
+  min_format_score: z.number().optional(),
+  // .keyof() derives from TrashScoresSchema instead of a bare z.string() so this is a
+  // single source of truth with TrashQPSchema.trash_score_set (and so a typo'd score-set
+  // name gets caught by validation instead of silently resolving to no score at all).
+  score_set: TrashScoresSchema.keyof().optional(),
+  quality_sort: z.string().optional(),
+  language: z.string().optional(),
+  qualities: z.array(InputConfigQualityProfileItemSchema).optional(),
+});
+export type InputConfigQualityProfile = z.infer<typeof InputConfigQualityProfileSchema>;
 
-  readarr?: Record<string, InputConfigArrInstance>;
-  readarrEnabled?: boolean;
-
-  lidarr?: Record<string, InputConfigArrInstance>;
-  lidarrEnabled?: boolean;
-};
-
-export type InputConfigCustomFormat = {
-  trash_ids?: string[];
-  /**
-   * @deprecated replaced with assign_scores_to
-   */
-  quality_profiles?: { name: string; score?: number; use_default_score?: boolean }[];
-  assign_scores_to?: { name: string; score?: number; use_default_score?: boolean }[];
-};
+export const InputConfigCustomFormatSchema = z.object({
+  trash_ids: z.array(z.string()).optional(),
+  /** @deprecated replaced with assign_scores_to */
+  quality_profiles: z.array(ScoreAssignmentSchema).optional(),
+  assign_scores_to: z.array(ScoreAssignmentSchema).optional(),
+});
+export type InputConfigCustomFormat = z.infer<typeof InputConfigCustomFormatSchema>;
 
 /** One TRaSH cf-group reference under `custom_format_groups[].trash_guide`. */
-export type InputConfigCfGroupTrashGuideItem = {
-  id: string;
-  include_unrequired?: boolean;
+export const InputConfigCfGroupTrashGuideItemSchema = z.object({
+  id: z.string(),
+  include_unrequired: z.boolean().optional(),
   /** If set, these CF `trash_id`s are added to the group base selection (must exist in the group JSON). */
-  include?: { id: string }[];
+  include: z.array(z.object({ id: z.string() })).optional(),
   /** Remove these CF `trash_id`s from the selection; wins over `include` when both list the same id. */
-  exclude?: { id: string }[];
-};
+  exclude: z.array(z.object({ id: z.string() })).optional(),
+});
+export type InputConfigCfGroupTrashGuideItem = z.infer<typeof InputConfigCfGroupTrashGuideItemSchema>;
 
-export type InputConfigCustomFormatGroup = {
-  trash_guide?: InputConfigCfGroupTrashGuideItem[];
-  assign_scores_to?: { name: string; score?: number }[];
-};
+export const InputConfigCustomFormatGroupSchema = z.object({
+  trash_guide: z.array(InputConfigCfGroupTrashGuideItemSchema).optional(),
+  assign_scores_to: z
+    .array(
+      z.object({
+        name: z.string(),
+        score: z.number().optional(),
+      }),
+    )
+    .optional(),
+});
+export type InputConfigCustomFormatGroup = z.infer<typeof InputConfigCustomFormatGroupSchema>;
 
 /**
  * @experimental
  * @since v1.28.0
  */
-export type InputConfigTrashCfGroupConfig = {
-  /**
-   * @experimental
-   * include optional `default:true` CFs in TRaSH auto-group loading.
-   * @default true
-   */
-  include_optional?: boolean;
-  /**
-   * @experimental
-   * include all CFs from matched TRaSH groups.
-   * @default false
-   */
-  include_unrequired?: boolean;
-  /**
-   * @experimental
-   * add specific CF ids on top of TRaSH auto-group base selection.
-   */
-  include_cfs?: { id: string }[];
-  /**
-   * @experimental
-   * deny-list CF ids for TRaSH auto-group loading (wins over include).
-   */
-  exclude_cfs?: { id: string }[];
-};
+export const InputConfigTrashCfGroupConfigSchema = z.object({
+  // @experimental include optional `default:true` CFs in TRaSH auto-group loading. @default true
+  include_optional: z.boolean().optional(),
+  // @experimental include all CFs from matched TRaSH groups. @default false
+  include_unrequired: z.boolean().optional(),
+  // @experimental add specific CF ids on top of TRaSH auto-group base selection.
+  include_cfs: z.array(z.object({ id: z.string() })).optional(),
+  // @experimental deny-list CF ids for TRaSH auto-group loading (wins over include).
+  exclude_cfs: z.array(z.object({ id: z.string() })).optional(),
+});
+export type InputConfigTrashCfGroupConfig = z.infer<typeof InputConfigTrashCfGroupConfigSchema>;
 
-export type InputConfigRootFolderLidarr = {
-  path: string;
-  name: string;
-  metadata_profile: string;
-  quality_profile: string;
-  monitor?: "all" | "future" | "missing" | "existing" | "latest" | "first" | "none" | "unknown";
-  monitor_new_album?: "all" | "none" | "new";
-  tags?: string[];
-};
+const MonitorSchema = z.enum(["all", "future", "missing", "existing", "latest", "first", "none", "unknown"]);
 
-export type InputConfigRootFolderReadarr = {
-  path: string;
-  name: string;
-  metadata_profile: string;
-  quality_profile: string;
-  monitor?: "all" | "future" | "missing" | "existing" | "latest" | "first" | "none" | "unknown";
-  monitor_new_items?: "all" | "none" | "new";
-  tags?: string[];
-  // Calibre integration (optional)
-  is_calibre_library?: boolean;
-  calibre_host?: string;
-  calibre_port?: number;
-  calibre_url_base?: string;
-  calibre_username?: string;
-  calibre_password?: string;
-  calibre_library?: string;
-  calibre_output_format?: string;
-  calibre_output_profile?: string;
-  calibre_use_ssl?: boolean;
-};
+export const InputConfigRootFolderLidarrSchema = z.object({
+  path: z.string(),
+  name: z.string(),
+  metadata_profile: z.string(),
+  quality_profile: z.string(),
+  monitor: MonitorSchema.optional(),
+  monitor_new_album: z.enum(["all", "none", "new"]).optional(),
+  tags: z.array(z.string()).optional(),
+});
+export type InputConfigRootFolderLidarr = z.infer<typeof InputConfigRootFolderLidarrSchema>;
 
-export type InputConfigRootFolderGeneric = string;
+export const InputConfigRootFolderReadarrSchema = z.object({
+  path: z.string(),
+  name: z.string(),
+  metadata_profile: z.string(),
+  quality_profile: z.string(),
+  monitor: MonitorSchema.optional(),
+  monitor_new_items: z.enum(["all", "none", "new"]).optional(),
+  tags: z.array(z.string()).optional(),
+  is_calibre_library: z.boolean().optional(),
+  calibre_host: z.string().optional(),
+  calibre_port: z.number().optional(),
+  calibre_url_base: z.string().optional(),
+  calibre_username: z.string().optional(),
+  calibre_password: z.string().optional(),
+  calibre_library: z.string().optional(),
+  calibre_output_format: z.string().optional(),
+  calibre_output_profile: z.string().optional(),
+  calibre_use_ssl: z.boolean().optional(),
+});
+export type InputConfigRootFolderReadarr = z.infer<typeof InputConfigRootFolderReadarrSchema>;
 
-export type InputConfigRootFolder = InputConfigRootFolderGeneric | InputConfigRootFolderLidarr | InputConfigRootFolderReadarr;
+export const InputConfigRootFolderGenericSchema = z.string();
+export type InputConfigRootFolderGeneric = z.infer<typeof InputConfigRootFolderGenericSchema>;
 
-export type InputConfigDownloadClientConfig = {
-  /**
-   * Folders where download clients store downloads
-   */
-  download_client_working_folders?: string;
-  /**
-   * Enable completed download handling
-   * @default true
-   */
-  enable_completed_download_handling?: boolean;
-  /**
-   * Automatically redownload failed downloads
-   * @default false
-   */
-  auto_redownload_failed?: boolean;
-  /**
-   * Automatically redownload failed downloads from interactive search
-   * @default false
-   */
-  auto_redownload_failed_from_interactive_search?: boolean;
-  /**
-   * Radarr only: Check interval for finished downloads (in minutes)
-   */
-  check_for_finished_download_interval?: number;
-};
+export const InputConfigRootFolderSchema = z.union([
+  InputConfigRootFolderGenericSchema,
+  InputConfigRootFolderLidarrSchema,
+  InputConfigRootFolderReadarrSchema,
+]);
+export type InputConfigRootFolder = z.infer<typeof InputConfigRootFolderSchema>;
 
-/**
- * Configuration for a single remote path mapping
- * @experimental since v1.20.0
- */
-export interface InputConfigRemotePath {
-  host: string;
-  remote_path: string;
-  local_path: string;
-}
+export const InputConfigDownloadClientConfigSchema = z.object({
+  download_client_working_folders: z.string().optional(),
+  enable_completed_download_handling: z.boolean().optional(),
+  auto_redownload_failed: z.boolean().optional(),
+  auto_redownload_failed_from_interactive_search: z.boolean().optional(),
+  check_for_finished_download_interval: z.number().optional(),
+});
+export type InputConfigDownloadClientConfig = z.infer<typeof InputConfigDownloadClientConfigSchema>;
 
-export type InputConfigArrInstance = {
-  base_url: string;
-  api_key: string;
-  /**
-   * since v1.11.0
-   */
-  enabled?: boolean;
-  /**
-   * since v1.12.0
-   * Deletes all CustomFormats which are not defined in any qualityprofile
-   */
-  delete_unmanaged_custom_formats?: {
-    enabled: boolean;
-    /**
-     * Names of custom formats to ignore deleting
-     */
-    ignore?: string[];
-  };
-  /**
-   * since v1.18.0
-   * Deletes all unmanaged Quality Profile
-   */
-  delete_unmanaged_quality_profiles?: {
-    enabled: boolean;
-    /**
-     * Names of quality profiles to ignore deleting
-     */
-    ignore?: string[];
-  };
-  quality_definition?: {
-    type?: string;
-    preferred_ratio?: number; // 0.0 - 1.0
-    // @experimental
-    qualities?: TrashQualityDefinitionQuality[];
-  };
-  include?: InputConfigIncludeItem[];
-  /**
-   * @experimental since v1.12.0 (expanded cf-group semantics since v1.28.0)
-   */
-  custom_format_groups?: InputConfigCustomFormatGroup[];
-  /**
-   * @experimental
-   * @since v1.28.0
-   * Instance-level defaults for TRaSH auto CF-group loading.
-   * Can be overridden per include item with `trash_cfgroup_*` fields.
-   */
-  trash_cfgroup_config?: InputConfigTrashCfGroupConfig;
-  custom_formats?: InputConfigCustomFormat[];
-  // TODO this is not correct. The profile can be added partly -> InputConfigQualityProfile
-  quality_profiles: ConfigQualityProfile[];
-  /* @experimental */
-  media_management?: MediaManagementType;
-  /* @experimental */
-  ui_config?: UiConfigType;
-  /* @experimental */
-  media_naming_api?: MediaNamingApiType;
-  renameQualityProfiles?: { from: string; to: string }[];
-  cloneQualityProfiles?: { from: string; to: string }[];
+export const InputConfigRemotePathSchema = z.object({
+  host: z.string(),
+  remote_path: z.string(),
+  local_path: z.string(),
+});
+export type InputConfigRemotePath = z.infer<typeof InputConfigRemotePathSchema>;
 
-  // this is recyclarr specific: https://recyclarr.dev/wiki/yaml/config-reference/media-naming/
-  media_naming?: MediaNamingType;
+export const InputConfigDelayProfileSchema = z.object({
+  enableUsenet: z.boolean().optional(),
+  enableTorrent: z.boolean().optional(),
+  preferredProtocol: z.string().optional(),
+  usenetDelay: z.number().optional(),
+  torrentDelay: z.number().optional(),
+  bypassIfHighestQuality: z.boolean().optional(),
+  bypassIfAboveCustomFormatScore: z.boolean().optional(),
+  minimumCustomFormatScore: z.number().optional(),
+  order: z.number().optional(),
+  tags: z.array(z.string()).optional(),
+});
+export type InputConfigDelayProfile = z.infer<typeof InputConfigDelayProfileSchema>;
 
-  /**
-   * Optional metadata profiles (Lidarr / Readarr only).
-   * Kept close to each Arr application's native MetadataProfileResource.
-   */
-  metadata_profiles?: InputConfigMetadataProfile[];
+export const InputConfigDownloadClientSchema = z.object({
+  name: z.string(),
+  type: z.string(),
+  enable: z.boolean().optional(),
+  priority: z.number().optional(),
+  remove_completed_downloads: z.boolean().optional(),
+  remove_failed_downloads: z.boolean().optional(),
+  fields: z.record(z.string(), z.any()).optional(),
+  tags: z.array(z.union([z.string(), z.number()])).optional(),
+});
+export type InputConfigDownloadClient = z.infer<typeof InputConfigDownloadClientSchema>;
 
-  /**
-   * Deletes all metadata profiles that are present on the server but not defined
-   * in this configuration. Can be further narrowed using the ignore list.
-   */
-  delete_unmanaged_metadata_profiles?: {
-    enabled: boolean;
-    /**
-     * Names of metadata profiles that should never be deleted automatically.
-     * Can be specified as an array of strings.
-     */
-    ignore?: string[];
-  };
+// APIs not consistent across different *arrs. Keeping empty/generic and open to arbitrary keys.
+export const MediaManagementTypeSchema = z.object({}).passthrough();
+export type MediaManagementType = z.infer<typeof MediaManagementTypeSchema>;
 
-  /**
-   * @experimental since v1.14.0
-   */
-  root_folders?: InputConfigRootFolder[];
-  /**
-   * @experimental since v1.14.0
-   */
-  delay_profiles?: {
-    default?: InputConfigDelayProfile;
-    additional?: InputConfigDelayProfile[];
-  };
-  /**
-   * @experimental since v1.19.0
-   * Download clients configuration
-   */
-  download_clients?: {
-    /**
-     * Array of download client configurations
-     */
-    data?: InputConfigDownloadClient[];
-    /**
-     * Always update password fields even when they match the server (to ensure passwords are current)
-     * @default false
-     */
-    update_password?: boolean;
-    /**
-     * Delete unmanaged download clients
-     * @default false
-     */
-    delete_unmanaged?: {
-      enabled: boolean;
-      /**
-       * Names of download clients to ignore deleting
-       */
-      ignore?: string[];
-    };
-    /**
-     * Global download client configuration
-     */
-    config?: InputConfigDownloadClientConfig;
-    /**
-     * Remote path mappings for download clients
-     * @experimental since v1.20.0
-     */
-    remote_paths?: InputConfigRemotePath[];
-    /**
-     * Delete unmanaged remote path mappings
-     * @experimental since v1.20.0
-     * @default false
-     */
-    delete_unmanaged_remote_paths?: boolean;
-  };
-} & Pick<InputConfigSchema, "customFormatDefinitions">;
+export const UiConfigTypeSchema = z.object({}).passthrough();
+export type UiConfigType = z.infer<typeof UiConfigTypeSchema>;
 
-export type InputConfigDelayProfile = {
-  enableUsenet?: boolean;
-  enableTorrent?: boolean;
-  preferredProtocol?: string;
-  usenetDelay?: number;
-  torrentDelay?: number;
-  bypassIfHighestQuality?: boolean;
-  bypassIfAboveCustomFormatScore?: boolean;
-  minimumCustomFormatScore?: number;
-  order?: number;
-  tags?: string[];
-};
+export const MediaNamingApiTypeSchema = z.object({}).passthrough();
+export type MediaNamingApiType = z.infer<typeof MediaNamingApiTypeSchema>;
 
-export type InputConfigDownloadClient = {
-  /**
-   * Download client name (must be unique)
-   */
-  name: string;
-  /**
-   * Download client type/implementation (e.g., "qbittorrent", "transmission", "sabnzbd")
-   */
-  type: string;
-  /**
-   * Whether the download client is enabled
-   * @default true
-   */
-  enable?: boolean;
-  /**
-   * Download client priority
-   * @default 1
-   */
-  priority?: number;
-  /**
-   * Remove completed downloads
-   * @default true
-   */
-  remove_completed_downloads?: boolean;
-  /**
-   * Remove failed downloads
-   * @default true
-   */
-  remove_failed_downloads?: boolean;
-  /**
-   * Field configuration (host, port, username, password, etc.)
-   */
-  fields?: Record<string, any>;
-  /**
-   * Tags to apply to this download client (can be tag names or IDs)
-   * Tag names will be automatically resolved to IDs, creating new tags if needed
-   */
-  tags?: (string | number)[];
-};
+export const MediaNamingTypeSchema = z.object({
+  folder: z.string().optional(),
+  movie: z
+    .object({
+      rename: z.boolean().optional(),
+      standard: z.string().optional(),
+    })
+    .optional(),
+  series: z.string().optional(),
+  season: z.string().optional(),
+  episodes: z
+    .object({
+      rename: z.boolean().optional(),
+      standard: z.string().optional(),
+      daily: z.string().optional(),
+      anime: z.string().optional(),
+    })
+    .optional(),
+});
+export type MediaNamingType = z.infer<typeof MediaNamingTypeSchema>;
 
-export type MediaManagementType = {
-  // APIs not consistent across different *arrs. Keeping empty or generic
-};
+const DeleteUnmanagedSchema = z.object({
+  enabled: z.boolean(),
+  ignore: z.array(z.string()).optional(),
+});
 
-export type UiConfigType = {
-  // APIs not consistent across different *arrs. Keeping empty or generic
-};
+export const InputConfigLidarrMetadataProfileSchema = z.object({
+  name: z.string(),
+  primary_types: z.array(z.string()).optional(),
+  secondary_types: z.array(z.string()).optional(),
+  release_statuses: z.array(z.string()).optional(),
+});
+export type InputConfigLidarrMetadataProfile = z.infer<typeof InputConfigLidarrMetadataProfileSchema>;
 
-// HINT: Experimental
-export type MediaNamingApiType = {
-  // APIs not consistent across different *arrs. Keeping empty or generic
-};
+export const InputConfigReadarrMetadataProfileSchema = z.object({
+  name: z.string(),
+  min_popularity: z.number().optional(),
+  skip_missing_date: z.boolean().optional(),
+  skip_missing_isbn: z.boolean().optional(),
+  skip_parts_and_sets: z.boolean().optional(),
+  skip_secondary_series: z.boolean().optional(),
+  allowed_languages: z.array(z.string()).nullable().optional(),
+  min_pages: z.number().nullable().optional(),
+  must_not_contain: z.array(z.string()).optional(),
+});
+export type InputConfigReadarrMetadataProfile = z.infer<typeof InputConfigReadarrMetadataProfileSchema>;
 
-export type MediaNamingType = {
-  // radarr
-  folder?: string;
-  movie?: {
-    rename?: boolean;
-    standard?: string;
-  };
+export const InputConfigMetadataProfileSchema = z.union([InputConfigLidarrMetadataProfileSchema, InputConfigReadarrMetadataProfileSchema]);
+export type InputConfigMetadataProfile = z.infer<typeof InputConfigMetadataProfileSchema>;
 
-  // sonarr
-  series?: string;
-  season?: string;
-  episodes?: {
-    rename?: boolean;
-    standard?: string;
-    daily?: string;
-    anime?: string;
-  };
-};
+export const InputConfigArrInstanceSchema = z.object({
+  base_url: z.string(),
+  api_key: z.string(),
+  enabled: z.boolean().optional(),
+  delete_unmanaged_custom_formats: DeleteUnmanagedSchema.optional(),
+  delete_unmanaged_quality_profiles: DeleteUnmanagedSchema.optional(),
+  quality_definition: z
+    .object({
+      type: z.string().optional(),
+      preferred_ratio: z.number().min(0).max(1).optional(),
+      qualities: z.array(TrashQualityDefinitionQualitySchema).optional(),
+    })
+    .optional(),
+  include: z.array(InputConfigIncludeItemSchema).optional(),
+  // @experimental since v1.12.0 (expanded cf-group semantics since v1.28.0)
+  custom_format_groups: z.array(InputConfigCustomFormatGroupSchema).optional(),
+  // @experimental @since v1.28.0 - Instance-level defaults for TRaSH auto CF-group loading.
+  // Can be overridden per include item with `trash_cfgroup_*` fields.
+  trash_cfgroup_config: InputConfigTrashCfGroupConfigSchema.optional(),
+  custom_formats: z.array(InputConfigCustomFormatSchema).optional(),
+  // Optional at the input stage: an instance can rely entirely on `include` templates
+  // for its profiles without declaring any directly (see examples/full's sonarr instance).
+  quality_profiles: z.array(InputConfigQualityProfileSchema).optional(),
+  media_management: MediaManagementTypeSchema.optional(),
+  ui_config: UiConfigTypeSchema.optional(),
+  media_naming_api: MediaNamingApiTypeSchema.optional(),
+  renameQualityProfiles: z.array(z.object({ from: z.string(), to: z.string() })).optional(),
+  cloneQualityProfiles: z.array(z.object({ from: z.string(), to: z.string() })).optional(),
+  media_naming: MediaNamingTypeSchema.optional(),
+  metadata_profiles: z.array(InputConfigMetadataProfileSchema).optional(),
+  delete_unmanaged_metadata_profiles: DeleteUnmanagedSchema.optional(),
+  root_folders: z.array(InputConfigRootFolderSchema).optional(),
+  delay_profiles: z
+    .object({
+      default: InputConfigDelayProfileSchema.optional(),
+      additional: z.array(InputConfigDelayProfileSchema).optional(),
+    })
+    .optional(),
+  download_clients: z
+    .object({
+      data: z.array(InputConfigDownloadClientSchema).optional(),
+      update_password: z.boolean().optional(),
+      delete_unmanaged: DeleteUnmanagedSchema.optional(),
+      config: InputConfigDownloadClientConfigSchema.optional(),
+      remote_paths: z.array(InputConfigRemotePathSchema).optional(),
+      delete_unmanaged_remote_paths: z.boolean().optional(),
+    })
+    .optional(),
+  customFormatDefinitions: CustomFormatDefinitionsSchema.optional(),
+});
+export type InputConfigArrInstance = z.infer<typeof InputConfigArrInstanceSchema>;
 
-export type InputConfigQualityProfile = {
-  name: string;
-  reset_unmatched_scores?: {
-    enabled: boolean;
-    except?: string[];
-  };
-  upgrade?:
-    | {
-        allowed: true;
-        until_quality: string;
-        until_score: number;
-        min_format_score?: number; // default 1
-      }
-    | {
-        allowed: false;
-        until_quality?: string;
-        until_score?: number;
-        min_format_score?: number;
-      };
-  min_format_score?: number;
-  score_set?: keyof TrashScores;
-  quality_sort?: string;
-  language?: string;
-  qualities?: InputConfigQualityProfileItem[];
-};
+export const InputConfigSchemaSchema = z.object({
+  trashGuideUrl: z.string().optional(),
+  trashRevision: z.string().optional(),
+  recyclarrConfigUrl: z.string().optional(),
+  recyclarrRevision: z.string().optional(),
+  localCustomFormatsPath: z.string().optional(),
+  localConfigTemplatesPath: z.string().optional(),
+  enableFullGitClone: z.boolean().optional(),
+  telemetry: z.boolean().optional(),
+  customFormatDefinitions: CustomFormatDefinitionsSchema.optional(),
+  compatibilityTrashGuide20260219Enabled: z.boolean().optional(),
+  // Silences warnings emitted when a Quality Profile contains CustomFormats that TRaSH-Guides
+  // marks as mutually exclusive in `conflicts.json`. Sync behavior itself is not changed - only
+  // the log output is suppressed. Useful when conflicting CFs are intentionally configured.
+  // @default false
+  silenceTrashConflictWarnings: z.boolean().optional(),
+  // Suppresses warnings when `custom_format_groups` excludes a CF that TRaSH marks as `required`
+  // in the cf-group JSON. Sync behavior unchanged - only log output affected.
+  // @since v1.28.0 @default false
+  silenceRequiredCfGroupExclusionWarnings: z.boolean().optional(),
 
-export type InputConfigQualityProfileItem = {
-  name: string;
-  qualities?: string[];
-  enabled?: boolean;
-};
+  sonarr: z.record(z.string(), InputConfigArrInstanceSchema).optional(),
+  sonarrEnabled: z.boolean().optional(),
 
-// Lidarr-specific metadata profile config
-export type InputConfigLidarrMetadataProfile = {
-  name: string;
-  primary_types?: string[];
-  secondary_types?: string[];
-  release_statuses?: string[];
-};
+  radarr: z.record(z.string(), InputConfigArrInstanceSchema).optional(),
+  radarrEnabled: z.boolean().optional(),
 
-// Readarr-specific metadata profile config
-export type InputConfigReadarrMetadataProfile = {
-  name: string;
-  min_popularity?: number;
-  skip_missing_date?: boolean;
-  skip_missing_isbn?: boolean;
-  skip_parts_and_sets?: boolean;
-  skip_secondary_series?: boolean;
-  allowed_languages?: string[] | null;
-  min_pages?: number | null;
-  must_not_contain?: string[];
-};
+  whisparr: z.record(z.string(), InputConfigArrInstanceSchema).optional(),
+  whisparrEnabled: z.boolean().optional(),
 
-// Union type for backward compatibility
-export type InputConfigMetadataProfile = InputConfigLidarrMetadataProfile | InputConfigReadarrMetadataProfile;
+  readarr: z.record(z.string(), InputConfigArrInstanceSchema).optional(),
+  readarrEnabled: z.boolean().optional(),
 
-export type InputConfigIncludeItem = {
-  // depends on source what this actually is. Can be the filename -> recyclarr or id in the files -> trash
-  template: string;
-  source?: "TRASH" | "RECYCLARR";
-  /**
-   * Optional preferred ratio (0.0 - 1.0) applied when this include resolves to a
-   * TRaSH quality definition. Has no effect for quality profile includes.
-   */
-  preferred_ratio?: number;
-  /**
-   * @experimental
-   * @since v1.28.0
-   * TRaSH quality-profile include only:
-   * include optional `default:true` CFs from default groups.
-   * Defaults to instance-level setting, then true.
-   */
-  trash_cfgroup_include_optional?: boolean;
-  /**
-   * @experimental
-   * @since v1.28.0
-   * TRaSH quality-profile include only:
-   * include all CFs from matched default groups.
-   */
-  trash_cfgroup_include_unrequired?: boolean;
-  /**
-   * @experimental
-   * @since v1.28.0
-   * TRaSH quality-profile include only:
-   * add CF trash IDs on top of matched default-group selection.
-   */
-  trash_cfgroup_include_cfs?: { id: string }[];
-  /**
-   * @experimental
-   * @since v1.28.0
-   * TRaSH quality-profile include only:
-   * explicit deny-list of CF trash IDs from matched default groups (wins over include).
-   */
-  trash_cfgroup_exclude_cfs?: { id: string }[];
-};
+  lidarr: z.record(z.string(), InputConfigArrInstanceSchema).optional(),
+  lidarrEnabled: z.boolean().optional(),
+});
+export type InputConfigSchema = z.infer<typeof InputConfigSchemaSchema>;
+
+// ============================================================================
+// Derived types - built by this app's own code (transformConfig, mergeConfigsAndTemplates)
+// from the schema-derived types above. Never independently parsed from external input,
+// so there's no schema for these; ordinary TypeScript type composition is enough.
+// ============================================================================
 
 export type ConfigSchema = InputConfigSchema;
 
@@ -508,17 +385,16 @@ export type ConfigArrInstance = OmitTyped<InputConfigArrInstance, "custom_format
   include?: ConfigIncludeItem[];
   custom_formats: ConfigCustomFormat[];
   quality_profiles: ConfigQualityProfile[];
-  /**
-   * Metadata profiles are kept in configuration shape; they are translated to
-   * the concrete Arr application's MetadataProfileResource in the feature layer.
-   */
   metadata_profiles?: InputConfigMetadataProfile[];
 };
 
-export type ConfigQualityProfile = OmitTyped<Required<InputConfigQualityProfile>, "qualities" | "reset_unmatched_scores" | "language"> & {
+export type ConfigQualityProfile = OmitTyped<
+  Required<InputConfigQualityProfile>,
+  "qualities" | "reset_unmatched_scores" | "language" | "score_set"
+> & {
   qualities: ConfigQualityProfileItem[];
   reset_unmatched_scores?: InputConfigQualityProfile["reset_unmatched_scores"];
-} & Pick<InputConfigQualityProfile, "language">;
+} & Pick<InputConfigQualityProfile, "language" | "score_set">;
 
 export type ConfigQualityProfileItem = InputConfigQualityProfileItem;
 
@@ -526,6 +402,5 @@ export type ConfigIncludeItem = OmitTyped<InputConfigIncludeItem, "source"> & {
   source: InputConfigIncludeItem["source"];
 };
 
-// TODO maybe reduce
 export type InputConfigInstance = OmitTyped<InputConfigArrInstance, "api_key" | "base_url">;
 export type MergedConfigInstance = OmitTyped<ConfigArrInstance, "api_key" | "base_url" | "include">;

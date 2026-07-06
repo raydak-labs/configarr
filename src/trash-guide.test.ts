@@ -2,8 +2,11 @@ import fs from "node:fs";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import {
   loadAllQDsFromTrash,
+  loadNamingFromTrashRadarr,
+  loadNamingFromTrashSonarr,
   loadQPFromTrash,
   loadTrashCFConflicts,
+  loadTrashCustomFormatGroups,
   transformTrashCFGroups,
   transformTrashQDs,
   transformTrashQPCFGroups,
@@ -12,6 +15,8 @@ import { InputConfigCustomFormatGroup } from "./types/config.types";
 import { TrashCFGroupMapping, TrashQualityDefinition, TrashQP } from "./types/trashguide.types";
 import * as util from "./util";
 import { logger } from "./logger";
+import * as envModule from "./env";
+import { ValidationError } from "./validation";
 
 describe("TrashGuide", async () => {
   beforeEach(() => {
@@ -101,6 +106,94 @@ describe("TrashGuide", async () => {
     const results = await loadQPFromTrash("RADARR");
 
     console.log(results.keys());
+  });
+
+  describe("loadQPFromTrash (regression)", () => {
+    // Real TRaSH-Guide quality-profile JSON commonly omits trash_score_set - TrashQPSchema
+    // used to require it, which crashed/rejected every profile in the real repo.
+    test("accepts a real-shaped profile with no trash_score_set", async () => {
+      const mockQP = {
+        trash_id: "base-profile-id",
+        name: "Base Profile",
+        language: "Any",
+        upgradeAllowed: true,
+        cutoff: "WEB 2160p",
+        minFormatScore: 0,
+        cutoffFormatScore: 10000,
+        items: [{ name: "WEB 2160p", allowed: true, items: ["WEBDL-2160p"] }],
+        formatItems: { "IMAX Enhanced": "9f6cbff8cfe4ebbc1bde14c7b7bec0de" },
+      };
+
+      vi.spyOn(fs, "readdirSync").mockReturnValue(["base-profile.json"] as any);
+      vi.spyOn(util, "loadJsonFile").mockReturnValue(mockQP);
+      const warnSpy = vi.spyOn(logger, "warn");
+
+      const result = await loadQPFromTrash("RADARR");
+
+      expect(result.get("base-profile-id")).toEqual(mockQP);
+      expect(warnSpy).not.toHaveBeenCalled();
+    });
+
+    // TrashScoresSchema's key list had drifted 8 keys behind what TRaSH-Guides actually
+    // ships (audited directly against the real cloned repo) - profiles using one of the
+    // missing score-sets got rejected/warned on, silently losing their intended CF scoring.
+    test.each([
+      "sqp-1-web-1080p",
+      "sqp-1-web-2160p",
+      "sqp-4-ma-hybrid",
+      "french-multi-vf",
+      "french-multi-vo",
+      "french-anime-multi",
+      "french-anime-vostfr",
+      "german-anime",
+    ])("accepts real-shaped score set '%s'", async (scoreSet) => {
+      const mockQP = {
+        trash_id: "profile-id",
+        name: "Profile",
+        trash_score_set: scoreSet,
+        upgradeAllowed: true,
+        cutoff: "WEB 2160p",
+        minFormatScore: 0,
+        cutoffFormatScore: 10000,
+        items: [],
+        formatItems: {},
+      };
+
+      vi.spyOn(fs, "readdirSync").mockReturnValue(["profile.json"] as any);
+      vi.spyOn(util, "loadJsonFile").mockReturnValue(mockQP);
+      const warnSpy = vi.spyOn(logger, "warn");
+
+      const result = await loadQPFromTrash("RADARR");
+
+      expect(result.get("profile-id")).toEqual(mockQP);
+      expect(warnSpy).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("loadTrashCustomFormatGroups (regression)", () => {
+    // Real TRaSH-Guide CF-group JSON uses `default` as either a string ("true") or a
+    // boolean - TrashCustomFormatGroupsSchema/TrashCFGItemSchema used to only accept one
+    // or the other for each, rejecting real, currently-shipped group files.
+    test("accepts group- and item-level default as either string or boolean", async () => {
+      const mockGroup = {
+        name: "Streaming Services",
+        trash_id: "group-id",
+        default: "true",
+        custom_formats: [
+          { name: "AMZN", trash_id: "cf-1", required: false, default: true },
+          { name: "NF", trash_id: "cf-2", required: false, default: "true" },
+        ],
+      };
+
+      vi.spyOn(fs, "readdirSync").mockReturnValue(["group.json"] as any);
+      vi.spyOn(util, "loadJsonFile").mockReturnValue(mockGroup);
+      const warnSpy = vi.spyOn(logger, "warn");
+
+      const result = await loadTrashCustomFormatGroups("RADARR");
+
+      expect(result.get("group-id")).toEqual(mockGroup);
+      expect(warnSpy).not.toHaveBeenCalled();
+    });
   });
 
   test("transformTrashQDs - diff preferred size with ratio", async ({}) => {
@@ -943,6 +1036,15 @@ describe("TrashGuide", async () => {
       expect(result).toEqual([]);
     });
 
+    test("should throw ValidationError instead of silently skipping when external enforcement is enabled", async () => {
+      vi.spyOn(util, "loadJsonFile").mockReturnValue({ invalid: "format" });
+      vi.spyOn(envModule, "getEnvs").mockReturnValue({
+        CONFIGARR_ENFORCE_EXTERNAL_VALIDATION: true,
+      } as any);
+
+      await expect(loadTrashCFConflicts("RADARR")).rejects.toThrow(ValidationError);
+    });
+
     test("should skip conflict groups with fewer than 2 valid trash_ids", async () => {
       const mockConflicts = {
         custom_formats: [
@@ -1065,6 +1167,65 @@ describe("TrashGuide", async () => {
       // Second call should use cache (loadJsonFile not called again)
       // Note: In this test setup, we can't actually set cacheReady = true,
       // but this test ensures the function handles cache correctly when used
+    });
+  });
+
+  describe("loadNamingFromTrashSonarr", () => {
+    test("should return valid naming data unchanged", async () => {
+      const mockNaming = {
+        season: { default: "Season {season:00}" },
+        series: { default: "{Series Title}" },
+        episodes: { standard: { default: "std" }, daily: { default: "daily" }, anime: { default: "anime" } },
+      };
+
+      vi.spyOn(fs, "readdirSync").mockReturnValue(["default.json"] as any);
+      vi.spyOn(util, "loadJsonFile").mockReturnValue(mockNaming);
+
+      const result = await loadNamingFromTrashSonarr();
+
+      expect(result).toEqual(mockNaming);
+    });
+
+    test("should warn but still return data when naming JSON is missing required keys", async () => {
+      const invalidNaming = { season: { default: "Season {season:00}" } }; // missing series/episodes
+
+      vi.spyOn(fs, "readdirSync").mockReturnValue(["default.json"] as any);
+      vi.spyOn(util, "loadJsonFile").mockReturnValue(invalidNaming);
+      const warnSpy = vi.spyOn(logger, "warn");
+
+      const result = await loadNamingFromTrashSonarr();
+
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("trash-naming/SONARR/default.json"));
+      expect(result).toEqual(invalidNaming);
+    });
+  });
+
+  describe("loadNamingFromTrashRadarr", () => {
+    test("should return valid naming data unchanged", async () => {
+      const mockNaming = {
+        folder: { default: "{Movie CleanTitle}" },
+        file: { default: "{Movie CleanTitle}" },
+      };
+
+      vi.spyOn(fs, "readdirSync").mockReturnValue(["default.json"] as any);
+      vi.spyOn(util, "loadJsonFile").mockReturnValue(mockNaming);
+
+      const result = await loadNamingFromTrashRadarr();
+
+      expect(result).toEqual(mockNaming);
+    });
+
+    test("should warn but still return data when naming JSON is missing required keys", async () => {
+      const invalidNaming = { folder: { default: "{Movie CleanTitle}" } }; // missing file
+
+      vi.spyOn(fs, "readdirSync").mockReturnValue(["default.json"] as any);
+      vi.spyOn(util, "loadJsonFile").mockReturnValue(invalidNaming);
+      const warnSpy = vi.spyOn(logger, "warn");
+
+      const result = await loadNamingFromTrashRadarr();
+
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("trash-naming/RADARR/default.json"));
+      expect(result).toEqual(invalidNaming);
     });
   });
 });

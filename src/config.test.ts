@@ -1,3 +1,4 @@
+import path from "node:path";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import yaml from "yaml";
 import {
@@ -17,8 +18,12 @@ import {
   ConfigQualityProfile,
   ConfigQualityProfileItem,
   InputConfigArrInstance,
+  InputConfigArrInstanceSchema,
   InputConfigCustomFormat,
+  InputConfigCustomFormatGroupSchema,
+  InputConfigIncludeItemSchema,
   InputConfigSchema,
+  InputConfigSchemaSchema,
 } from "./types/config.types";
 import { TrashQP, TrashQualityDefinition } from "./types/trashguide.types";
 import { cloneWithJSON } from "./util";
@@ -1719,5 +1724,91 @@ describe("isTrashQualityDefinition", () => {
         qualities: [{ quality: "SDTV", min: 2, preferred: 50, max: 100 }, { quality: "HDTV-720p" }],
       }),
     ).toBe(false);
+  });
+});
+
+describe("InputConfigSchemaSchema (regression)", () => {
+  // Guards against the Zod schema silently drifting from what real, working configs actually
+  // look like - it's a hand-maintained duplicate of the manual types with no compiler link
+  // between them. Caught 3 real mismatches this way already (see git history for this test).
+  test("accepts examples/full's config.yml as valid, unmodified", async () => {
+    const actualFs = await vi.importActual<typeof import("node:fs")>("node:fs");
+    const filePath = path.resolve(__dirname, "../examples/full/config/config.yml");
+    const file = actualFs.readFileSync(filePath, "utf8");
+
+    const stubSecretTag = {
+      identify: (value: unknown) => value instanceof String,
+      tag: "!secret",
+      resolve: () => "placeholder-secret",
+    };
+
+    const rawConfig = yaml.parse(file, { customTags: [stubSecretTag] });
+
+    const result = InputConfigSchemaSchema.safeParse(rawConfig);
+
+    if (!result.success) {
+      throw new Error(
+        `examples/full/config/config.yml no longer matches InputConfigSchemaSchema:\n${result.error.issues
+          .map((i) => `${i.path.join(".")}: ${i.message}`)
+          .join("\n")}`,
+      );
+    }
+  });
+
+  // Zod object schemas silently strip keys they don't recognize on a *successful* parse -
+  // no warning, no error. validateConfig() returns that stripped result, not the original
+  // input, so a field missing from the schema doesn't fail loudly - it just vanishes.
+  test("does not silently strip silenceTrashConflictWarnings/silenceRequiredCfGroupExclusionWarnings", () => {
+    const config = {
+      silenceTrashConflictWarnings: true,
+      silenceRequiredCfGroupExclusionWarnings: true,
+    };
+
+    const result = InputConfigSchemaSchema.parse(config);
+
+    expect(result).toMatchObject(config);
+  });
+
+  test("does not silently strip an arr instance's trash_cfgroup_config", () => {
+    const config = {
+      base_url: "http://radarr:7878",
+      api_key: "key",
+      quality_profiles: [],
+      trash_cfgroup_config: {
+        include_optional: true,
+        include_unrequired: false,
+        include_cfs: [{ id: "cf-1" }],
+        exclude_cfs: [{ id: "cf-2" }],
+      },
+    };
+
+    const result = InputConfigArrInstanceSchema.parse(config);
+
+    expect(result).toMatchObject({ trash_cfgroup_config: config.trash_cfgroup_config });
+  });
+
+  test("does not silently strip an include item's trash_cfgroup_* overrides", () => {
+    const config = {
+      template: "some-profile",
+      source: "TRASH" as const,
+      trash_cfgroup_include_optional: true,
+      trash_cfgroup_include_unrequired: true,
+      trash_cfgroup_include_cfs: [{ id: "cf-1" }],
+      trash_cfgroup_exclude_cfs: [{ id: "cf-2" }],
+    };
+
+    const result = InputConfigIncludeItemSchema.parse(config);
+
+    expect(result).toMatchObject(config);
+  });
+
+  test("does not silently strip a custom_format_groups trash_guide item's include/exclude", () => {
+    const config = {
+      trash_guide: [{ id: "group-1", include: [{ id: "cf-1" }], exclude: [{ id: "cf-2" }] }],
+    };
+
+    const result = InputConfigCustomFormatGroupSchema.parse(config);
+
+    expect(result).toMatchObject(config);
   });
 });

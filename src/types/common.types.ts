@@ -1,5 +1,6 @@
+import { z } from "zod";
 import { MergedCustomFormatResource, MergedCustomFormatSpecificationSchema } from "./merged.types";
-import { InputConfigArrInstance } from "./config.types";
+import { ConfigQualityProfile, InputConfigArrInstance } from "./config.types";
 import { TrashCF, TrashCFSpF } from "./trashguide.types";
 
 export type DynamicImportType<T> = { default: T };
@@ -10,7 +11,7 @@ type RequireAtLeastOne<T> = {
 
 /** Used in the UI of Sonarr/Radarr to import. Trash JSON are based on that so users can copy&paste stuff */
 export type UserFriendlyField = {
-  name?: string | null; // TODO validate if this can really appear? As Input
+  name?: string | null;
   value?: any;
 } & Pick<MergedCustomFormatSpecificationSchema, "negate" | "required">;
 
@@ -51,6 +52,12 @@ export type ConfigarrCFMeta = {
 
 export type ConfigarrCF = ConfigarrCFMeta & ImportCF;
 
+export const ConfigarrCFSchema: z.ZodType<ConfigarrCF> = z
+  .any()
+  .refine((v) => v != null && typeof v === "object" && typeof v.configarr_id === "string" && typeof v.name === "string", {
+    message: "ConfigarrCF must be an object with 'configarr_id' and 'name' string fields",
+  });
+
 type CFConfigGroup = {
   carrConfig: ConfigarrCF;
   requestConfig: MergedCustomFormatResource;
@@ -71,7 +78,6 @@ export type MappedTemplates = Partial<
     | "custom_formats"
     | "custom_format_groups"
     | "include"
-    | "quality_profiles"
     | "customFormatDefinitions"
     | "media_management"
     | "media_naming"
@@ -85,7 +91,12 @@ export type MappedTemplates = Partial<
     | "delay_profiles"
     | "download_clients"
   >
->;
+> & {
+  // Not picked from InputConfigArrInstance: by the time profiles live in mergedTemplates
+  // they're being progressively resolved/defaulted toward the fully-merged shape (see
+  // mergeConfigsAndTemplates), not the raw, possibly-sparse input shape.
+  quality_profiles?: ConfigQualityProfile[];
+};
 
 export type MappedMergedTemplates = MappedTemplates & Required<Pick<MappedTemplates, "custom_formats" | "quality_profiles">>;
 
