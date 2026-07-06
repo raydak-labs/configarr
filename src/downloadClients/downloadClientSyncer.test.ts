@@ -378,7 +378,7 @@ describe("downloadClientSyncer – equality & omission semantics", () => {
       // This should be treated as "do not manage" for those properties
     };
 
-    const equal = getTestSync().isDownloadClientEqual(config, server, cache);
+    const { equal } = getTestSync().isDownloadClientEqual(config, server, cache);
 
     expect(equal).toBe(true);
   });
@@ -406,7 +406,7 @@ describe("downloadClientSyncer – equality & omission semantics", () => {
       enable: false, // explicitly different from server
     };
 
-    const equal = getTestSync().isDownloadClientEqual(config, server, cache);
+    const { equal } = getTestSync().isDownloadClientEqual(config, server, cache);
 
     expect(equal).toBe(false);
   });
