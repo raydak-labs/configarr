@@ -2549,7 +2549,7 @@ Expected: PASS.
 
 #### 8c. Download clients
 
-`isDownloadClientEqual` (`src/downloadClients/downloadClientGeneric.ts`) is directly unit-tested (~8 call sites across `downloadClientSyncer.test.ts` and `downloadClientGeneric.test.ts`) asserting its boolean return — it is **not** modified. Instead, a new sibling method computes the structured field changes only for entries `calculateDiff` already decided are an update, keeping the well-tested boolean logic untouched.
+`isDownloadClientEqual` (`src/downloadClients/downloadClientGeneric.ts`) is refactored in place to return `{ equal: boolean; changes: FieldChange[] }` instead of a bare `boolean`, collecting every differing field instead of early-returning on the first mismatch (needed since the report wants all of them, not just "is it different"). This is directly unit-tested at ~8 call sites (`downloadClientSyncer.test.ts` lines 381, 409; `downloadClientGeneric.test.ts` lines 108, 137, 171, 212, 276, 316, 320) — all of them destructure `.equal` in this step rather than being left on a duplicate sibling method, per explicit decision: consolidating avoids the verbatim-duplication a task reviewer would otherwise flag, at the cost of touching (not breaking) these existing tests.
 
 - [ ] **Step 20: Add `fieldChanges` to `DownloadClientDiff.update` and `diffEntries` to `DownloadClientSyncResult`**
 
@@ -2575,69 +2575,67 @@ export interface DownloadClientSyncResult {
 }
 ```
 
-- [ ] **Step 21: Write a failing test for the new field-change method**
+- [ ] **Step 21: Update the 8 existing `isDownloadClientEqual` call sites to the new `{equal, changes}` shape**
 
-Add to `src/downloadClients/downloadClientGeneric.test.ts` (it already has a `getTestSync()`-style helper and `cache`/`serverClient`/`configClient` fixtures used by the existing `isDownloadClientEqual` tests around line 100-320 — reuse that same fixture style):
+These are pure mechanical fixes — each just destructures `.equal` instead of taking the bare return value, keeping every other line (including the subsequent `expect(...)`) unchanged:
 
+In `src/downloadClients/downloadClientSyncer.test.ts`:
+
+Line 381 — change:
 ```ts
-  describe("getDownloadClientFieldChanges", () => {
-    it("reports a changed top-level field", () => {
-      const sync = new GenericDownloadClientSync("RADARR");
-      const cache = new ServerCache([], [], [], []);
-
-      const config: InputConfigDownloadClient = { name: "qBit", type: "qbittorrent", priority: 5 };
-      const server: DownloadClientResource = { name: "qBit", implementation: "qbittorrent", priority: 1, fields: [], tags: [] };
-
-      const changes = sync.getDownloadClientFieldChanges(config, server, cache);
-
-      expect(changes).toContainEqual({ field: "priority", from: 1, to: 5 });
-    });
-
-    it("reports a changed field value", () => {
-      const sync = new GenericDownloadClientSync("RADARR");
-      const cache = new ServerCache([], [], [], []);
-
-      const config: InputConfigDownloadClient = { name: "qBit", type: "qbittorrent", fields: { host: "new-host" } };
-      const server: DownloadClientResource = {
-        name: "qBit",
-        implementation: "qbittorrent",
-        fields: [{ name: "host", value: "old-host" }],
-        tags: [],
-      };
-
-      const changes = sync.getDownloadClientFieldChanges(config, server, cache);
-
-      expect(changes).toContainEqual({ field: "fields.host", from: "old-host", to: "new-host" });
-    });
-  });
+    const equal = getTestSync().isDownloadClientEqual(config, server, cache);
+```
+to:
+```ts
+    const { equal } = getTestSync().isDownloadClientEqual(config, server, cache);
 ```
 
-Add `ServerCache` to the file's imports if not already present: `import { ServerCache } from "../cache";`; add `DownloadClientResource` and `InputConfigDownloadClient` too if not already imported (check the existing import block at the top of the file first).
+Line 409 — identical change:
+```ts
+    const { equal } = getTestSync().isDownloadClientEqual(config, server, cache);
+```
 
-- [ ] **Step 22: Run test to verify it fails**
+In `src/downloadClients/downloadClientGeneric.test.ts`, each of the following lines changes from `const isEqual = sync.isDownloadClientEqual(...)` to `const { equal: isEqual } = sync.isDownloadClientEqual(...)` (same arguments, only the left-hand side changes):
 
-Run: `pnpm test -- downloadClientGeneric.test.ts -t "getDownloadClientFieldChanges"`
-Expected: FAIL — `sync.getDownloadClientFieldChanges` is not a function yet.
+- Line 108: `const { equal: isEqual } = sync.isDownloadClientEqual(configClient, serverClient, cache);`
+- Line 137: `const { equal: isEqual } = sync.isDownloadClientEqual(configClient, serverClient, cache);`
+- Line 171: `const { equal: isEqual } = sync.isDownloadClientEqual(configClient, serverClient, cache);`
+- Line 212: `const { equal: isEqual } = sync.isDownloadClientEqual(configClient, serverClient, cache);`
+- Line 276: `const { equal: isEqual } = sync.isDownloadClientEqual(configClient, serverClient, cache);`
+- Line 316: `const { equal: isEqualWithoutUpdate } = sync.isDownloadClientEqual(configClient, serverClient, cache, false);`
+- Line 320: `const { equal: isEqualWithUpdate } = sync.isDownloadClientEqual(configClient, serverClient, cache, true);`
 
-- [ ] **Step 23: Implement `getDownloadClientFieldChanges` in `src/downloadClients/downloadClientGeneric.ts`**
+- [ ] **Step 22: Run tests to verify they fail**
 
-Add the import:
+Run: `pnpm test -- downloadClientSyncer.test.ts downloadClientGeneric.test.ts`
+Expected: FAIL — `isDownloadClientEqual` still returns a bare `boolean`, so destructuring `.equal` off it yields `undefined`, and every `expect(equal).toBe(true/false)` fails.
+
+- [ ] **Step 23: Implement — refactor `isDownloadClientEqual` to return `{equal, changes}` and update `calculateDiff`**
+
+Add the import to `src/downloadClients/downloadClientGeneric.ts`:
 
 ```ts
 import { FieldChange } from "../diffReport/diffReport.types";
 ```
 
-Add the new method (alongside `isDownloadClientEqual`, which is left completely unchanged):
+Replace `isDownloadClientEqual` entirely:
 
 ```ts
-  public getDownloadClientFieldChanges(
+  public isDownloadClientEqual = (
     config: InputConfigDownloadClient,
     server: DownloadClientResource,
     cache: ServerCache,
     updatePassword: boolean = false,
-  ): FieldChange[] {
+  ): { equal: boolean; changes: FieldChange[] } => {
+    // Basic comparison - identity mismatch means this isn't even a candidate match
+    if (config.name !== server.name || config.type.toLowerCase() !== server.implementation?.toLowerCase()) {
+      return { equal: false, changes: [] };
+    }
+
     const changes: FieldChange[] = [];
 
+    // Compare only when specified
+    // Omitted means "do not manage"
     if (config.enable !== undefined && config.enable !== server.enable) {
       changes.push({ field: "enable", from: server.enable, to: config.enable });
     }
@@ -2651,6 +2649,7 @@ Add the new method (alongside `isDownloadClientEqual`, which is left completely 
       changes.push({ field: "removeFailedDownloads", from: server.removeFailedDownloads, to: config.remove_failed_downloads });
     }
 
+    // Compare fields (normalize to support snake_case)
     const normalizedConfigFields = this.normalizeConfigFields(config.fields || {}, this.arrType);
     const serverFields = server.fields || [];
 
@@ -2659,11 +2658,15 @@ Add the new method (alongside `isDownloadClientEqual`, which is left completely 
       if (!fieldName) continue;
 
       const configValue = normalizedConfigFields[fieldName];
+      const serverValue = serverField.value;
+
+      // Skip if config doesn't specify this field (use server default)
       if (configValue === undefined) continue;
 
-      const serverValue = serverField.value;
+      // Deep comparison for arrays and objects
       let valuesMatch = JSON.stringify(configValue) === JSON.stringify(serverValue);
 
+      // Special handling for password fields - server masks them as "********" unless update_password is enabled
       if (
         !valuesMatch &&
         (fieldName.toLowerCase().includes("password") || fieldName.toLowerCase().includes("apikey")) &&
@@ -2680,6 +2683,25 @@ Add the new method (alongside `isDownloadClientEqual`, which is left completely 
       }
     }
 
+    const serverFieldNames = new Set(
+      serverFields.map((f: DownloadClientField) => f.name).filter((name): name is string => typeof name === "string" && name.length > 0),
+    );
+
+    for (const key of Object.keys(normalizedConfigFields)) {
+      // Only check camelCase field names against server (skip snake_case duplicates)
+      if (key !== snakeToCamel(key)) {
+        // This is a snake_case field, skip the server field check
+        continue;
+      }
+
+      if (!serverFieldNames.has(key) && normalizedConfigFields[key] !== undefined) {
+        // Config references a field that does not exist on the server; treat as different
+        this.logger.warn(`Config field '${key}' does not exist on server`);
+        changes.push({ field: `fields.${key}`, from: undefined, to: normalizedConfigFields[key] });
+      }
+    }
+
+    // Compare tags (resolve names to IDs first)
     const configTags = config.tags ?? [];
     const { ids: resolvedTagIds } = this.resolveTagNamesToIds(configTags, cache.tags);
     const serverTags = server.tags ?? [];
@@ -2691,11 +2713,11 @@ Add the new method (alongside `isDownloadClientEqual`, which is left completely 
       changes.push({ field: "tags", from: sortedServerTags, to: sortedConfigTagIds });
     }
 
-    return changes;
-  }
+    return { equal: changes.length === 0, changes };
+  };
 ```
 
-Update `calculateDiff` to call it once an update is already decided (via the untouched `isDownloadClientEqual`):
+Update `calculateDiff` to consume the new shape:
 
 ```ts
   async calculateDiff(
@@ -2717,12 +2739,14 @@ Update `calculateDiff` to call it once an update is already decided (via the unt
 
       if (!serverClient) {
         create.push(config);
-      } else if (!this.isDownloadClientEqual(config, serverClient, cache, updatePassword)) {
-        const partialUpdate = this.shouldUsePartialUpdate(config);
-        const fieldChanges = this.getDownloadClientFieldChanges(config, serverClient, cache, updatePassword);
-        update.push({ config, server: serverClient, partialUpdate, fieldChanges });
       } else {
-        unchanged.push({ config, server: serverClient });
+        const comparison = this.isDownloadClientEqual(config, serverClient, cache, updatePassword);
+        if (!comparison.equal) {
+          const partialUpdate = this.shouldUsePartialUpdate(config);
+          update.push({ config, server: serverClient, partialUpdate, fieldChanges: comparison.changes });
+        } else {
+          unchanged.push({ config, server: serverClient });
+        }
       }
     }
 
@@ -2736,10 +2760,10 @@ Update `calculateDiff` to call it once an update is already decided (via the unt
   }
 ```
 
-- [ ] **Step 24: Run test to verify it passes**
+- [ ] **Step 24: Run tests to verify they pass**
 
-Run: `pnpm test -- downloadClientGeneric.test.ts`
-Expected: PASS.
+Run: `pnpm test -- downloadClientSyncer.test.ts downloadClientGeneric.test.ts`
+Expected: PASS — all 8 updated call sites plus everything else in both files.
 
 - [ ] **Step 25: Add the adapter and wire `diffEntries` into `syncDownloadClients` in `src/downloadClients/downloadClientBase.ts`**
 
@@ -3077,9 +3101,9 @@ feat: report field-level diffs for root folders/metadata profiles/download clien
 Each module already computed a config/server pair when deciding
 whether to update - none captured which fields actually differed.
 Root folders and metadata profiles (Lidarr/Readarr) now compare
-structured fields directly; download clients get a new sibling method
-alongside the existing (untested-safe, unchanged) equality check so
-the diff report doesn't touch any already-tested boolean logic.
+structured fields directly; isDownloadClientEqual now returns
+{equal, changes} instead of a bare boolean, collecting every
+differing field instead of stopping at the first one.
 EOF
 )"
 ```
