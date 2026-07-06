@@ -509,8 +509,12 @@ const run = async () => {
 
   const diffOutputFile = getEnvs().CONFIGARR_DIFF_OUTPUT_FILE;
   if (diffOutputFile) {
-    writeJsonDiffReport(diffOutputFile, allReports, getEnvs().DRY_RUN);
-    logger.info(`Diff report written to ${diffOutputFile}`);
+    try {
+      writeJsonDiffReport(diffOutputFile, allReports, getEnvs().DRY_RUN);
+      logger.info(`Diff report written to ${diffOutputFile}`);
+    } catch (err: any) {
+      logger.error(`Failed to write diff report to ${diffOutputFile}: ${err.message}`);
+    }
   }
 
   if (Telemetry.isEnabled()) {

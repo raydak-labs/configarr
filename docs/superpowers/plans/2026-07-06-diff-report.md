@@ -22,11 +22,13 @@
 ### Task 1: Rework `compareObjectsCarr` (fix 2 bugs, change return shape)
 
 **Files:**
+
 - Create: `src/diffReport/diffReport.types.ts`
 - Modify: `src/util.ts:1-210` (the `compareObjectsCarr`, `compareCustomFormats`, `compareNaming`, `compareMediamanagement` functions)
 - Test: `src/util.test.ts`
 
 **Interfaces:**
+
 - Produces: `FieldChange { field: string; from: unknown; to: unknown }`, `DiffAction = "create" | "update" | "delete" | "unchanged"`, `DiffEntry { resourceType: string; name: string; action: DiffAction; fieldChanges?: FieldChange[] }`, `InstanceDiffReport { arrType: string; instanceName: string; entries: DiffEntry[] }` — all in `src/diffReport/diffReport.types.ts`.
 - Produces: `compareObjectsCarr(serverObject: any, localObject: any, parent?: string): { equal: boolean; changes: FieldChange[] }` (return type changed from `{ changes: string[] }`).
 
@@ -221,11 +223,13 @@ EOF
 ### Task 2: Fix the 3 `compareObjectsCarr` consumers' debug logging for the new shape
 
 **Files:**
+
 - Modify: `src/custom-formats.ts:58`
 - Modify: `src/uiConfigs/uiConfigSyncer.ts:46`
 - Test: none new (existing `custom-formats.test.ts` and `uiConfigSyncer` tests, if any, must keep passing)
 
 **Interfaces:**
+
 - Consumes: `FieldChange` from Task 1 (`{ field, from, to }`), `compareCustomFormats`/`compareObjectsCarr` returning `{ equal, changes: FieldChange[] }`.
 
 `src/media-management.ts` needs no code change: its `logger.debug(changes, ...)` calls already pass `changes` as a structured object to the pino-style logger (object-then-message signature), so they render correctly with either `string[]` or `FieldChange[]` — only the two call sites below use string-only formatting (template-literal interpolation / `.join()`) that breaks with objects.
@@ -233,11 +237,13 @@ EOF
 - [ ] **Step 1: Fix `src/custom-formats.ts:58`**
 
 Old:
+
 ```ts
 logger.debug(`Found mismatch for ${requestConfig.name}: ${comparison.changes}`);
 ```
 
 New:
+
 ```ts
 logger.debug(comparison.changes, `Found mismatch for ${requestConfig.name}`);
 ```
@@ -245,11 +251,13 @@ logger.debug(comparison.changes, `Found mismatch for ${requestConfig.name}`);
 - [ ] **Step 2: Fix `src/uiConfigs/uiConfigSyncer.ts:46`**
 
 Old:
+
 ```ts
 logger.debug(`UI config changes: ${changes.join(", ")}`);
 ```
 
 New:
+
 ```ts
 logger.debug(changes, `UI config changes for ${arrType}`);
 ```
@@ -279,10 +287,12 @@ EOF
 ### Task 3: Fix `index.ts` DRY_RUN short-circuit for downloadClients/downloadClientConfig/remotePaths
 
 **Files:**
+
 - Modify: `src/index.ts:314-357`
 
 **Interfaces:**
-- Consumes: `syncDownloadClients(arrType, config, serverCache)`, `syncDownloadClientConfig(arrType, config, serverCache)`, `syncRemotePaths(arrType, config)` — unchanged signatures. Each of these already has its own correct `if (getEnvs().DRY_RUN) { ...; return }` branch internally (`downloadClientBase.ts:425`, `downloadClientConfigSyncer.ts:122`, `remotePathSyncer.ts:120`), placed *after* diff calculation — so calling them unconditionally is safe and is what actually fixes the bug (today `index.ts` never lets execution reach those internal checks in dry-run mode, because it short-circuits one level higher).
+
+- Consumes: `syncDownloadClients(arrType, config, serverCache)`, `syncDownloadClientConfig(arrType, config, serverCache)`, `syncRemotePaths(arrType, config)` — unchanged signatures. Each of these already has its own correct `if (getEnvs().DRY_RUN) { ...; return }` branch internally (`downloadClientBase.ts:425`, `downloadClientConfigSyncer.ts:122`, `remotePathSyncer.ts:120`), placed _after_ diff calculation — so calling them unconditionally is safe and is what actually fixes the bug (today `index.ts` never lets execution reach those internal checks in dry-run mode, because it short-circuits one level higher).
 
 No test exercises `pipeline()` directly (it requires a live/mocked `*arr` API and there is no `index.test.ts`); this task is verified by the full test suite (no regressions in the three modules' own tests) plus the end-to-end Docker verification in Task 12.
 
@@ -291,38 +301,38 @@ No test exercises `pipeline()` directly (it requires a live/mocked `*arr` API an
 Replace lines 314-357 (the `// Download Clients` / `// Download Client Configuration` / `// Sync remote path mappings` blocks) with:
 
 ```ts
-  // Download Clients
-  if (config.download_clients?.data || config.download_clients?.delete_unmanaged?.enabled) {
-    try {
-      await syncDownloadClients(arrType, config, serverCache);
-    } catch (err: any) {
-      logger.error(`Failed to sync download clients: ${err.message}`);
-    }
+// Download Clients
+if (config.download_clients?.data || config.download_clients?.delete_unmanaged?.enabled) {
+  try {
+    await syncDownloadClients(arrType, config, serverCache);
+  } catch (err: any) {
+    logger.error(`Failed to sync download clients: ${err.message}`);
   }
+}
 
-  // Download Client Configuration
-  if (config.download_clients?.config) {
-    try {
-      await syncDownloadClientConfig(arrType, config, serverCache);
-    } catch (err: any) {
-      logger.error(`Failed to sync download client config: ${err.message}`);
-    }
+// Download Client Configuration
+if (config.download_clients?.config) {
+  try {
+    await syncDownloadClientConfig(arrType, config, serverCache);
+  } catch (err: any) {
+    logger.error(`Failed to sync download client config: ${err.message}`);
   }
+}
 
-  // Sync remote path mappings
-  if (
-    config.download_clients?.remote_paths !== undefined &&
-    (config.download_clients.remote_paths.length > 0 || config.download_clients.delete_unmanaged_remote_paths)
-  ) {
-    logger.debug(`[DEBUG] About to sync remote paths for ${arrType}. Count: ${config.download_clients.remote_paths.length}`);
-    try {
-      await syncRemotePaths(arrType, config);
-    } catch (err: any) {
-      logger.error(`Failed to sync remote path mappings: ${err.message}`);
-    }
-  } else {
-    logger.debug(`[DEBUG] No remote paths to sync for ${arrType}. download_clients: ${JSON.stringify(config.download_clients)}`);
+// Sync remote path mappings
+if (
+  config.download_clients?.remote_paths !== undefined &&
+  (config.download_clients.remote_paths.length > 0 || config.download_clients.delete_unmanaged_remote_paths)
+) {
+  logger.debug(`[DEBUG] About to sync remote paths for ${arrType}. Count: ${config.download_clients.remote_paths.length}`);
+  try {
+    await syncRemotePaths(arrType, config);
+  } catch (err: any) {
+    logger.error(`Failed to sync remote path mappings: ${err.message}`);
   }
+} else {
+  logger.debug(`[DEBUG] No remote paths to sync for ${arrType}. download_clients: ${JSON.stringify(config.download_clients)}`);
+}
 ```
 
 - [ ] **Step 2: Run full verification**
@@ -352,6 +362,7 @@ EOF
 ### Task 4: `DiffCollector`, `formatDiffValue`, `DiffFormatter`/console formatter
 
 **Files:**
+
 - Modify: `src/diffReport/diffReport.types.ts` (add `DiffFormatter` interface, from Task 1)
 - Create: `src/diffReport/diffCollector.ts`
 - Create: `src/diffReport/diffCollector.test.ts`
@@ -361,6 +372,7 @@ EOF
 - Create: `src/diffReport/formatters/consoleFormatter.test.ts`
 
 **Interfaces:**
+
 - Consumes: `DiffEntry`, `FieldChange`, `InstanceDiffReport` from `src/diffReport/diffReport.types.ts` (Task 1).
 - Produces: `class DiffCollector { add(entries: DiffEntry[]): void; getEntries(): DiffEntry[] }`, `function formatDiffValue(value: unknown): string`, `interface DiffFormatter { format(report: InstanceDiffReport): void | Promise<void> }`, `class ConsoleDiffFormatter implements DiffFormatter`.
 
@@ -388,7 +400,9 @@ describe("DiffCollector", () => {
   test("accumulates entries across multiple add() calls", () => {
     const collector = new DiffCollector();
     const first: DiffEntry[] = [{ resourceType: "QualityProfile", name: "HD-1080p", action: "create" }];
-    const second: DiffEntry[] = [{ resourceType: "CustomFormat", name: "SDTV", action: "update", fieldChanges: [{ field: "score", from: 0, to: 10 }] }];
+    const second: DiffEntry[] = [
+      { resourceType: "CustomFormat", name: "SDTV", action: "update", fieldChanges: [{ field: "score", from: 0, to: 10 }] },
+    ];
 
     collector.add(first);
     collector.add(second);
@@ -697,11 +711,13 @@ EOF
 ### Task 5: Wire the collector into `pipeline()`/`runArrType()`/`run()`; migrate `quality-definitions.ts`
 
 **Files:**
+
 - Modify: `src/index.ts` (imports, `pipeline()` signature/body, `runArrType()`, `run()`)
 - Modify: `src/quality-definitions.ts` (change `changeMap` to `FieldChange[]`, add adapter)
 - Test: `src/quality-definitions.test.ts`
 
 **Interfaces:**
+
 - Consumes: `DiffCollector`, `ConsoleDiffFormatter`, `InstanceDiffReport`, `FieldChange`, `DiffEntry` from Task 4/1.
 - Produces: `calculateQualityDefinitionDiff(...)` now returns `{ changeMap: Map<string, FieldChange[]>; restData: MergedQualityDefinitionResource[] }` (was `Map<string, string[]>`). New: `qualityDefinitionsToDiffEntries(changeMap: Map<string, FieldChange[]>): DiffEntry[]`.
 - Produces: `pipeline(globalConfig, instanceConfig, arrType, instanceName): Promise<InstanceDiffReport>` (was `Promise<void>`, no `instanceName` param). `runArrType(...)` now returns `Promise<{ status: { success: number; failure: number; skipped: number }; reports: InstanceDiffReport[] }>` (was `Promise<{success,failure,skipped}>` directly).
@@ -719,7 +735,7 @@ import { DiffEntry, FieldChange } from "./diffReport/diffReport.types";
 Replace the body of `calculateQualityDefinitionDiff`'s per-quality loop (the `const changeMap = new Map<string, string[]>();` declaration and the four `changes.push(...)` prose lines):
 
 ```ts
-  const changeMap = new Map<string, FieldChange[]>();
+const changeMap = new Map<string, FieldChange[]>();
 ```
 
 ```ts
@@ -774,24 +790,24 @@ export function qualityDefinitionsToDiffEntries(changeMap: Map<string, FieldChan
 Add to `src/quality-definitions.test.ts` (add `qualityDefinitionsToDiffEntries` to the existing import from `./quality-definitions`):
 
 ```ts
-  test("calculateQualityDefinitionDiff - min size diff produces a structured FieldChange", async ({}) => {
-    const clone: TrashQualityDefinition = JSON.parse(JSON.stringify(client));
-    clone.qualities[0]!.min = 3;
+test("calculateQualityDefinitionDiff - min size diff produces a structured FieldChange", async ({}) => {
+  const clone: TrashQualityDefinition = JSON.parse(JSON.stringify(client));
+  clone.qualities[0]!.min = 3;
 
-    const result = calculateQualityDefinitionDiff(server, clone.qualities);
+  const result = calculateQualityDefinitionDiff(server, clone.qualities);
 
-    expect(result.changeMap.get("SDTV")).toEqual([{ field: "minSize", from: 2, to: 3 }]);
-  });
+  expect(result.changeMap.get("SDTV")).toEqual([{ field: "minSize", from: 2, to: 3 }]);
+});
 
-  test("qualityDefinitionsToDiffEntries - converts a changeMap into DiffEntry[]", () => {
-    const changeMap = new Map([["SDTV", [{ field: "minSize", from: 2, to: 3 }]]]);
+test("qualityDefinitionsToDiffEntries - converts a changeMap into DiffEntry[]", () => {
+  const changeMap = new Map([["SDTV", [{ field: "minSize", from: 2, to: 3 }]]]);
 
-    const entries = qualityDefinitionsToDiffEntries(changeMap);
+  const entries = qualityDefinitionsToDiffEntries(changeMap);
 
-    expect(entries).toEqual([
-      { resourceType: "QualityDefinitions", name: "SDTV", action: "update", fieldChanges: [{ field: "minSize", from: 2, to: 3 }] },
-    ]);
-  });
+  expect(entries).toEqual([
+    { resourceType: "QualityDefinitions", name: "SDTV", action: "update", fieldChanges: [{ field: "minSize", from: 2, to: 3 }] },
+  ]);
+});
 ```
 
 - [ ] **Step 3: Run test to verify it fails**
@@ -834,7 +850,7 @@ const pipeline = async (
 Immediately after the `const api = getUnifiedClient();` line at the top of `pipeline()`, add:
 
 ```ts
-  const diffCollector = new DiffCollector();
+const diffCollector = new DiffCollector();
 ```
 
 At the very end of `pipeline()` (replacing the function's final closing, i.e. after the "Sync remote path mappings" block and before the function's closing `};`), add:
@@ -849,23 +865,23 @@ At the very end of `pipeline()` (replacing the function's final closing, i.e. af
 Inside the quality-definitions block, wire the adapter into the collector:
 
 ```ts
-    const { changeMap, restData } = calculateQualityDefinitionDiff(serverCache.qd, mergedQDs);
+const { changeMap, restData } = calculateQualityDefinitionDiff(serverCache.qd, mergedQDs);
 
-    if (changeMap.size > 0) {
-      diffCollector.add(qualityDefinitionsToDiffEntries(changeMap));
+if (changeMap.size > 0) {
+  diffCollector.add(qualityDefinitionsToDiffEntries(changeMap));
 
-      if (getEnvs().DRY_RUN) {
-        logger.info("DryRun: Would update QualityDefinitions.");
-      } else {
-        logger.info(`Diffs in quality definitions found ${changeMap.values()}`);
-        await api.updateQualityDefinitions(restData);
-        // refresh QDs
-        serverCache.qd = await loadQualityDefinitionFromServer();
-        logger.info(`Updated QualityDefinitions`);
-      }
-    } else {
-      logger.info(`QualityDefinitions do not need update!`);
-    }
+  if (getEnvs().DRY_RUN) {
+    logger.info("DryRun: Would update QualityDefinitions.");
+  } else {
+    logger.info(`Diffs in quality definitions found ${changeMap.values()}`);
+    await api.updateQualityDefinitions(restData);
+    // refresh QDs
+    serverCache.qd = await loadQualityDefinitionFromServer();
+    logger.info(`Updated QualityDefinitions`);
+  }
+} else {
+  logger.info(`QualityDefinitions do not need update!`);
+}
 ```
 
 - [ ] **Step 6: Update `runArrType` to consume and print the report**
@@ -949,24 +965,24 @@ const runArrType = async (
 
 The rest of the `catch`/`finally` block and the trailing `logger.info("");` inside the loop are unchanged. Change the function's final `return status;` to `return { status, reports };`.
 
-- [ ] **Step 7: Update `run()` to accumulate reports across all *arr types**
+- [ ] *_Step 7: Update `run()` to accumulate reports across all *arr types*_
 
 Change:
 
 ```ts
-  const totalStatus: string[] = [];
+const totalStatus: string[] = [];
 
-  const disabledArrs: string[] = [];
+const disabledArrs: string[] = [];
 ```
 
 to:
 
 ```ts
-  const totalStatus: string[] = [];
+const totalStatus: string[] = [];
 
-  const disabledArrs: string[] = [];
+const disabledArrs: string[] = [];
 
-  const allReports: InstanceDiffReport[] = [];
+const allReports: InstanceDiffReport[] = [];
 ```
 
 Change:
@@ -1018,11 +1034,13 @@ EOF
 ### Task 6: Migrate `quality-profiles.ts` — expose the previously-dead `changeList`
 
 **Files:**
+
 - Modify: `src/quality-profiles.ts`
 - Modify: `src/index.ts`
 - Test: `src/quality-profiles.test.ts`
 
 **Interfaces:**
+
 - Consumes: `FieldChange`, `DiffEntry` (Task 1), `DiffCollector` (already wired into `pipeline()` by Task 5).
 - Produces: `calculateQualityProfilesDiff(...)` now returns `{ changedQPs, create, noChanges, changes: Map<string, FieldChange[]> }` (added `changes` — the previously write-only `changes` map, per the spec's "Prerequisite" analysis, is now actually returned). New: `qualityProfilesToDiffEntries(create: MergedQualityProfileResource[], changedQPs: MergedQualityProfileResource[], changes: Map<string, FieldChange[]>): DiffEntry[]`.
 
@@ -1041,33 +1059,33 @@ import { DiffEntry, FieldChange } from "./diffReport/diffReport.types";
 Replace (around line 424):
 
 ```ts
-    const changeList: string[] = [];
-    changes.set(serverMatch.name!, changeList);
+const changeList: string[] = [];
+changes.set(serverMatch.name!, changeList);
 ```
 
 with:
 
 ```ts
-    const fieldChanges: FieldChange[] = [];
-    changes.set(serverMatch.name!, fieldChanges);
+const fieldChanges: FieldChange[] = [];
+changes.set(serverMatch.name!, fieldChanges);
 ```
 
 Then replace each of the following `changeList.push(...)` prose calls in that same loop with their structured equivalent (all still under the same `if`/`else` conditions they already sit in — only the pushed value changes):
 
-| Old | New |
-| --- | --- |
-| `changeList.push(\`QualityProfile quality order does not match\`);` | `fieldChanges.push({ field: "items", from: serverMatch.items, to: mappedQualities });` |
-| `changeList.push(\`MinFormatScore diff: server: ${serverMatch.minFormatScore} - expected: ${value.min_format_score}\`);` | `fieldChanges.push({ field: "minFormatScore", from: serverMatch.minFormatScore, to: value.min_format_score });` |
-| `changeList.push(\`UpgradeAllowed diff: server: ${serverMatch.upgradeAllowed} - expected: ${value.upgrade.allowed}\`);` | `fieldChanges.push({ field: "upgradeAllowed", from: serverMatch.upgradeAllowed, to: value.upgrade.allowed });` |
-| `changeList.push(\`Upgrade until quality diff: server: ${serverMatch.cutoff} - expected: ${upgradeUntil}\`);` | `fieldChanges.push({ field: "cutoff", from: serverMatch.cutoff, to: upgradeUntil });` |
-| `changeList.push(\`Upgrade until score diff: server: ${serverMatch.cutoffFormatScore} - expected: ${value.upgrade.until_score}\`);` | `fieldChanges.push({ field: "cutoffFormatScore", from: serverMatch.cutoffFormatScore, to: value.upgrade.until_score });` |
-| `changeList.push(\`Min upgrade format score diff: server: ${serverMatch.cutoffFormatScore} - expected: ${configMinUpgradeFormatScore}\`);` | `fieldChanges.push({ field: "minUpgradeFormatScore", from: serverMatch.minUpgradeFormatScore, to: configMinUpgradeFormatScore });` |
-| `changeList.push(\`Cutoff diff for upgrade disabled: server: ${serverMatch.cutoff} - expected: ${cutoffId}\`);` | `fieldChanges.push({ field: "cutoff", from: serverMatch.cutoff, to: cutoffId });` |
-| `changeList.push(\`CutoffFormatScore diff for upgrade disabled: server: ${serverMatch.cutoffFormatScore} - expected: 1\`);` | `fieldChanges.push({ field: "cutoffFormatScore", from: serverMatch.cutoffFormatScore, to: 1 });` |
-| `changeList.push(\`MinUpgradeFormatScore diff for upgrade disabled: server: ${serverMatch.minUpgradeFormatScore} - expected: 1\`);` | `fieldChanges.push({ field: "minUpgradeFormatScore", from: serverMatch.minUpgradeFormatScore, to: 1 });` |
-| `changeList.push(\`Language diff: server: ${serverMatch.language?.name} - expected: ${profileLanguage?.name}\`);` | `fieldChanges.push({ field: "language", from: serverMatch.language?.name, to: profileLanguage?.name });` |
-| `changeList.push(\`CF resetting score '${scoreValue.name}': server ${serverCF?.score} - client: 0\`);` (both occurrences — inside the scoring loop and the missing-CFs reduce) | `fieldChanges.push({ field: \`customFormats.${scoreValue.name}\`, from: serverCF?.score, to: 0 });` (use `cfName` instead of `scoreValue.name` in the missing-CFs occurrence, matching that block's variable name) |
-| `changeList.push(\`CF diff ${scoreValue.name}: server: ${serverCF?.score} - expected: ${scoreValue.score}\`);` | `fieldChanges.push({ field: \`customFormats.${scoreValue.name}\`, from: serverCF?.score, to: scoreValue.score });` |
+| Old                                                                                                                                                                            | New                                                                                                                                                                                                            |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `changeList.push(\`QualityProfile quality order does not match\`);`                                                                                                            | `fieldChanges.push({ field: "items", from: serverMatch.items, to: mappedQualities });`                                                                                                                         |
+| `changeList.push(\`MinFormatScore diff: server: ${serverMatch.minFormatScore} - expected: ${value.min_format_score}\`);`                                                       | `fieldChanges.push({ field: "minFormatScore", from: serverMatch.minFormatScore, to: value.min_format_score });`                                                                                                |
+| `changeList.push(\`UpgradeAllowed diff: server: ${serverMatch.upgradeAllowed} - expected: ${value.upgrade.allowed}\`);`                                                        | `fieldChanges.push({ field: "upgradeAllowed", from: serverMatch.upgradeAllowed, to: value.upgrade.allowed });`                                                                                                 |
+| `changeList.push(\`Upgrade until quality diff: server: ${serverMatch.cutoff} - expected: ${upgradeUntil}\`);`                                                                  | `fieldChanges.push({ field: "cutoff", from: serverMatch.cutoff, to: upgradeUntil });`                                                                                                                          |
+| `changeList.push(\`Upgrade until score diff: server: ${serverMatch.cutoffFormatScore} - expected: ${value.upgrade.until_score}\`);`                                            | `fieldChanges.push({ field: "cutoffFormatScore", from: serverMatch.cutoffFormatScore, to: value.upgrade.until_score });`                                                                                       |
+| `changeList.push(\`Min upgrade format score diff: server: ${serverMatch.cutoffFormatScore} - expected: ${configMinUpgradeFormatScore}\`);`                                     | `fieldChanges.push({ field: "minUpgradeFormatScore", from: serverMatch.minUpgradeFormatScore, to: configMinUpgradeFormatScore });`                                                                             |
+| `changeList.push(\`Cutoff diff for upgrade disabled: server: ${serverMatch.cutoff} - expected: ${cutoffId}\`);`                                                                | `fieldChanges.push({ field: "cutoff", from: serverMatch.cutoff, to: cutoffId });`                                                                                                                              |
+| `changeList.push(\`CutoffFormatScore diff for upgrade disabled: server: ${serverMatch.cutoffFormatScore} - expected: 1\`);`                                                    | `fieldChanges.push({ field: "cutoffFormatScore", from: serverMatch.cutoffFormatScore, to: 1 });`                                                                                                               |
+| `changeList.push(\`MinUpgradeFormatScore diff for upgrade disabled: server: ${serverMatch.minUpgradeFormatScore} - expected: 1\`);`                                            | `fieldChanges.push({ field: "minUpgradeFormatScore", from: serverMatch.minUpgradeFormatScore, to: 1 });`                                                                                                       |
+| `changeList.push(\`Language diff: server: ${serverMatch.language?.name} - expected: ${profileLanguage?.name}\`);`                                                              | `fieldChanges.push({ field: "language", from: serverMatch.language?.name, to: profileLanguage?.name });`                                                                                                       |
+| `changeList.push(\`CF resetting score '${scoreValue.name}': server ${serverCF?.score} - client: 0\`);` (both occurrences — inside the scoring loop and the missing-CFs reduce) | `fieldChanges.push({ field: \`customFormats.${scoreValue.name}\`, from: serverCF?.score, to: 0 });`(use`cfName`instead of`scoreValue.name` in the missing-CFs occurrence, matching that block's variable name) |
+| `changeList.push(\`CF diff ${scoreValue.name}: server: ${serverCF?.score} - expected: ${scoreValue.score}\`);`                                                                 | `fieldChanges.push({ field: \`customFormats.${scoreValue.name}\`, from: serverCF?.score, to: scoreValue.score });`                                                                                             |
 
 Note the `Min upgrade format score` fix: the original prose read `server: ${serverMatch.cutoffFormatScore}` even though the field actually being changed two lines later is `updatedServerObject.minUpgradeFormatScore` — a pre-existing copy-paste bug in the log message. The structured version above uses the correct `serverMatch.minUpgradeFormatScore` as `from`, fixing this incidentally.
 
@@ -1078,14 +1096,14 @@ Update the two `logger.debug` calls referencing `changeList.length` (around line
 Replace (around line 616):
 
 ```ts
-    const changeList: string[] = [];
+const changeList: string[] = [];
 ```
 
 with:
 
 ```ts
-    const fieldChanges: FieldChange[] = [];
-    changes.set(unmanagedServerQp.name!, fieldChanges);
+const fieldChanges: FieldChange[] = [];
+changes.set(unmanagedServerQp.name!, fieldChanges);
 ```
 
 (This loop's `changeList` was never added to the `changes` map at all before — unmanaged QPs that get pushed into `changedQPs` via `scoringDiff` need their diffs discoverable the same way managed ones are.)
@@ -1093,13 +1111,13 @@ with:
 Replace:
 
 ```ts
-            changeList.push(`CF diff '${scoreValue.name}': server: '${serverCF?.score}' - expected: '${scoreValue.score}'`);
+changeList.push(`CF diff '${scoreValue.name}': server: '${serverCF?.score}' - expected: '${scoreValue.score}'`);
 ```
 
 with:
 
 ```ts
-            fieldChanges.push({ field: `customFormats.${scoreValue.name}`, from: serverCF?.score, to: scoreValue.score });
+fieldChanges.push({ field: `customFormats.${scoreValue.name}`, from: serverCF?.score, to: scoreValue.score });
 ```
 
 Update the trailing `logger.debug` calls in this loop from `changeList` to `fieldChanges` the same way as Step 2.
@@ -1120,7 +1138,7 @@ Change the function's return type annotation:
 Change the final `return` statement:
 
 ```ts
-  return { create: createQPs, changedQPs: changedQPs, noChanges: noChangedQPs, changes };
+return { create: createQPs, changedQPs: changedQPs, noChanges: noChangedQPs, changes };
 ```
 
 Add the adapter at the end of the file:
@@ -1155,69 +1173,67 @@ export function qualityProfilesToDiffEntries(
 Add to `src/quality-profiles.test.ts` (add `qualityProfilesToDiffEntries` to the existing import from `./quality-profiles`):
 
 ```ts
-  test("calculateQualityProfilesDiff - exposes minFormatScore diff as a structured FieldChange", async ({}) => {
-    const cfMap: CFProcessing = { carrIdMapping: new Map(), cfNameToCarrConfig: new Map() };
+test("calculateQualityProfilesDiff - exposes minFormatScore diff as a structured FieldChange", async ({}) => {
+  const cfMap: CFProcessing = { carrIdMapping: new Map(), cfNameToCarrConfig: new Map() };
 
-    const fromConfig: ConfigQualityProfileItem[] = [{ name: "HDTV-1080p", enabled: false }];
+  const fromConfig: ConfigQualityProfileItem[] = [{ name: "HDTV-1080p", enabled: false }];
 
-    const resources: MergedQualityDefinitionResource[] = [
-      { id: 1, title: "HDTV-1080p", weight: 2, quality: { id: 1, name: "HDTV-1080p" } },
-    ];
+  const resources: MergedQualityDefinitionResource[] = [{ id: 1, title: "HDTV-1080p", weight: 2, quality: { id: 1, name: "HDTV-1080p" } }];
 
-    const profile: ConfigQualityProfile = {
-      name: "hi",
-      min_format_score: 2,
-      qualities: fromConfig,
-      quality_sort: "top",
-      upgrade: { allowed: true, until_quality: "HDTV-1080p", until_score: 1000 },
-      score_set: "default",
-    };
+  const profile: ConfigQualityProfile = {
+    name: "hi",
+    min_format_score: 2,
+    qualities: fromConfig,
+    quality_sort: "top",
+    upgrade: { allowed: true, until_quality: "HDTV-1080p", until_score: 1000 },
+    score_set: "default",
+  };
 
-    const config: MergedConfigInstance = {
-      custom_formats: [],
-      quality_profiles: [profile],
-      customFormatDefinitions: [],
-      media_management: {},
-      media_naming: {},
-    };
+  const config: MergedConfigInstance = {
+    custom_formats: [],
+    quality_profiles: [profile],
+    customFormatDefinitions: [],
+    media_management: {},
+    media_naming: {},
+  };
 
-    const serverProfile = cloneWithJSON(sampleQualityProfile);
-    serverProfile.name = "hi";
-    serverProfile.formatItems = [];
-    serverProfile.minUpgradeFormatScore = 3;
-    serverProfile.minFormatScore = 3;
-    serverProfile.cutoff = 1;
-    serverProfile.items = [{ allowed: false, items: [], quality: { id: 1, name: "HDTV-1080p" } }];
+  const serverProfile = cloneWithJSON(sampleQualityProfile);
+  serverProfile.name = "hi";
+  serverProfile.formatItems = [];
+  serverProfile.minUpgradeFormatScore = 3;
+  serverProfile.minFormatScore = 3;
+  serverProfile.cutoff = 1;
+  serverProfile.items = [{ allowed: false, items: [], quality: { id: 1, name: "HDTV-1080p" } }];
 
-    const serverQP: MergedQualityProfileResource[] = [serverProfile];
-    const serverQD: MergedQualityDefinitionResource[] = resources;
-    const serverCF: MergedCustomFormatResource[] = [cloneWithJSON(sampleCustomFormat)];
+  const serverQP: MergedQualityProfileResource[] = [serverProfile];
+  const serverQD: MergedQualityDefinitionResource[] = resources;
+  const serverCF: MergedCustomFormatResource[] = [cloneWithJSON(sampleCustomFormat)];
 
-    const serverCache = new ServerCache(serverQD, serverQP, serverCF, []);
+  const serverCache = new ServerCache(serverQD, serverQP, serverCF, []);
 
-    const diff = await calculateQualityProfilesDiff("RADARR", cfMap, config, serverCache);
+  const diff = await calculateQualityProfilesDiff("RADARR", cfMap, config, serverCache);
 
-    const fieldChanges = diff.changes.get("hi");
-    expect(fieldChanges).toContainEqual({ field: "minFormatScore", from: 3, to: 2 });
-  });
+  const fieldChanges = diff.changes.get("hi");
+  expect(fieldChanges).toContainEqual({ field: "minFormatScore", from: 3, to: 2 });
+});
 
-  test("qualityProfilesToDiffEntries - builds create and update entries with field changes", () => {
-    const create = [{ name: "NewProfile" } as MergedQualityProfileResource];
-    const changedQPs = [{ name: "ExistingProfile" } as MergedQualityProfileResource];
-    const changes = new Map([["ExistingProfile", [{ field: "minFormatScore", from: 0, to: 10 }]]]);
+test("qualityProfilesToDiffEntries - builds create and update entries with field changes", () => {
+  const create = [{ name: "NewProfile" } as MergedQualityProfileResource];
+  const changedQPs = [{ name: "ExistingProfile" } as MergedQualityProfileResource];
+  const changes = new Map([["ExistingProfile", [{ field: "minFormatScore", from: 0, to: 10 }]]]);
 
-    const entries = qualityProfilesToDiffEntries(create, changedQPs, changes);
+  const entries = qualityProfilesToDiffEntries(create, changedQPs, changes);
 
-    expect(entries).toEqual([
-      { resourceType: "QualityProfile", name: "NewProfile", action: "create" },
-      {
-        resourceType: "QualityProfile",
-        name: "ExistingProfile",
-        action: "update",
-        fieldChanges: [{ field: "minFormatScore", from: 0, to: 10 }],
-      },
-    ]);
-  });
+  expect(entries).toEqual([
+    { resourceType: "QualityProfile", name: "NewProfile", action: "create" },
+    {
+      resourceType: "QualityProfile",
+      name: "ExistingProfile",
+      action: "update",
+      fieldChanges: [{ field: "minFormatScore", from: 0, to: 10 }],
+    },
+  ]);
+});
 ```
 
 - [ ] **Step 6: Run test to verify it fails, then implement (already done in Steps 1-4), then verify it passes**
@@ -1243,10 +1259,10 @@ import {
 Update the call site:
 
 ```ts
-  // calculate diff from server <-> what we want to be there
-  const { changedQPs, create, noChanges, changes: qpChanges } = await calculateQualityProfilesDiff(arrType, mergedCFs, config, serverCache);
+// calculate diff from server <-> what we want to be there
+const { changedQPs, create, noChanges, changes: qpChanges } = await calculateQualityProfilesDiff(arrType, mergedCFs, config, serverCache);
 
-  diffCollector.add(qualityProfilesToDiffEntries(create, changedQPs, qpChanges));
+diffCollector.add(qualityProfilesToDiffEntries(create, changedQPs, qpChanges));
 ```
 
 - [ ] **Step 8: Run full verification**
@@ -1275,6 +1291,7 @@ EOF
 ### Task 7: Migrate `custom-formats.ts`, `media-management.ts`, `uiConfigSyncer.ts`
 
 **Files:**
+
 - Modify: `src/custom-formats.ts` (`manageCf`, and the `delete_unmanaged_custom_formats` block in `index.ts`)
 - Modify: `src/media-management.ts`
 - Modify: `src/uiConfigs/uiConfigSyncer.ts`
@@ -1283,6 +1300,7 @@ EOF
 - Test: `src/custom-formats.test.ts`
 
 **Interfaces:**
+
 - Consumes: `FieldChange`, `DiffEntry` (Task 1), `DiffCollector` already created in `pipeline()` (Task 5).
 - Produces: `manageCf(...)` return type gains `diffEntries: DiffEntry[]`. `UiConfigSyncResult` gains `fieldChanges: FieldChange[]`. New: `uiConfigDiffToDiffEntries(result: UiConfigSyncResult): DiffEntry[]`.
 
@@ -1393,61 +1411,61 @@ export const manageCf = async (cfProcessing: CFProcessing, serverCfs: Map<string
 Add to `src/custom-formats.test.ts`, inside a new `describe("manageCf - diffEntries", ...)` block:
 
 ```ts
-  describe("manageCf - diffEntries", () => {
-    it("emits a create DiffEntry for a new CF", async () => {
-      vi.spyOn(env, "getEnvs").mockReturnValue({ DRY_RUN: false } as ReturnType<typeof env.getEnvs>);
+describe("manageCf - diffEntries", () => {
+  it("emits a create DiffEntry for a new CF", async () => {
+    vi.spyOn(env, "getEnvs").mockReturnValue({ DRY_RUN: false } as ReturnType<typeof env.getEnvs>);
 
-      const carrConfig = { configarr_id: "id-a", name: "NewCF", specifications: [] } as unknown as ConfigarrCF;
-      const requestConfig = util.mapImportCfToRequestCf(carrConfig);
+    const carrConfig = { configarr_id: "id-a", name: "NewCF", specifications: [] } as unknown as ConfigarrCF;
+    const requestConfig = util.mapImportCfToRequestCf(carrConfig);
 
-      const cfProcessing: CFProcessing = {
-        carrIdMapping: new Map([["id-a", { carrConfig, requestConfig }]]),
-        cfNameToCarrConfig: new Map([[carrConfig.name!, carrConfig]]),
-      };
+    const cfProcessing: CFProcessing = {
+      carrIdMapping: new Map([["id-a", { carrConfig, requestConfig }]]),
+      cfNameToCarrConfig: new Map([[carrConfig.name!, carrConfig]]),
+    };
 
-      const serverCfs = new Map<string, MergedCustomFormatResource>();
+    const serverCfs = new Map<string, MergedCustomFormatResource>();
 
-      vi.spyOn(unifiedClient, "getUnifiedClient").mockReturnValue({
-        createCustomFormat: vi.fn().mockResolvedValue({ id: 1, name: "NewCF", ...requestConfig }),
-        updateCustomFormat: vi.fn(),
-      } as unknown as ReturnType<typeof unifiedClient.getUnifiedClient>);
+    vi.spyOn(unifiedClient, "getUnifiedClient").mockReturnValue({
+      createCustomFormat: vi.fn().mockResolvedValue({ id: 1, name: "NewCF", ...requestConfig }),
+      updateCustomFormat: vi.fn(),
+    } as unknown as ReturnType<typeof unifiedClient.getUnifiedClient>);
 
-      const out = await manageCf(cfProcessing, serverCfs);
+    const out = await manageCf(cfProcessing, serverCfs);
 
-      expect(out.diffEntries).toEqual([{ resourceType: "CustomFormat", name: "NewCF", action: "create" }]);
-    });
-
-    it("emits an update DiffEntry with fieldChanges for a changed CF", async () => {
-      vi.spyOn(env, "getEnvs").mockReturnValue({ DRY_RUN: true } as ReturnType<typeof env.getEnvs>);
-
-      const specifications = [
-        { name: "S0", implementation: "ReleaseGroupSpecification" as const, negate: false, required: false, fields: { value: "^(0)$" } },
-      ];
-      const carrConfig = { configarr_id: "id-a", name: "ChangedCF", specifications } as unknown as ConfigarrCF;
-      const requestConfig = util.mapImportCfToRequestCf(carrConfig);
-
-      const cfProcessing: CFProcessing = {
-        carrIdMapping: new Map([["id-a", { carrConfig, requestConfig }]]),
-        cfNameToCarrConfig: new Map([[carrConfig.name!, carrConfig]]),
-      };
-
-      const existingCf: MergedCustomFormatResource = JSON.parse(JSON.stringify({ id: 1, ...requestConfig }));
-      existingCf.specifications[0].negate = true;
-      const serverCfs = new Map<string, MergedCustomFormatResource>([["ChangedCF", existingCf]]);
-
-      vi.spyOn(unifiedClient, "getUnifiedClient").mockReturnValue({
-        createCustomFormat: vi.fn(),
-        updateCustomFormat: vi.fn(),
-      } as unknown as ReturnType<typeof unifiedClient.getUnifiedClient>);
-
-      const out = await manageCf(cfProcessing, serverCfs);
-
-      expect(out.diffEntries).toHaveLength(1);
-      expect(out.diffEntries[0]!.resourceType).toBe("CustomFormat");
-      expect(out.diffEntries[0]!.action).toBe("update");
-      expect(out.diffEntries[0]!.fieldChanges).toContainEqual({ field: "specifications[0].negate", from: true, to: false });
-    });
+    expect(out.diffEntries).toEqual([{ resourceType: "CustomFormat", name: "NewCF", action: "create" }]);
   });
+
+  it("emits an update DiffEntry with fieldChanges for a changed CF", async () => {
+    vi.spyOn(env, "getEnvs").mockReturnValue({ DRY_RUN: true } as ReturnType<typeof env.getEnvs>);
+
+    const specifications = [
+      { name: "S0", implementation: "ReleaseGroupSpecification" as const, negate: false, required: false, fields: { value: "^(0)$" } },
+    ];
+    const carrConfig = { configarr_id: "id-a", name: "ChangedCF", specifications } as unknown as ConfigarrCF;
+    const requestConfig = util.mapImportCfToRequestCf(carrConfig);
+
+    const cfProcessing: CFProcessing = {
+      carrIdMapping: new Map([["id-a", { carrConfig, requestConfig }]]),
+      cfNameToCarrConfig: new Map([[carrConfig.name!, carrConfig]]),
+    };
+
+    const existingCf: MergedCustomFormatResource = JSON.parse(JSON.stringify({ id: 1, ...requestConfig }));
+    existingCf.specifications[0].negate = true;
+    const serverCfs = new Map<string, MergedCustomFormatResource>([["ChangedCF", existingCf]]);
+
+    vi.spyOn(unifiedClient, "getUnifiedClient").mockReturnValue({
+      createCustomFormat: vi.fn(),
+      updateCustomFormat: vi.fn(),
+    } as unknown as ReturnType<typeof unifiedClient.getUnifiedClient>);
+
+    const out = await manageCf(cfProcessing, serverCfs);
+
+    expect(out.diffEntries).toHaveLength(1);
+    expect(out.diffEntries[0]!.resourceType).toBe("CustomFormat");
+    expect(out.diffEntries[0]!.action).toBe("update");
+    expect(out.diffEntries[0]!.fieldChanges).toContainEqual({ field: "specifications[0].negate", from: true, to: false });
+  });
+});
 ```
 
 - [ ] **Step 3: Run test to verify it fails**
@@ -1584,7 +1602,12 @@ import { calculateCFsToManage, deleteCustomFormat, loadCustomFormatDefinitions, 
 stays the same (no new export name needed — `manageCf`'s return value already carries `diffEntries`); update the `media-management` import:
 
 ```ts
-import { calculateMediamanagementDiff, calculateNamingDiff, mediamanagementDiffToDiffEntries, namingDiffToDiffEntries } from "./media-management";
+import {
+  calculateMediamanagementDiff,
+  calculateNamingDiff,
+  mediamanagementDiffToDiffEntries,
+  namingDiffToDiffEntries,
+} from "./media-management";
 ```
 
 update the `uiConfigs` import:
@@ -1596,65 +1619,65 @@ import { syncUiConfig, uiConfigDiffToDiffEntries } from "./uiConfigs/uiConfigSyn
 Update the `cfUpdateResult` call site:
 
 ```ts
-  const cfUpdateResult = await manageCf(mergedCFs, serverCFMapping);
-  diffCollector.add(cfUpdateResult.diffEntries);
+const cfUpdateResult = await manageCf(mergedCFs, serverCFMapping);
+diffCollector.add(cfUpdateResult.diffEntries);
 ```
 
 Update the `delete_unmanaged_custom_formats` block to report deletions (both DRY_RUN and real run report the same intended deletions):
 
 ```ts
-    if (cfsToDelete.length > 0) {
-      diffCollector.add(cfsToDelete.map((e) => ({ resourceType: "CustomFormat", name: e.name!, action: "delete" as const })));
+if (cfsToDelete.length > 0) {
+  diffCollector.add(cfsToDelete.map((e) => ({ resourceType: "CustomFormat", name: e.name!, action: "delete" as const })));
 
-      if (getEnvs().DRY_RUN) {
-        logger.info(`DryRun: Would delete CF: ${cfsToDelete.map((e) => e.name).join(", ")}`);
-      } else {
-        logger.info(`Deleting ${cfsToDelete.length} CustomFormats ...`);
-        logger.debug(
-          cfsToDelete.map((e) => e.name),
-          `This CustomFormats will be deleted:`,
-        );
+  if (getEnvs().DRY_RUN) {
+    logger.info(`DryRun: Would delete CF: ${cfsToDelete.map((e) => e.name).join(", ")}`);
+  } else {
+    logger.info(`Deleting ${cfsToDelete.length} CustomFormats ...`);
+    logger.debug(
+      cfsToDelete.map((e) => e.name),
+      `This CustomFormats will be deleted:`,
+    );
 
-        for (const element of cfsToDelete) {
-          await deleteCustomFormat(element);
-        }
-      }
+    for (const element of cfsToDelete) {
+      await deleteCustomFormat(element);
     }
+  }
+}
 ```
 
 Update the naming/management diff blocks:
 
 ```ts
-  const namingDiff = await calculateNamingDiff(config.media_naming_api);
+const namingDiff = await calculateNamingDiff(config.media_naming_api);
 
-  if (namingDiff) {
-    diffCollector.add(namingDiffToDiffEntries(namingDiff));
+if (namingDiff) {
+  diffCollector.add(namingDiffToDiffEntries(namingDiff));
 
-    if (getEnvs().DRY_RUN) {
-      logger.info("DryRun: Would update MediaNaming.");
-    } else {
-      // TODO this will need a radarr/sonarr separation for sure to have good and correct typings
-      await api.updateNaming(namingDiff.updatedData.id! + "", namingDiff.updatedData as any); // Ignore types
-      logger.info(`Updated MediaNaming`);
-    }
+  if (getEnvs().DRY_RUN) {
+    logger.info("DryRun: Would update MediaNaming.");
+  } else {
+    // TODO this will need a radarr/sonarr separation for sure to have good and correct typings
+    await api.updateNaming(namingDiff.updatedData.id! + "", namingDiff.updatedData as any); // Ignore types
+    logger.info(`Updated MediaNaming`);
   }
+}
 
-  const managementDiff = await calculateMediamanagementDiff(config.media_management);
+const managementDiff = await calculateMediamanagementDiff(config.media_management);
 
-  if (managementDiff) {
-    diffCollector.add(mediamanagementDiffToDiffEntries(managementDiff));
+if (managementDiff) {
+  diffCollector.add(mediamanagementDiffToDiffEntries(managementDiff));
 
-    if (getEnvs().DRY_RUN) {
-      logger.info("DryRun: Would update MediaManagement.");
-    } else {
-      // TODO this will need a radarr/sonarr separation for sure to have good and correct typings
-      await api.updateMediamanagement(managementDiff.updatedData.id! + "", managementDiff.updatedData as any); // Ignore types
-      logger.info(`Updated MediaManagement`);
-    }
+  if (getEnvs().DRY_RUN) {
+    logger.info("DryRun: Would update MediaManagement.");
+  } else {
+    // TODO this will need a radarr/sonarr separation for sure to have good and correct typings
+    await api.updateMediamanagement(managementDiff.updatedData.id! + "", managementDiff.updatedData as any); // Ignore types
+    logger.info(`Updated MediaManagement`);
   }
+}
 
-  const uiConfigResult = await syncUiConfig(arrType, config.ui_config);
-  diffCollector.add(uiConfigDiffToDiffEntries(uiConfigResult));
+const uiConfigResult = await syncUiConfig(arrType, config.ui_config);
+diffCollector.add(uiConfigDiffToDiffEntries(uiConfigResult));
 ```
 
 (The last line replaces the current `await syncUiConfig(arrType, config.ui_config);` which discarded the return value entirely.)
@@ -1686,6 +1709,7 @@ EOF
 ### Task 8: Migrate `rootFolder`, `metadataProfiles`, `downloadClients`, `downloadClientConfig`
 
 **Files:**
+
 - Modify: `src/rootFolder/rootFolder.types.ts`, `src/rootFolder/rootFolderBase.ts`, `src/rootFolder/rootFolderLidarr.ts`, `src/rootFolder/rootFolderReadarr.ts`, `src/rootFolder/rootFolderSyncer.ts`
 - Modify: `src/metadataProfiles/metadataProfile.types.ts`, `src/metadataProfiles/metadataProfileBase.ts`, `src/metadataProfiles/metadataProfileLidarr.ts`, `src/metadataProfiles/metadataProfileReadarr.ts`
 - Modify: `src/types/download-client.types.ts`, `src/downloadClients/downloadClientGeneric.ts`, `src/downloadClients/downloadClientBase.ts`
@@ -1693,9 +1717,10 @@ EOF
 - Modify: `src/index.ts`
 - Test: `src/rootFolder/rootFolderLidarr.test.ts`, `src/metadataProfiles/metadataProfileReadarr.test.ts`, `src/downloadClients/downloadClientGeneric.test.ts`, `src/downloadClientConfig/downloadClientConfigSyncer.test.ts`
 
-This is the largest task: four modules where `{config, server}` pairs exist internally but no field-level diff is captured or returned. In every case the fix follows the same shape — the class already computes a boolean "is this different" answer; it's changed to also return *which* fields differ, computed at the same place (no re-fetching, no calling `resolveConfig` twice).
+This is the largest task: four modules where `{config, server}` pairs exist internally but no field-level diff is captured or returned. In every case the fix follows the same shape — the class already computes a boolean "is this different" answer; it's changed to also return _which_ fields differ, computed at the same place (no re-fetching, no calling `resolveConfig` twice).
 
 **Interfaces:**
+
 - Consumes: `FieldChange`, `DiffEntry` (Task 1), `compareObjectsCarr` (Task 1's fixed version), `DiffCollector` (already wired in `pipeline()`).
 - Produces: `RootFolderDiff.changed[].fieldChanges: FieldChange[]`, `RootFolderSyncResult.diffEntries: DiffEntry[]`, `rootFolderDiffToDiffEntries(diff: RootFolderDiff): DiffEntry[]`. `MetadataProfileDiff.changed[].fieldChanges: FieldChange[]`, `MetadataProfileSyncResult.diffEntries: DiffEntry[]`, `metadataProfileDiffToDiffEntries(diff: MetadataProfileDiff): DiffEntry[]`. `DownloadClientDiff.update[].fieldChanges: FieldChange[]`, `DownloadClientSyncResult.diffEntries: DiffEntry[]`, `downloadClientDiffToDiffEntries(diff: DownloadClientDiff, unmanagedToDelete: DownloadClientResource[]): DiffEntry[]`. `DownloadClientConfigSyncResult.fieldChanges: FieldChange[]`, `downloadClientConfigDiffToDiffEntries(result: DownloadClientConfigSyncResult): DiffEntry[]`.
 
@@ -1727,76 +1752,78 @@ export interface RootFolderSyncResult {
 
 - [ ] **Step 2: Update the two existing `calculateDiff` tests that assert on the whole result, and add one new test**
 
-`src/rootFolder/rootFolderLidarr.test.ts` already has a `describe("calculateDiff", ...)` block (mocking `mockApi.getRootfolders`, with `loadQualityProfilesFromServer` and `mockApi.getMetadataProfiles` already mocked in `beforeEach`). Its two existing tests assert on the *entire* returned object via `toEqual({...})`, including `changed: [{ config, server }]` with no `fieldChanges` key — adding a required `fieldChanges` field to each `changed` entry will make both fail with an "unexpected property" mismatch. Replace both with equivalent per-field assertions (avoids hand-computing `compareObjectsCarr`'s exact key-enumeration order/output, while still proving real diffs are captured), and add one new test for the field-level content itself:
+`src/rootFolder/rootFolderLidarr.test.ts` already has a `describe("calculateDiff", ...)` block (mocking `mockApi.getRootfolders`, with `loadQualityProfilesFromServer` and `mockApi.getMetadataProfiles` already mocked in `beforeEach`). Its two existing tests assert on the _entire_ returned object via `toEqual({...})`, including `changed: [{ config, server }]` with no `fieldChanges` key — adding a required `fieldChanges` field to each `changed` entry will make both fail with an "unexpected property" mismatch. Replace both with equivalent per-field assertions (avoids hand-computing `compareObjectsCarr`'s exact key-enumeration order/output, while still proving real diffs are captured), and add one new test for the field-level content itself:
 
 ```ts
-    it("should handle object root folders", async () => {
-      mockApi.getRootfolders.mockResolvedValue(["/existing"]);
+it("should handle object root folders", async () => {
+  mockApi.getRootfolders.mockResolvedValue(["/existing"]);
 
-      const sync = new LidarrRootFolderSync();
-      const result = await sync.calculateDiff(
-        [
-          { path: "/existing", name: "existing", metadata_profile: "Standard", quality_profile: "Any" },
-          { path: "/new", name: "new", metadata_profile: "Standard", quality_profile: "Any" },
-        ],
-        serverCache,
-      );
+  const sync = new LidarrRootFolderSync();
+  const result = await sync.calculateDiff(
+    [
+      { path: "/existing", name: "existing", metadata_profile: "Standard", quality_profile: "Any" },
+      { path: "/new", name: "new", metadata_profile: "Standard", quality_profile: "Any" },
+    ],
+    serverCache,
+  );
 
-      expect(result?.missingOnServer).toEqual([{ path: "/new", name: "new", metadata_profile: "Standard", quality_profile: "Any" }]);
-      expect(result?.notAvailableAnymore).toEqual([]);
-      expect(result?.changed).toHaveLength(1);
-      expect(result?.changed[0]?.config).toEqual({
-        path: "/existing",
-        name: "existing",
-        metadata_profile: "Standard",
-        quality_profile: "Any",
-      });
-      expect(result?.changed[0]?.server).toEqual("/existing");
-      expect(result?.changed[0]?.fieldChanges.length).toBeGreaterThan(0);
-    });
+  expect(result?.missingOnServer).toEqual([{ path: "/new", name: "new", metadata_profile: "Standard", quality_profile: "Any" }]);
+  expect(result?.notAvailableAnymore).toEqual([]);
+  expect(result?.changed).toHaveLength(1);
+  expect(result?.changed[0]?.config).toEqual({
+    path: "/existing",
+    name: "existing",
+    metadata_profile: "Standard",
+    quality_profile: "Any",
+  });
+  expect(result?.changed[0]?.server).toEqual("/existing");
+  expect(result?.changed[0]?.fieldChanges.length).toBeGreaterThan(0);
+});
 
-    it("should handle server returning objects", async () => {
-      mockApi.getRootfolders.mockResolvedValue([
-        { path: "/server-folder", id: 1, name: "Server Folder" },
-        { path: "/old-server", id: 2, name: "Old Server" },
-      ]);
+it("should handle server returning objects", async () => {
+  mockApi.getRootfolders.mockResolvedValue([
+    { path: "/server-folder", id: 1, name: "Server Folder" },
+    { path: "/old-server", id: 2, name: "Old Server" },
+  ]);
 
-      const sync = new LidarrRootFolderSync();
-      const result = await sync.calculateDiff(
-        [
-          { path: "/server-folder", name: "Config Folder", metadata_profile: "Standard", quality_profile: "Any" },
-          { path: "/new-config", name: "New Config", metadata_profile: "Standard", quality_profile: "Any" },
-        ],
-        serverCache,
-      );
+  const sync = new LidarrRootFolderSync();
+  const result = await sync.calculateDiff(
+    [
+      { path: "/server-folder", name: "Config Folder", metadata_profile: "Standard", quality_profile: "Any" },
+      { path: "/new-config", name: "New Config", metadata_profile: "Standard", quality_profile: "Any" },
+    ],
+    serverCache,
+  );
 
-      expect(result?.missingOnServer).toEqual([{ path: "/new-config", name: "New Config", metadata_profile: "Standard", quality_profile: "Any" }]);
-      expect(result?.notAvailableAnymore).toEqual([{ path: "/old-server", id: 2, name: "Old Server" }]);
-      expect(result?.changed).toHaveLength(1);
-      expect(result?.changed[0]?.config).toEqual({
-        path: "/server-folder",
-        name: "Config Folder",
-        metadata_profile: "Standard",
-        quality_profile: "Any",
-      });
-      expect(result?.changed[0]?.server).toEqual({ path: "/server-folder", id: 1, name: "Server Folder" });
-      expect(result?.changed[0]?.fieldChanges.length).toBeGreaterThan(0);
-    });
+  expect(result?.missingOnServer).toEqual([
+    { path: "/new-config", name: "New Config", metadata_profile: "Standard", quality_profile: "Any" },
+  ]);
+  expect(result?.notAvailableAnymore).toEqual([{ path: "/old-server", id: 2, name: "Old Server" }]);
+  expect(result?.changed).toHaveLength(1);
+  expect(result?.changed[0]?.config).toEqual({
+    path: "/server-folder",
+    name: "Config Folder",
+    metadata_profile: "Standard",
+    quality_profile: "Any",
+  });
+  expect(result?.changed[0]?.server).toEqual({ path: "/server-folder", id: 1, name: "Server Folder" });
+  expect(result?.changed[0]?.fieldChanges.length).toBeGreaterThan(0);
+});
 
-    it("exposes structured fieldChanges for a changed root folder", async () => {
-      mockApi.getRootfolders.mockResolvedValue([
-        { path: "/music", id: 1, name: "old-name", defaultQualityProfileId: 1, defaultMetadataProfileId: 10, defaultTags: [] },
-      ]);
+it("exposes structured fieldChanges for a changed root folder", async () => {
+  mockApi.getRootfolders.mockResolvedValue([
+    { path: "/music", id: 1, name: "old-name", defaultQualityProfileId: 1, defaultMetadataProfileId: 10, defaultTags: [] },
+  ]);
 
-      const sync = new LidarrRootFolderSync();
-      const result = await sync.calculateDiff(
-        [{ path: "/music", name: "new-name", metadata_profile: "Standard", quality_profile: "Any" }],
-        serverCache,
-      );
+  const sync = new LidarrRootFolderSync();
+  const result = await sync.calculateDiff(
+    [{ path: "/music", name: "new-name", metadata_profile: "Standard", quality_profile: "Any" }],
+    serverCache,
+  );
 
-      expect(result?.changed).toHaveLength(1);
-      expect(result?.changed[0]?.fieldChanges).toContainEqual({ field: "name", from: "old-name", to: "new-name" });
-    });
+  expect(result?.changed).toHaveLength(1);
+  expect(result?.changed[0]?.fieldChanges).toContainEqual({ field: "name", from: "old-name", to: "new-name" });
+});
 ```
 
 - [ ] **Step 3: Run test to verify it fails**
@@ -1809,58 +1836,60 @@ Expected: FAIL — the two updated tests fail because `changed[0].fieldChanges` 
 Its `describe("calculateDiff", ...)` block (lines 211-259) has the exact same two whole-object `toEqual` tests. Replace them the same way:
 
 ```ts
-    it("should handle object root folders", async () => {
-      mockApi.getRootfolders.mockResolvedValue(["/existing"]);
+it("should handle object root folders", async () => {
+  mockApi.getRootfolders.mockResolvedValue(["/existing"]);
 
-      const sync = new ReadarrRootFolderSync();
-      const result = await sync.calculateDiff(
-        [
-          { path: "/existing", name: "existing", metadata_profile: "Standard", quality_profile: "eBook" },
-          { path: "/new", name: "new", metadata_profile: "Standard", quality_profile: "eBook" },
-        ],
-        serverCache,
-      );
+  const sync = new ReadarrRootFolderSync();
+  const result = await sync.calculateDiff(
+    [
+      { path: "/existing", name: "existing", metadata_profile: "Standard", quality_profile: "eBook" },
+      { path: "/new", name: "new", metadata_profile: "Standard", quality_profile: "eBook" },
+    ],
+    serverCache,
+  );
 
-      expect(result?.missingOnServer).toEqual([{ path: "/new", name: "new", metadata_profile: "Standard", quality_profile: "eBook" }]);
-      expect(result?.notAvailableAnymore).toEqual([]);
-      expect(result?.changed).toHaveLength(1);
-      expect(result?.changed[0]?.config).toEqual({
-        path: "/existing",
-        name: "existing",
-        metadata_profile: "Standard",
-        quality_profile: "eBook",
-      });
-      expect(result?.changed[0]?.server).toEqual("/existing");
-      expect(result?.changed[0]?.fieldChanges.length).toBeGreaterThan(0);
-    });
+  expect(result?.missingOnServer).toEqual([{ path: "/new", name: "new", metadata_profile: "Standard", quality_profile: "eBook" }]);
+  expect(result?.notAvailableAnymore).toEqual([]);
+  expect(result?.changed).toHaveLength(1);
+  expect(result?.changed[0]?.config).toEqual({
+    path: "/existing",
+    name: "existing",
+    metadata_profile: "Standard",
+    quality_profile: "eBook",
+  });
+  expect(result?.changed[0]?.server).toEqual("/existing");
+  expect(result?.changed[0]?.fieldChanges.length).toBeGreaterThan(0);
+});
 
-    it("should handle server returning objects", async () => {
-      mockApi.getRootfolders.mockResolvedValue([
-        { path: "/server-folder", id: 1, name: "Server Folder" },
-        { path: "/old-server", id: 2, name: "Old Server" },
-      ]);
+it("should handle server returning objects", async () => {
+  mockApi.getRootfolders.mockResolvedValue([
+    { path: "/server-folder", id: 1, name: "Server Folder" },
+    { path: "/old-server", id: 2, name: "Old Server" },
+  ]);
 
-      const sync = new ReadarrRootFolderSync();
-      const result = await sync.calculateDiff(
-        [
-          { path: "/server-folder", name: "Config Folder", metadata_profile: "Standard", quality_profile: "eBook" },
-          { path: "/new-config", name: "New Config", metadata_profile: "Standard", quality_profile: "eBook" },
-        ],
-        serverCache,
-      );
+  const sync = new ReadarrRootFolderSync();
+  const result = await sync.calculateDiff(
+    [
+      { path: "/server-folder", name: "Config Folder", metadata_profile: "Standard", quality_profile: "eBook" },
+      { path: "/new-config", name: "New Config", metadata_profile: "Standard", quality_profile: "eBook" },
+    ],
+    serverCache,
+  );
 
-      expect(result?.missingOnServer).toEqual([{ path: "/new-config", name: "New Config", metadata_profile: "Standard", quality_profile: "eBook" }]);
-      expect(result?.notAvailableAnymore).toEqual([{ path: "/old-server", id: 2, name: "Old Server" }]);
-      expect(result?.changed).toHaveLength(1);
-      expect(result?.changed[0]?.config).toEqual({
-        path: "/server-folder",
-        name: "Config Folder",
-        metadata_profile: "Standard",
-        quality_profile: "eBook",
-      });
-      expect(result?.changed[0]?.server).toEqual({ path: "/server-folder", id: 1, name: "Server Folder" });
-      expect(result?.changed[0]?.fieldChanges.length).toBeGreaterThan(0);
-    });
+  expect(result?.missingOnServer).toEqual([
+    { path: "/new-config", name: "New Config", metadata_profile: "Standard", quality_profile: "eBook" },
+  ]);
+  expect(result?.notAvailableAnymore).toEqual([{ path: "/old-server", id: 2, name: "Old Server" }]);
+  expect(result?.changed).toHaveLength(1);
+  expect(result?.changed[0]?.config).toEqual({
+    path: "/server-folder",
+    name: "Config Folder",
+    metadata_profile: "Standard",
+    quality_profile: "eBook",
+  });
+  expect(result?.changed[0]?.server).toEqual({ path: "/server-folder", id: 1, name: "Server Folder" });
+  expect(result?.changed[0]?.fieldChanges.length).toBeGreaterThan(0);
+});
 ```
 
 - [ ] **Step 5: Implement — convert `isRootFolderConfigEqual` to `compareRootFolderConfig` in `src/rootFolder/rootFolderLidarr.ts`**
@@ -1916,9 +1945,9 @@ Replace `isRootFolderConfigEqual`:
 Update `calculateDiff`'s `changed` array type and its population:
 
 ```ts
-    const missingOnServer: InputConfigRootFolderLidarr[] = [];
-    const notAvailableAnymore: RootFolderResource[] = [];
-    const changed: Array<{ config: InputConfigRootFolderLidarr; server: RootFolderResource; fieldChanges: FieldChange[] }> = [];
+const missingOnServer: InputConfigRootFolderLidarr[] = [];
+const notAvailableAnymore: RootFolderResource[] = [];
+const changed: Array<{ config: InputConfigRootFolderLidarr; server: RootFolderResource; fieldChanges: FieldChange[] }> = [];
 ```
 
 ```ts
@@ -1965,9 +1994,9 @@ Rename `isRootFolderConfigEqual` to `compareRootFolderConfig`, keeping its exist
 Update `calculateDiff` the same way as Step 4:
 
 ```ts
-    const missingOnServer: InputConfigRootFolderReadarr[] = [];
-    const notAvailableAnymore: RootFolderResource[] = [];
-    const changed: Array<{ config: InputConfigRootFolderReadarr; server: RootFolderResource; fieldChanges: FieldChange[] }> = [];
+const missingOnServer: InputConfigRootFolderReadarr[] = [];
+const notAvailableAnymore: RootFolderResource[] = [];
+const changed: Array<{ config: InputConfigRootFolderReadarr; server: RootFolderResource; fieldChanges: FieldChange[] }> = [];
 ```
 
 ```ts
@@ -2140,17 +2169,17 @@ export interface MetadataProfileSyncResult {
 Its `"should detect configuration changes"` test (lines 181-204) asserts `toEqual({ missingOnServer, noChanges, changed: [{ config, server: serverProfile }] })`. `ReadarrMetadataProfileSync`'s comparison logic already funnels straight through `compareObjectsCarr` unchanged (Step 14 below only makes it also capture `.changes`), so the exact resulting `fieldChanges` can be predicted precisely here (unlike the Lidarr per-category case) — no need to relax this one to a looser assertion. Replace:
 
 ```ts
-      const result = await sync.calculateDiff([config], serverCache);
+const result = await sync.calculateDiff([config], serverCache);
 
-      expect(result?.missingOnServer).toEqual([]);
-      expect(result?.noChanges).toEqual([]);
-      expect(result?.changed).toHaveLength(1);
-      expect(result?.changed[0]?.config).toEqual(config);
-      expect(result?.changed[0]?.server).toEqual(serverProfile);
-      expect(result?.changed[0]?.fieldChanges).toEqual([
-        { field: "minPopularity", from: 50, to: 75 },
-        { field: "skipMissingDate", from: false, to: true },
-      ]);
+expect(result?.missingOnServer).toEqual([]);
+expect(result?.noChanges).toEqual([]);
+expect(result?.changed).toHaveLength(1);
+expect(result?.changed[0]?.config).toEqual(config);
+expect(result?.changed[0]?.server).toEqual(serverProfile);
+expect(result?.changed[0]?.fieldChanges).toEqual([
+  { field: "minPopularity", from: 50, to: 75 },
+  { field: "skipMissingDate", from: false, to: true },
+]);
 ```
 
 - [ ] **Step 13: Fix the existing whole-object `toEqual` test in `src/metadataProfiles/metadataProfileLidarr.test.ts`**
@@ -2158,14 +2187,14 @@ Its `"should detect configuration changes"` test (lines 181-204) asserts `toEqua
 Its `"should detect changes when enabled types differ"` test (lines 301-329) has config `primary_types: ["Album", "EP"]` against a server where `EP` is `allowed: false` — a single-category mismatch. Replace the final assertion:
 
 ```ts
-      const result = await sync.calculateDiff([config], serverCache);
+const result = await sync.calculateDiff([config], serverCache);
 
-      expect(result?.missingOnServer).toEqual([]);
-      expect(result?.noChanges).toEqual([]);
-      expect(result?.changed).toHaveLength(1);
-      expect(result?.changed[0]?.config).toEqual(config);
-      expect(result?.changed[0]?.server).toEqual(serverProfile);
-      expect(result?.changed[0]?.fieldChanges).toEqual([{ field: "primaryAlbumTypes", from: ["Album"], to: ["Album", "EP"] }]);
+expect(result?.missingOnServer).toEqual([]);
+expect(result?.noChanges).toEqual([]);
+expect(result?.changed).toHaveLength(1);
+expect(result?.changed[0]?.config).toEqual(config);
+expect(result?.changed[0]?.server).toEqual(serverProfile);
+expect(result?.changed[0]?.fieldChanges).toEqual([{ field: "primaryAlbumTypes", from: ["Album"], to: ["Album", "EP"] }]);
 ```
 
 - [ ] **Step 14: Run tests to verify they fail**
@@ -2215,9 +2244,9 @@ Replace `isConfigEqual` with `compareConfig`:
 Update `calculateDiff`'s `changed` type and population:
 
 ```ts
-    const missingOnServer: InputConfigMetadataProfile[] = [];
-    const changed: Array<{ config: InputConfigMetadataProfile; server: MetadataProfileResource; fieldChanges: FieldChange[] }> = [];
-    const noChanges: MetadataProfileResource[] = [];
+const missingOnServer: InputConfigMetadataProfile[] = [];
+const changed: Array<{ config: InputConfigMetadataProfile; server: MetadataProfileResource; fieldChanges: FieldChange[] }> = [];
+const noChanges: MetadataProfileResource[] = [];
 ```
 
 ```ts
@@ -2243,7 +2272,7 @@ Add the import:
 import { FieldChange } from "../diffReport/diffReport.types";
 ```
 
-Replace `isConfigEqual` with `compareConfig`, which keeps the exact same `normalizeForComparison` helper and enabled-set building, but instead of early-returning `false` on the first differing category, compares each category's *sorted enabled-name list* as a whole and pushes one `FieldChange` per differing category (matching the spec's accepted "whole-array replacement" fallback for collection-shaped fields):
+Replace `isConfigEqual` with `compareConfig`, which keeps the exact same `normalizeForComparison` helper and enabled-set building, but instead of early-returning `false` on the first differing category, compares each category's _sorted enabled-name list_ as a whole and pushes one `FieldChange` per differing category (matching the spec's accepted "whole-array replacement" fallback for collection-shaped fields):
 
 ```ts
   private compareConfig(
@@ -2327,9 +2356,9 @@ Replace `isConfigEqual` with `compareConfig`, which keeps the exact same `normal
 Update `calculateDiff`'s `changed` type and population:
 
 ```ts
-    const missingOnServer: InputConfigMetadataProfile[] = [];
-    const changed: Array<{ config: InputConfigMetadataProfile; server: MetadataProfileResource; fieldChanges: FieldChange[] }> = [];
-    const noChanges: MetadataProfileResource[] = [];
+const missingOnServer: InputConfigMetadataProfile[] = [];
+const changed: Array<{ config: InputConfigMetadataProfile; server: MetadataProfileResource; fieldChanges: FieldChange[] }> = [];
+const noChanges: MetadataProfileResource[] = [];
 ```
 
 ```ts
@@ -2582,17 +2611,21 @@ These are pure mechanical fixes — each just destructures `.equal` instead of t
 In `src/downloadClients/downloadClientSyncer.test.ts`:
 
 Line 381 — change:
+
 ```ts
-    const equal = getTestSync().isDownloadClientEqual(config, server, cache);
+const equal = getTestSync().isDownloadClientEqual(config, server, cache);
 ```
+
 to:
+
 ```ts
-    const { equal } = getTestSync().isDownloadClientEqual(config, server, cache);
+const { equal } = getTestSync().isDownloadClientEqual(config, server, cache);
 ```
 
 Line 409 — identical change:
+
 ```ts
-    const { equal } = getTestSync().isDownloadClientEqual(config, server, cache);
+const { equal } = getTestSync().isDownloadClientEqual(config, server, cache);
 ```
 
 In `src/downloadClients/downloadClientGeneric.test.ts`, each of the following lines changes from `const isEqual = sync.isDownloadClientEqual(...)` to `const { equal: isEqual } = sync.isDownloadClientEqual(...)` (same arguments, only the left-hand side changes):
@@ -2773,7 +2806,7 @@ Add the import:
 import { DiffEntry } from "../diffReport/diffReport.types";
 ```
 
-Add the adapter function. It takes the *actually-will-be-deleted* set (already filtered by `delete_unmanaged.enabled`/`ignore` via the existing `filterUnmanagedClients`) rather than `diff.deleted` directly, since `diff.deleted` is "server minus config" unconditionally and does not by itself reflect whether deletion is even enabled — reporting deletions that will not actually happen would be worse than the old generic message:
+Add the adapter function. It takes the _actually-will-be-deleted_ set (already filtered by `delete_unmanaged.enabled`/`ignore` via the existing `filterUnmanagedClients`) rather than `diff.deleted` directly, since `diff.deleted` is "server minus config" unconditionally and does not by itself reflect whether deletion is even enabled — reporting deletions that will not actually happen would be worse than the old generic message:
 
 ```ts
 export function downloadClientDiffToDiffEntries(diff: DownloadClientDiff, unmanagedToDelete: DownloadClientResource[]): DiffEntry[] {
@@ -2900,26 +2933,26 @@ export type DownloadClientConfigSyncResult = {
 Add to `src/downloadClientConfig/downloadClientConfigSyncer.test.ts` (it already has tests asserting `result.updated`/`result.arrType` around lines 81-153 with a mocked `getSpecificClient` — reuse that same mock setup style):
 
 ```ts
-  it("returns structured fieldChanges when config differs", async () => {
-    vi.spyOn(unifiedClient, "getSpecificClient").mockReturnValue({
-      getDownloadClientConfig: vi.fn().mockResolvedValue({ id: 1, enableCompletedDownloadHandling: false }),
-      updateDownloadClientConfig: vi.fn(),
-    } as any);
-    vi.spyOn(env, "getEnvs").mockReturnValue({ DRY_RUN: true } as ReturnType<typeof env.getEnvs>);
+it("returns structured fieldChanges when config differs", async () => {
+  vi.spyOn(unifiedClient, "getSpecificClient").mockReturnValue({
+    getDownloadClientConfig: vi.fn().mockResolvedValue({ id: 1, enableCompletedDownloadHandling: false }),
+    updateDownloadClientConfig: vi.fn(),
+  } as any);
+  vi.spyOn(env, "getEnvs").mockReturnValue({ DRY_RUN: true } as ReturnType<typeof env.getEnvs>);
 
-    const config = {
-      download_clients: { config: { enable_completed_download_handling: true } },
-    } as unknown as MergedConfigInstance;
+  const config = {
+    download_clients: { config: { enable_completed_download_handling: true } },
+  } as unknown as MergedConfigInstance;
 
-    const result = await syncDownloadClientConfig("RADARR", config, serverCache);
+  const result = await syncDownloadClientConfig("RADARR", config, serverCache);
 
-    expect(result.updated).toBe(true);
-    expect(result.fieldChanges).toContainEqual({
-      field: "enableCompletedDownloadHandling",
-      from: false,
-      to: true,
-    });
+  expect(result.updated).toBe(true);
+  expect(result.fieldChanges).toContainEqual({
+    field: "enableCompletedDownloadHandling",
+    from: false,
+    to: true,
   });
+});
 ```
 
 Check the file's existing imports for `unifiedClient`/`env`/`serverCache` aliases before adding — reuse whatever names the file already uses for its other tests rather than introducing new ones.
@@ -3040,36 +3073,36 @@ Update the `downloadClients`/`downloadClientConfig` imports — unchanged as wel
 Update the call sites in `pipeline()`:
 
 ```ts
-  // Handle metadata profiles (Lidarr / Readarr) - unified sync with optional deletion
-  const metadataProfileResult = await syncMetadataProfiles(arrType, config, serverCache);
-  diffCollector.add(metadataProfileResult.diffEntries);
+// Handle metadata profiles (Lidarr / Readarr) - unified sync with optional deletion
+const metadataProfileResult = await syncMetadataProfiles(arrType, config, serverCache);
+diffCollector.add(metadataProfileResult.diffEntries);
 
-  const rootFolderResult = await syncRootFolders(arrType, config.root_folders, serverCache);
-  diffCollector.add(rootFolderResult.diffEntries);
+const rootFolderResult = await syncRootFolders(arrType, config.root_folders, serverCache);
+diffCollector.add(rootFolderResult.diffEntries);
 ```
 
 (these replace the current `await syncMetadataProfiles(arrType, config, serverCache);` and `await syncRootFolders(arrType, config.root_folders, serverCache);`, both of which currently discard their return value entirely)
 
 ```ts
-  // Download Clients
-  if (config.download_clients?.data || config.download_clients?.delete_unmanaged?.enabled) {
-    try {
-      const downloadClientsResult = await syncDownloadClients(arrType, config, serverCache);
-      diffCollector.add(downloadClientsResult.diffEntries);
-    } catch (err: any) {
-      logger.error(`Failed to sync download clients: ${err.message}`);
-    }
+// Download Clients
+if (config.download_clients?.data || config.download_clients?.delete_unmanaged?.enabled) {
+  try {
+    const downloadClientsResult = await syncDownloadClients(arrType, config, serverCache);
+    diffCollector.add(downloadClientsResult.diffEntries);
+  } catch (err: any) {
+    logger.error(`Failed to sync download clients: ${err.message}`);
   }
+}
 
-  // Download Client Configuration
-  if (config.download_clients?.config) {
-    try {
-      const downloadClientConfigResult = await syncDownloadClientConfig(arrType, config, serverCache);
-      diffCollector.add(downloadClientConfigDiffToDiffEntries(downloadClientConfigResult));
-    } catch (err: any) {
-      logger.error(`Failed to sync download client config: ${err.message}`);
-    }
+// Download Client Configuration
+if (config.download_clients?.config) {
+  try {
+    const downloadClientConfigResult = await syncDownloadClientConfig(arrType, config, serverCache);
+    diffCollector.add(downloadClientConfigDiffToDiffEntries(downloadClientConfigResult));
+  } catch (err: any) {
+    logger.error(`Failed to sync download client config: ${err.message}`);
   }
+}
 ```
 
 (these replace Task 3's `await syncDownloadClients(arrType, config, serverCache);` and `await syncDownloadClientConfig(arrType, config, serverCache);`)
@@ -3113,12 +3146,14 @@ EOF
 ### Task 9: Migrate `remotePaths`
 
 **Files:**
+
 - Modify: `src/remotePaths/remotePath.types.ts`
 - Modify: `src/remotePaths/remotePathSyncer.ts`
 - Modify: `src/index.ts`
 - Test: `src/remotePaths/remotePathSyncer.test.ts`
 
 **Interfaces:**
+
 - Consumes: `DiffEntry`, `FieldChange` (Task 1), `DiffCollector` (already wired).
 - Produces: `RemotePathDiff.toUpdate[].server: RemotePathMappingResource` (was discarded before the function returned — the spec identified this as a trivial fix, not a structural blocker). `RemotePathDiff.toDelete[]` gains `host`/`remotePath` (was `{ id: number }` only, losing the name needed for reporting). `RemotePathSyncResult.diffEntries: DiffEntry[]`. New: `remotePathsToDiffEntries(diff: RemotePathDiff): DiffEntry[]`.
 
@@ -3155,14 +3190,14 @@ export interface RemotePathDiff {
 `src/remotePaths/remotePathSyncer.test.ts`'s `"should return early when no remote_paths in config"` test (line 38) asserts the full result object. Add the new field:
 
 ```ts
-    expect(result).toEqual({
-      created: 0,
-      updated: 0,
-      deleted: 0,
-      unchanged: 0,
-      arrType: "RADARR",
-      diffEntries: [],
-    });
+expect(result).toEqual({
+  created: 0,
+  updated: 0,
+  deleted: 0,
+  unchanged: 0,
+  arrType: "RADARR",
+  diffEntries: [],
+});
 ```
 
 - [ ] **Step 3: Write failing tests for the new adapter and the retained `server` value**
@@ -3444,13 +3479,13 @@ Expected: PASS.
 Update the call site:
 
 ```ts
-    logger.debug(`[DEBUG] About to sync remote paths for ${arrType}. Count: ${config.download_clients.remote_paths.length}`);
-    try {
-      const remotePathsResult = await syncRemotePaths(arrType, config);
-      diffCollector.add(remotePathsResult.diffEntries);
-    } catch (err: any) {
-      logger.error(`Failed to sync remote path mappings: ${err.message}`);
-    }
+logger.debug(`[DEBUG] About to sync remote paths for ${arrType}. Count: ${config.download_clients.remote_paths.length}`);
+try {
+  const remotePathsResult = await syncRemotePaths(arrType, config);
+  diffCollector.add(remotePathsResult.diffEntries);
+} catch (err: any) {
+  logger.error(`Failed to sync remote path mappings: ${err.message}`);
+}
 ```
 
 - [ ] **Step 8: Run full verification**
@@ -3478,82 +3513,84 @@ EOF
 ### Task 10: Migrate `delay-profiles.ts` — build real field-level comparison
 
 **Files:**
+
 - Modify: `src/delay-profiles.ts`
 - Modify: `src/index.ts`
 - Test: `src/delay-profiles.test.ts`
 
 **Interfaces:**
+
 - Consumes: `FieldChange`, `DiffEntry` (Task 1), `DiffCollector` (already wired).
 - Produces: new exported `DelayProfilesDiff` interface (replacing the previously-anonymous return type of `calculateDelayProfilesDiff`), which gains `defaultProfileFieldChanges: FieldChange[]` and `additionalProfilesFieldChanges: FieldChange[][]`. New: `delayProfilesToDiffEntries(diff: DelayProfilesDiff): DiffEntry[]`.
 
 This module currently only produces two booleans (`defaultProfileChanged`/`additionalProfilesChanged`) — the most net-new logic in this migration, since (unlike every other module so far) there is no existing prose/dead-code diff to convert. `isDefaultProfileDifferent`/`isProfileDifferent` are private, not exported, and not directly unit-tested (only the exported `calculateDelayProfilesDiff` is, and only via per-field assertions — confirmed no whole-object `toEqual` on its result) — safe to change their shape.
 
-Real execution for "additional" profiles is always delete-all-then-recreate-all (`deleteAdditionalDelayProfiles()` followed by creating every configured profile), never a targeted per-profile update — but per-index field comparison against the old server profile at the same position is still the most useful signal for *what the user will see change*, so that's what's reported (each additional profile as an `"update"` entry), even though the underlying execution mechanism is delete+recreate.
+Real execution for "additional" profiles is always delete-all-then-recreate-all (`deleteAdditionalDelayProfiles()` followed by creating every configured profile), never a targeted per-profile update — but per-index field comparison against the old server profile at the same position is still the most useful signal for _what the user will see change_, so that's what's reported (each additional profile as an `"update"` entry), even though the underlying execution mechanism is delete+recreate.
 
 - [ ] **Step 1: Write failing tests for the new field-level output**
 
 The file mocks `getUnifiedClient` at the top via a hoisted `mockGetDelayProfiles = vi.hoisted(() => vi.fn())`, then each test calls `mockGetDelayProfiles.mockResolvedValue(serverProfiles)` and dynamically `const { calculateDelayProfilesDiff } = await import("./delay-profiles");` — reuse that exact pattern. Add to `src/delay-profiles.test.ts`:
 
 ```ts
-  test("calculateDelayProfilesDiff - default profile change exposes structured fieldChanges", async () => {
-    const configProfiles = {
-      default: {
-        enableUsenet: true,
-        enableTorrent: true,
-        preferredProtocol: "usenet",
-        usenetDelay: 10,
-        torrentDelay: 0,
-        bypassIfHighestQuality: false,
-        bypassIfAboveCustomFormatScore: false,
-        minimumCustomFormatScore: 0,
-        order: 1,
-      },
-    };
+test("calculateDelayProfilesDiff - default profile change exposes structured fieldChanges", async () => {
+  const configProfiles = {
+    default: {
+      enableUsenet: true,
+      enableTorrent: true,
+      preferredProtocol: "usenet",
+      usenetDelay: 10,
+      torrentDelay: 0,
+      bypassIfHighestQuality: false,
+      bypassIfAboveCustomFormatScore: false,
+      minimumCustomFormatScore: 0,
+      order: 1,
+    },
+  };
 
-    const serverProfiles: MergedDelayProfileResource[] = [
-      {
-        id: 1,
-        tags: [],
-        enableUsenet: true,
-        enableTorrent: true,
-        preferredProtocol: "usenet" as any,
-        usenetDelay: 0,
-        torrentDelay: 0,
-        bypassIfHighestQuality: false,
-        bypassIfAboveCustomFormatScore: false,
-        minimumCustomFormatScore: 0,
-        order: 1,
-      },
-    ];
+  const serverProfiles: MergedDelayProfileResource[] = [
+    {
+      id: 1,
+      tags: [],
+      enableUsenet: true,
+      enableTorrent: true,
+      preferredProtocol: "usenet" as any,
+      usenetDelay: 0,
+      torrentDelay: 0,
+      bypassIfHighestQuality: false,
+      bypassIfAboveCustomFormatScore: false,
+      minimumCustomFormatScore: 0,
+      order: 1,
+    },
+  ];
 
-    mockGetDelayProfiles.mockResolvedValue(serverProfiles);
+  mockGetDelayProfiles.mockResolvedValue(serverProfiles);
 
-    const { calculateDelayProfilesDiff } = await import("./delay-profiles");
-    const diff = await calculateDelayProfilesDiff(configProfiles, []);
+  const { calculateDelayProfilesDiff } = await import("./delay-profiles");
+  const diff = await calculateDelayProfilesDiff(configProfiles, []);
 
-    expect(diff?.defaultProfileChanged).toBe(true);
-    expect(diff?.defaultProfileFieldChanges).toEqual([{ field: "usenetDelay", from: 0, to: 10 }]);
-  });
+  expect(diff?.defaultProfileChanged).toBe(true);
+  expect(diff?.defaultProfileFieldChanges).toEqual([{ field: "usenetDelay", from: 0, to: 10 }]);
+});
 
-  test("delayProfilesToDiffEntries - builds a DiffEntry for the default profile", async () => {
-    const { delayProfilesToDiffEntries } = await import("./delay-profiles");
+test("delayProfilesToDiffEntries - builds a DiffEntry for the default profile", async () => {
+  const { delayProfilesToDiffEntries } = await import("./delay-profiles");
 
-    const diff = {
-      defaultProfileChanged: true,
-      additionalProfilesChanged: false,
-      missingTags: [],
-      defaultProfile: {} as any,
-      additionalProfiles: [],
-      defaultProfileFieldChanges: [{ field: "usenetDelay", from: 0, to: 10 }],
-      additionalProfilesFieldChanges: [],
-    };
+  const diff = {
+    defaultProfileChanged: true,
+    additionalProfilesChanged: false,
+    missingTags: [],
+    defaultProfile: {} as any,
+    additionalProfiles: [],
+    defaultProfileFieldChanges: [{ field: "usenetDelay", from: 0, to: 10 }],
+    additionalProfilesFieldChanges: [],
+  };
 
-    const entries = delayProfilesToDiffEntries(diff);
+  const entries = delayProfilesToDiffEntries(diff);
 
-    expect(entries).toEqual([
-      { resourceType: "DelayProfile", name: "default", action: "update", fieldChanges: [{ field: "usenetDelay", from: 0, to: 10 }] },
-    ]);
-  });
+  expect(entries).toEqual([
+    { resourceType: "DelayProfile", name: "default", action: "update", fieldChanges: [{ field: "usenetDelay", from: 0, to: 10 }] },
+  ]);
+});
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -3741,25 +3778,30 @@ Expected: PASS — new tests plus all existing per-field assertions (`defaultPro
 Update the `delay-profiles` import:
 
 ```ts
-import { calculateDelayProfilesDiff, delayProfilesToDiffEntries, deleteAdditionalDelayProfiles, mapToServerDelayProfile } from "./delay-profiles";
+import {
+  calculateDelayProfilesDiff,
+  delayProfilesToDiffEntries,
+  deleteAdditionalDelayProfiles,
+  mapToServerDelayProfile,
+} from "./delay-profiles";
 ```
 
 Update the call site — add the collector push right after the diff is calculated (unconditional on the `if`, since `calculateDelayProfilesDiff` already returns `null` when nothing changed):
 
 ```ts
-    const delayProfilesDiff = await calculateDelayProfilesDiff(config.delay_profiles, serverCache.tags);
+const delayProfilesDiff = await calculateDelayProfilesDiff(config.delay_profiles, serverCache.tags);
 
-    if (delayProfilesDiff) {
-      diffCollector.add(delayProfilesToDiffEntries(delayProfilesDiff));
-    }
+if (delayProfilesDiff) {
+  diffCollector.add(delayProfilesToDiffEntries(delayProfilesDiff));
+}
 
-    if (delayProfilesDiff?.defaultProfileChanged || delayProfilesDiff?.additionalProfilesChanged) {
-      if (getEnvs().DRY_RUN) {
-        logger.info("DryRun: Would update DelayProfiles.");
-      } else {
-        // ... rest of the execution block is unchanged ...
-      }
-    }
+if (delayProfilesDiff?.defaultProfileChanged || delayProfilesDiff?.additionalProfilesChanged) {
+  if (getEnvs().DRY_RUN) {
+    logger.info("DryRun: Would update DelayProfiles.");
+  } else {
+    // ... rest of the execution block is unchanged ...
+  }
+}
 ```
 
 - [ ] **Step 9: Run full verification**
@@ -3788,12 +3830,14 @@ EOF
 ### Task 11: JSON formatter + `CONFIGARR_DIFF_OUTPUT_FILE`
 
 **Files:**
+
 - Create: `src/diffReport/formatters/jsonFormatter.ts`
 - Create: `src/diffReport/formatters/jsonFormatter.test.ts`
 - Modify: `src/env.ts`
 - Modify: `src/index.ts`
 
 **Interfaces:**
+
 - Consumes: `InstanceDiffReport` (Task 1), `allReports: InstanceDiffReport[]` (already accumulated across all instances in `run()` since Task 5).
 - Produces: `writeJsonDiffReport(filePath: string, instances: InstanceDiffReport[], dryRun: boolean): void`. New env var `CONFIGARR_DIFF_OUTPUT_FILE: string | undefined`.
 
@@ -3896,17 +3940,17 @@ import { writeJsonDiffReport } from "./diffReport/formatters/jsonFormatter";
 Add the write call at the end of `run()`, after the `Execution Summary` log line and before the `Telemetry.isEnabled()` finalize block:
 
 ```ts
-  logger.info(`Execution Summary (success/failure/skipped) instances: ${totalStatus.join(" - ")}`);
+logger.info(`Execution Summary (success/failure/skipped) instances: ${totalStatus.join(" - ")}`);
 
-  const diffOutputFile = getEnvs().CONFIGARR_DIFF_OUTPUT_FILE;
-  if (diffOutputFile) {
-    writeJsonDiffReport(diffOutputFile, allReports, getEnvs().DRY_RUN);
-    logger.info(`Diff report written to ${diffOutputFile}`);
-  }
+const diffOutputFile = getEnvs().CONFIGARR_DIFF_OUTPUT_FILE;
+if (diffOutputFile) {
+  writeJsonDiffReport(diffOutputFile, allReports, getEnvs().DRY_RUN);
+  logger.info(`Diff report written to ${diffOutputFile}`);
+}
 
-  if (Telemetry.isEnabled()) {
-    await getTelemetryInstance().finalizeTracking();
-  }
+if (Telemetry.isEnabled()) {
+  await getTelemetryInstance().finalizeTracking();
+}
 ```
 
 - [ ] **Step 7: Run full verification**
@@ -3957,7 +4001,7 @@ Expected: console output shows one `=== Diff Report: <ARR_TYPE> / <instance> ===
 docker-compose -f docker-compose.local.yml run --rm configarr
 ```
 
-Expected: the diff report block shows the *same* entries as the dry-run pass in Step 2 (same creates/updates/deletes, same field changes) — confirming the "one collection mechanism, not two" goal. Server state changes as expected (spot-check one or two updated resources via the *arr UI/API if available).
+Expected: the diff report block shows the _same_ entries as the dry-run pass in Step 2 (same creates/updates/deletes, same field changes) — confirming the "one collection mechanism, not two" goal. Server state changes as expected (spot-check one or two updated resources via the *arr UI/API if available).
 
 - [ ] **Step 4: Run once more immediately after Step 3, in dry-run mode again**
 
@@ -3987,4 +4031,3 @@ docker-compose -f docker-compose.local.yml down
 ## Post-plan: array-reordering diffs (separate follow-up, not part of this plan)
 
 The spec's "Known limitation" section documents that reordered arrays (e.g. a quality-profile's `items` reordered) collapse to one whole-array `{field, from, to}` `FieldChange` rather than a per-element diff — accepted as a v1 limitation. Per the user's explicit request, this is to be revisited **after** this plan is fully executed and verified (Task 12 complete), as a separate, small follow-up investigation — not a task in this plan's build order. It should start from `compareObjectsCarr`'s array-handling branch (`src/util.ts`, reworked in Task 1), likely using an LCS/edit-distance-style diff to detect moved-not-changed elements, scoped narrowly so it doesn't reopen the rest of this plan.
-

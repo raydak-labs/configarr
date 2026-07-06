@@ -112,7 +112,7 @@ describe("QualityDefinitions", async () => {
     const entries = qualityDefinitionsToDiffEntries(changeMap);
 
     expect(entries).toEqual([
-      { resourceType: "QualityDefinitions", name: "SDTV", action: "update", fieldChanges: [{ field: "minSize", from: 2, to: 3 }] },
+      { resourceType: "QualityDefinition", name: "SDTV", action: "update", fieldChanges: [{ field: "minSize", from: 2, to: 3 }] },
     ]);
   });
 

@@ -16,7 +16,7 @@ describe("ConsoleDiffFormatter", () => {
       instanceName: "instance1",
       entries: [
         {
-          resourceType: "QualityDefinitions",
+          resourceType: "QualityDefinition",
           name: "SDTV",
           action: "update",
           fieldChanges: [{ field: "minSize", from: 2, to: 5 }],
@@ -40,7 +40,7 @@ describe("ConsoleDiffFormatter", () => {
     const output = infoSpy.mock.calls[0]![0] as string;
 
     expect(output).toContain("=== Diff Report: RADARR / instance1 ===");
-    expect(output).toContain("QualityDefinitions (1 change)");
+    expect(output).toContain("QualityDefinition (1 change)");
     expect(output).toContain("~ SDTV");
     expect(output).toContain("minSize: 2 -> 5");
     expect(output).toContain("QualityProfiles (1 create, 1 update)");

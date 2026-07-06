@@ -50,18 +50,18 @@ first means every later step is verified against a correct baseline, and a
 regression is easy to attribute to the right change.
 
 1. **`compareObjectsCarr` (`src/util.ts`) array-element bug.** When
-   comparing array elements, only the *first* differing sub-field per
+   comparing array elements, only the _first_ differing sub-field per
    element is recorded (`subChanges[0]`) — additional differing fields on
    the same element are silently dropped. Must capture all of them.
 2. **`compareObjectsCarr` dead branch.** The check
    `if (!isEqual && changes.length <= 0)` at the end of the array-handling
-   loop reads the *outer accumulated `changes` array's total length*, not
+   loop reads the _outer accumulated `changes` array's total length_, not
    a per-element local — it's dead after the first change found anywhere,
    including on the very first iteration. Remove or fix.
 3. **`index.ts` DRY_RUN short-circuit.** For download clients, download
    client config, and remote paths, `index.ts` currently wraps the entire
    sync call in `if (DRY_RUN) { log generic message } else { await
-   syncX(...) }` — meaning the diff is **never computed** in dry-run mode
+syncX(...) }` — meaning the diff is **never computed** in dry-run mode
    for these three resource types (the `DRY_RUN` checks inside those
    modules' own sync functions are dead code, unreachable). Fix: always
    call through to compute the diff; branch on `DRY_RUN` only around
@@ -149,7 +149,7 @@ own cross-instance or whole-run state.
 Adapters are kept separate from execution logic deliberately: `index.ts`
 still uses each module's native return shape (`create`/`changedQPs`/
 `noChanges`, etc.) to decide what to actually create/update/delete. The
-adapter only produces the *reporting* view. This keeps "what to execute"
+adapter only produces the _reporting_ view. This keeps "what to execute"
 and "what to report" as separate concerns, since some callers need the
 former without the latter and vice versa.
 
@@ -223,32 +223,32 @@ export interface DiffFormatter {
     "generatedAt": "2026-07-06T12:34:56.000Z",
     "dryRun": true,
     "instances": [
-      { "arrType": "RADARR", "instanceName": "instance1", "entries": [ /* DiffEntry[] */ ] },
-      { "arrType": "SONARR", "instanceName": "main", "entries": [ /* DiffEntry[] */ ] }
-    ]
+      { "arrType": "RADARR", "instanceName": "instance1", "entries": [/* DiffEntry[] */] },
+      { "arrType": "SONARR", "instanceName": "main", "entries": [/* DiffEntry[] */] },
+    ],
   }
   ```
 
 ## Per-module migration plan and effort
 
-| Module | Current state | Work needed |
-| --- | --- | --- |
-| `compareObjectsCarr` (`util.ts`) | Prose `changes: string[]`, 2 known bugs | Rework return type + fix both bugs (prerequisite, §above) |
-| `custom-formats.ts`, `media-management.ts`, `uiConfigSyncer.ts` | Already use `compareObjectsCarr` | Adapt to new shape; inherit structured diffs automatically |
-| `quality-definitions.ts` | `changeMap: Map<string, string[]>`, already returned | Convert prose pushes to `{field, from, to}`; add adapter |
-| `quality-profiles.ts` | `changeList`/`changes` map computed but fully discarded (dead code) | Convert prose pushes to `{field, from, to}`; actually return/expose it; add adapter |
-| `rootFolder`, `metadataProfiles`, `downloadClients` | `{config, server}` pairs, no field diff | Feed pairs through reworked `compareObjectsCarr`; add adapter |
-| `remotePaths` | `toUpdate: Array<{id, config}>`, old value discarded before return | Add `server` value back into the tuple (trivial); diff via `compareObjectsCarr`; add adapter |
-| `delay-profiles.ts` | Only two booleans, no field detail | Build real field comparison (known, static set of fields); add adapter |
-| `index.ts` (downloadClients/downloadClientConfig/remotePaths) | DRY_RUN short-circuits before diff is computed | Prerequisite bug fix (§above) |
+| Module                                                          | Current state                                                       | Work needed                                                                                  |
+| --------------------------------------------------------------- | ------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `compareObjectsCarr` (`util.ts`)                                | Prose `changes: string[]`, 2 known bugs                             | Rework return type + fix both bugs (prerequisite, §above)                                    |
+| `custom-formats.ts`, `media-management.ts`, `uiConfigSyncer.ts` | Already use `compareObjectsCarr`                                    | Adapt to new shape; inherit structured diffs automatically                                   |
+| `quality-definitions.ts`                                        | `changeMap: Map<string, string[]>`, already returned                | Convert prose pushes to `{field, from, to}`; add adapter                                     |
+| `quality-profiles.ts`                                           | `changeList`/`changes` map computed but fully discarded (dead code) | Convert prose pushes to `{field, from, to}`; actually return/expose it; add adapter          |
+| `rootFolder`, `metadataProfiles`, `downloadClients`             | `{config, server}` pairs, no field diff                             | Feed pairs through reworked `compareObjectsCarr`; add adapter                                |
+| `remotePaths`                                                   | `toUpdate: Array<{id, config}>`, old value discarded before return  | Add `server` value back into the tuple (trivial); diff via `compareObjectsCarr`; add adapter |
+| `delay-profiles.ts`                                             | Only two booleans, no field detail                                  | Build real field comparison (known, static set of fields); add adapter                       |
+| `index.ts` (downloadClients/downloadClientConfig/remotePaths)   | DRY_RUN short-circuits before diff is computed                      | Prerequisite bug fix (§above)                                                                |
 
 ## Configuration
 
 One new environment variable:
 
-| Variable | Default | Description |
-| --- | --- | --- |
-| `CONFIGARR_DIFF_OUTPUT_FILE` | unset | If set, the full structured diff report for the whole run is written as JSON to this file path once the run completes, in addition to (not instead of) console output. |
+| Variable                     | Default | Description                                                                                                                                                            |
+| ---------------------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `CONFIGARR_DIFF_OUTPUT_FILE` | unset   | If set, the full structured diff report for the whole run is written as JSON to this file path once the run completes, in addition to (not instead of) console output. |
 
 No format-selection env var — console is always on (it's the replacement
 for today's default behavior, not an opt-in), and JSON is purely

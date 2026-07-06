@@ -98,7 +98,7 @@ export const calculateQualityDefinitionDiff = (
 
 export function qualityDefinitionsToDiffEntries(changeMap: Map<string, FieldChange[]>): DiffEntry[] {
   return Array.from(changeMap.entries()).map(([name, fieldChanges]) => ({
-    resourceType: "QualityDefinitions",
+    resourceType: "QualityDefinition",
     name,
     action: "update" as const,
     fieldChanges,
