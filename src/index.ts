@@ -29,6 +29,7 @@ import {
 import { calculateQualityDefinitionDiff, loadQualityDefinitionFromServer, qualityDefinitionsToDiffEntries } from "./quality-definitions";
 import { DiffCollector } from "./diffReport/diffCollector";
 import { ConsoleDiffFormatter } from "./diffReport/formatters/consoleFormatter";
+import { writeJsonDiffReport } from "./diffReport/formatters/jsonFormatter";
 import { InstanceDiffReport } from "./diffReport/diffReport.types";
 import {
   calculateQualityProfilesDiff,
@@ -505,6 +506,12 @@ const run = async () => {
     logger.info(`Disabled Arrs: ${disabledArrs.join(", ")}`);
   }
   logger.info(`Execution Summary (success/failure/skipped) instances: ${totalStatus.join(" - ")}`);
+
+  const diffOutputFile = getEnvs().CONFIGARR_DIFF_OUTPUT_FILE;
+  if (diffOutputFile) {
+    writeJsonDiffReport(diffOutputFile, allReports, getEnvs().DRY_RUN);
+    logger.info(`Diff report written to ${diffOutputFile}`);
+  }
 
   if (Telemetry.isEnabled()) {
     await getTelemetryInstance().finalizeTracking();
