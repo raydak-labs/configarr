@@ -233,4 +233,64 @@ describe("DelayProfiles", () => {
     expect(diff).not.toBeNull();
     expect(diff?.missingTags).toHaveLength(1);
   });
+
+  test("calculateDelayProfilesDiff - default profile change exposes structured fieldChanges", async () => {
+    const configProfiles = {
+      default: {
+        enableUsenet: true,
+        enableTorrent: true,
+        preferredProtocol: "usenet",
+        usenetDelay: 10,
+        torrentDelay: 0,
+        bypassIfHighestQuality: false,
+        bypassIfAboveCustomFormatScore: false,
+        minimumCustomFormatScore: 0,
+        order: 1,
+      },
+    };
+
+    const serverProfiles: MergedDelayProfileResource[] = [
+      {
+        id: 1,
+        tags: [],
+        enableUsenet: true,
+        enableTorrent: true,
+        preferredProtocol: "usenet" as any,
+        usenetDelay: 0,
+        torrentDelay: 0,
+        bypassIfHighestQuality: false,
+        bypassIfAboveCustomFormatScore: false,
+        minimumCustomFormatScore: 0,
+        order: 1,
+      },
+    ];
+
+    mockGetDelayProfiles.mockResolvedValue(serverProfiles);
+
+    const { calculateDelayProfilesDiff } = await import("./delay-profiles");
+    const diff = await calculateDelayProfilesDiff(configProfiles, []);
+
+    expect(diff?.defaultProfileChanged).toBe(true);
+    expect(diff?.defaultProfileFieldChanges).toEqual([{ field: "usenetDelay", from: 0, to: 10 }]);
+  });
+
+  test("delayProfilesToDiffEntries - builds a DiffEntry for the default profile", async () => {
+    const { delayProfilesToDiffEntries } = await import("./delay-profiles");
+
+    const diff = {
+      defaultProfileChanged: true,
+      additionalProfilesChanged: false,
+      missingTags: [],
+      defaultProfile: {} as any,
+      additionalProfiles: [],
+      defaultProfileFieldChanges: [{ field: "usenetDelay", from: 0, to: 10 }],
+      additionalProfilesFieldChanges: [],
+    };
+
+    const entries = delayProfilesToDiffEntries(diff);
+
+    expect(entries).toEqual([
+      { resourceType: "DelayProfile", name: "default", action: "update", fieldChanges: [{ field: "usenetDelay", from: 0, to: 10 }] },
+    ]);
+  });
 });

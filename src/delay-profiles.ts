@@ -1,4 +1,5 @@
 import { getUnifiedClient } from "./clients/unified-client";
+import { DiffEntry, FieldChange } from "./diffReport/diffReport.types";
 import { logger } from "./logger";
 import { InputConfigDelayProfile } from "./types/config.types";
 import { MergedDelayProfileResource, MergedTagResource } from "./types/merged.types";
@@ -56,16 +57,20 @@ export const mapToServerDelayProfile = (profile: InputConfigDelayProfile, server
   };
 };
 
-export const calculateDelayProfilesDiff = async (
-  delayProfilesObj: { default?: InputConfigDelayProfile; additional?: InputConfigDelayProfile[] },
-  tags: MergedTagResource[],
-): Promise<{
+export interface DelayProfilesDiff {
   defaultProfileChanged: boolean;
   additionalProfilesChanged: boolean;
   missingTags: string[];
   defaultProfile?: InputConfigDelayProfile;
   additionalProfiles?: InputConfigDelayProfile[];
-} | null> => {
+  defaultProfileFieldChanges: FieldChange[];
+  additionalProfilesFieldChanges: FieldChange[][];
+}
+
+export const calculateDelayProfilesDiff = async (
+  delayProfilesObj: { default?: InputConfigDelayProfile; additional?: InputConfigDelayProfile[] },
+  tags: MergedTagResource[],
+): Promise<DelayProfilesDiff | null> => {
   const { default: configDefault, additional: configAdditional = [] } = delayProfilesObj;
 
   if (!configDefault && configAdditional.length === 0) {
@@ -78,23 +83,29 @@ export const calculateDelayProfilesDiff = async (
   const { default: serverDefault, additional: serverAdditional = [] } = splitServerDelayProfiles(serverData);
 
   // Check default profile (no tag comparison for default)
-  const defaultProfileChanged = configDefault && serverDefault ? isDefaultProfileDifferent(configDefault, serverDefault) : false;
+  const defaultComparison: { equal: boolean; changes: FieldChange[] } =
+    configDefault && serverDefault ? compareDefaultProfile(configDefault, serverDefault) : { equal: true, changes: [] };
+  const defaultProfileChanged = !defaultComparison.equal;
 
   let additionalProfilesChanged = configAdditional.length !== serverAdditional.length;
 
-  if (!additionalProfilesChanged && configAdditional.length > 0) {
-    additionalProfilesChanged = configAdditional.some((config, i) => {
-      const mappedTags = config.tags?.map((tagName) => tags.find((t) => t.label === tagName)?.id).filter((t) => t !== undefined);
-      const serverProfile = serverAdditional[i];
+  const additionalComparisons: Array<{ equal: boolean; changes: FieldChange[] }> = configAdditional.map((config, i) => {
+    const mappedTags = config.tags?.map((tagName) => tags.find((t) => t.label === tagName)?.id).filter((t) => t !== undefined);
+    const serverProfile = serverAdditional[i];
 
-      if (!serverProfile) {
-        logger.debug(`Server profile at index ${i} does not exist.`);
-        return true; // Mark as changed
-      }
+    if (!serverProfile) {
+      logger.debug(`Server profile at index ${i} does not exist.`);
+      return { equal: false, changes: [] };
+    }
 
-      return isProfileDifferent(config, serverProfile, mappedTags || []);
-    });
+    return compareAdditionalProfile(config, serverProfile, mappedTags || []);
+  });
+
+  if (!additionalProfilesChanged) {
+    additionalProfilesChanged = additionalComparisons.some((c) => !c.equal);
   }
+
+  const additionalProfilesFieldChanges = additionalComparisons.map((c) => c.changes);
 
   if (!defaultProfileChanged && !additionalProfilesChanged) {
     logger.debug(`Delay profiles are in sync`);
@@ -113,6 +124,8 @@ export const calculateDelayProfilesDiff = async (
     missingTags,
     defaultProfile: configDefault,
     additionalProfiles: configAdditional,
+    defaultProfileFieldChanges: defaultComparison.changes,
+    additionalProfilesFieldChanges,
   };
 };
 
@@ -134,8 +147,7 @@ const getProfileTags = (profile: MergedDelayProfileResource): number[] => {
   return "tags" in profile && Array.isArray(profile.tags) ? profile.tags : [];
 };
 
-// Separate function for default profile (no tag comparison)
-const isDefaultProfileDifferent = (config: InputConfigDelayProfile, server: MergedDelayProfileResource): boolean => {
+const compareProfileFields = (config: InputConfigDelayProfile, server: MergedDelayProfileResource): FieldChange[] => {
   const keys: ComparisonKeys[] = [
     "enableUsenet",
     "enableTorrent",
@@ -148,39 +160,61 @@ const isDefaultProfileDifferent = (config: InputConfigDelayProfile, server: Merg
     "order",
   ];
 
+  const changes: FieldChange[] = [];
   for (const key of keys) {
     if (config[key] !== undefined && config[key] !== server[key]) {
-      return true;
+      changes.push({ field: key, from: server[key], to: config[key] });
     }
   }
-  return false;
+  return changes;
 };
 
-// For additional profiles (includes tag comparison)
-const isProfileDifferent = (config: InputConfigDelayProfile, server: MergedDelayProfileResource, mappedTags: Array<number>): boolean => {
-  const keys: ComparisonKeys[] = [
-    "enableUsenet",
-    "enableTorrent",
-    "preferredProtocol",
-    "usenetDelay",
-    "torrentDelay",
-    "bypassIfHighestQuality",
-    "bypassIfAboveCustomFormatScore",
-    "minimumCustomFormatScore",
-    "order",
-  ];
+// Default profile: no tag comparison
+const compareDefaultProfile = (
+  config: InputConfigDelayProfile,
+  server: MergedDelayProfileResource,
+): { equal: boolean; changes: FieldChange[] } => {
+  const changes = compareProfileFields(config, server);
+  return { equal: changes.length === 0, changes };
+};
 
-  for (const key of keys) {
-    if (config[key] !== undefined && config[key] !== server[key]) {
-      return true;
-    }
-  }
+// Additional profiles: includes tag comparison
+const compareAdditionalProfile = (
+  config: InputConfigDelayProfile,
+  server: MergedDelayProfileResource,
+  mappedTags: Array<number>,
+): { equal: boolean; changes: FieldChange[] } => {
+  const changes = compareProfileFields(config, server);
+
   if (!areTagsEqual(mappedTags, getProfileTags(server))) {
-    return true;
+    changes.push({ field: "tags", from: getProfileTags(server), to: mappedTags });
   }
-  return false;
+
+  return { equal: changes.length === 0, changes };
 };
 
 const areTagsEqual = (tags1: number[], tags2: number[]): boolean => {
   return tags1.length === tags2.length && tags1.sort().join(",") === tags2.sort().join(",");
 };
+
+export function delayProfilesToDiffEntries(diff: DelayProfilesDiff): DiffEntry[] {
+  const entries: DiffEntry[] = [];
+
+  if (diff.defaultProfileChanged) {
+    entries.push({ resourceType: "DelayProfile", name: "default", action: "update", fieldChanges: diff.defaultProfileFieldChanges });
+  }
+
+  if (diff.additionalProfilesChanged && diff.additionalProfiles) {
+    diff.additionalProfiles.forEach((profile, i) => {
+      const name = profile.tags && profile.tags.length > 0 ? profile.tags.join(",") : `profile-${i + 1}`;
+      entries.push({
+        resourceType: "DelayProfile",
+        name,
+        action: "update",
+        fieldChanges: diff.additionalProfilesFieldChanges[i] ?? [],
+      });
+    });
+  }
+
+  return entries;
+}

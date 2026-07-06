@@ -9,7 +9,12 @@ import { ServerCache } from "./cache";
 import { configureApi, getUnifiedClient, unsetApi } from "./clients/unified-client";
 import { getConfig, mergeConfigsAndTemplates } from "./config";
 import { calculateCFsToManage, deleteCustomFormat, loadCustomFormatDefinitions, loadServerCustomFormats, manageCf } from "./custom-formats";
-import { calculateDelayProfilesDiff, deleteAdditionalDelayProfiles, mapToServerDelayProfile } from "./delay-profiles";
+import {
+  calculateDelayProfilesDiff,
+  delayProfilesToDiffEntries,
+  deleteAdditionalDelayProfiles,
+  mapToServerDelayProfile,
+} from "./delay-profiles";
 import { syncDownloadClients } from "./downloadClients/downloadClientSyncer";
 import { downloadClientConfigDiffToDiffEntries, syncDownloadClientConfig } from "./downloadClientConfig/downloadClientConfigSyncer";
 import { syncRemotePaths } from "./remotePaths/remotePathSyncer";
@@ -300,6 +305,10 @@ const pipeline = async (
     logger.debug(`Config 'delay_profiles' not specified. Ignoring.`);
   } else {
     const delayProfilesDiff = await calculateDelayProfilesDiff(config.delay_profiles, serverCache.tags);
+
+    if (delayProfilesDiff) {
+      diffCollector.add(delayProfilesToDiffEntries(delayProfilesDiff));
+    }
 
     if (delayProfilesDiff?.defaultProfileChanged || delayProfilesDiff?.additionalProfilesChanged) {
       if (getEnvs().DRY_RUN) {
