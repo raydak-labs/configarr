@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { syncRemotePaths } from "./remotePathSyncer";
+import { syncRemotePaths, remotePathsToDiffEntries } from "./remotePathSyncer";
 import { getUnifiedClient, getSpecificClient } from "../clients/unified-client";
 import { RemotePathMappingResource } from "./remotePath.types";
 
@@ -41,6 +41,7 @@ describe("remotePathSyncer", () => {
       deleted: 0,
       unchanged: 0,
       arrType: "RADARR",
+      diffEntries: [],
     });
   });
 
@@ -283,6 +284,36 @@ describe("remotePathSyncer", () => {
 
       expect(result.created).toBe(2);
       expect(mockRadarrClient.createRemotePathMapping).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe("remotePathsToDiffEntries", () => {
+    it("builds create, update, and delete entries", () => {
+      const diff = {
+        toCreate: [{ host: "host1", remote_path: "/remote", local_path: "/local" }],
+        toUpdate: [
+          {
+            id: 1,
+            config: { host: "host2", remote_path: "/remote2", local_path: "/new-local" },
+            server: { id: 1, host: "host2", remotePath: "/remote2", localPath: "/old-local" },
+          },
+        ],
+        toDelete: [{ id: 2, host: "host3", remotePath: "/remote3" }],
+        unchanged: 0,
+      };
+
+      const entries = remotePathsToDiffEntries(diff);
+
+      expect(entries).toEqual([
+        { resourceType: "RemotePathMapping", name: "host1 -> /remote", action: "create" },
+        {
+          resourceType: "RemotePathMapping",
+          name: "host2 -> /remote2",
+          action: "update",
+          fieldChanges: [{ field: "localPath", from: "/old-local", to: "/new-local" }],
+        },
+        { resourceType: "RemotePathMapping", name: "host3 -> /remote3", action: "delete" },
+      ]);
     });
   });
 });

@@ -367,7 +367,8 @@ const pipeline = async (
   ) {
     logger.debug(`[DEBUG] About to sync remote paths for ${arrType}. Count: ${config.download_clients.remote_paths.length}`);
     try {
-      await syncRemotePaths(arrType, config);
+      const remotePathsResult = await syncRemotePaths(arrType, config);
+      diffCollector.add(remotePathsResult.diffEntries);
     } catch (err: any) {
       logger.error(`Failed to sync remote path mappings: ${err.message}`);
     }
