@@ -8,6 +8,7 @@ import {
 } from "../__generated__/readarr/data-contracts";
 import { ServerCache } from "../cache";
 import { getSpecificClient } from "../clients/unified-client";
+import { FieldChange } from "../diffReport/diffReport.types";
 import { loadQualityProfilesFromServer } from "../quality-profiles";
 import { InputConfigRootFolderReadarr } from "../types/config.types";
 import { compareObjectsCarr } from "../util";
@@ -113,7 +114,10 @@ export class ReadarrRootFolderSync extends BaseRootFolderSync<InputConfigRootFol
     return result;
   }
 
-  private isRootFolderConfigEqual(resolvedConfig: RootFolderResource, serverFolder: RootFolderResource): boolean {
+  private compareRootFolderConfig(
+    resolvedConfig: RootFolderResource,
+    serverFolder: RootFolderResource,
+  ): { equal: boolean; changes: FieldChange[] } {
     // Compare only configurable fields; server-only fields like id, accessible, freeSpace are excluded.
     // Password is excluded since the API returns masked values, not the actual password.
     const configFields = {
@@ -156,7 +160,7 @@ export class ReadarrRootFolderSync extends BaseRootFolderSync<InputConfigRootFol
       useSsl: serverFolder.useSsl,
     };
 
-    return compareObjectsCarr(serverFields, configFields).equal;
+    return compareObjectsCarr(serverFields, configFields);
   }
 
   async calculateDiff(
@@ -183,7 +187,7 @@ export class ReadarrRootFolderSync extends BaseRootFolderSync<InputConfigRootFol
 
     const missingOnServer: InputConfigRootFolderReadarr[] = [];
     const notAvailableAnymore: RootFolderResource[] = [];
-    const changed: Array<{ config: InputConfigRootFolderReadarr; server: RootFolderResource }> = [];
+    const changed: Array<{ config: InputConfigRootFolderReadarr; server: RootFolderResource; fieldChanges: FieldChange[] }> = [];
 
     // Create maps for efficient lookup
     const serverByPath = new Map<string, RootFolderResource>();
@@ -205,12 +209,12 @@ export class ReadarrRootFolderSync extends BaseRootFolderSync<InputConfigRootFol
       } else {
         // Folder exists, check if configuration matches
         const resolvedConfig = await this.resolveRootFolderConfig(configFolder, serverCache);
-        const isChanged = !this.isRootFolderConfigEqual(
+        const comparison = this.compareRootFolderConfig(
           resolvedConfig,
           typeof serverFolder === "string" ? { path: serverFolder } : serverFolder,
         );
-        if (isChanged) {
-          changed.push({ config: configFolder, server: serverFolder });
+        if (!comparison.equal) {
+          changed.push({ config: configFolder, server: serverFolder, fieldChanges: comparison.changes });
         }
         // Remove from serverByPath so it won't be considered "not available anymore"
         serverByPath.delete(configPath);
