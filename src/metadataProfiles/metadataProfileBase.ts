@@ -4,7 +4,22 @@ import { getEnvs } from "../env";
 import { logger } from "../logger";
 import { ArrType } from "../types/common.types";
 import { InputConfigMetadataProfile, MergedConfigInstance } from "../types/config.types";
+import { DiffEntry } from "../diffReport/diffReport.types";
 import { BaseMetadataProfileResource, MetadataProfileDiff, MetadataProfileSyncResult } from "./metadataProfile.types";
+
+export function metadataProfileDiffToDiffEntries(diff: MetadataProfileDiff): DiffEntry[] {
+  const entries: DiffEntry[] = diff.missingOnServer.map((profile) => ({
+    resourceType: "MetadataProfile",
+    name: profile.name,
+    action: "create" as const,
+  }));
+
+  for (const { config, fieldChanges } of diff.changed) {
+    entries.push({ resourceType: "MetadataProfile", name: config.name, action: "update", fieldChanges });
+  }
+
+  return entries;
+}
 
 // Base class for metadata profile synchronization
 export abstract class BaseMetadataProfileSync<T extends BaseMetadataProfileResource = any> {
@@ -30,39 +45,49 @@ export abstract class BaseMetadataProfileSync<T extends BaseMetadataProfileResou
     const deleteConfig = config.delete_unmanaged_metadata_profiles;
 
     // Step 1: Perform sync (add/update)
-    const syncResult = await this.performSync(profiles, serverCache);
+    const { added, updated, diffEntries } = await this.performSync(profiles, serverCache);
 
     // Step 2: Handle deletion if requested
     let removed = 0;
+    let deletionDiffEntries: DiffEntry[] = [];
     if (deleteConfig) {
-      removed = await this.performDeletion(profiles, deleteConfig);
+      const deletionResult = await this.performDeletion(profiles, deleteConfig);
+      removed = deletionResult.removed;
+      deletionDiffEntries = deletionResult.diffEntries;
     }
 
     // Combine results
-    const totalChanges = syncResult.added + syncResult.updated + removed;
+    const totalChanges = added + updated + removed;
     if (totalChanges > 0) {
-      this.logger.info(`Updated MetadataProfiles: +${syncResult.added} ~${syncResult.updated} -${removed}`);
+      this.logger.info(`Updated MetadataProfiles: +${added} ~${updated} -${removed}`);
     }
 
     return {
-      added: syncResult.added,
-      updated: syncResult.updated,
+      added,
+      updated,
       removed,
+      diffEntries: [...diffEntries, ...deletionDiffEntries],
     };
   }
 
-  private async performSync(profiles: InputConfigMetadataProfile[], serverCache: ServerCache): Promise<{ added: number; updated: number }> {
+  private async performSync(
+    profiles: InputConfigMetadataProfile[],
+    serverCache: ServerCache,
+  ): Promise<{ added: number; updated: number; diffEntries: DiffEntry[] }> {
     const diff = await this.calculateDiff(profiles, serverCache);
 
     if (!diff) {
-      return { added: 0, updated: 0 };
+      return { added: 0, updated: 0, diffEntries: [] };
     }
+
+    const diffEntries = metadataProfileDiffToDiffEntries(diff);
 
     if (getEnvs().DRY_RUN) {
       this.logger.info("DryRun: Would update MetadataProfiles.");
       return {
         added: diff.missingOnServer.length,
         updated: diff.changed.length,
+        diffEntries,
       };
     }
 
@@ -85,17 +110,17 @@ export abstract class BaseMetadataProfileSync<T extends BaseMetadataProfileResou
       updated++;
     }
 
-    return { added, updated };
+    return { added, updated, diffEntries };
   }
 
   private async performDeletion(
     managedProfiles: InputConfigMetadataProfile[],
     deleteConfig: NonNullable<MergedConfigInstance["delete_unmanaged_metadata_profiles"]>,
-  ): Promise<number> {
+  ): Promise<{ removed: number; diffEntries: DiffEntry[] }> {
     const shouldDelete = deleteConfig.enabled;
 
     if (!shouldDelete) {
-      return 0;
+      return { removed: 0, diffEntries: [] };
     }
 
     const ignoreList = deleteConfig.ignore ?? [];
@@ -109,14 +134,20 @@ export abstract class BaseMetadataProfileSync<T extends BaseMetadataProfileResou
     const toDelete = serverProfiles.filter((p: any) => p.name && !managedNames.has(p.name) && !ignoreSet.has(p.name));
 
     if (toDelete.length === 0) {
-      return 0;
+      return { removed: 0, diffEntries: [] };
     }
+
+    const diffEntries: DiffEntry[] = toDelete.map((p: any) => ({
+      resourceType: "MetadataProfile",
+      name: p.name,
+      action: "delete" as const,
+    }));
 
     if (getEnvs().DRY_RUN) {
       this.logger.info(
         `DryRun: Would delete ${toDelete.length} unmanaged MetadataProfiles: ${toDelete.map((p: any) => p.name).join(", ")}`,
       );
-      return toDelete.length;
+      return { removed: toDelete.length, diffEntries };
     }
 
     this.logger.info(`Deleting ${toDelete.length} unmanaged MetadataProfiles ...`);
@@ -145,6 +176,6 @@ export abstract class BaseMetadataProfileSync<T extends BaseMetadataProfileResou
       }
     }
 
-    return deleted;
+    return { removed: deleted, diffEntries };
   }
 }

@@ -3,6 +3,7 @@ import { ServerCache } from "../cache";
 import { LidarrClient } from "../clients/lidarr-client";
 import { getSpecificClient } from "../clients/unified-client";
 import { InputConfigLidarrMetadataProfile, InputConfigMetadataProfile } from "../types/config.types";
+import { FieldChange } from "../diffReport/diffReport.types";
 import { MetadataProfileDiff } from "./metadataProfile.types";
 import { BaseMetadataProfileSync } from "./metadataProfileBase";
 
@@ -166,15 +167,11 @@ export class LidarrMetadataProfileSync extends BaseMetadataProfileSync<MetadataP
     return result;
   }
 
-  private isConfigEqual(
+  private compareConfig(
     resolvedConfig: MetadataProfileResource,
     serverProfile: MetadataProfileResource,
     originalConfig: InputConfigLidarrMetadataProfile,
-  ): boolean {
-    // Compare name and allowed states
-    // Only compare fields that are actually defined in the original config
-    // If a field is undefined in config, we skip checking it (leave server as-is)
-
+  ): { equal: boolean; changes: FieldChange[] } {
     const normalizeForComparison = (profile: MetadataProfileResource) => {
       const extractName = (item: any): string => {
         // Handle both nested {albumType: {name: "X"}} and flat {albumType: "X"}
@@ -212,42 +209,54 @@ export class LidarrMetadataProfileSync extends BaseMetadataProfileSync<MetadataP
     const normalizedConfig = normalizeForComparison(resolvedConfig);
     const normalizedServer = normalizeForComparison(serverProfile);
 
-    // Build sets of enabled types from config (only for defined fields)
-    const configEnabledPrimary = new Set(normalizedConfig.primaryAlbumTypes.filter((t) => t.allowed).map((t) => t.name));
-    const configEnabledSecondary = new Set(normalizedConfig.secondaryAlbumTypes.filter((t) => t.allowed).map((t) => t.name));
-    const configEnabledStatuses = new Set(normalizedConfig.releaseStatuses.filter((t) => t.allowed).map((t) => t.name));
+    const enabledNames = (items: Array<{ name: string; allowed: boolean }>) =>
+      items
+        .filter((t) => t.allowed)
+        .map((t) => t.name)
+        .sort();
 
-    // Check primary types - ONLY if defined in config
-    if (originalConfig.primary_types !== undefined) {
-      for (const serverType of normalizedServer.primaryAlbumTypes) {
-        const shouldBeEnabled = configEnabledPrimary.has(serverType.name);
-        if (serverType.allowed !== shouldBeEnabled) {
-          return false;
-        }
+    const changes: FieldChange[] = [];
+
+    const categories: Array<{
+      field: string;
+      enabled: boolean;
+      server: Array<{ name: string; allowed: boolean }>;
+      config: Array<{ name: string; allowed: boolean }>;
+    }> = [
+      {
+        field: "primaryAlbumTypes",
+        enabled: originalConfig.primary_types !== undefined,
+        server: normalizedServer.primaryAlbumTypes,
+        config: normalizedConfig.primaryAlbumTypes,
+      },
+      {
+        field: "secondaryAlbumTypes",
+        enabled: originalConfig.secondary_types !== undefined,
+        server: normalizedServer.secondaryAlbumTypes,
+        config: normalizedConfig.secondaryAlbumTypes,
+      },
+      {
+        field: "releaseStatuses",
+        enabled: originalConfig.release_statuses !== undefined,
+        server: normalizedServer.releaseStatuses,
+        config: normalizedConfig.releaseStatuses,
+      },
+    ];
+
+    for (const category of categories) {
+      // Only compare a category if it's actually defined in config - matches the original
+      // isConfigEqual behavior of leaving undefined-in-config categories untouched.
+      if (!category.enabled) continue;
+
+      const serverEnabled = enabledNames(category.server);
+      const configEnabled = enabledNames(category.config);
+
+      if (JSON.stringify(serverEnabled) !== JSON.stringify(configEnabled)) {
+        changes.push({ field: category.field, from: serverEnabled, to: configEnabled });
       }
     }
 
-    // Check secondary types - ONLY if defined in config
-    if (originalConfig.secondary_types !== undefined) {
-      for (const serverType of normalizedServer.secondaryAlbumTypes) {
-        const shouldBeEnabled = configEnabledSecondary.has(serverType.name);
-        if (serverType.allowed !== shouldBeEnabled) {
-          return false;
-        }
-      }
-    }
-
-    // Check release statuses - ONLY if defined in config
-    if (originalConfig.release_statuses !== undefined) {
-      for (const serverStatus of normalizedServer.releaseStatuses) {
-        const shouldBeEnabled = configEnabledStatuses.has(serverStatus.name);
-        if (serverStatus.allowed !== shouldBeEnabled) {
-          return false;
-        }
-      }
-    }
-
-    return true;
+    return { equal: changes.length === 0, changes };
   }
 
   async calculateDiff(
@@ -265,7 +274,7 @@ export class LidarrMetadataProfileSync extends BaseMetadataProfileSync<MetadataP
     const serverData = await this.loadFromServer();
 
     const missingOnServer: InputConfigMetadataProfile[] = [];
-    const changed: Array<{ config: InputConfigMetadataProfile; server: MetadataProfileResource }> = [];
+    const changed: Array<{ config: InputConfigMetadataProfile; server: MetadataProfileResource; fieldChanges: FieldChange[] }> = [];
     const noChanges: MetadataProfileResource[] = [];
 
     // Create maps for efficient lookup
@@ -303,9 +312,9 @@ export class LidarrMetadataProfileSync extends BaseMetadataProfileSync<MetadataP
           })),
         };
 
-        const isChanged = !this.isConfigEqual(simpleResolvedConfig, serverProfile, lidarrConfig);
-        if (isChanged) {
-          changed.push({ config: configProfile, server: serverProfile });
+        const comparison = this.compareConfig(simpleResolvedConfig, serverProfile, lidarrConfig);
+        if (!comparison.equal) {
+          changed.push({ config: configProfile, server: serverProfile, fieldChanges: comparison.changes });
         } else {
           noChanges.push(serverProfile);
         }

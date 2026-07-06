@@ -321,11 +321,12 @@ describe("LidarrMetadataProfileSync", () => {
 
       const result = await sync.calculateDiff([config], serverCache);
 
-      expect(result).toEqual({
-        missingOnServer: [],
-        noChanges: [],
-        changed: [{ config, server: serverProfile }],
-      });
+      expect(result?.missingOnServer).toEqual([]);
+      expect(result?.noChanges).toEqual([]);
+      expect(result?.changed).toHaveLength(1);
+      expect(result?.changed[0]?.config).toEqual(config);
+      expect(result?.changed[0]?.server).toEqual(serverProfile);
+      expect(result?.changed[0]?.fieldChanges).toEqual([{ field: "primaryAlbumTypes", from: ["Album"], to: ["Album", "EP"] }]);
     });
   });
 });

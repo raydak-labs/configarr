@@ -1,4 +1,5 @@
 import { InputConfigMetadataProfile } from "../types/config.types";
+import { DiffEntry, FieldChange } from "../diffReport/diffReport.types";
 
 // Common interface for all metadata profile resources
 // All metadata profiles must have at least id and name
@@ -11,7 +12,7 @@ export interface BaseMetadataProfileResource {
 // Generic type T represents the specific MetadataProfileResource type (Lidarr, Readarr, etc.)
 export interface MetadataProfileDiff<T extends BaseMetadataProfileResource = any> {
   missingOnServer: InputConfigMetadataProfile[];
-  changed: Array<{ config: InputConfigMetadataProfile; server: T }>;
+  changed: Array<{ config: InputConfigMetadataProfile; server: T; fieldChanges: FieldChange[] }>;
   noChanges: T[];
 }
 
@@ -19,4 +20,5 @@ export interface MetadataProfileSyncResult {
   added: number;
   removed: number;
   updated: number;
+  diffEntries: DiffEntry[];
 }
