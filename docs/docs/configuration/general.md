@@ -45,3 +45,47 @@ Some of those can be configured via configuration others via environment variabl
 | `templates` | `unset`              | No       | Optional. Location for your own templates to be included.                                                                                                                                                                                                                        |
 | `config`    | `/app/config`        | Yes      | Specifies the path to the configuration folder containing the `config.yml` and `secrets.yml` file.                                                                                                                                                                               |
 | `repos`     | `/app/repos`         | Yes      | Location for the repos which are cloned and cached (like TRaSH-Guide, Recyclarr configs). Added with `1.13.3`: Permission independent git ownership (before you had to make sure git folder matches running user in container to not get an git error like "dubious ownership"). |
+
+## Diff Reports & Dry Run {#diff-reports}
+
+Every run prints a **Diff Report** per configured instance, summarizing exactly what changed (or, with `DRY_RUN=true`, what _would_ change) - grouped by resource type, with the actual field-level differences instead of a generic "would update X" message. The report has the same content in dry-run and real runs, so you can always preview exactly what a real run will do first:
+
+```bash
+DRY_RUN=true configarr
+```
+
+```
+=== Diff Report: RADARR / instance1 ===
+
+QualityDefinitions (1 change)
+  ~ SDTV
+      minSize: 2 -> 5
+
+QualityProfiles (1 create, 1 update)
+  + ExampleProfile (new)
+  ~ Remux-2160p
+      minFormatScore: 0 -> 10
+      language: English -> Any
+
+==========================================
+```
+
+- `+` create, `~` update (with the changed fields listed beneath), `-` delete.
+- Reordering an array without any other change (e.g. a quality profile's item order) is reported as a single reorder, not one entry per shifted position.
+- Large arrays/objects in a field's before/after value are truncated to the first 5 entries (`(+N more)`) to keep the console output scannable.
+
+### JSON output
+
+Set `CONFIGARR_DIFF_OUTPUT_FILE` to a file path to additionally write the full run's diff report (every instance, across every \*arr type) as a single JSON document once the run completes - useful for scripting or feeding into other tooling. Console output is unaffected either way; JSON is additive.
+
+```bash
+CONFIGARR_DIFF_OUTPUT_FILE=/app/config/diff-report.json DRY_RUN=true configarr
+```
+
+```json
+{
+  "generatedAt": "2026-07-06T12:34:56.000Z",
+  "dryRun": true,
+  "instances": [{ "arrType": "RADARR", "instanceName": "instance1", "entries": [] }]
+}
+```
