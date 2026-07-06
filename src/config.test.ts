@@ -18,7 +18,10 @@ import {
   ConfigQualityProfile,
   ConfigQualityProfileItem,
   InputConfigArrInstance,
+  InputConfigArrInstanceSchema,
   InputConfigCustomFormat,
+  InputConfigCustomFormatGroupSchema,
+  InputConfigIncludeItemSchema,
   InputConfigSchema,
   InputConfigSchemaSchema,
 } from "./types/config.types";
@@ -1750,5 +1753,62 @@ describe("InputConfigSchemaSchema (regression)", () => {
           .join("\n")}`,
       );
     }
+  });
+
+  // Zod object schemas silently strip keys they don't recognize on a *successful* parse -
+  // no warning, no error. validateConfig() returns that stripped result, not the original
+  // input, so a field missing from the schema doesn't fail loudly - it just vanishes.
+  test("does not silently strip silenceTrashConflictWarnings/silenceRequiredCfGroupExclusionWarnings", () => {
+    const config = {
+      silenceTrashConflictWarnings: true,
+      silenceRequiredCfGroupExclusionWarnings: true,
+    };
+
+    const result = InputConfigSchemaSchema.parse(config);
+
+    expect(result).toMatchObject(config);
+  });
+
+  test("does not silently strip an arr instance's trash_cfgroup_config", () => {
+    const config = {
+      base_url: "http://radarr:7878",
+      api_key: "key",
+      quality_profiles: [],
+      trash_cfgroup_config: {
+        include_optional: true,
+        include_unrequired: false,
+        include_cfs: [{ id: "cf-1" }],
+        exclude_cfs: [{ id: "cf-2" }],
+      },
+    };
+
+    const result = InputConfigArrInstanceSchema.parse(config);
+
+    expect(result).toMatchObject({ trash_cfgroup_config: config.trash_cfgroup_config });
+  });
+
+  test("does not silently strip an include item's trash_cfgroup_* overrides", () => {
+    const config = {
+      template: "some-profile",
+      source: "TRASH" as const,
+      trash_cfgroup_include_optional: true,
+      trash_cfgroup_include_unrequired: true,
+      trash_cfgroup_include_cfs: [{ id: "cf-1" }],
+      trash_cfgroup_exclude_cfs: [{ id: "cf-2" }],
+    };
+
+    const result = InputConfigIncludeItemSchema.parse(config);
+
+    expect(result).toMatchObject(config);
+  });
+
+  test("does not silently strip a custom_format_groups trash_guide item's include/exclude", () => {
+    const config = {
+      trash_guide: [{ id: "group-1", include: [{ id: "cf-1" }], exclude: [{ id: "cf-2" }] }],
+    };
+
+    const result = InputConfigCustomFormatGroupSchema.parse(config);
+
+    expect(result).toMatchObject(config);
   });
 });

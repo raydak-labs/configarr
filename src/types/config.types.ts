@@ -20,6 +20,10 @@ export const InputConfigIncludeItemSchema = z.object({
   template: z.string(),
   source: z.enum(["TRASH", "RECYCLARR"]).optional(),
   preferred_ratio: z.number().min(0).max(1).optional(),
+  trash_cfgroup_include_optional: z.boolean().optional(),
+  trash_cfgroup_include_unrequired: z.boolean().optional(),
+  trash_cfgroup_include_cfs: z.array(z.object({ id: z.string() })).optional(),
+  trash_cfgroup_exclude_cfs: z.array(z.object({ id: z.string() })).optional(),
 });
 
 export const InputConfigQualityProfileItemSchema = z.object({
@@ -67,6 +71,8 @@ export const InputConfigCustomFormatGroupSchema = z.object({
       z.object({
         id: z.string(),
         include_unrequired: z.boolean().optional(),
+        include: z.array(z.object({ id: z.string() })).optional(),
+        exclude: z.array(z.object({ id: z.string() })).optional(),
       }),
     )
     .optional(),
@@ -208,6 +214,13 @@ export const InputConfigReadarrMetadataProfileSchema = z.object({
 
 export const InputConfigMetadataProfileSchema = z.union([InputConfigLidarrMetadataProfileSchema, InputConfigReadarrMetadataProfileSchema]);
 
+export const InputConfigTrashCfGroupConfigSchema = z.object({
+  include_optional: z.boolean().optional(),
+  include_unrequired: z.boolean().optional(),
+  include_cfs: z.array(z.object({ id: z.string() })).optional(),
+  exclude_cfs: z.array(z.object({ id: z.string() })).optional(),
+});
+
 export const InputConfigArrInstanceSchema = z.object({
   base_url: z.string(),
   api_key: z.string(),
@@ -223,6 +236,7 @@ export const InputConfigArrInstanceSchema = z.object({
     .optional(),
   include: z.array(InputConfigIncludeItemSchema).optional(),
   custom_format_groups: z.array(InputConfigCustomFormatGroupSchema).optional(),
+  trash_cfgroup_config: InputConfigTrashCfGroupConfigSchema.optional(),
   custom_formats: z.array(InputConfigCustomFormatSchema).optional(),
   // Optional at the input stage: an instance can rely entirely on `include` templates
   // for its profiles without declaring any directly (see examples/full's sonarr instance).
@@ -266,6 +280,8 @@ export const InputConfigSchemaSchema = z.object({
   telemetry: z.boolean().optional(),
   customFormatDefinitions: CustomFormatDefinitionsSchema.optional(),
   compatibilityTrashGuide20260219Enabled: z.boolean().optional(),
+  silenceTrashConflictWarnings: z.boolean().optional(),
+  silenceRequiredCfGroupExclusionWarnings: z.boolean().optional(),
 
   sonarr: z.record(z.string(), InputConfigArrInstanceSchema).optional(),
   sonarrEnabled: z.boolean().optional(),
