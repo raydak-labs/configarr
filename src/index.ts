@@ -313,27 +313,19 @@ const pipeline = async (globalConfig: InputConfigSchema, instanceConfig: InputCo
 
   // Download Clients
   if (config.download_clients?.data || config.download_clients?.delete_unmanaged?.enabled) {
-    if (getEnvs().DRY_RUN) {
-      logger.info("DryRun: Would sync download clients.");
-    } else {
-      try {
-        await syncDownloadClients(arrType, config, serverCache);
-      } catch (err: any) {
-        logger.error(`Failed to sync download clients: ${err.message}`);
-      }
+    try {
+      await syncDownloadClients(arrType, config, serverCache);
+    } catch (err: any) {
+      logger.error(`Failed to sync download clients: ${err.message}`);
     }
   }
 
   // Download Client Configuration
   if (config.download_clients?.config) {
-    if (getEnvs().DRY_RUN) {
-      logger.info("DryRun: Would sync download client config.");
-    } else {
-      try {
-        await syncDownloadClientConfig(arrType, config, serverCache);
-      } catch (err: any) {
-        logger.error(`Failed to sync download client config: ${err.message}`);
-      }
+    try {
+      await syncDownloadClientConfig(arrType, config, serverCache);
+    } catch (err: any) {
+      logger.error(`Failed to sync download client config: ${err.message}`);
     }
   }
 
@@ -343,14 +335,10 @@ const pipeline = async (globalConfig: InputConfigSchema, instanceConfig: InputCo
     (config.download_clients.remote_paths.length > 0 || config.download_clients.delete_unmanaged_remote_paths)
   ) {
     logger.debug(`[DEBUG] About to sync remote paths for ${arrType}. Count: ${config.download_clients.remote_paths.length}`);
-    if (getEnvs().DRY_RUN) {
-      logger.info("DryRun: Would sync remote path mappings.");
-    } else {
-      try {
-        await syncRemotePaths(arrType, config);
-      } catch (err: any) {
-        logger.error(`Failed to sync remote path mappings: ${err.message}`);
-      }
+    try {
+      await syncRemotePaths(arrType, config);
+    } catch (err: any) {
+      logger.error(`Failed to sync remote path mappings: ${err.message}`);
     }
   } else {
     logger.debug(`[DEBUG] No remote paths to sync for ${arrType}. download_clients: ${JSON.stringify(config.download_clients)}`);
