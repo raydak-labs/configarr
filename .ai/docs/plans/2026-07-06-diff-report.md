@@ -14,7 +14,7 @@
 - After every task: `pnpm build && pnpm test && pnpm lint && pnpm typecheck` must all pass before moving to the next task.
 - Never edit `CHANGELOG.md` manually.
 - Commit message types: this whole effort is internal (not a user-facing config surface — see spec's Goals) but it does fix real bugs and change user-visible log output, so individual commits use `fix:` (bug fixes: compareObjectsCarr, DRY_RUN short-circuit) or `feat:` (new reporting capability) per the project's commit conventions in `AGENTS.md`/`CLAUDE.md`. Do not add yourself as a commit co-author.
-- Full design reference: `docs/superpowers/specs/2026-07-06-diff-report-design.md` — read it if any task below is ambiguous; this plan implements it exactly.
+- Full design reference: `.ai/docs/specs/2026-07-06-diff-report-design.md` — read it if any task below is ambiguous; this plan implements it exactly.
 - TDD throughout: write the failing test first, confirm it fails for the expected reason, then implement.
 
 ---
