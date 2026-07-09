@@ -137,28 +137,26 @@ jobs:
         with:
           path: artifacts
 
-      - name: Extract tar.gz files
-        run: |
-          find artifacts -name "*.tar.gz" -type f -exec sh -c '
-            dir=$(dirname "$1")
-            base=$(basename "$1" .tar.gz)
-            mkdir -p "$dir/extracted"
-            tar -xzf "$1" -C "$dir/extracted"
-            mv "$dir/extracted"/* "$dir/" 2>/dev/null || true
-            rmdir "$dir/extracted" 2>/dev/null || true
-          ' _ {} \;
-
       - name: Create or update Release
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           TAG_NAME: ${{ github.ref_name }}
         run: |
-          shopt -s globstar nullglob
+          echo "Collecting CLI artifacts for ${TAG_NAME} from artifacts/"
+          mapfile -d '' -t ASSETS < <(
+            find artifacts -path 'artifacts/*/configarr-*.tar.xz' -type f -print0 | sort -z
+          )
+          if [[ ${#ASSETS[@]} -eq 0 ]]; then
+            echo "No CLI artifacts found under artifacts/ for ${TAG_NAME}"
+            find artifacts -ls || true
+            exit 1
+          fi
+          echo "Found ${#ASSETS[@]} CLI artifact(s)"
           if gh release view "${TAG_NAME}" >/dev/null 2>&1; then
-            gh release upload "${TAG_NAME}" artifacts/**/configarr-*.tar.xz --clobber
+            gh release upload "${TAG_NAME}" "${ASSETS[@]}" --clobber
           else
             gh release create "${TAG_NAME}" \
-              artifacts/**/configarr-*.tar.xz \
+              "${ASSETS[@]}" \
               --title "${TAG_NAME}"
           fi
