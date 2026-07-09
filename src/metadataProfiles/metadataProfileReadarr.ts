@@ -4,6 +4,7 @@ import { ReadarrClient } from "../clients/readarr-client";
 import { getSpecificClient } from "../clients/unified-client";
 import { InputConfigReadarrMetadataProfile, InputConfigMetadataProfile } from "../types/config.types";
 import { compareObjectsCarr } from "../util";
+import { FieldChange } from "../diffReport/diffReport.types";
 import { MetadataProfileDiff } from "./metadataProfile.types";
 import { BaseMetadataProfileSync } from "./metadataProfileBase";
 
@@ -120,7 +121,10 @@ export class ReadarrMetadataProfileSync extends BaseMetadataProfileSync<Metadata
     return result;
   }
 
-  private isConfigEqual(resolvedConfig: MetadataProfileResource, serverProfile: MetadataProfileResource): boolean {
+  private compareConfig(
+    resolvedConfig: MetadataProfileResource,
+    serverProfile: MetadataProfileResource,
+  ): { equal: boolean; changes: FieldChange[] } {
     // Normalize both for comparison
     const normalizeForComparison = (profile: MetadataProfileResource) => {
       const rawIgnored = profile.ignored ?? [];
@@ -144,7 +148,7 @@ export class ReadarrMetadataProfileSync extends BaseMetadataProfileSync<Metadata
     const normalizedConfig = normalizeForComparison(resolvedConfig);
     const normalizedServer = normalizeForComparison(serverProfile);
 
-    return compareObjectsCarr(normalizedServer, normalizedConfig).equal;
+    return compareObjectsCarr(normalizedServer, normalizedConfig);
   }
 
   async calculateDiff(
@@ -159,7 +163,7 @@ export class ReadarrMetadataProfileSync extends BaseMetadataProfileSync<Metadata
     const serverData = await this.loadFromServer();
 
     const missingOnServer: InputConfigMetadataProfile[] = [];
-    const changed: Array<{ config: InputConfigMetadataProfile; server: MetadataProfileResource }> = [];
+    const changed: Array<{ config: InputConfigMetadataProfile; server: MetadataProfileResource; fieldChanges: FieldChange[] }> = [];
     const noChanges: MetadataProfileResource[] = [];
 
     // Create maps for efficient lookup
@@ -180,9 +184,9 @@ export class ReadarrMetadataProfileSync extends BaseMetadataProfileSync<Metadata
       } else {
         // Profile exists, check if configuration matches
         const resolvedConfig = await this.resolveConfig(configProfile, serverCache);
-        const isChanged = !this.isConfigEqual(resolvedConfig, serverProfile);
-        if (isChanged) {
-          changed.push({ config: configProfile, server: serverProfile });
+        const comparison = this.compareConfig(resolvedConfig, serverProfile);
+        if (!comparison.equal) {
+          changed.push({ config: configProfile, server: serverProfile, fieldChanges: comparison.changes });
         } else {
           noChanges.push(serverProfile);
         }

@@ -221,13 +221,17 @@ describe("ReadarrRootFolderSync", () => {
         serverCache,
       );
 
-      expect(result).toEqual({
-        missingOnServer: [{ path: "/new", name: "new", metadata_profile: "Standard", quality_profile: "eBook" }],
-        notAvailableAnymore: [],
-        changed: [
-          { config: { path: "/existing", name: "existing", metadata_profile: "Standard", quality_profile: "eBook" }, server: "/existing" },
-        ],
+      expect(result?.missingOnServer).toEqual([{ path: "/new", name: "new", metadata_profile: "Standard", quality_profile: "eBook" }]);
+      expect(result?.notAvailableAnymore).toEqual([]);
+      expect(result?.changed).toHaveLength(1);
+      expect(result?.changed[0]?.config).toEqual({
+        path: "/existing",
+        name: "existing",
+        metadata_profile: "Standard",
+        quality_profile: "eBook",
       });
+      expect(result?.changed[0]?.server).toEqual("/existing");
+      expect(result?.changed[0]?.fieldChanges.length).toBeGreaterThan(0);
     });
 
     it("should handle server returning objects", async () => {
@@ -245,16 +249,19 @@ describe("ReadarrRootFolderSync", () => {
         serverCache,
       );
 
-      expect(result).toEqual({
-        missingOnServer: [{ path: "/new-config", name: "New Config", metadata_profile: "Standard", quality_profile: "eBook" }],
-        notAvailableAnymore: [{ path: "/old-server", id: 2, name: "Old Server" }],
-        changed: [
-          {
-            config: { path: "/server-folder", name: "Config Folder", metadata_profile: "Standard", quality_profile: "eBook" },
-            server: { path: "/server-folder", id: 1, name: "Server Folder" },
-          },
-        ],
+      expect(result?.missingOnServer).toEqual([
+        { path: "/new-config", name: "New Config", metadata_profile: "Standard", quality_profile: "eBook" },
+      ]);
+      expect(result?.notAvailableAnymore).toEqual([{ path: "/old-server", id: 2, name: "Old Server" }]);
+      expect(result?.changed).toHaveLength(1);
+      expect(result?.changed[0]?.config).toEqual({
+        path: "/server-folder",
+        name: "Config Folder",
+        metadata_profile: "Standard",
+        quality_profile: "eBook",
       });
+      expect(result?.changed[0]?.server).toEqual({ path: "/server-folder", id: 1, name: "Server Folder" });
+      expect(result?.changed[0]?.fieldChanges.length).toBeGreaterThan(0);
     });
   });
 });

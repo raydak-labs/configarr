@@ -1,11 +1,39 @@
 import { MergedRootFolderResource } from "../types/merged.types";
 import { ServerCache } from "../cache";
 import { getUnifiedClient, IArrClient } from "../clients/unified-client";
+import { DiffEntry } from "../diffReport/diffReport.types";
 import { getEnvs } from "../env";
 import { logger } from "../logger";
 import { ArrType } from "../types/common.types";
 import { InputConfigRootFolder } from "../types/config.types";
 import { RootFolderDiff, RootFolderSyncResult } from "./rootFolder.types";
+
+export function rootFolderDiffToDiffEntries(diff: RootFolderDiff): DiffEntry[] {
+  const entries: DiffEntry[] = diff.missingOnServer.map((folder) => ({
+    resourceType: "RootFolder",
+    name: typeof folder === "string" ? folder : (folder.path ?? "unknown"),
+    action: "create" as const,
+  }));
+
+  for (const { config, server, fieldChanges } of diff.changed) {
+    entries.push({
+      resourceType: "RootFolder",
+      name: typeof config === "string" ? config : (config.path ?? server.path ?? "unknown"),
+      action: "update",
+      fieldChanges,
+    });
+  }
+
+  entries.push(
+    ...diff.notAvailableAnymore.map((folder) => ({
+      resourceType: "RootFolder",
+      name: folder.path ?? "unknown",
+      action: "delete" as const,
+    })),
+  );
+
+  return entries;
+}
 
 // Base class for root folder synchronization
 export abstract class BaseRootFolderSync<TConfig extends InputConfigRootFolder = InputConfigRootFolder> {
@@ -19,12 +47,14 @@ export abstract class BaseRootFolderSync<TConfig extends InputConfigRootFolder =
     const diff = await this.calculateDiff(rootFolders, serverCache);
 
     if (!diff) {
-      return { added: 0, removed: 0, updated: 0 };
+      return { added: 0, removed: 0, updated: 0, diffEntries: [] };
     }
+
+    const diffEntries = rootFolderDiffToDiffEntries(diff);
 
     if (getEnvs().DRY_RUN) {
       this.logger.info("DryRun: Would update RootFolders.");
-      return { added: diff.missingOnServer.length, removed: diff.notAvailableAnymore.length, updated: diff.changed.length };
+      return { added: diff.missingOnServer.length, removed: diff.notAvailableAnymore.length, updated: diff.changed.length, diffEntries };
     }
 
     let added = 0,
@@ -58,7 +88,7 @@ export abstract class BaseRootFolderSync<TConfig extends InputConfigRootFolder =
       this.logger.info(`Updated RootFolders: +${added} -${removed} ~${updated}`);
     }
 
-    return { added, removed, updated };
+    return { added, removed, updated, diffEntries };
   }
 
   protected async loadRootFoldersFromServer(): Promise<MergedRootFolderResource[]> {

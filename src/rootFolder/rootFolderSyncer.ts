@@ -23,7 +23,7 @@ export async function syncRootFolders(
   serverCache: ServerCache,
 ): Promise<RootFolderSyncResult> {
   if (!rootFolders) {
-    return { added: 0, removed: 0, updated: 0 };
+    return { added: 0, removed: 0, updated: 0, diffEntries: [] };
   }
 
   const sync = createRootFolderSync(arrType);

@@ -1,4 +1,5 @@
 import { ServerCache } from "../cache";
+import { FieldChange } from "../diffReport/diffReport.types";
 import { logger } from "../logger";
 import { ArrType } from "../types/common.types";
 import { InputConfigDownloadClient } from "../types/config.types";
@@ -20,23 +21,28 @@ export class GenericDownloadClientSync extends BaseDownloadClientSync {
     server: DownloadClientResource,
     cache: ServerCache,
     updatePassword: boolean = false,
-  ): boolean => {
-    // Basic comparison
-    if (config.name !== server.name) return false;
+  ): { equal: boolean; changes: FieldChange[] } => {
+    // Basic comparison - identity mismatch means this isn't even a candidate match
+    if (config.name !== server.name || config.type.toLowerCase() !== server.implementation?.toLowerCase()) {
+      return { equal: false, changes: [] };
+    }
+
+    const changes: FieldChange[] = [];
 
     // Compare only when specified
     // Omitted means "do not manage"
-    if (config.enable !== undefined && config.enable !== server.enable) return false;
-    if (config.priority !== undefined && config.priority !== server.priority) return false;
+    if (config.enable !== undefined && config.enable !== server.enable) {
+      changes.push({ field: "enable", from: server.enable, to: config.enable });
+    }
+    if (config.priority !== undefined && config.priority !== server.priority) {
+      changes.push({ field: "priority", from: server.priority, to: config.priority });
+    }
     if (config.remove_completed_downloads !== undefined && config.remove_completed_downloads !== server.removeCompletedDownloads) {
-      return false;
+      changes.push({ field: "removeCompletedDownloads", from: server.removeCompletedDownloads, to: config.remove_completed_downloads });
     }
     if (config.remove_failed_downloads !== undefined && config.remove_failed_downloads !== server.removeFailedDownloads) {
-      return false;
+      changes.push({ field: "removeFailedDownloads", from: server.removeFailedDownloads, to: config.remove_failed_downloads });
     }
-
-    // Compare implementation
-    if (config.type.toLowerCase() !== server.implementation?.toLowerCase()) return false;
 
     // Compare fields (normalize to support snake_case)
     const normalizedConfigFields = this.normalizeConfigFields(config.fields || {}, this.arrType);
@@ -68,7 +74,7 @@ export class GenericDownloadClientSync extends BaseDownloadClientSync {
       }
 
       if (!valuesMatch) {
-        return false;
+        changes.push({ field: `fields.${fieldName}`, from: serverValue, to: configValue });
       }
     }
 
@@ -86,23 +92,23 @@ export class GenericDownloadClientSync extends BaseDownloadClientSync {
       if (!serverFieldNames.has(key) && normalizedConfigFields[key] !== undefined) {
         // Config references a field that does not exist on the server; treat as different
         this.logger.warn(`Config field '${key}' does not exist on server`);
-        return false;
+        changes.push({ field: `fields.${key}`, from: undefined, to: normalizedConfigFields[key] });
       }
     }
 
     // Compare tags (resolve names to IDs first)
     const configTags = config.tags ?? [];
-    const { ids: resolvedTagIds, missingTags } = this.resolveTagNamesToIds(configTags, cache.tags);
+    const { ids: resolvedTagIds } = this.resolveTagNamesToIds(configTags, cache.tags);
     const serverTags = server.tags ?? [];
 
     const sortedConfigTagIds = [...resolvedTagIds].sort();
     const sortedServerTags = [...serverTags].sort();
 
     if (JSON.stringify(sortedConfigTagIds) !== JSON.stringify(sortedServerTags)) {
-      return false;
+      changes.push({ field: "tags", from: sortedServerTags, to: sortedConfigTagIds });
     }
 
-    return true;
+    return { equal: changes.length === 0, changes };
   };
 
   public shouldUsePartialUpdate = (config: InputConfigDownloadClient): boolean => {
@@ -134,7 +140,12 @@ export class GenericDownloadClientSync extends BaseDownloadClientSync {
     updatePassword: boolean = false,
   ): Promise<DownloadClientDiff> {
     const create: InputConfigDownloadClient[] = [];
-    const update: { config: InputConfigDownloadClient; server: DownloadClientResource; partialUpdate: boolean }[] = [];
+    const update: {
+      config: InputConfigDownloadClient;
+      server: DownloadClientResource;
+      partialUpdate: boolean;
+      fieldChanges: FieldChange[];
+    }[] = [];
     const unchanged: { config: InputConfigDownloadClient; server: DownloadClientResource }[] = [];
 
     for (const config of configClients) {
@@ -145,11 +156,14 @@ export class GenericDownloadClientSync extends BaseDownloadClientSync {
 
       if (!serverClient) {
         create.push(config);
-      } else if (!this.isDownloadClientEqual(config, serverClient, cache, updatePassword)) {
-        const partialUpdate = this.shouldUsePartialUpdate(config);
-        update.push({ config, server: serverClient, partialUpdate });
       } else {
-        unchanged.push({ config, server: serverClient });
+        const comparison = this.isDownloadClientEqual(config, serverClient, cache, updatePassword);
+        if (!comparison.equal) {
+          const partialUpdate = this.shouldUsePartialUpdate(config);
+          update.push({ config, server: serverClient, partialUpdate, fieldChanges: comparison.changes });
+        } else {
+          unchanged.push({ config, server: serverClient });
+        }
       }
     }
 

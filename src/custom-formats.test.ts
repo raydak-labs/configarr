@@ -295,4 +295,60 @@ describe("CustomFormats", () => {
       expect(updatePayload).toMatchObject({ ...requestConfigB });
     });
   });
+
+  describe("manageCf - diffEntries", () => {
+    it("emits a create DiffEntry for a new CF", async () => {
+      vi.spyOn(env, "getEnvs").mockReturnValue({ DRY_RUN: false } as ReturnType<typeof env.getEnvs>);
+
+      const carrConfig = { configarr_id: "id-a", name: "NewCF", specifications: [] } as unknown as ConfigarrCF;
+      const requestConfig = util.mapImportCfToRequestCf(carrConfig);
+
+      const cfProcessing: CFProcessing = {
+        carrIdMapping: new Map([["id-a", { carrConfig, requestConfig }]]),
+        cfNameToCarrConfig: new Map([[carrConfig.name!, carrConfig]]),
+      };
+
+      const serverCfs = new Map<string, MergedCustomFormatResource>();
+
+      vi.spyOn(unifiedClient, "getUnifiedClient").mockReturnValue({
+        createCustomFormat: vi.fn().mockResolvedValue({ id: 1, name: "NewCF", ...requestConfig }),
+        updateCustomFormat: vi.fn(),
+      } as unknown as ReturnType<typeof unifiedClient.getUnifiedClient>);
+
+      const out = await manageCf(cfProcessing, serverCfs);
+
+      expect(out.diffEntries).toEqual([{ resourceType: "CustomFormat", name: "NewCF", action: "create" }]);
+    });
+
+    it("emits an update DiffEntry with fieldChanges for a changed CF", async () => {
+      vi.spyOn(env, "getEnvs").mockReturnValue({ DRY_RUN: true } as ReturnType<typeof env.getEnvs>);
+
+      const specifications = [
+        { name: "S0", implementation: "ReleaseGroupSpecification" as const, negate: false, required: false, fields: { value: "^(0)$" } },
+      ];
+      const carrConfig = { configarr_id: "id-a", name: "ChangedCF", specifications } as unknown as ConfigarrCF;
+      const requestConfig = util.mapImportCfToRequestCf(carrConfig);
+
+      const cfProcessing: CFProcessing = {
+        carrIdMapping: new Map([["id-a", { carrConfig, requestConfig }]]),
+        cfNameToCarrConfig: new Map([[carrConfig.name!, carrConfig]]),
+      };
+
+      const existingCf: MergedCustomFormatResource = JSON.parse(JSON.stringify({ id: 1, ...requestConfig }));
+      existingCf.specifications![0]!.negate = true;
+      const serverCfs = new Map<string, MergedCustomFormatResource>([["ChangedCF", existingCf]]);
+
+      vi.spyOn(unifiedClient, "getUnifiedClient").mockReturnValue({
+        createCustomFormat: vi.fn(),
+        updateCustomFormat: vi.fn(),
+      } as unknown as ReturnType<typeof unifiedClient.getUnifiedClient>);
+
+      const out = await manageCf(cfProcessing, serverCfs);
+
+      expect(out.diffEntries).toHaveLength(1);
+      expect(out.diffEntries[0]!.resourceType).toBe("CustomFormat");
+      expect(out.diffEntries[0]!.action).toBe("update");
+      expect(out.diffEntries[0]!.fieldChanges).toContainEqual({ field: "specifications[0].negate", from: true, to: false });
+    });
+  });
 });

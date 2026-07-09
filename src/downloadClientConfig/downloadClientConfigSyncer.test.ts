@@ -224,6 +224,7 @@ describe("downloadClientConfigSyncer", () => {
 
       const mockGetConfig = vi.fn().mockResolvedValue({
         id: 1,
+        enableCompletedDownloadHandling: false,
       });
 
       const mockUpdateConfig = vi.fn().mockResolvedValue({});
@@ -272,6 +273,7 @@ describe("downloadClientConfigSyncer", () => {
 
       const mockGetConfig = vi.fn().mockResolvedValue({
         id: 1,
+        enableCompletedDownloadHandling: false,
       });
 
       const mockUpdateConfig = vi.fn().mockResolvedValue({});
@@ -302,6 +304,43 @@ describe("downloadClientConfigSyncer", () => {
         expect(updatedConfig).not.toHaveProperty("autoRedownloadFailedFromInteractiveSearch");
         expect(updatedConfig).toHaveProperty("enableCompletedDownloadHandling", true);
       }
+    });
+
+    it("returns structured fieldChanges when config differs", async () => {
+      const { syncDownloadClientConfig } = await import("./downloadClientConfigSyncer");
+      const { getSpecificClient } = await import("../clients/unified-client");
+      const { getEnvs } = await import("../env");
+
+      const mockGetEnvs = vi.mocked(getEnvs);
+      mockGetEnvs.mockReturnValue({
+        DRY_RUN: true,
+        LOG_LEVEL: "silent",
+        DEBUG_CREATE_FILES: false,
+        CONFIGARR_VERSION: "test",
+        ROOT_PATH: "/tmp/test",
+      } as any);
+
+      const mockGetConfig = vi.fn().mockResolvedValue({ id: 1, enableCompletedDownloadHandling: false });
+      const mockUpdateConfig = vi.fn();
+
+      const mockClient = {
+        getDownloadClientConfig: mockGetConfig,
+        updateDownloadClientConfig: mockUpdateConfig,
+      };
+      vi.mocked(getSpecificClient).mockReturnValue(mockClient as any);
+
+      const config = {
+        download_clients: { config: { enable_completed_download_handling: true } },
+      } as unknown as MergedConfigInstance;
+
+      const result = await syncDownloadClientConfig("RADARR", config, createMockServerCache());
+
+      expect(result.updated).toBe(true);
+      expect(result.fieldChanges).toContainEqual({
+        field: "enableCompletedDownloadHandling",
+        from: false,
+        to: true,
+      });
     });
 
     it("should not update if config is already up-to-date", async () => {
@@ -445,6 +484,8 @@ describe("downloadClientConfigSyncer", () => {
 
       const mockGetConfig = vi.fn().mockResolvedValue({
         id: 1,
+        enableCompletedDownloadHandling: true,
+        autoRedownloadFailed: false,
       });
 
       const mockUpdateConfig = vi.fn().mockResolvedValue({});

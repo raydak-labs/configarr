@@ -4,6 +4,7 @@ import { ArrType } from "../types/common.types";
 import { RemotePathMappingResource, RemotePathSyncResult, RemotePathDiff } from "./remotePath.types";
 import { InputConfigRemotePath, MergedConfigInstance } from "../types/config.types";
 import { getEnvs } from "../env";
+import { DiffEntry } from "../diffReport/diffReport.types";
 
 /**
  * Normalize a path by removing trailing slashes
@@ -43,7 +44,7 @@ function calculateDiff(configs: InputConfigRemotePath[], serverMappings: RemoteP
   }
 
   const toCreate: InputConfigRemotePath[] = [];
-  const toUpdate: Array<{ id: number; config: InputConfigRemotePath }> = [];
+  const toUpdate: Array<{ id: number; config: InputConfigRemotePath; server: RemotePathMappingResource }> = [];
   let unchanged = 0;
 
   // Find items to create or update
@@ -53,7 +54,7 @@ function calculateDiff(configs: InputConfigRemotePath[], serverMappings: RemoteP
       toCreate.push(config);
     } else if (serverMapping.localPath !== config.local_path) {
       if (serverMapping.id) {
-        toUpdate.push({ id: serverMapping.id, config });
+        toUpdate.push({ id: serverMapping.id, config, server: serverMapping });
       }
     } else {
       unchanged++;
@@ -64,9 +65,39 @@ function calculateDiff(configs: InputConfigRemotePath[], serverMappings: RemoteP
   const toDelete = Array.from(serverMap.entries())
     .filter(([key]) => !configMap.has(key))
     .filter(([, mapping]) => !!mapping.id)
-    .map(([, mapping]) => ({ id: mapping.id! }));
+    .map(([, mapping]) => ({ id: mapping.id!, host: mapping.host, remotePath: mapping.remotePath }));
 
   return { toCreate, toUpdate, toDelete, unchanged };
+}
+
+/**
+ * Convert a remote path diff into DiffEntry[] for the per-instance report
+ */
+export function remotePathsToDiffEntries(diff: RemotePathDiff): DiffEntry[] {
+  const entries: DiffEntry[] = diff.toCreate.map((c) => ({
+    resourceType: "RemotePathMapping",
+    name: `${c.host} -> ${c.remote_path}`,
+    action: "create" as const,
+  }));
+
+  for (const { config, server } of diff.toUpdate) {
+    entries.push({
+      resourceType: "RemotePathMapping",
+      name: `${config.host} -> ${config.remote_path}`,
+      action: "update",
+      fieldChanges: [{ field: "localPath", from: server.localPath, to: config.local_path }],
+    });
+  }
+
+  entries.push(
+    ...diff.toDelete.map((d) => ({
+      resourceType: "RemotePathMapping",
+      name: d.host && d.remotePath ? `${d.host} -> ${d.remotePath}` : `id:${d.id}`,
+      action: "delete" as const,
+    })),
+  );
+
+  return entries;
 }
 
 /**
@@ -79,7 +110,7 @@ export async function syncRemotePaths(arrType: ArrType, config: MergedConfigInst
   // If remote_paths is undefined/not present, skip management entirely
   if (remotePaths === undefined) {
     logger.debug(`No remote path mappings specified for ${arrType}`);
-    return { created: 0, updated: 0, deleted: 0, unchanged: 0, arrType };
+    return { created: 0, updated: 0, deleted: 0, unchanged: 0, arrType, diffEntries: [] };
   }
 
   // If remote_paths is empty array [], skip unless delete_unmanaged is enabled
@@ -87,7 +118,7 @@ export async function syncRemotePaths(arrType: ArrType, config: MergedConfigInst
   if (remotePaths.length === 0) {
     if (!deleteUnmanaged) {
       logger.debug(`No remote path mappings specified for ${arrType}`);
-      return { created: 0, updated: 0, deleted: 0, unchanged: 0, arrType };
+      return { created: 0, updated: 0, deleted: 0, unchanged: 0, arrType, diffEntries: [] };
     }
     logger.debug(`Empty remote_paths with delete_unmanaged_remote_paths enabled for ${arrType} - will delete all existing mappings`);
   }
@@ -103,6 +134,7 @@ export async function syncRemotePaths(arrType: ArrType, config: MergedConfigInst
 
     // Calculate diff
     const diff = calculateDiff(remotePaths, serverMappings);
+    const diffEntries = remotePathsToDiffEntries(diff);
 
     logger.debug(
       `Remote path mapping diff for ${arrType}: create=${diff.toCreate.length}, update=${diff.toUpdate.length}, delete=${diff.toDelete.length}, unchanged=${diff.unchanged}`,
@@ -111,7 +143,7 @@ export async function syncRemotePaths(arrType: ArrType, config: MergedConfigInst
     // Check if any changes needed
     if (diff.toCreate.length === 0 && diff.toUpdate.length === 0 && diff.toDelete.length === 0) {
       logger.info(`Remote path mappings for ${arrType} are already up-to-date`);
-      return { created: 0, updated: 0, deleted: 0, unchanged: diff.unchanged, arrType };
+      return { created: 0, updated: 0, deleted: 0, unchanged: diff.unchanged, arrType, diffEntries };
     }
 
     logger.info(`Remote path mapping changes detected for ${arrType}`);
@@ -127,6 +159,7 @@ export async function syncRemotePaths(arrType: ArrType, config: MergedConfigInst
         deleted: diff.toDelete.length,
         unchanged: diff.unchanged,
         arrType,
+        diffEntries,
       };
     }
 
@@ -210,7 +243,7 @@ export async function syncRemotePaths(arrType: ArrType, config: MergedConfigInst
     }
 
     logger.info(`Successfully synced remote path mappings for ${arrType}: created=${created}, updated=${updated}, deleted=${deleted}`);
-    return { created, updated, deleted, unchanged: diff.unchanged, arrType };
+    return { created, updated, deleted, unchanged: diff.unchanged, arrType, diffEntries };
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     logger.error(`Failed to sync remote path mappings for ${arrType}: ${errorMessage}`);

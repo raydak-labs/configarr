@@ -5,11 +5,12 @@ import { LidarrClient } from "../clients/lidarr-client";
 import { ReadarrClient } from "../clients/readarr-client";
 import { WhisparrClient } from "../clients/whisparr-client";
 import { getSpecificClient } from "../clients/unified-client";
+import { DiffEntry } from "../diffReport/diffReport.types";
 import { logger } from "../logger";
 import { ArrType } from "../types/common.types";
 import { InputConfigDownloadClientConfig, MergedConfigInstance } from "../types/config.types";
 import { getEnvs } from "../env";
-import { camelToSnake, snakeToCamel } from "../util";
+import { camelToSnake, compareObjectsCarr, snakeToCamel } from "../util";
 import { DownloadClientConfigSyncResult } from "./downloadClientConfig.types";
 
 /**
@@ -70,18 +71,6 @@ function filterFieldsByArrType(fields: Record<string, any>, arrType: ArrType): R
 }
 
 /**
- * Check if server config differs from desired config
- */
-function configHasChanges(serverConfig: Record<string, any>, desiredConfig: Record<string, any>): boolean {
-  for (const [key, value] of Object.entries(desiredConfig)) {
-    if (serverConfig[key] !== value) {
-      return true;
-    }
-  }
-  return false;
-}
-
-/**
  * Sync download client configuration for a specific *arr instance
  */
 export async function syncDownloadClientConfig(
@@ -93,7 +82,7 @@ export async function syncDownloadClientConfig(
 
   if (!downloadClientConfig) {
     logger.debug(`No download client config specified for ${arrType}`);
-    return { updated: false, arrType };
+    return { updated: false, arrType, fieldChanges: [] };
   }
 
   try {
@@ -112,16 +101,18 @@ export async function syncDownloadClientConfig(
     logger.debug(`Desired config: ${JSON.stringify(desiredConfig)}`);
 
     // Check if changes are needed
-    if (!configHasChanges(serverConfig, desiredConfig)) {
+    const { changes, equal } = compareObjectsCarr(serverConfig, desiredConfig);
+
+    if (equal) {
       logger.info(`Download client config for ${arrType} is already up-to-date`);
-      return { updated: false, arrType };
+      return { updated: false, arrType, fieldChanges: [] };
     }
 
     logger.info(`Download client config changes detected for ${arrType}`);
 
     if (getEnvs().DRY_RUN) {
       logger.info("DryRun: Would update download client config.");
-      return { updated: true, arrType };
+      return { updated: true, arrType, fieldChanges: changes };
     }
 
     // Merge with server config to preserve unmanaged fields
@@ -133,10 +124,17 @@ export async function syncDownloadClientConfig(
     await client.updateDownloadClientConfig(configId, mergedConfig);
 
     logger.info(`Successfully updated download client config for ${arrType}`);
-    return { updated: true, arrType };
+    return { updated: true, arrType, fieldChanges: changes };
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     logger.error(`Failed to sync download client config for ${arrType}: ${errorMessage}`);
     throw new Error(`Download client config sync failed for ${arrType}: ${errorMessage}`);
   }
+}
+
+export function downloadClientConfigDiffToDiffEntries(result: DownloadClientConfigSyncResult): DiffEntry[] {
+  if (!result.updated) {
+    return [];
+  }
+  return [{ resourceType: "DownloadClientConfig", name: result.arrType, action: "update", fieldChanges: result.fieldChanges }];
 }

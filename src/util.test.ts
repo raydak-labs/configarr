@@ -2,7 +2,7 @@ import path from "path";
 import { describe, expect, test } from "vitest";
 import { MergedCustomFormatResource } from "./types/merged.types";
 import { TrashCF, TrashCFSpF } from "./types/trashguide.types";
-import { cloneWithJSON, compareCustomFormats, loadJsonFile, mapImportCfToRequestCf, toCarrCF, zip } from "./util";
+import { cloneWithJSON, compareCustomFormats, compareObjectsCarr, loadJsonFile, mapImportCfToRequestCf, toCarrCF, zip } from "./util";
 
 const exampleCFImplementations = {
   name: "TestSpec",
@@ -260,5 +260,126 @@ describe("compareImportCFs - general", async () => {
 describe("zip function", async () => {
   test("should work for empty inputs", async () => {
     expect(zip([], [])).toEqual([]);
+  });
+});
+
+describe("compareObjectsCarr", () => {
+  test("returns FieldChange[] with field/from/to for a scalar mismatch", () => {
+    const server = { name: "SDTV", minSize: 2 };
+    const local = { name: "SDTV", minSize: 5 };
+
+    const result = compareObjectsCarr(server, local);
+
+    expect(result.equal).toBe(false);
+    expect(result.changes).toEqual([{ field: "minSize", from: 2, to: 5 }]);
+  });
+
+  test("captures ALL differing sub-fields per array element, not just the first", () => {
+    const server = { items: [{ name: "a", score: 1, enabled: true }] };
+    const local = { items: [{ name: "a", score: 2, enabled: false }] };
+
+    const result = compareObjectsCarr(server, local);
+
+    expect(result.equal).toBe(false);
+    expect(result.changes).toEqual([
+      { field: "items[0].score", from: 1, to: 2 },
+      { field: "items[0].enabled", from: true, to: false },
+    ]);
+  });
+
+  test("detects a mismatch on the second array element even when the first element already matched", () => {
+    const server = { items: [{ score: 1 }, { score: 10 }] };
+    const local = { items: [{ score: 1 }, { score: 20 }] };
+
+    const result = compareObjectsCarr(server, local);
+
+    expect(result.equal).toBe(false);
+    expect(result.changes).toEqual([{ field: "items[1].score", from: 10, to: 20 }]);
+  });
+
+  test("builds dotted paths for nested objects", () => {
+    const server = { upgrade: { until_score: 5 } };
+    const local = { upgrade: { until_score: 10 } };
+
+    const result = compareObjectsCarr(server, local);
+
+    expect(result.changes).toEqual([{ field: "upgrade.until_score", from: 5, to: 10 }]);
+  });
+
+  test("equal objects return equal: true and no changes", () => {
+    const server = { name: "SDTV", minSize: 2 };
+    const local = { name: "SDTV", minSize: 2 };
+
+    const result = compareObjectsCarr(server, local);
+
+    expect(result.equal).toBe(true);
+    expect(result.changes).toEqual([]);
+  });
+
+  test("a pure reorder of primitive array elements produces one FieldChange, not per-index noise", () => {
+    const server = { tags: ["a", "b", "c", "d"] };
+    const local = { tags: ["c", "a", "d", "b"] };
+
+    const result = compareObjectsCarr(server, local);
+
+    expect(result.equal).toBe(false);
+    expect(result.changes).toEqual([{ field: "tags", from: ["a", "b", "c", "d"], to: ["c", "a", "d", "b"] }]);
+  });
+
+  test("a pure reorder of object array elements produces one FieldChange, not per-index noise", () => {
+    const server = { items: [{ name: "a" }, { name: "b" }, { name: "c" }] };
+    const local = { items: [{ name: "c" }, { name: "a" }, { name: "b" }] };
+
+    const result = compareObjectsCarr(server, local);
+
+    expect(result.equal).toBe(false);
+    expect(result.changes).toEqual([
+      { field: "items", from: [{ name: "a" }, { name: "b" }, { name: "c" }], to: [{ name: "c" }, { name: "a" }, { name: "b" }] },
+    ]);
+  });
+
+  test("an array in the same order produces no change, even with duplicate-looking elements", () => {
+    const server = { items: [{ name: "a" }, { name: "a" }, { name: "b" }] };
+    const local = { items: [{ name: "a" }, { name: "a" }, { name: "b" }] };
+
+    const result = compareObjectsCarr(server, local);
+
+    expect(result.equal).toBe(true);
+    expect(result.changes).toEqual([]);
+  });
+
+  test("reorder combined with a real content edit falls back to per-index diffs, not a coarse reorder change", () => {
+    const server = {
+      items: [
+        { name: "a", score: 1 },
+        { name: "b", score: 1 },
+        { name: "c", score: 1 },
+      ],
+    };
+    const local = {
+      items: [
+        { name: "c", score: 1 },
+        { name: "a", score: 1 },
+        { name: "b", score: 99 },
+      ],
+    };
+
+    const result = compareObjectsCarr(server, local);
+
+    expect(result.equal).toBe(false);
+    // Not a multiset match (b's score differs), so this must NOT collapse into one "items" reorder change.
+    expect(result.changes.some((c) => c.field === "items")).toBe(false);
+  });
+
+  test("distinguishes a true reorder from a count change disguised as one (duplicate-aware)", () => {
+    const server = { tags: ["a", "a", "b"] };
+    const local = { tags: ["a", "b", "b"] };
+
+    const result = compareObjectsCarr(server, local);
+
+    expect(result.equal).toBe(false);
+    // Counts differ (two "a" vs two "b"), so this is a real content change, not a reorder -
+    // it must report per-index field changes, not collapse into one "tags" change.
+    expect(result.changes.some((c) => c.field === "tags")).toBe(false);
   });
 });

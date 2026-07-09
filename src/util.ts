@@ -6,6 +6,7 @@ import { getHelpers } from "./env";
 import { logger } from "./logger";
 import { ConfigarrCF, ImportCF, UserFriendlyField } from "./types/common.types";
 import { TrashCF } from "./types/trashguide.types";
+import { FieldChange } from "./diffReport/diffReport.types";
 
 const recyclarrConfigPath = `${getHelpers().repoPath}/recyclarr-config`;
 const recyclarrSonarrRoot = `${recyclarrConfigPath}/sonarr`;
@@ -125,18 +126,57 @@ export function compareMediamanagement(serverObject: any, localObject: any): Ret
   return compareObjectsCarr(serverObject, localObject);
 }
 
-export function compareObjectsCarr(serverObject: any, localObject: any, parent?: string): { equal: boolean; changes: string[] } {
-  const changes: string[] = [];
+// Detects a pure reorder: same length, not already in the same order, but every element in one
+// array has a matching element (by count) in the other. Duplicate-aware so a real count change
+// (e.g. two "a"s becoming one "a" and one extra "b") isn't mistaken for a reorder.
+function isPureReorder(serverArray: unknown[], localArray: unknown[]): boolean {
+  if (serverArray.length !== localArray.length) {
+    return false;
+  }
+
+  const isSameOrder = serverArray.every((item, i) => JSON.stringify(item) === JSON.stringify(localArray[i]));
+  if (isSameOrder) {
+    return false;
+  }
+
+  const countElements = (arr: unknown[]) => {
+    const counts = new Map<string, number>();
+    for (const item of arr) {
+      const key = JSON.stringify(item);
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
+    return counts;
+  };
+
+  const serverCounts = countElements(serverArray);
+  const localCounts = countElements(localArray);
+
+  if (serverCounts.size !== localCounts.size) {
+    return false;
+  }
+
+  for (const [key, count] of serverCounts) {
+    if (localCounts.get(key) !== count) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+export function compareObjectsCarr(serverObject: any, localObject: any, parent?: string): { equal: boolean; changes: FieldChange[] } {
+  const changes: FieldChange[] = [];
 
   for (const key in localObject) {
     if (Object.prototype.hasOwnProperty.call(localObject, key)) {
       if (Object.prototype.hasOwnProperty.call(serverObject, key)) {
         const serverProperty = serverObject[key];
-        let localProperty = localObject[key];
+        const localProperty = localObject[key];
+        const path = parent ? `${parent}.${key}` : key;
 
         if (Array.isArray(serverProperty)) {
           if (!Array.isArray(localProperty)) {
-            changes.push(`Expected array for key ${key} in localProperty`);
+            changes.push({ field: path, from: serverProperty, to: localProperty });
             continue;
           }
 
@@ -151,40 +191,30 @@ export function compareObjectsCarr(serverObject: any, localObject: any, parent?:
           }
 
           if (arrayLengthMismatch) {
-            changes.push(
-              `Array length mismatch for key ${key} (parent: ${parent}): serverProperty length ${serverProperty.length}, localProperty length ${localProperty.length}`,
-            );
+            changes.push({ field: path, from: serverProperty, to: localProperty });
+            continue;
+          }
+
+          if (isPureReorder(serverProperty, localProperty)) {
+            changes.push({ field: path, from: serverProperty, to: localProperty });
             continue;
           }
 
           for (let i = 0; i < serverProperty.length; i++) {
-            const { equal: isEqual, changes: subChanges } = compareObjectsCarr(serverProperty[i], localProperty[i], key);
-            // changes.push(
-            //   ...subChanges.map((subChange) => `${key}[${i}].${subChange}`)
-            // );
-
-            if (subChanges.length > 0) {
-              changes.push(`${key}[${i}].${subChanges[0]}`);
-            }
-
-            if (!isEqual && changes.length <= 0) {
-              changes.push(`Mismatch found in array element at index ${i} for key '${key}'`);
-            }
+            const { changes: subChanges } = compareObjectsCarr(serverProperty[i], localProperty[i]);
+            changes.push(...subChanges.map((subChange) => ({ ...subChange, field: `${path}[${i}].${subChange.field}` })));
           }
         } else if (typeof localProperty === "object" && localProperty !== null) {
           if (typeof serverProperty !== "object" || serverProperty === null) {
-            changes.push(`Expected object for key '${key}' in serverProperty`);
+            changes.push({ field: path, from: serverProperty, to: localProperty });
             continue;
           }
 
-          const { equal: isEqual, changes: subChanges } = compareObjectsCarr(serverProperty, localProperty, key);
-          changes.push(...subChanges.map((subChange) => `${key}.${subChange}`));
-          if (!isEqual) {
-            changes.push(`Mismatch found for key '${key}'`);
-          }
+          const { changes: subChanges } = compareObjectsCarr(serverProperty, localProperty, path);
+          changes.push(...subChanges);
         } else {
           if (serverProperty !== localProperty) {
-            changes.push(`Mismatch found for key '${key}': server value '${serverProperty}', value to set '${localProperty}'`);
+            changes.push({ field: path, from: serverProperty, to: localProperty });
           }
         }
       } else {

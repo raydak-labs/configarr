@@ -9,20 +9,35 @@ import { ServerCache } from "./cache";
 import { configureApi, getUnifiedClient, unsetApi } from "./clients/unified-client";
 import { getConfig, mergeConfigsAndTemplates } from "./config";
 import { calculateCFsToManage, deleteCustomFormat, loadCustomFormatDefinitions, loadServerCustomFormats, manageCf } from "./custom-formats";
-import { calculateDelayProfilesDiff, deleteAdditionalDelayProfiles, mapToServerDelayProfile } from "./delay-profiles";
+import {
+  calculateDelayProfilesDiff,
+  delayProfilesToDiffEntries,
+  deleteAdditionalDelayProfiles,
+  mapToServerDelayProfile,
+} from "./delay-profiles";
 import { syncDownloadClients } from "./downloadClients/downloadClientSyncer";
-import { syncDownloadClientConfig } from "./downloadClientConfig/downloadClientConfigSyncer";
+import { downloadClientConfigDiffToDiffEntries, syncDownloadClientConfig } from "./downloadClientConfig/downloadClientConfigSyncer";
 import { syncRemotePaths } from "./remotePaths/remotePathSyncer";
-import { syncUiConfig } from "./uiConfigs/uiConfigSyncer";
+import { syncUiConfig, uiConfigDiffToDiffEntries } from "./uiConfigs/uiConfigSyncer";
 import { logger, logHeading, logInstanceHeading } from "./logger";
-import { calculateMediamanagementDiff, calculateNamingDiff } from "./media-management";
-import { calculateQualityDefinitionDiff, loadQualityDefinitionFromServer } from "./quality-definitions";
+import {
+  calculateMediamanagementDiff,
+  calculateNamingDiff,
+  mediamanagementDiffToDiffEntries,
+  namingDiffToDiffEntries,
+} from "./media-management";
+import { calculateQualityDefinitionDiff, loadQualityDefinitionFromServer, qualityDefinitionsToDiffEntries } from "./quality-definitions";
+import { DiffCollector } from "./diffReport/diffCollector";
+import { ConsoleDiffFormatter } from "./diffReport/formatters/consoleFormatter";
+import { writeJsonDiffReport } from "./diffReport/formatters/jsonFormatter";
+import { InstanceDiffReport } from "./diffReport/diffReport.types";
 import {
   calculateQualityProfilesDiff,
   checkForConflictingCFs,
   deleteQualityProfile,
   getUnmanagedQualityProfiles,
   loadQualityProfilesFromServer,
+  qualityProfilesToDiffEntries,
 } from "./quality-profiles";
 import { syncMetadataProfiles } from "./metadataProfiles/metadataProfileSyncer";
 import { cloneRecyclarrTemplateRepo } from "./recyclarr-importer";
@@ -36,8 +51,14 @@ import { TrashArrSupportedConst, TrashQualityDefinition, TrashQualityDefinitionQ
 import { isInConstArray } from "./util";
 import { syncRootFolders } from "./rootFolder/rootFolderSyncer";
 
-const pipeline = async (globalConfig: InputConfigSchema, instanceConfig: InputConfigArrInstance, arrType: ArrType) => {
+const pipeline = async (
+  globalConfig: InputConfigSchema,
+  instanceConfig: InputConfigArrInstance,
+  arrType: ArrType,
+  instanceName: string,
+): Promise<InstanceDiffReport> => {
   const api = getUnifiedClient();
+  const diffCollector = new DiffCollector();
 
   const system = await api.getSystemStatus();
   logger.info(`System status: ${JSON.stringify(system)}`);
@@ -73,6 +94,7 @@ const pipeline = async (globalConfig: InputConfigSchema, instanceConfig: InputCo
   }, new Map<string, MergedCustomFormatResource>());
 
   const cfUpdateResult = await manageCf(mergedCFs, serverCFMapping);
+  diffCollector.add(cfUpdateResult.diffEntries);
 
   // add missing CFs to list because we need it for further steps
   // serverCFs.push(...cfUpdateResult.createCFs);
@@ -99,6 +121,8 @@ const pipeline = async (globalConfig: InputConfigSchema, instanceConfig: InputCo
     const cfsToDelete = serverCache.cf.filter((e) => (e.name && mm.get(e.name)) !== true);
 
     if (cfsToDelete.length > 0) {
+      diffCollector.add(cfsToDelete.map((e) => ({ resourceType: "CustomFormat", name: e.name!, action: "delete" as const })));
+
       if (getEnvs().DRY_RUN) {
         logger.info(`DryRun: Would delete CF: ${cfsToDelete.map((e) => e.name).join(", ")}`);
       } else {
@@ -153,6 +177,8 @@ const pipeline = async (globalConfig: InputConfigSchema, instanceConfig: InputCo
     const { changeMap, restData } = calculateQualityDefinitionDiff(serverCache.qd, mergedQDs);
 
     if (changeMap.size > 0) {
+      diffCollector.add(qualityDefinitionsToDiffEntries(changeMap));
+
       if (getEnvs().DRY_RUN) {
         logger.info("DryRun: Would update QualityDefinitions.");
       } else {
@@ -172,6 +198,8 @@ const pipeline = async (globalConfig: InputConfigSchema, instanceConfig: InputCo
   const namingDiff = await calculateNamingDiff(config.media_naming_api);
 
   if (namingDiff) {
+    diffCollector.add(namingDiffToDiffEntries(namingDiff));
+
     if (getEnvs().DRY_RUN) {
       logger.info("DryRun: Would update MediaNaming.");
     } else {
@@ -184,6 +212,8 @@ const pipeline = async (globalConfig: InputConfigSchema, instanceConfig: InputCo
   const managementDiff = await calculateMediamanagementDiff(config.media_management);
 
   if (managementDiff) {
+    diffCollector.add(mediamanagementDiffToDiffEntries(managementDiff));
+
     if (getEnvs().DRY_RUN) {
       logger.info("DryRun: Would update MediaManagement.");
     } else {
@@ -193,7 +223,8 @@ const pipeline = async (globalConfig: InputConfigSchema, instanceConfig: InputCo
     }
   }
 
-  await syncUiConfig(arrType, config.ui_config);
+  const uiConfigResult = await syncUiConfig(arrType, config.ui_config);
+  diffCollector.add(uiConfigDiffToDiffEntries(uiConfigResult));
 
   const serverQP = await loadQualityProfilesFromServer();
   serverCache.qp = serverQP;
@@ -201,7 +232,9 @@ const pipeline = async (globalConfig: InputConfigSchema, instanceConfig: InputCo
   logger.info(`Server objects: QualityProfiles ${serverQP.length}`);
 
   // calculate diff from server <-> what we want to be there
-  const { changedQPs, create, noChanges } = await calculateQualityProfilesDiff(arrType, mergedCFs, config, serverCache);
+  const { changedQPs, create, noChanges, changes: qpChanges } = await calculateQualityProfilesDiff(arrType, mergedCFs, config, serverCache);
+
+  diffCollector.add(qualityProfilesToDiffEntries(create, changedQPs, qpChanges));
 
   if (getEnvs().DEBUG_CREATE_FILES) {
     create.concat(changedQPs).forEach((e, i) => {
@@ -259,9 +292,11 @@ const pipeline = async (globalConfig: InputConfigSchema, instanceConfig: InputCo
   }
 
   // Handle metadata profiles (Lidarr / Readarr) - unified sync with optional deletion
-  await syncMetadataProfiles(arrType, config, serverCache);
+  const metadataProfileResult = await syncMetadataProfiles(arrType, config, serverCache);
+  diffCollector.add(metadataProfileResult.diffEntries);
 
-  await syncRootFolders(arrType, config.root_folders, serverCache);
+  const rootFolderResult = await syncRootFolders(arrType, config.root_folders, serverCache);
+  diffCollector.add(rootFolderResult.diffEntries);
 
   // Handle delay profiles
   if (
@@ -271,6 +306,10 @@ const pipeline = async (globalConfig: InputConfigSchema, instanceConfig: InputCo
     logger.debug(`Config 'delay_profiles' not specified. Ignoring.`);
   } else {
     const delayProfilesDiff = await calculateDelayProfilesDiff(config.delay_profiles, serverCache.tags);
+
+    if (delayProfilesDiff) {
+      diffCollector.add(delayProfilesToDiffEntries(delayProfilesDiff));
+    }
 
     if (delayProfilesDiff?.defaultProfileChanged || delayProfilesDiff?.additionalProfilesChanged) {
       if (getEnvs().DRY_RUN) {
@@ -313,27 +352,21 @@ const pipeline = async (globalConfig: InputConfigSchema, instanceConfig: InputCo
 
   // Download Clients
   if (config.download_clients?.data || config.download_clients?.delete_unmanaged?.enabled) {
-    if (getEnvs().DRY_RUN) {
-      logger.info("DryRun: Would sync download clients.");
-    } else {
-      try {
-        await syncDownloadClients(arrType, config, serverCache);
-      } catch (err: any) {
-        logger.error(`Failed to sync download clients: ${err.message}`);
-      }
+    try {
+      const downloadClientsResult = await syncDownloadClients(arrType, config, serverCache);
+      diffCollector.add(downloadClientsResult.diffEntries);
+    } catch (err: any) {
+      logger.error(`Failed to sync download clients: ${err.message}`);
     }
   }
 
   // Download Client Configuration
   if (config.download_clients?.config) {
-    if (getEnvs().DRY_RUN) {
-      logger.info("DryRun: Would sync download client config.");
-    } else {
-      try {
-        await syncDownloadClientConfig(arrType, config, serverCache);
-      } catch (err: any) {
-        logger.error(`Failed to sync download client config: ${err.message}`);
-      }
+    try {
+      const downloadClientConfigResult = await syncDownloadClientConfig(arrType, config, serverCache);
+      diffCollector.add(downloadClientConfigDiffToDiffEntries(downloadClientConfigResult));
+    } catch (err: any) {
+      logger.error(`Failed to sync download client config: ${err.message}`);
     }
   }
 
@@ -343,18 +376,17 @@ const pipeline = async (globalConfig: InputConfigSchema, instanceConfig: InputCo
     (config.download_clients.remote_paths.length > 0 || config.download_clients.delete_unmanaged_remote_paths)
   ) {
     logger.debug(`[DEBUG] About to sync remote paths for ${arrType}. Count: ${config.download_clients.remote_paths.length}`);
-    if (getEnvs().DRY_RUN) {
-      logger.info("DryRun: Would sync remote path mappings.");
-    } else {
-      try {
-        await syncRemotePaths(arrType, config);
-      } catch (err: any) {
-        logger.error(`Failed to sync remote path mappings: ${err.message}`);
-      }
+    try {
+      const remotePathsResult = await syncRemotePaths(arrType, config);
+      diffCollector.add(remotePathsResult.diffEntries);
+    } catch (err: any) {
+      logger.error(`Failed to sync remote path mappings: ${err.message}`);
     }
   } else {
     logger.debug(`[DEBUG] No remote paths to sync for ${arrType}. download_clients: ${JSON.stringify(config.download_clients)}`);
   }
+
+  return { arrType, instanceName, entries: diffCollector.getEntries() };
 };
 
 const runArrType = async (
@@ -367,10 +399,11 @@ const runArrType = async (
     failure: 0,
     skipped: 0,
   };
+  const reports: InstanceDiffReport[] = [];
 
   if (!arrEntry || typeof arrEntry !== "object" || Object.keys(arrEntry).length === 0) {
     logHeading(`No ${arrType} instances defined.`);
-    return status;
+    return { status, reports };
   }
 
   logHeading(`Processing ${arrType} ...`);
@@ -386,7 +419,9 @@ const runArrType = async (
 
     try {
       await configureApi(arrType, instance.base_url, instance.api_key);
-      await pipeline(globalConfig, instance, arrType);
+      const report = await pipeline(globalConfig, instance, arrType, instanceName);
+      new ConsoleDiffFormatter().format(report);
+      reports.push(report);
       status.success++;
     } catch (err: any) {
       logger.error(
@@ -406,7 +441,7 @@ const runArrType = async (
     logger.info("");
   }
 
-  return status;
+  return { status, reports };
 };
 
 const run = async () => {
@@ -429,6 +464,8 @@ const run = async () => {
   const totalStatus: string[] = [];
 
   const disabledArrs: string[] = [];
+
+  const allReports: InstanceDiffReport[] = [];
 
   const arrTypes = [
     { type: "SONARR", enabled: globalConfig.sonarrEnabled, config: globalConfig.sonarr },
@@ -456,7 +493,8 @@ const run = async () => {
   for (const { type, enabled, config } of arrTypes) {
     if (enabled == null || enabled) {
       const result = await runArrType(type as ArrType, globalConfig, config);
-      totalStatus.push(`${type}: (${result.success}/${result.failure}/${result.skipped})`);
+      totalStatus.push(`${type}: (${result.status.success}/${result.status.failure}/${result.status.skipped})`);
+      allReports.push(...result.reports);
     } else {
       logger.debug(`${type} disabled in config`);
       disabledArrs.push(type);
@@ -468,6 +506,16 @@ const run = async () => {
     logger.info(`Disabled Arrs: ${disabledArrs.join(", ")}`);
   }
   logger.info(`Execution Summary (success/failure/skipped) instances: ${totalStatus.join(" - ")}`);
+
+  const diffOutputFile = getEnvs().CONFIGARR_DIFF_OUTPUT_FILE;
+  if (diffOutputFile) {
+    try {
+      writeJsonDiffReport(diffOutputFile, allReports, getEnvs().DRY_RUN);
+      logger.info(`Diff report written to ${diffOutputFile}`);
+    } catch (err: any) {
+      logger.error(`Failed to write diff report to ${diffOutputFile}: ${err.message}`);
+    }
+  }
 
   if (Telemetry.isEnabled()) {
     await getTelemetryInstance().finalizeTracking();

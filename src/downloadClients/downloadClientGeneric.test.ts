@@ -105,7 +105,7 @@ describe("GenericDownloadClientSync – ARR type handling", () => {
         fields: { host: "localhost" },
       };
 
-      const isEqual = sync.isDownloadClientEqual(configClient, serverClient, cache);
+      const { equal: isEqual } = sync.isDownloadClientEqual(configClient, serverClient, cache);
       expect(isEqual).toBe(true);
     });
 
@@ -134,7 +134,7 @@ describe("GenericDownloadClientSync – ARR type handling", () => {
         fields: { host: "localhost" },
       };
 
-      const isEqual = sync.isDownloadClientEqual(configClient, serverClient, cache);
+      const { equal: isEqual } = sync.isDownloadClientEqual(configClient, serverClient, cache);
       expect(isEqual).toBe(false);
     });
 
@@ -168,7 +168,7 @@ describe("GenericDownloadClientSync – ARR type handling", () => {
         },
       };
 
-      const isEqual = sync.isDownloadClientEqual(configClient, serverClient, cache);
+      const { equal: isEqual } = sync.isDownloadClientEqual(configClient, serverClient, cache);
       expect(isEqual).toBe(true);
     });
 
@@ -209,7 +209,7 @@ describe("GenericDownloadClientSync – ARR type handling", () => {
         },
       };
 
-      const isEqual = sync.isDownloadClientEqual(configClient, serverClient, cache);
+      const { equal: isEqual } = sync.isDownloadClientEqual(configClient, serverClient, cache);
       expect(isEqual).toBe(true); // Should NOT detect changes due to password masking
     });
 
@@ -273,7 +273,7 @@ describe("GenericDownloadClientSync – ARR type handling", () => {
         },
       };
 
-      const isEqual = sync.isDownloadClientEqual(configClient, serverClient, cache);
+      const { equal: isEqual } = sync.isDownloadClientEqual(configClient, serverClient, cache);
 
       // Now it should be true since we have the right field mapping
       expect(isEqual).toBe(true); // Should NOT detect changes anymore
@@ -313,11 +313,11 @@ describe("GenericDownloadClientSync – ARR type handling", () => {
       };
 
       // Without update_password, should be equal (password masked)
-      const isEqualWithoutUpdate = sync.isDownloadClientEqual(configClient, serverClient, cache, false);
+      const { equal: isEqualWithoutUpdate } = sync.isDownloadClientEqual(configClient, serverClient, cache, false);
       expect(isEqualWithoutUpdate).toBe(true);
 
       // With update_password, should NOT be equal (different passwords)
-      const isEqualWithUpdate = sync.isDownloadClientEqual(configClient, serverClient, cache, true);
+      const { equal: isEqualWithUpdate } = sync.isDownloadClientEqual(configClient, serverClient, cache, true);
       expect(isEqualWithUpdate).toBe(false);
     });
   });

@@ -45,7 +45,7 @@ describe("uiConfigSyncer", () => {
     test("should skip when uiConfig is undefined", async () => {
       const result = await syncUiConfig("RADARR", undefined);
 
-      expect(result).toEqual({ updated: false, arrType: "RADARR" });
+      expect(result).toEqual({ updated: false, arrType: "RADARR", fieldChanges: [] });
       expect(getSpecificClient).not.toHaveBeenCalled();
       expect(mockGetUiConfig).not.toHaveBeenCalled();
     });
@@ -72,7 +72,7 @@ describe("uiConfigSyncer", () => {
 
       const result = await syncUiConfig("RADARR", localConfig);
 
-      expect(result).toEqual({ updated: false, arrType: "RADARR" });
+      expect(result).toEqual({ updated: false, arrType: "RADARR", fieldChanges: [] });
       expect(mockUpdateUiConfig).not.toHaveBeenCalled();
     });
 
@@ -85,7 +85,11 @@ describe("uiConfigSyncer", () => {
 
       const result = await syncUiConfig("RADARR", localConfig);
 
-      expect(result).toEqual({ updated: true, arrType: "RADARR" });
+      expect(result).toEqual({
+        updated: true,
+        arrType: "RADARR",
+        fieldChanges: [{ field: "theme", from: "light", to: "dark" }],
+      });
       expect(mockUpdateUiConfig).toHaveBeenCalledWith("1", { id: 1, theme: "dark", language: "en" });
     });
 
@@ -99,7 +103,11 @@ describe("uiConfigSyncer", () => {
 
       const result = await syncUiConfig("SONARR", localConfig);
 
-      expect(result).toEqual({ updated: true, arrType: "SONARR" });
+      expect(result).toEqual({
+        updated: true,
+        arrType: "SONARR",
+        fieldChanges: [{ field: "theme", from: "light", to: "dark" }],
+      });
       expect(mockUpdateUiConfig).not.toHaveBeenCalled();
     });
 
@@ -157,7 +165,7 @@ describe("uiConfigSyncer", () => {
 
         const result = await syncUiConfig(arrType, localConfig);
 
-        expect(result).toEqual({ updated: true, arrType });
+        expect(result).toEqual({ updated: true, arrType, fieldChanges: [{ field: "theme", from: "light", to: "dark" }] });
         expect(getSpecificClient).toHaveBeenCalledWith(arrType);
       }
     });

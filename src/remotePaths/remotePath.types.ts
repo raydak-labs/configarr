@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { ArrType } from "../types/common.types";
 import { InputConfigRemotePath } from "../types/config.types";
+import { DiffEntry } from "../diffReport/diffReport.types";
 
 /**
  * Zod schema for validating remote path configuration
@@ -26,6 +27,7 @@ export interface RemotePathSyncResult {
   deleted: number;
   unchanged: number;
   arrType: ArrType;
+  diffEntries: DiffEntry[];
 }
 
 /**
@@ -44,7 +46,7 @@ export interface RemotePathMappingResource {
  */
 export interface RemotePathDiff {
   toCreate: InputConfigRemotePath[];
-  toUpdate: Array<{ id: number; config: InputConfigRemotePath }>;
-  toDelete: Array<{ id: number }>;
+  toUpdate: Array<{ id: number; config: InputConfigRemotePath; server: RemotePathMappingResource }>;
+  toDelete: Array<{ id: number; host?: string | null; remotePath?: string | null }>;
   unchanged: number;
 }

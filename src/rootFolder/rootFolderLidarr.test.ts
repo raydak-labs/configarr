@@ -193,13 +193,17 @@ describe("LidarrRootFolderSync", () => {
         serverCache,
       );
 
-      expect(result).toEqual({
-        missingOnServer: [{ path: "/new", name: "new", metadata_profile: "Standard", quality_profile: "Any" }],
-        notAvailableAnymore: [],
-        changed: [
-          { config: { path: "/existing", name: "existing", metadata_profile: "Standard", quality_profile: "Any" }, server: "/existing" },
-        ],
+      expect(result?.missingOnServer).toEqual([{ path: "/new", name: "new", metadata_profile: "Standard", quality_profile: "Any" }]);
+      expect(result?.notAvailableAnymore).toEqual([]);
+      expect(result?.changed).toHaveLength(1);
+      expect(result?.changed[0]?.config).toEqual({
+        path: "/existing",
+        name: "existing",
+        metadata_profile: "Standard",
+        quality_profile: "Any",
       });
+      expect(result?.changed[0]?.server).toEqual("/existing");
+      expect(result?.changed[0]?.fieldChanges.length).toBeGreaterThan(0);
     });
 
     it("should handle server returning objects", async () => {
@@ -217,16 +221,34 @@ describe("LidarrRootFolderSync", () => {
         serverCache,
       );
 
-      expect(result).toEqual({
-        missingOnServer: [{ path: "/new-config", name: "New Config", metadata_profile: "Standard", quality_profile: "Any" }],
-        notAvailableAnymore: [{ path: "/old-server", id: 2, name: "Old Server" }],
-        changed: [
-          {
-            config: { path: "/server-folder", name: "Config Folder", metadata_profile: "Standard", quality_profile: "Any" },
-            server: { path: "/server-folder", id: 1, name: "Server Folder" },
-          },
-        ],
+      expect(result?.missingOnServer).toEqual([
+        { path: "/new-config", name: "New Config", metadata_profile: "Standard", quality_profile: "Any" },
+      ]);
+      expect(result?.notAvailableAnymore).toEqual([{ path: "/old-server", id: 2, name: "Old Server" }]);
+      expect(result?.changed).toHaveLength(1);
+      expect(result?.changed[0]?.config).toEqual({
+        path: "/server-folder",
+        name: "Config Folder",
+        metadata_profile: "Standard",
+        quality_profile: "Any",
       });
+      expect(result?.changed[0]?.server).toEqual({ path: "/server-folder", id: 1, name: "Server Folder" });
+      expect(result?.changed[0]?.fieldChanges.length).toBeGreaterThan(0);
+    });
+
+    it("exposes structured fieldChanges for a changed root folder", async () => {
+      mockApi.getRootfolders.mockResolvedValue([
+        { path: "/music", id: 1, name: "old-name", defaultQualityProfileId: 1, defaultMetadataProfileId: 10, defaultTags: [] },
+      ]);
+
+      const sync = new LidarrRootFolderSync();
+      const result = await sync.calculateDiff(
+        [{ path: "/music", name: "new-name", metadata_profile: "Standard", quality_profile: "Any" }],
+        serverCache,
+      );
+
+      expect(result?.changed).toHaveLength(1);
+      expect(result?.changed[0]?.fieldChanges).toContainEqual({ field: "name", from: "old-name", to: "new-name" });
     });
   });
 });

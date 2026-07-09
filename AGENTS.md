@@ -66,6 +66,15 @@ pnpm typecheck         # TypeScript type checking
    - Type definitions in `types/` or local `*.types.ts` files
    - Generated API code in `__generated__/`
 
+## AI-Internal Documentation
+
+Store design, architecture, and implementation planning documents created during agent-assisted development in `.ai/docs/` — not in `docs/` (user-facing documentation for configarr.de):
+
+- **`.ai/docs/specs/`** — feature design and architecture documents
+- **`.ai/docs/plans/`** — step-by-step implementation plans
+
+Use dated filenames (e.g. `2026-07-06-feature-name-design.md`). Cross-reference specs from plans when both exist.
+
 ## Project Structure
 
 ```

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { ServerCache } from "../cache";
 import { getUnifiedClient, IArrClient } from "../clients/unified-client";
+import { DiffEntry } from "../diffReport/diffReport.types";
 import { getEnvs } from "../env";
 import { logger } from "../logger";
 import { ArrType } from "../types/common.types";
@@ -36,6 +37,28 @@ const DownloadClientConfigSchema = z.object({
     .optional()
     .default([]),
 });
+
+export function downloadClientDiffToDiffEntries(diff: DownloadClientDiff, unmanagedToDelete: DownloadClientResource[]): DiffEntry[] {
+  const entries: DiffEntry[] = diff.create.map((c) => ({
+    resourceType: "DownloadClient",
+    name: c.name,
+    action: "create" as const,
+  }));
+
+  for (const { config, fieldChanges } of diff.update) {
+    entries.push({ resourceType: "DownloadClient", name: config.name, action: "update", fieldChanges });
+  }
+
+  entries.push(
+    ...unmanagedToDelete.map((c) => ({
+      resourceType: "DownloadClient",
+      name: c.name ?? "unknown",
+      action: "delete" as const,
+    })),
+  );
+
+  return entries;
+}
 
 export abstract class BaseDownloadClientSync {
   private _api: IArrClient | undefined;
@@ -396,7 +419,7 @@ export abstract class BaseDownloadClientSync {
 
     if (configClients.length === 0 && !config.download_clients?.delete_unmanaged?.enabled) {
       this.logger.info("No download clients configured and delete_unmanaged not enabled, skipping");
-      return { added: 0, updated: 0, removed: 0 };
+      return { added: 0, updated: 0, removed: 0, diffEntries: [] };
     }
 
     // Get schema and server clients
@@ -422,12 +445,19 @@ export abstract class BaseDownloadClientSync {
       `Download clients diff - Create: ${diff.create.length}, Update: ${diff.update.length}, Unchanged: ${diff.unchanged.length}`,
     );
 
+    const unmanagedToDelete = config.download_clients?.delete_unmanaged?.enabled
+      ? this.filterUnmanagedClients(serverClients, configClients, config.download_clients.delete_unmanaged)
+      : [];
+
+    const diffEntries = downloadClientDiffToDiffEntries(diff, unmanagedToDelete);
+
     if (getEnvs().DRY_RUN) {
       this.logger.info("DryRun: Would update download clients.");
       return {
         added: diff.create.length,
         updated: diff.update.length,
         removed: diff.deleted.length,
+        diffEntries,
       };
     }
 
@@ -437,11 +467,7 @@ export abstract class BaseDownloadClientSync {
       this.updateClients(diff.update, serverCache),
     ]);
 
-    const removed = config.download_clients?.delete_unmanaged?.enabled
-      ? await this.deleteUnmanagedClients(
-          this.filterUnmanagedClients(serverClients, configClients, config.download_clients.delete_unmanaged),
-        )
-      : 0;
+    const removed = config.download_clients?.delete_unmanaged?.enabled ? await this.deleteUnmanagedClients(unmanagedToDelete) : 0;
 
     if (added > 0 || updated > 0 || removed > 0) {
       this.logger.info(`Download client synchronization complete: +${added} ~${updated} -${removed}`);
@@ -449,6 +475,6 @@ export abstract class BaseDownloadClientSync {
       this.logger.info("Download client synchronization complete - no changes needed");
     }
 
-    return { added, updated, removed };
+    return { added, updated, removed, diffEntries };
   }
 }

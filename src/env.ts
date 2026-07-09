@@ -20,6 +20,7 @@ const schema = z.object({
     .default("info"),
   CONFIG_LOCATION: z.string().optional(),
   SECRETS_LOCATION: z.string().optional(),
+  CONFIGARR_DIFF_OUTPUT_FILE: z.string().optional(),
   // TODO: deprecate?
   CUSTOM_REPO_ROOT: z.string().optional(),
   ROOT_PATH: z.string().optional().default(DEFAULT_ROOT_PATH),
