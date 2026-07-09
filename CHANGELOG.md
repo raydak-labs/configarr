@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.30.0](https://github.com/raydak-labs/configarr/compare/v1.29.1...v1.30.0) (2026-07-09)
+
+### Features
+
+- add validation utility with config/external enforcement flags ([#431](https://github.com/raydak-labs/configarr/issues/431)) ([8773478](https://github.com/raydak-labs/configarr/commit/877347825bd2c4bf33da384db16c758ad8158a07))
+- detailed diff reports replacing generic DryRun/update log lines ([#478](https://github.com/raydak-labs/configarr/issues/478)) ([c5f2533](https://github.com/raydak-labs/configarr/commit/c5f2533aa6584c0a0107e85a9ef5364a736d38fa))
+
+### Bug Fixes
+
+- **radarr:** default omitted quality-profile language to Any on sync ([8d62c1b](https://github.com/raydak-labs/configarr/commit/8d62c1be38c9870ff57b526c99e6b323d1642bf0))
+
 ## [1.29.1](https://github.com/raydak-labs/configarr/compare/v1.29.0...v1.29.1) (2026-07-05)
 
 ### Bug Fixes
