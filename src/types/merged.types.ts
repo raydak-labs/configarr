@@ -58,7 +58,18 @@ export type MergedQualityProfileResource = OmitTyped<QPRMerged, "items"> &
 
 export type MergedCustomFormatSpecificationSchema = RadarrCustomFormatSpecificationSchema & SonarrCustomFormatSpecificationSchema;
 export type MergedRootFolderResource = SonarrRootFolderResource & RadarrRootFolderResource;
+/** Lidarr nightly delay-profile protocol rows (openapi still stale; extend manually). */
+export type MergedDelayProfileProtocolItem = {
+  name?: string | null;
+  protocol?: string | null;
+  allowed?: boolean;
+  delay?: number;
+};
+
 export type MergedDelayProfileResource = import("../__generated__/sonarr/data-contracts").DelayProfileResource &
-  import("../__generated__/radarr/data-contracts").DelayProfileResource;
+  import("../__generated__/radarr/data-contracts").DelayProfileResource & {
+    name?: string | null;
+    items?: MergedDelayProfileProtocolItem[] | null;
+  };
 
 export type MergedTagResource = RadarrTagResource;

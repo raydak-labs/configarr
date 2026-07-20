@@ -193,18 +193,41 @@ export const InputConfigRemotePathSchema = z.object({
 });
 export type InputConfigRemotePath = z.infer<typeof InputConfigRemotePathSchema>;
 
-export const InputConfigDelayProfileSchema = z.object({
-  enableUsenet: z.boolean().optional(),
-  enableTorrent: z.boolean().optional(),
-  preferredProtocol: z.string().optional(),
-  usenetDelay: z.number().optional(),
-  torrentDelay: z.number().optional(),
-  bypassIfHighestQuality: z.boolean().optional(),
-  bypassIfAboveCustomFormatScore: z.boolean().optional(),
-  minimumCustomFormatScore: z.number().optional(),
-  order: z.number().optional(),
-  tags: z.array(z.string()).optional(),
+export const InputConfigDelayProfileItemSchema = z.object({
+  name: z.string(),
+  protocol: z.string(),
+  allowed: z.boolean().optional(),
+  delay: z.number().optional(),
 });
+export type InputConfigDelayProfileItem = z.infer<typeof InputConfigDelayProfileItemSchema>;
+
+// Lidarr nightly (plugin support) uses items[]; Sonarr/Radarr/etc. still use enableUsenet/enableTorrent.
+// Accept YAML `Items` as alias for `items`.
+export const InputConfigDelayProfileSchema = z.preprocess(
+  (raw) => {
+    if (raw && typeof raw === "object" && !Array.isArray(raw)) {
+      const obj = raw as Record<string, unknown>;
+      if (obj.Items !== undefined && obj.items === undefined) {
+        const { Items, ...rest } = obj;
+        return { ...rest, items: Items };
+      }
+    }
+    return raw;
+  },
+  z.object({
+    enableUsenet: z.boolean().optional(),
+    enableTorrent: z.boolean().optional(),
+    preferredProtocol: z.string().optional(),
+    usenetDelay: z.number().optional(),
+    torrentDelay: z.number().optional(),
+    bypassIfHighestQuality: z.boolean().optional(),
+    bypassIfAboveCustomFormatScore: z.boolean().optional(),
+    minimumCustomFormatScore: z.number().optional(),
+    order: z.number().optional(),
+    tags: z.array(z.string()).optional(),
+    items: z.array(InputConfigDelayProfileItemSchema).optional(),
+  }),
+);
 export type InputConfigDelayProfile = z.infer<typeof InputConfigDelayProfileSchema>;
 
 export const InputConfigDownloadClientSchema = z.object({
