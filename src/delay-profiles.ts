@@ -2,7 +2,7 @@ import { getUnifiedClient } from "./clients/unified-client";
 import { DiffEntry, FieldChange } from "./diffReport/diffReport.types";
 import { logger } from "./logger";
 import { InputConfigDelayProfile } from "./types/config.types";
-import { MergedDelayProfileResource, MergedTagResource } from "./types/merged.types";
+import { MergedDelayProfileProtocolItem, MergedDelayProfileResource, MergedTagResource } from "./types/merged.types";
 
 export const deleteAdditionalDelayProfiles = async () => {
   const api = getUnifiedClient();
@@ -43,17 +43,34 @@ export function splitServerDelayProfiles(serverProfiles: MergedDelayProfileResou
 
 export const mapToServerDelayProfile = (profile: InputConfigDelayProfile, serverTags: MergedTagResource[]): MergedDelayProfileResource => {
   const mappedTags = profile.tags?.map((tagName) => serverTags.find((t) => t.label === tagName)?.id).filter((t) => t !== undefined) || [];
-  return {
-    enableUsenet: profile.enableUsenet,
-    enableTorrent: profile.enableTorrent,
-    preferredProtocol: (profile.preferredProtocol ?? "usenet") as any, // Default to usenet if not specified
-    usenetDelay: profile.usenetDelay,
-    torrentDelay: profile.torrentDelay,
+  const shared = {
     bypassIfHighestQuality: profile.bypassIfHighestQuality,
     bypassIfAboveCustomFormatScore: profile.bypassIfAboveCustomFormatScore,
     minimumCustomFormatScore: profile.minimumCustomFormatScore,
     order: profile.order,
     tags: mappedTags,
+  };
+
+  // Lidarr nightly: items[] required. Prefer items when configured.
+  if (profile.items?.length) {
+    return {
+      ...shared,
+      items: profile.items.map((item) => ({
+        name: item.name,
+        protocol: item.protocol,
+        allowed: item.allowed,
+        delay: item.delay,
+      })),
+    };
+  }
+
+  return {
+    ...shared,
+    enableUsenet: profile.enableUsenet,
+    enableTorrent: profile.enableTorrent,
+    preferredProtocol: (profile.preferredProtocol ?? "usenet") as any, // Default to usenet if not specified
+    usenetDelay: profile.usenetDelay,
+    torrentDelay: profile.torrentDelay,
   };
 };
 
@@ -147,6 +164,21 @@ const getProfileTags = (profile: MergedDelayProfileResource): number[] => {
   return "tags" in profile && Array.isArray(profile.tags) ? profile.tags : [];
 };
 
+const normalizeDelayProfileItems = (items: MergedDelayProfileProtocolItem[] | null | undefined) =>
+  (items ?? []).map((item) => ({
+    name: item.name ?? undefined,
+    protocol: item.protocol ?? undefined,
+    allowed: item.allowed,
+    delay: item.delay,
+  }));
+
+const areDelayProfileItemsEqual = (
+  configItems: InputConfigDelayProfile["items"],
+  serverItems: MergedDelayProfileResource["items"],
+): boolean => {
+  return JSON.stringify(normalizeDelayProfileItems(configItems)) === JSON.stringify(normalizeDelayProfileItems(serverItems));
+};
+
 const compareProfileFields = (config: InputConfigDelayProfile, server: MergedDelayProfileResource): FieldChange[] => {
   const keys: ComparisonKeys[] = [
     "enableUsenet",
@@ -166,6 +198,11 @@ const compareProfileFields = (config: InputConfigDelayProfile, server: MergedDel
       changes.push({ field: key, from: server[key], to: config[key] });
     }
   }
+
+  if (config.items !== undefined && !areDelayProfileItemsEqual(config.items, server.items)) {
+    changes.push({ field: "items", from: server.items ?? [], to: config.items });
+  }
+
   return changes;
 };
 

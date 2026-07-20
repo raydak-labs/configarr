@@ -861,15 +861,47 @@ yourarr:
             - mytag
 ```
 
+### Protocol `items` (Lidarr nightly) <span className="theme-doc-version-badge badge badge--secondary configarr-badge">1.30.1</span>
+
+Lidarr **nightly** (plugin support) replaced the legacy Usenet/Torrent flags with a protocol `items` list. Custom protocols from plugins (for example Tubifarry) appear as extra entries in that list.
+
+```yaml
+lidarr:
+  instance1:
+    delay_profiles:
+      default:
+        items:
+          - name: Usenet
+            protocol: UsenetDownloadProtocol
+            allowed: true
+            delay: 2
+          - name: Torrent
+            protocol: TorrentDownloadProtocol
+            allowed: true
+            delay: 0
+          # Plugin protocols (example):
+          # - name: Youtube
+          #   protocol: YoutubeDownloadProtocol
+          #   allowed: false
+          #   delay: 0
+        bypassIfHighestQuality: true
+        bypassIfAboveCustomFormatScore: true
+        minimumCustomFormatScore: 0
+```
+
+YAML key `Items` is accepted as an alias for `items`.
+
+**Backward compatible:** existing configs that only set `enableUsenet` / `enableTorrent` / `preferredProtocol` / `usenetDelay` / `torrentDelay` keep working for Sonarr, Radarr, Whisparr, Readarr, and Lidarr stable. If `items` is set (non-empty), configarr sends the `items` payload and does **not** send the legacy protocol fields for that profile.
+
 Notes:
 
-- **experimental**, available since `v1.14.0`
+- **experimental**, available since `v1.14.0`; protocol `items` since `v1.30.1`
 - Supported for Sonarr, Radarr, Whisparr, Lidarr, and Readarr (if the API supports it)
 - If a delay profile exists on the server but not in your config, it will be deleted
 - If a delay profile is in your config but not on the server, it will be created (if supported)
 - If a delay profile differs, it will be updated
 
-See example [Radarr API DelayProfile](https://radarr.video/docs/api/#/DelayProfile) for more details on available fields.
+See example [Radarr API DelayProfile](https://radarr.video/docs/api/#/DelayProfile) for legacy fields. Lidarr nightly uses `items` instead.
 
 ## Download Clients <span className="theme-doc-version-badge badge badge--secondary configarr-badge">1.19.0</span>
 

@@ -293,4 +293,49 @@ describe("DelayProfiles", () => {
       { resourceType: "DelayProfile", name: "default", action: "update", fieldChanges: [{ field: "usenetDelay", from: 0, to: 10 }] },
     ]);
   });
+
+  test("mapToServerDelayProfile - items-only payload omits legacy protocol fields", async () => {
+    const { mapToServerDelayProfile } = await import("./delay-profiles");
+    const mapped = mapToServerDelayProfile(
+      {
+        items: [
+          { name: "Usenet", protocol: "UsenetDownloadProtocol", allowed: true, delay: 2 },
+          { name: "Torrent", protocol: "TorrentDownloadProtocol", allowed: true, delay: 0 },
+          { name: "Youtube", protocol: "YoutubeDownloadProtocol", allowed: false, delay: 0 },
+        ],
+        bypassIfHighestQuality: true,
+        bypassIfAboveCustomFormatScore: true,
+        minimumCustomFormatScore: 0,
+      },
+      [],
+    );
+
+    expect(mapped).toEqual({
+      bypassIfHighestQuality: true,
+      bypassIfAboveCustomFormatScore: true,
+      minimumCustomFormatScore: 0,
+      order: undefined,
+      tags: [],
+      items: [
+        { name: "Usenet", protocol: "UsenetDownloadProtocol", allowed: true, delay: 2 },
+        { name: "Torrent", protocol: "TorrentDownloadProtocol", allowed: true, delay: 0 },
+        { name: "Youtube", protocol: "YoutubeDownloadProtocol", allowed: false, delay: 0 },
+      ],
+    });
+    expect(mapped).not.toHaveProperty("preferredProtocol");
+    expect(mapped).not.toHaveProperty("enableUsenet");
+  });
+
+  test("InputConfigDelayProfileSchema - accepts Items alias", async () => {
+    const { InputConfigDelayProfileSchema } = await import("./types/config.types");
+    const parsed = InputConfigDelayProfileSchema.parse({
+      Items: [{ name: "Usenet", protocol: "UsenetDownloadProtocol", allowed: true, delay: 2 }],
+      bypassIfHighestQuality: true,
+    });
+
+    expect(parsed).toEqual({
+      items: [{ name: "Usenet", protocol: "UsenetDownloadProtocol", allowed: true, delay: 2 }],
+      bypassIfHighestQuality: true,
+    });
+  });
 });

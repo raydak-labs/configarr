@@ -596,7 +596,7 @@ export interface Field {
   helpText?: string | null;
   helpTextWarning?: string | null;
   helpLink?: string | null;
-  value?: any;
+  value?: any | null;
   type?: string | null;
   advanced?: boolean;
   selectOptions?: SelectOption[] | null;
@@ -1281,8 +1281,8 @@ export interface ReleaseProfileResource {
   id?: number;
   name?: string | null;
   enabled?: boolean;
-  required?: any;
-  ignored?: any;
+  required?: any | null;
+  ignored?: any | null;
   /** @format int32 */
   indexerId?: number;
   /** @uniqueItems true */
