@@ -1,0 +1,71 @@
+# Shared API key for all fixtures (must match helpers.ts DEFAULT_API_KEY)
+# Named volumes keep runtime DBs out of the repo; only config.xml is bind-mounted.
+services:
+  sonarr:
+    image: lscr.io/linuxserver/sonarr:4.0.19
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=Etc/UTC
+    volumes:
+      - sonarr-data:/config
+      - ./fixtures/sonarr-config/config.xml:/config/config.xml
+    ports:
+      - "18989:8989"
+
+  radarr:
+    image: lscr.io/linuxserver/radarr:6.2.1
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=Etc/UTC
+    volumes:
+      - radarr-data:/config
+      - ./fixtures/radarr-config/config.xml:/config/config.xml
+    ports:
+      - "17878:7878"
+
+  whisparr:
+    image: ghcr.io/hotio/whisparr:v3-3.0.0.695
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - UMASK=002
+      - TZ=Etc/UTC
+    volumes:
+      - whisparr-data:/config
+      - ./fixtures/whisparr-config/config.xml:/config/config.xml
+    ports:
+      - "16969:6969"
+
+  readarr:
+    image: lscr.io/linuxserver/readarr:develop-0.4.3.2665-ls130
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=Etc/UTC
+    volumes:
+      - readarr-data:/config
+      - ./fixtures/readarr-config/config.xml:/config/config.xml
+    ports:
+      - "18787:8787"
+
+  # Nightly required for protocol items[] (#481)
+  lidarr:
+    image: lscr.io/linuxserver/lidarr:nightly
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=Etc/UTC
+    volumes:
+      - lidarr-data:/config
+      - ./fixtures/lidarr-config/config.xml:/config/config.xml
+    ports:
+      - "18686:8686"
+
+volumes:
+  sonarr-data:
+  radarr-data:
+  whisparr-data:
+  readarr-data:
+  lidarr-data:

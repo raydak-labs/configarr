@@ -1,0 +1,10 @@
+# *arr containers write into fixture dirs when compose mounts them
+**/asp/
+**/*.db
+**/*.db-shm
+**/*.db-wal
+**/*.pid
+**/logs/
+**/MediaCover/
+**/Sentry/
+**/Backups/

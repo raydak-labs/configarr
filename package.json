@@ -16,6 +16,7 @@
     "start": "tsx src/index.ts",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:e2e:arr": "vitest run --config vitest.arr-e2e.config.ts",
     "typecheck": "tsc --noEmit",
     "release": "release-it"
   },
