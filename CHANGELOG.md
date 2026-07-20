@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.30.1](https://github.com/raydak-labs/configarr/compare/v1.30.0...v1.30.1) (2026-07-20)
+
+### Bug Fixes
+
+- **delay-profiles:** support Lidarr protocol items ([35820b5](https://github.com/raydak-labs/configarr/commit/35820b59f5d32a789984f9153e5bf9690b3e35da)), closes [#481](https://github.com/raydak-labs/configarr/issues/481)
+
 ## [1.30.0](https://github.com/raydak-labs/configarr/compare/v1.29.1...v1.30.0) (2026-07-09)
 
 ### Features
