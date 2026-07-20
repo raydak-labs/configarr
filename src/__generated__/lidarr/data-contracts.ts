@@ -669,7 +669,7 @@ export interface Field {
   helpText?: string | null;
   helpTextWarning?: string | null;
   helpLink?: string | null;
-  value?: any;
+  value?: any | null;
   type?: string | null;
   advanced?: boolean;
   selectOptions?: SelectOption[] | null;
