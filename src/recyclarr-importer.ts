@@ -28,6 +28,15 @@ export const loadRecyclarrTemplates = (arrType: RecyclarrArrSupported): Map<stri
   const map = new Map<string, RecyclarrTemplates>();
 
   const fillMap = (path: string) => {
+    if (!fs.existsSync(path)) {
+      // Upstream (recyclarr/config-templates) has moved away from these legacy per-item
+      // include directories in favor of bundled templates, so they may no longer exist
+      // at all for a given arrType/revision. Treat that as "no legacy templates found"
+      // rather than crashing, matching loadLocalRecyclarrTemplate's existsSync guard.
+      logger.debug(`Recyclarr template directory '${path}' does not exist. Skipping.`);
+      return;
+    }
+
     const files = fs
       .readdirSync(`${path}`, { recursive: true, encoding: "utf8" })
       .filter((fn) => fn.endsWith("yaml") || fn.endsWith("yml"));
