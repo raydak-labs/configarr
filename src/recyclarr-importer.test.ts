@@ -17,17 +17,17 @@ describe("recyclarr-importer", () => {
   });
 
   describe("loadRecyclarrTemplates", () => {
-    test("does not throw when a legacy includes directory does not exist", () => {
+    test.each(["SONARR", "RADARR"] as const)("does not throw when a legacy includes directory does not exist (%s)", (arrType) => {
       // Regression test for https://github.com/raydak-labs/configarr/issues/504
       // recyclarr/config-templates removed sonarr/includes and radarr/includes entirely,
       // which previously crashed every run with ENOENT regardless of which templates a
       // user's config actually referenced.
-      vi.spyOn(fs, "existsSync").mockReturnValue(false);
+      vi.spyOn(fs, "existsSync").mockImplementation((path) => !String(path).includes("includes"));
       const readdirSpy = vi.spyOn(fs, "readdirSync");
 
-      expect(() => loadRecyclarrTemplates("SONARR")).not.toThrow();
-      expect(loadRecyclarrTemplates("SONARR").size).toBe(0);
-      expect(loadRecyclarrTemplates("RADARR").size).toBe(0);
+      const map = loadRecyclarrTemplates(arrType);
+
+      expect(map.size).toBe(0);
       expect(readdirSpy).not.toHaveBeenCalled();
     });
 
