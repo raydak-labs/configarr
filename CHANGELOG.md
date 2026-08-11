@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.30.2](https://github.com/raydak-labs/configarr/compare/v1.30.1...v1.30.2) (2026-08-11)
+
+### Bug Fixes
+
+- **deps:** update dependencies (non-major) ([#488](https://github.com/raydak-labs/configarr/issues/488)) ([4ab75db](https://github.com/raydak-labs/configarr/commit/4ab75db463c391e35c73315e3d54d03f518fd4b4))
+- **deps:** update docusaurus monorepo to v3.10.2 ([#489](https://github.com/raydak-labs/configarr/issues/489)) ([bfe97e1](https://github.com/raydak-labs/configarr/commit/bfe97e14536e2b5f643016e54616c5fa21a53532))
+- pin recyclarr templates to legacy includes ([7b94d82](https://github.com/raydak-labs/configarr/commit/7b94d8235ff8566b1c7068814e524f390180e38a)), closes [#504](https://github.com/raydak-labs/configarr/issues/504)
+
 ## [1.30.1](https://github.com/raydak-labs/configarr/compare/v1.30.0...v1.30.1) (2026-07-20)
 
 ### Bug Fixes
