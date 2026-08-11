@@ -2,9 +2,11 @@
 #trashGuideUrl: https://github.com/BlackDark/fork-TRASH-Guides
 #recyclarrConfigUrl: https://github.com/BlackDark/fork-recyclarr-configs
 
-# Optional: Specify a custom branch/revision (defaults to 'master')
+# Optional: Specify a custom branch/revision
+# trashRevision defaults to 'master'
+# recyclarrRevision defaults to pinned SHA with legacy includes/ (see issue #504)
 #trashRevision: master
-#recyclarrRevision: master
+#recyclarrRevision: 4ae377bb704fc7fd69a544ad04e91357e0b09f62 # default pin; upstream master dropped legacy includes/ (Recyclarr v8)
 
 # since v1.12.0. Optional. Enable for legacy configuration to clone full repos (trash, recyclarr) instead of sparse.
 # Default is false. Setting to true increases storage usage up to 10x.

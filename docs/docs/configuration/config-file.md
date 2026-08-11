@@ -107,9 +107,12 @@ trashGuideUrl: https://github.com/your-org/fork-TRASH-Guides
 # Use a custom Recyclarr templates fork
 recyclarrConfigUrl: https://github.com/your-org/fork-recyclarr-configs
 
-# Optional: Specify a custom branch/revision (defaults to 'master')
+# Optional: Specify a custom branch/revision
+# trashRevision defaults to 'master'
+# recyclarrRevision defaults to a pinned SHA that still has legacy includes/
+# (upstream master removed them in Recyclarr v8 — see issue #504)
 trashRevision: main
-recyclarrRevision: develop
+recyclarrRevision: 4ae377bb704fc7fd69a544ad04e91357e0b09f62
 ```
 
 **Repository URL Changes:**
