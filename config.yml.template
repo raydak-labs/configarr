@@ -1,7 +1,7 @@
 trashGuideUrl: https://github.com/TRaSH-Guides/Guides
 #trashRevision: master # Optional to specify sha
 recyclarrConfigUrl: https://github.com/recyclarr/config-templates
-#recyclarrRevision: master # Optional to specify sha
+#recyclarrRevision: 4ae377bb704fc7fd69a544ad04e91357e0b09f62 # Optional; default is this pin (legacy includes). Upstream master dropped them (Recyclarr v8).
 
 # Optional if you want to add custom formats locally
 #localCustomFormatsPath: ./custom/cfs

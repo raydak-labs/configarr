@@ -8,14 +8,42 @@ import { cloneGitRepo, recyclarrRepoPaths } from "./util";
 
 const DEFAULT_RECYCLARR_GIT_URL = "https://github.com/recyclarr/config-templates";
 
+/**
+ * Last commit on recyclarr/config-templates that still ships the legacy
+ * includes/ fragment layout Configarr loads. Upstream v8 (merged into master
+ * on 2026-08-07) deleted those directories in favor of bundled starter templates.
+ * See https://github.com/raydak-labs/configarr/issues/504
+ */
+export const DEFAULT_RECYCLARR_REVISION = "4ae377bb704fc7fd69a544ad04e91357e0b09f62";
+
+export const resolveRecyclarrRevision = (recyclarrRevision?: string, recyclarrConfigUrl?: string): string => {
+  if (recyclarrRevision) {
+    return recyclarrRevision;
+  }
+
+  const gitUrl = recyclarrConfigUrl ?? DEFAULT_RECYCLARR_GIT_URL;
+  // Custom forks may not contain the pinned SHA; keep branch tip for those.
+  if (gitUrl !== DEFAULT_RECYCLARR_GIT_URL) {
+    return "master";
+  }
+
+  return DEFAULT_RECYCLARR_REVISION;
+};
+
 export const cloneRecyclarrTemplateRepo = async () => {
   logger.info(`Checking Recyclarr repo ...`);
 
   const rootPath = recyclarrRepoPaths.root;
   const applicationConfig = getConfig();
   const gitUrl = applicationConfig.recyclarrConfigUrl ?? DEFAULT_RECYCLARR_GIT_URL;
-  const revision = applicationConfig.recyclarrRevision ?? "master";
+  const revision = resolveRecyclarrRevision(applicationConfig.recyclarrRevision, applicationConfig.recyclarrConfigUrl);
   const sparseDisabled = applicationConfig.enableFullGitClone === true;
+
+  if (!applicationConfig.recyclarrRevision && gitUrl === DEFAULT_RECYCLARR_GIT_URL) {
+    logger.info(
+      `Using pinned Recyclarr config-templates revision ${DEFAULT_RECYCLARR_REVISION} (legacy includes/). Override with recyclarrRevision if needed.`,
+    );
+  }
 
   const cloneResult = await cloneGitRepo(rootPath, gitUrl, revision, {
     disabled: sparseDisabled,
