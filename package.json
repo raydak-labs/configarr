@@ -43,7 +43,7 @@
     "prettier": "3.9.6",
     "release-it": "20.2.1",
     "swagger-typescript-api": "13.12.6",
-    "typescript": "6.0.3",
+    "typescript": "7.0.2",
     "vitest": "4.1.10"
   }
 }
