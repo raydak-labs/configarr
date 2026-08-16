@@ -102,4 +102,4 @@ You can compare features here: [Feature Comparison](https://configarr.de/docs/co
 
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=raydak-labs/configarr&type=Date)](https://www.star-history.com/#raydak-labs/configarr&Date)
+[![Star History Chart](https://star-history.dera.page/svg?repos=raydak-labs/configarr&type=Date)](https://star-history.dera.page/#raydak-labs/configarr&Date)
