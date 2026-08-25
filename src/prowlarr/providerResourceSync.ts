@@ -7,6 +7,7 @@ import { getEnvs } from "../env";
 import { logger } from "../logger";
 import type { Tag } from "../tags/tag.types";
 import { camelToSnake, snakeToCamel } from "../util";
+import { ConfigValidationError } from "../validation";
 
 export type { Tag };
 
@@ -258,8 +259,10 @@ export abstract class ProviderResourceSync<
     for (const key of Object.keys(normalizedConfigFields)) {
       if (key !== snakeToCamel(key)) continue;
       if (!serverFieldNames.has(key) && normalizedConfigFields[key] !== undefined) {
+        if (getEnvs().CONFIGARR_ENFORCE_CONFIG_VALIDATION) {
+          throw new ConfigValidationError(`Config field '${key}' does not exist on server`);
+        }
         this.logger.warn(`Config field '${key}' does not exist on server`);
-        changes.push({ field: `fields.${key}`, from: undefined, to: normalizedConfigFields[key] });
       }
     }
 

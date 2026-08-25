@@ -43,7 +43,7 @@ import {
   MergedConfigInstance,
 } from "./types/config.types";
 import { RemotePathConfigSchema } from "./remotePaths/remotePath.types";
-import { validateConfig as validateConfigData } from "./validation";
+import { ConfigValidationError, validateConfig as validateConfigData } from "./validation";
 import {
   TrashCFGroupMapping,
   TrashQP,
@@ -300,7 +300,7 @@ const validateRemotePaths = (remotePaths: InputConfigRemotePath[]): void => {
     try {
       RemotePathConfigSchema.parse(config);
     } catch (error) {
-      throw new Error(`Invalid remote path config: ${error instanceof Error ? error.message : String(error)}`);
+      throw new ConfigValidationError(`Invalid remote path config: ${error instanceof Error ? error.message : String(error)}`);
     }
 
     // Check for duplicates by host + remote_path combination
@@ -308,7 +308,7 @@ const validateRemotePaths = (remotePaths: InputConfigRemotePath[]): void => {
     const normalizedRemotePath = config.remote_path.replace(/\/+$/, "");
     const key = `${config.host}||${normalizedRemotePath}`;
     if (keys.has(key)) {
-      throw new Error(`Duplicate remote path mapping: '${config.host} + ${config.remote_path}' already configured.`);
+      throw new ConfigValidationError(`Duplicate remote path mapping: '${config.host} + ${config.remote_path}' already configured.`);
     }
     keys.add(key);
   }

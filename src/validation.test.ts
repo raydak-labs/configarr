@@ -1,6 +1,7 @@
 import { describe, expect, test, vi, beforeEach } from "vitest";
 import { z } from "zod";
-import { validateData, validateConfig, validateExternal, ValidationError } from "./validation";
+import { ConfigValidationError, validateData, validateConfig, validateExternal, ValidationError } from "./validation";
+import { InputConfigDelayProfileSchema } from "./types/config.types";
 
 // Mock env module
 vi.mock("./env", () => ({
@@ -93,6 +94,42 @@ describe("validateConfig", () => {
     } as any);
 
     expect(() => validateConfig(testSchema, { name: 123 }, "test")).toThrow(ValidationError);
+  });
+
+  test("classifies strict schema failures as configuration errors", () => {
+    vi.mocked(getEnvs).mockReturnValue({
+      CONFIGARR_ENFORCE_CONFIG_VALIDATION: true,
+      CONFIGARR_ENFORCE_EXTERNAL_VALIDATION: false,
+    } as any);
+
+    expect(() => validateConfig(z.object({ name: z.string() }), { name: "test", unknown_key: true }, "test")).toThrow(
+      ConfigValidationError,
+    );
+  });
+
+  test("accepts the delay profile Items alias in strict mode", () => {
+    const result = validateConfig(
+      InputConfigDelayProfileSchema,
+      { Items: [{ name: "Usenet", protocol: "UsenetDownloadProtocol", allowed: true, delay: 2 }] },
+      "delay profile",
+      true,
+    );
+
+    expect(result).toMatchObject({ items: [{ name: "Usenet" }] });
+  });
+
+  test("rejects conflicting delay profile Items and items keys in strict mode", () => {
+    expect(() =>
+      validateConfig(
+        InputConfigDelayProfileSchema,
+        {
+          items: [{ name: "Usenet", protocol: "UsenetDownloadProtocol", allowed: true, delay: 2 }],
+          Items: [{ name: "Torrent", protocol: "TorrentDownloadProtocol", allowed: true, delay: 3 }],
+        },
+        "delay profile",
+        true,
+      ),
+    ).toThrow("Items");
   });
 
   test("should respect override over env flag", () => {

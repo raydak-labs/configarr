@@ -12,6 +12,7 @@ import {
 } from "./qualityProfileBase";
 import { CFProcessing } from "../customFormats/customFormat.types";
 import { ConfigQualityProfile, ConfigQualityProfileItem, MergedConfigInstance } from "../types/config.types";
+import { ConfigValidationError } from "../validation";
 
 describe("qualityProfileBase", async () => {
   test("isOrderOfConfigQualitiesEqual - should match", async ({}) => {
@@ -91,6 +92,19 @@ describe("qualityProfileBase", async () => {
     expect(result[1]!.allowed).toBe(true);
     expect(result[2]!.name).toBe("WEB 1080p");
     expect(result[2]!.allowed).toBe(true);
+  });
+
+  test("mapQualities classifies unknown configured qualities as configuration errors", async () => {
+    const profile: ConfigQualityProfile = {
+      name: "HD",
+      min_format_score: 0,
+      qualities: [{ name: "Unknown Quality" }],
+      quality_sort: "top",
+      upgrade: { allowed: false },
+      score_set: "default",
+    };
+
+    expect(() => mapQualities([], profile)).toThrow(ConfigValidationError);
   });
 
   test("mapQualities - enabled mapped to false", async ({}) => {

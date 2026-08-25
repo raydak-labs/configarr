@@ -420,9 +420,6 @@ readarr:
         - Standard
         - None
 
-    delete_unmanaged_profiles:
-      enabled: true
-
     download_clients:
       data:
         - name: "qBit 4K"

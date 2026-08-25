@@ -6,6 +6,7 @@ import { InputConfigRootFolderReadarr } from "../types/config.types";
 import { compareObjectsCarr, toEnumOrThrow } from "../util";
 import { RootFolderDiff } from "./rootFolder.types";
 import { BaseRootFolderSync, definedFields, nameIdMap } from "./rootFolderBase";
+import { ConfigValidationError } from "../validation";
 
 type NamedProfile = { name?: string | null; id?: number };
 
@@ -35,7 +36,9 @@ export class ReadarrRootFolderSync extends BaseRootFolderSync<InputConfigRootFol
 
   public async resolveRootFolderConfig(config: InputConfigRootFolderReadarr, serverCache: ServerCache): Promise<RootFolderResource> {
     if (typeof config === "string") {
-      throw new Error(`Readarr root folders must be objects with name, metadata_profile, and quality_profile. Got string: ${config}`);
+      throw new ConfigValidationError(
+        `Readarr root folders must be objects with name, metadata_profile, and quality_profile. Got string: ${config}`,
+      );
     }
 
     const { quality: qualityProfileMap, metadata: metadataProfileMap } = await this.getProfileIdMaps(serverCache);
@@ -45,11 +48,11 @@ export class ReadarrRootFolderSync extends BaseRootFolderSync<InputConfigRootFol
     const qualityProfileId = config.quality_profile ? qualityProfileMap.get(config.quality_profile) : undefined;
 
     if (config.metadata_profile && metadataProfileId === undefined) {
-      throw new Error(`Metadata profile '${config.metadata_profile}' not found on Readarr server`);
+      throw new ConfigValidationError(`Metadata profile '${config.metadata_profile}' not found on Readarr server`);
     }
 
     if (config.quality_profile && qualityProfileId === undefined) {
-      throw new Error(`Quality profile '${config.quality_profile}' not found on Readarr server`);
+      throw new ConfigValidationError(`Quality profile '${config.quality_profile}' not found on Readarr server`);
     }
 
     // Resolve tag names to IDs, creating tags if they don't exist

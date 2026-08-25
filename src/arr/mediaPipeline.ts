@@ -32,6 +32,7 @@ import { MediaArrType } from "../types/common.types";
 import { InputConfigArrInstance, InputConfigSchema, MergedConfigInstance } from "../types/config.types";
 import { TrashQualityDefinitionQuality } from "../types/trashguide.types";
 import { syncUiConfig, uiConfigDiffToDiffEntries } from "../uiConfigs/uiConfigSyncer";
+import { ConfigValidationError } from "../validation";
 
 export type MediaFeatureSyncs = {
   qd: QualityDefinitionSync<QualityDefinitionShared>;
@@ -360,6 +361,9 @@ export const completeMediaSync = async <T extends MediaArrType>(ctx: MediaSyncCo
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
       logger.error(`Failed to sync download clients: ${message}`);
+      if (err instanceof ConfigValidationError) {
+        throw err;
+      }
     }
   }
 
@@ -370,6 +374,9 @@ export const completeMediaSync = async <T extends MediaArrType>(ctx: MediaSyncCo
       collector.add(downloadClientConfigDiffToDiffEntries(downloadClientConfigResult));
     } catch (err: any) {
       logger.error(`Failed to sync download client config: ${err.message}`);
+      if (err instanceof ConfigValidationError) {
+        throw err;
+      }
     }
   }
 
@@ -384,6 +391,9 @@ export const completeMediaSync = async <T extends MediaArrType>(ctx: MediaSyncCo
       collector.add(remotePathsResult.diffEntries);
     } catch (err: any) {
       logger.error(`Failed to sync remote path mappings: ${err.message}`);
+      if (err instanceof ConfigValidationError) {
+        throw err;
+      }
     }
   } else {
     logger.debug(`[DEBUG] No remote paths to sync for ${arrType}. download_clients: ${JSON.stringify(config.download_clients)}`);
