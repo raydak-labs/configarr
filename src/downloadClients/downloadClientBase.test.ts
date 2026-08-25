@@ -1,16 +1,29 @@
 import { describe, expect, test, vi, beforeEach } from "vitest";
+vi.mock("../env", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../env")>();
+  return {
+    ...actual,
+    getEnvs: vi.fn(() => ({ LOG_LEVEL: "fatal", CONFIGARR_ENFORCE_CONFIG_VALIDATION: false })),
+  };
+});
+
 import { BaseDownloadClientSync } from "./downloadClientBase";
 import type { InputConfigDownloadClient } from "../types/config.types";
-import type { ServerCache } from "../cache";
+import type { MergedConfigInstance } from "../types/config.types";
+import { ServerCache } from "../cache";
+import { getEnvs } from "../env";
 import type { IArrClient } from "../clients/unified-client";
 import type { TagResource } from "../__generated__/radarr/data-contracts";
 import { DownloadProtocol } from "../__generated__/radarr/data-contracts";
 import { ArrType } from "../types/common.types";
 import { DownloadClientResource } from "../types/download-client.types";
+import { ConfigValidationError } from "../validation";
 
 class MockDownloadClientSync extends BaseDownloadClientSync {
-  constructor() {
-    super();
+  private api?: Pick<IArrClient, "getDownloadClientSchema" | "getDownloadClients">;
+
+  public setApi(api: Pick<IArrClient, "getDownloadClientSchema" | "getDownloadClients">): void {
+    this.api = api;
   }
 
   public testValidateDownloadClient(config: InputConfigDownloadClient, schema: DownloadClientResource[]) {
@@ -27,6 +40,10 @@ class MockDownloadClientSync extends BaseDownloadClientSync {
 
   public testGetApi(): IArrClient {
     return this.getApi();
+  }
+
+  protected getApi(): IArrClient {
+    return this.api ? (this.api as unknown as IArrClient) : super.getApi();
   }
 
   protected getArrType(): ArrType {
@@ -73,6 +90,7 @@ describe("BaseDownloadClientSync – utility methods", () => {
   let sync: MockDownloadClientSync;
 
   beforeEach(() => {
+    vi.mocked(getEnvs).mockReturnValue({ LOG_LEVEL: "fatal", CONFIGARR_ENFORCE_CONFIG_VALIDATION: false } as ReturnType<typeof getEnvs>);
     sync = new MockDownloadClientSync();
   });
 
@@ -194,6 +212,38 @@ describe("BaseDownloadClientSync – utility methods", () => {
       expect(result.errors).toEqual([]);
     });
 
+    test("rejects fields that are absent from the server schema", () => {
+      const mockSchema: DownloadClientResource[] = [
+        {
+          implementation: "rtorrent",
+          fields: [{ name: "host", value: "localhost" }],
+        },
+      ];
+
+      const result = sync.testValidateDownloadClient({ name: "ruTorrent movies", type: "rtorrent", fields: { asd: 1 } }, mockSchema);
+
+      expect(result).toMatchObject({
+        valid: false,
+        errors: ["Field 'asd' does not exist for download client type 'rtorrent'"],
+      });
+    });
+
+    test("accepts snake_case aliases for server schema fields", () => {
+      const mockSchema: DownloadClientResource[] = [
+        {
+          implementation: "rtorrent",
+          fields: [{ name: "movieImportedCategory", value: "movies" }],
+        },
+      ];
+
+      const result = sync.testValidateDownloadClient(
+        { name: "ruTorrent movies", type: "rtorrent", fields: { movie_imported_category: "movies" } },
+        mockSchema,
+      );
+
+      expect(result.errors).toEqual([]);
+    });
+
     test("rejects configuration with missing name", () => {
       const mockSchema: DownloadClientResource[] = [
         {
@@ -246,6 +296,29 @@ describe("BaseDownloadClientSync – utility methods", () => {
 
       expect(result.valid).toBe(false);
       expect(result.errors.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe("strict validation", () => {
+    test("stops download client synchronization on invalid fields", async () => {
+      vi.mocked(getEnvs).mockReturnValue({ LOG_LEVEL: "fatal", CONFIGARR_ENFORCE_CONFIG_VALIDATION: true } as ReturnType<typeof getEnvs>);
+      sync.setApi({
+        getDownloadClientSchema: vi
+          .fn()
+          .mockResolvedValue([{ implementation: "rtorrent", fields: [{ name: "host", value: "localhost" }] }]),
+        getDownloadClients: vi.fn().mockResolvedValue([]),
+      });
+
+      await expect(
+        sync.syncDownloadClients(
+          {
+            custom_formats: [],
+            quality_profiles: [],
+            download_clients: { data: [{ name: "ruTorrent movies", type: "rtorrent", fields: { asd: 1 } }] },
+          } satisfies MergedConfigInstance,
+          new ServerCache([], [], [], []),
+        ),
+      ).rejects.toBeInstanceOf(ConfigValidationError);
     });
   });
 

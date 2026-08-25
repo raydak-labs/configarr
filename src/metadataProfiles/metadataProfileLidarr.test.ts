@@ -4,6 +4,7 @@ import { ServerCache } from "../cache";
 import { InputConfigLidarrMetadataProfile } from "../types/config.types";
 import { getUnifiedClient, getSpecificClient } from "../clients/unified-client";
 
+import { ConfigValidationError } from "../validation";
 // Mock the unified client
 vi.mock("../clients/unified-client", () => ({
   getUnifiedClient: vi.fn(),
@@ -225,6 +226,8 @@ describe("LidarrMetadataProfileSync", () => {
       ];
 
       await expect(sync.calculateDiff(configs, serverCache)).rejects.toThrow("Metadata profile validation failed");
+
+      await expect(sync.calculateDiff(configs, serverCache)).rejects.toBeInstanceOf(ConfigValidationError);
     });
   });
 

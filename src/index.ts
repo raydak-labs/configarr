@@ -49,6 +49,7 @@ import { InputConfigArrInstance, InputConfigSchema } from "./types/config.types"
 import { TrashArrSupported } from "./types/trashguide.types";
 import { TrashArrSupportedConst, TrashQualityDefinition, TrashQualityDefinitionQuality } from "./types/trashguide.types";
 import { isInConstArray } from "./util";
+import { ConfigValidationError } from "./validation";
 import { syncRootFolders } from "./rootFolder/rootFolderSyncer";
 
 const pipeline = async (
@@ -357,6 +358,9 @@ const pipeline = async (
       diffCollector.add(downloadClientsResult.diffEntries);
     } catch (err: any) {
       logger.error(`Failed to sync download clients: ${err.message}`);
+      if (err instanceof ConfigValidationError) {
+        throw err;
+      }
     }
   }
 
@@ -431,8 +435,8 @@ const runArrType = async (
       if (getEnvs().LOG_STACKTRACE) {
         logger.error(err);
       }
-      if (getEnvs().STOP_ON_ERROR) {
-        throw new Error(`Stopping further execution because 'STOP_ON_ERROR' is enabled.`);
+      if (getEnvs().STOP_ON_ERROR || (err instanceof ConfigValidationError && getEnvs().CONFIGARR_ENFORCE_CONFIG_VALIDATION)) {
+        throw err;
       }
     } finally {
       unsetApi();
