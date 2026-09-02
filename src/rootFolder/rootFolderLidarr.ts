@@ -15,6 +15,7 @@ import { InputConfigRootFolderLidarr } from "../types/config.types";
 import { compareObjectsCarr } from "../util";
 import { RootFolderDiff } from "./rootFolder.types";
 import { BaseRootFolderSync } from "./rootFolderBase";
+import { ConfigValidationError } from "../validation";
 
 export class LidarrRootFolderSync extends BaseRootFolderSync<InputConfigRootFolderLidarr> {
   protected api: LidarrClient = getSpecificClient("LIDARR");
@@ -25,7 +26,9 @@ export class LidarrRootFolderSync extends BaseRootFolderSync<InputConfigRootFold
 
   public async resolveRootFolderConfig(config: InputConfigRootFolderLidarr, serverCache: ServerCache): Promise<RootFolderResource> {
     if (typeof config === "string") {
-      throw new Error(`Lidarr root folders must be objects with name, metadata_profile, and quality_profile. Got string: ${config}`);
+      throw new ConfigValidationError(
+        `Lidarr root folders must be objects with name, metadata_profile, and quality_profile. Got string: ${config}`,
+      );
     }
 
     // Load quality profiles and metadata profiles for Lidarr
@@ -51,11 +54,11 @@ export class LidarrRootFolderSync extends BaseRootFolderSync<InputConfigRootFold
     const qualityProfileId = config.quality_profile ? qualityProfileMap.get(config.quality_profile) : undefined;
 
     if (config.metadata_profile && metadataProfileId === undefined) {
-      throw new Error(`Metadata profile '${config.metadata_profile}' not found on Lidarr server`);
+      throw new ConfigValidationError(`Metadata profile '${config.metadata_profile}' not found on Lidarr server`);
     }
 
     if (config.quality_profile && qualityProfileId === undefined) {
-      throw new Error(`Quality profile '${config.quality_profile}' not found on Lidarr server`);
+      throw new ConfigValidationError(`Quality profile '${config.quality_profile}' not found on Lidarr server`);
     }
 
     // Resolve tag names to IDs, creating tags if they don't exist

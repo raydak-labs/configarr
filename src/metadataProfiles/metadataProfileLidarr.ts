@@ -6,6 +6,7 @@ import { InputConfigLidarrMetadataProfile, InputConfigMetadataProfile } from "..
 import { FieldChange } from "../diffReport/diffReport.types";
 import { MetadataProfileDiff } from "./metadataProfile.types";
 import { BaseMetadataProfileSync } from "./metadataProfileBase";
+import { ConfigValidationError } from "../validation";
 
 export class LidarrMetadataProfileSync extends BaseMetadataProfileSync<MetadataProfileResource> {
   protected api: LidarrClient = getSpecificClient("LIDARR");
@@ -65,7 +66,7 @@ export class LidarrMetadataProfileSync extends BaseMetadataProfileSync<MetadataP
     }
 
     if (allErrors.length > 0) {
-      throw new Error(`Metadata profile validation failed:\n\n${allErrors.join("\n\n")}`);
+      throw new ConfigValidationError(`Metadata profile validation failed:\n\n${allErrors.join("\n\n")}`);
     }
   }
 
