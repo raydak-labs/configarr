@@ -684,6 +684,7 @@ export interface HostConfigResource {
   launchBrowser?: boolean;
   authenticationMethod?: AuthenticationType;
   authenticationRequired?: AuthenticationRequiredType;
+  allowedHosts?: string | null;
   analyticsEnabled?: boolean;
   username?: string | null;
   password?: string | null;
@@ -697,6 +698,7 @@ export interface HostConfigResource {
   sslCertPath?: string | null;
   sslCertPassword?: string | null;
   urlBase?: string | null;
+  trustedNetworks?: string | null;
   instanceName?: string | null;
   applicationUrl?: string | null;
   updateAutomatically?: boolean;

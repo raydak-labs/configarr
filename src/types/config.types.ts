@@ -302,6 +302,87 @@ export type InputConfigReadarrMetadataProfile = z.infer<typeof InputConfigReadar
 export const InputConfigMetadataProfileSchema = z.union([InputConfigLidarrMetadataProfileSchema, InputConfigReadarrMetadataProfileSchema]);
 export type InputConfigMetadataProfile = z.infer<typeof InputConfigMetadataProfileSchema>;
 
+// ---------------------------------------------------------------------------
+// Prowlarr (experimental) - indexer manager, not a media manager. Only its
+// Tags, Applications, Indexers, Indexer Proxies and Download Clients are
+// managed, so it gets a dedicated instance schema instead of reusing
+// InputConfigArrInstanceSchema.
+// ---------------------------------------------------------------------------
+
+export const InputConfigApplicationSchema = z.object({
+  name: z.string(),
+  // Prowlarr implementation name, e.g. "Sonarr", "Radarr", "LazyLibrarian".
+  type: z.string(),
+  sync_level: z.enum(["disabled", "addOnly", "fullSync"]).optional(),
+  fields: z.record(z.string(), z.any()).optional(),
+  tags: z.array(z.union([z.string(), z.number()])).optional(),
+});
+export type InputConfigApplication = z.infer<typeof InputConfigApplicationSchema>;
+
+export const InputConfigIndexerSchema = z.object({
+  name: z.string(),
+  // Prowlarr schema `definitionName`, e.g. "1337x", "Nyaa.si", "The Pirate Bay".
+  definition: z.string(),
+  enable: z.boolean().optional(),
+  // App profile name (resolved to id); defaults to the first / existing profile.
+  app_profile: z.string().optional(),
+  priority: z.number().int().optional(),
+  fields: z.record(z.string(), z.any()).optional(),
+  tags: z.array(z.union([z.string(), z.number()])).optional(),
+});
+export type InputConfigIndexer = z.infer<typeof InputConfigIndexerSchema>;
+
+export const InputConfigIndexerProxySchema = z.object({
+  name: z.string(),
+  // Prowlarr implementation name, e.g. "FlareSolverr", "Http", "Socks4", "Socks5".
+  type: z.string(),
+  fields: z.record(z.string(), z.any()).optional(),
+  tags: z.array(z.union([z.string(), z.number()])).optional(),
+});
+export type InputConfigIndexerProxy = z.infer<typeof InputConfigIndexerProxySchema>;
+
+// Prowlarr has no download client config or remote path mappings, so this is a
+// narrower version of the arr instance's `download_clients` block.
+export const InputConfigProwlarrDownloadClientsSchema = z.object({
+  data: z.array(InputConfigDownloadClientSchema).optional(),
+  update_password: z.boolean().optional(),
+  delete_unmanaged: DeleteUnmanagedSchema.optional(),
+});
+export type InputConfigProwlarrDownloadClients = z.infer<typeof InputConfigProwlarrDownloadClientsSchema>;
+
+export const InputConfigProwlarrInstanceSchema = z.object({
+  base_url: z.string(),
+  api_key: z.string(),
+  enabled: z.boolean().optional(),
+  // Ensure these tag labels exist on the server (created if missing).
+  tags: z.array(z.string()).optional(),
+  // Delete server tags not listed in `tags` (and not referenced by managed resources).
+  delete_unmanaged_tags: DeleteUnmanagedSchema.optional(),
+  applications: z
+    .object({
+      data: z.array(InputConfigApplicationSchema).optional(),
+      delete_unmanaged: DeleteUnmanagedSchema.optional(),
+      // After applications are synced, trigger Prowlarr's global "ApplicationIndexerSync"
+      // command so it pushes its indexers to the configured applications.
+      sync_indexers: z.boolean().optional(),
+    })
+    .optional(),
+  indexers: z
+    .object({
+      data: z.array(InputConfigIndexerSchema).optional(),
+      delete_unmanaged: DeleteUnmanagedSchema.optional(),
+    })
+    .optional(),
+  indexer_proxies: z
+    .object({
+      data: z.array(InputConfigIndexerProxySchema).optional(),
+      delete_unmanaged: DeleteUnmanagedSchema.optional(),
+    })
+    .optional(),
+  download_clients: InputConfigProwlarrDownloadClientsSchema.optional(),
+});
+export type InputConfigProwlarrInstance = z.infer<typeof InputConfigProwlarrInstanceSchema>;
+
 export const InputConfigArrInstanceSchema = z.object({
   base_url: z.string(),
   api_key: z.string(),
@@ -389,6 +470,9 @@ export const InputConfigSchemaSchema = z.object({
 
   lidarr: z.record(z.string(), InputConfigArrInstanceSchema).optional(),
   lidarrEnabled: z.boolean().optional(),
+
+  prowlarr: z.record(z.string(), InputConfigProwlarrInstanceSchema).optional(),
+  prowlarrEnabled: z.boolean().optional(),
 });
 export type InputConfigSchema = z.infer<typeof InputConfigSchemaSchema>;
 

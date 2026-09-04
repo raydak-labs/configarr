@@ -100,7 +100,7 @@ export type MappedTemplates = Partial<
 
 export type MappedMergedTemplates = MappedTemplates & Required<Pick<MappedTemplates, "custom_formats" | "quality_profiles">>;
 
-export const ArrTypeConst = ["RADARR", "SONARR", "WHISPARR", "READARR", "LIDARR"] as const;
+export const ArrTypeConst = ["RADARR", "SONARR", "WHISPARR", "READARR", "LIDARR", "PROWLARR"] as const;
 export type ArrType = (typeof ArrTypeConst)[number];
 
 export type QualityDefinitionsSonarr = "anime" | "series" | "custom";

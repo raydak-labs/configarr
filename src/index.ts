@@ -16,6 +16,7 @@ import {
   mapToServerDelayProfile,
 } from "./delay-profiles";
 import { syncDownloadClients } from "./downloadClients/downloadClientSyncer";
+import { syncProwlarrProviders } from "./prowlarr/prowlarrSyncer";
 import { downloadClientConfigDiffToDiffEntries, syncDownloadClientConfig } from "./downloadClientConfig/downloadClientConfigSyncer";
 import { syncRemotePaths } from "./remotePaths/remotePathSyncer";
 import { syncUiConfig, uiConfigDiffToDiffEntries } from "./uiConfigs/uiConfigSyncer";
@@ -45,7 +46,7 @@ import { loadServerTags } from "./tags";
 import { getTelemetryInstance, Telemetry } from "./telemetry";
 import { cloneTrashRepo, loadQualityDefinitionFromTrash, loadTrashCFConflicts, transformTrashQDs } from "./trash-guide";
 import { ArrType } from "./types/common.types";
-import { InputConfigArrInstance, InputConfigSchema } from "./types/config.types";
+import { InputConfigArrInstance, InputConfigProwlarrInstance, InputConfigSchema, MergedConfigInstance } from "./types/config.types";
 import { TrashArrSupported } from "./types/trashguide.types";
 import { TrashArrSupportedConst, TrashQualityDefinition, TrashQualityDefinitionQuality } from "./types/trashguide.types";
 import { isInConstArray } from "./util";
@@ -444,6 +445,89 @@ const runArrType = async (
   return { status, reports };
 };
 
+/**
+ * Prowlarr is an indexer manager, not a media manager, so it runs its own minimal
+ * pipeline (system status, tags, indexer proxies, indexers, applications, download
+ * clients) instead of the media `pipeline()`.
+ */
+const prowlarrPipeline = async (instanceConfig: InputConfigProwlarrInstance, instanceName: string): Promise<InstanceDiffReport> => {
+  const api = getUnifiedClient();
+  const diffCollector = new DiffCollector();
+
+  const system = await api.getSystemStatus();
+  logger.info(`System status: ${JSON.stringify(system)}`);
+
+  const serverCache = new ServerCache([], [], [], []);
+  serverCache.tags = await loadServerTags();
+
+  // Tags, indexer proxies, indexers, applications (+ optional "sync app indexers")
+  const providersResult = await syncProwlarrProviders(instanceConfig, serverCache);
+  diffCollector.add(providersResult.diffEntries);
+
+  // Download clients - reuse the generic, arr-type-agnostic syncer
+  if (instanceConfig.download_clients?.data || instanceConfig.download_clients?.delete_unmanaged?.enabled) {
+    try {
+      const downloadClientsResult = await syncDownloadClients(
+        "PROWLARR",
+        { download_clients: instanceConfig.download_clients } as MergedConfigInstance,
+        serverCache,
+      );
+      diffCollector.add(downloadClientsResult.diffEntries);
+    } catch (err: any) {
+      logger.error(`Failed to sync download clients: ${err.message}`);
+    }
+  }
+
+  return { arrType: "PROWLARR", instanceName, entries: diffCollector.getEntries() };
+};
+
+const runProwlarr = async (entry: Record<string, InputConfigProwlarrInstance> | undefined) => {
+  const status = { success: 0, failure: 0, skipped: 0 };
+  const reports: InstanceDiffReport[] = [];
+
+  if (!entry || typeof entry !== "object" || Object.keys(entry).length === 0) {
+    logHeading(`No PROWLARR instances defined.`);
+    return { status, reports };
+  }
+
+  logHeading(`Processing PROWLARR ...`);
+
+  for (const [instanceName, instance] of Object.entries(entry)) {
+    logInstanceHeading(`Processing PROWLARR Instance: ${instanceName} ...`);
+
+    if (instance.enabled === false) {
+      logger.info(`Instance PROWLARR - ${instanceName} is disabled!`);
+      status.skipped++;
+      continue;
+    }
+
+    try {
+      await configureApi("PROWLARR", instance.base_url, instance.api_key);
+      const report = await prowlarrPipeline(instance, instanceName);
+      new ConsoleDiffFormatter().format(report);
+      reports.push(report);
+      status.success++;
+    } catch (err: any) {
+      logger.error(
+        `Failure during configuring: PROWLARR - ${instanceName} (Detailed logs with env var: LOG_STACKTRACE=true). Error: ${err?.message}`,
+      );
+      status.failure++;
+      if (getEnvs().LOG_STACKTRACE) {
+        logger.error(err);
+      }
+      if (getEnvs().STOP_ON_ERROR) {
+        throw new Error(`Stopping further execution because 'STOP_ON_ERROR' is enabled.`);
+      }
+    } finally {
+      unsetApi();
+    }
+
+    logger.info("");
+  }
+
+  return { status, reports };
+};
+
 const run = async () => {
   logger.info(`Support the project: https://ko-fi.com/blackdark93 - Star on Github! https://github.com/raydak-labs/configarr`);
   logger.info(`Configarr Version: ${getEnvs().CONFIGARR_VERSION}`);
@@ -499,6 +583,15 @@ const run = async () => {
       logger.debug(`${type} disabled in config`);
       disabledArrs.push(type);
     }
+  }
+
+  if (globalConfig.prowlarrEnabled == null || globalConfig.prowlarrEnabled) {
+    const result = await runProwlarr(globalConfig.prowlarr);
+    totalStatus.push(`PROWLARR: (${result.status.success}/${result.status.failure}/${result.status.skipped})`);
+    allReports.push(...result.reports);
+  } else {
+    logger.debug(`PROWLARR disabled in config`);
+    disabledArrs.push("PROWLARR");
   }
 
   logger.info(``);
