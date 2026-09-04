@@ -110,6 +110,106 @@ radarr: {}
   });
 });
 
+describe("prowlarr config", () => {
+  test("parses a prowlarr instance with applications and download_clients", () => {
+    const parsed = InputConfigSchemaSchema.parse(
+      yaml.parse(`
+prowlarrEnabled: true
+prowlarr:
+  main:
+    base_url: http://prowlarr:9696
+    api_key: test
+    applications:
+      data:
+        - name: Sonarr
+          type: Sonarr
+          sync_level: fullSync
+          fields:
+            baseUrl: http://sonarr:8989
+            apiKey: abc
+      delete_unmanaged:
+        enabled: false
+      sync_indexers: true
+    download_clients:
+      data:
+        - name: qbittorrent
+          type: QBittorrent
+`),
+    );
+
+    const instance = parsed.prowlarr!.main!;
+    expect(instance.base_url).toBe("http://prowlarr:9696");
+    expect(instance.applications?.data?.[0]).toMatchObject({ name: "Sonarr", type: "Sonarr", sync_level: "fullSync" });
+    expect(instance.applications?.sync_indexers).toBe(true);
+    expect(instance.download_clients?.data?.[0]).toMatchObject({ name: "qbittorrent", type: "QBittorrent" });
+  });
+
+  test("parses tags, indexers and indexer_proxies", () => {
+    const parsed = InputConfigSchemaSchema.parse(
+      yaml.parse(`
+prowlarr:
+  main:
+    base_url: http://prowlarr:9696
+    api_key: test
+    tags:
+      - managed
+    delete_unmanaged_tags:
+      enabled: true
+    indexers:
+      data:
+        - name: 1337x
+          definition: 1337x
+          enable: true
+          app_profile: Standard
+          priority: 30
+    indexer_proxies:
+      data:
+        - name: flaresolverr
+          type: FlareSolverr
+          fields:
+            host: http://flaresolverr:8191/
+`),
+    );
+
+    const instance = parsed.prowlarr!.main!;
+    expect(instance.tags).toEqual(["managed"]);
+    expect(instance.delete_unmanaged_tags?.enabled).toBe(true);
+    expect(instance.indexers?.data?.[0]).toMatchObject({ name: "1337x", definition: "1337x", app_profile: "Standard", priority: 30 });
+    expect(instance.indexer_proxies?.data?.[0]).toMatchObject({ name: "flaresolverr", type: "FlareSolverr" });
+  });
+
+  test("rejects an invalid application sync_level", () => {
+    expect(() =>
+      InputConfigSchemaSchema.parse(
+        yaml.parse(`
+prowlarr:
+  main:
+    base_url: http://prowlarr:9696
+    api_key: test
+    applications:
+      data:
+        - name: Sonarr
+          type: Sonarr
+          sync_level: nope
+`),
+      ),
+    ).toThrow();
+  });
+
+  test("transformConfig passes prowlarr through untouched", () => {
+    const cfg = InputConfigSchemaSchema.parse(
+      yaml.parse(`
+prowlarr:
+  main:
+    base_url: http://prowlarr:9696
+    api_key: test
+`),
+    );
+    const transformed = transformConfig(cfg);
+    expect(transformed.prowlarr).toEqual(cfg.prowlarr);
+  });
+});
+
 describe("mergeConfigsAndTemplates", () => {
   beforeEach(() => {
     // Reset mocks before each test

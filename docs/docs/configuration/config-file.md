@@ -993,6 +993,57 @@ radarr:
 
 For more details, check the \*Arr-specific API documentation under the `RemotePathMapping` resource endpoint.
 
+## Prowlarr <span className="theme-doc-version-badge badge badge--secondary configarr-badge">1.31.0</span>
+
+Prowlarr uses a dedicated top-level `prowlarr:` block (see
+[Experimental support › Prowlarr](/docs/configuration/experimental-support#prowlarr-v1)).
+Under each instance it can manage `tags`, `indexer_proxies`, `indexers`, `applications` and
+`download_clients` (synced in that order). Each list section takes an optional
+`delete_unmanaged: { enabled, ignore }`.
+
+`applications` manages the apps Prowlarr syncs its indexers to:
+
+```yaml title="config.yml"
+prowlarr:
+  main:
+    base_url: http://prowlarr:9696
+    api_key: !secret PROWLARR_API_KEY
+
+    applications:
+      data:
+        - name: Sonarr
+          type: Sonarr # Prowlarr implementation name
+          sync_level: fullSync # disabled | addOnly | fullSync
+          fields:
+            prowlarrUrl: http://prowlarr:9696
+            baseUrl: http://sonarr:8989
+            apiKey: !secret SONARR_API_KEY
+            syncCategories: [5000, 5010, 5020, 5030, 5040]
+          tags:
+            - managed
+      delete_unmanaged:
+        enabled: false
+        ignore:
+          - "Manual App"
+      sync_indexers: true # optional: run Prowlarr's "Sync App Indexers" command after syncing
+```
+
+- Applications are matched by `name` + `type` (implementation)
+- `fields` are merged onto the Prowlarr schema for the implementation; snake_case keys are accepted
+- Secrets shown by the server as `********` are left untouched unless you change them
+- `sync_indexers: true` triggers Prowlarr's global `ApplicationIndexerSync` command once per run
+
+`indexers` entries are based on a schema `definition` (the Prowlarr `definitionName`, e.g. `1337x`)
+and matched to the server by display `name`. Extra keys: `enable`, `priority`, `app_profile`
+(resolved to an app-profile id, defaults to the first profile). `indexer_proxies` are matched by
+`name` + `type` (implementation: `FlareSolverr`, `Http`, `Socks4`, `Socks5`).
+
+`tags` is a plain list of labels to ensure exist; `delete_unmanaged_tags: { enabled, ignore }`
+prunes server tags that are neither listed nor referenced by a managed resource.
+
+Prowlarr download clients use the same `download_clients` block as the other \*Arrs, minus the
+`config` and `remote_paths` sub-sections (Prowlarr has no equivalent endpoints).
+
 ## Experimental supported fields
 
 - Experimental support for `media_management` and `media_naming_api` (since v1.5.0)

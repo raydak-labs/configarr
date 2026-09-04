@@ -13,6 +13,10 @@ URLs:
 
 - sonarr: http://localhost:6500
 - radarr: http://localhost:6501
+- whisparr: http://localhost:6502
+- readarr: http://localhost:6503
+- lidarr: http://localhost:6504
+- prowlarr: http://localhost:6505
 
 Cleanup: `docker-compose down -v`
 

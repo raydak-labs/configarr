@@ -147,7 +147,7 @@ describe("Telemetry", () => {
         enableFullGitClone: true,
       };
 
-      const instances: Record<ArrType, InputConfigArrInstance[]> = {
+      const instances: Partial<Record<ArrType, InputConfigArrInstance[]>> = {
         SONARR: [
           {
             base_url: "http://localhost:8989",
@@ -236,7 +236,7 @@ describe("Telemetry", () => {
 
       const telemetryInstance = new Telemetry();
       const globalConfig = {};
-      const instances: Record<ArrType, InputConfigArrInstance[]> = {
+      const instances: Partial<Record<ArrType, InputConfigArrInstance[]>> = {
         SONARR: [],
         RADARR: [],
         WHISPARR: [],

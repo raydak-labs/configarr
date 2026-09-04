@@ -290,6 +290,108 @@ metadata_profiles:
     release_statuses: [Official] # Only Official enabled
 ```
 
+## Prowlarr v1
+
+Experimental support for Prowlarr was added with [v1.31.0](https://github.com/raydak-labs/configarr/releases/tag/v1.31.0).
+
+Prowlarr is an indexer manager, not a media manager, so it uses a dedicated `prowlarr:` block
+instead of the usual `*arr` instance shape. The following are managed:
+
+- **Tags** – ensure a set of tag labels exists (and optionally prune the rest)
+- **Applications** – the Sonarr/Radarr/... sync targets Prowlarr pushes its indexers to
+- **Indexers** – created from a Prowlarr schema `definition` (e.g. `1337x`), matched by `name`
+- **Indexer Proxies** – FlareSolverr / HTTP / SOCKS4 / SOCKS5
+- **Download Clients** – reuses the same engine as the other `*arr` download clients
+- an optional **"sync indexers to apps"** trigger (`applications.sync_indexers`)
+
+Each managed section (`applications`, `indexers`, `indexer_proxies`, `download_clients`) supports a
+`delete_unmanaged: { enabled, ignore }` block. Resources are synced in dependency order: tags →
+indexer proxies → indexers → applications → download clients.
+
+Not supported (out of scope for now): indexer definitions/proxies beyond CRUD, app sync profiles,
+notifications, DNS/host config.
+
+Enable/disable all Prowlarr instances with the top-level `prowlarrEnabled` flag (defaults to enabled).
+
+### Configuration File
+
+```yaml title="config.yml"
+prowlarrEnabled: true
+prowlarr:
+  main: # Instance name (can be any unique identifier)
+    base_url: http://prowlarr:9696
+    api_key: !secret PROWLARR_API_KEY
+
+    # Ensure these tag labels exist (created if missing)
+    tags:
+      - managed
+      - vip
+    delete_unmanaged_tags:
+      enabled: false
+      ignore:
+        - keep-me
+
+    # Indexer proxies (FlareSolverr, Http, Socks4, Socks5)
+    indexer_proxies:
+      data:
+        - name: flaresolverr
+          type: FlareSolverr
+          fields:
+            host: http://flaresolverr:8191/
+            requestTimeout: 60
+          tags:
+            - managed
+      delete_unmanaged:
+        enabled: false
+
+    # Indexers - `definition` is the Prowlarr schema definitionName; matched on the server by `name`
+    indexers:
+      data:
+        - name: 1337x
+          definition: 1337x
+          enable: true
+          app_profile: Standard # resolved to appProfileId; defaults to the first profile
+          priority: 25
+          fields:
+            torrentBaseSettings.seedRatio: 1.0
+          tags:
+            - managed
+      delete_unmanaged:
+        enabled: false
+        ignore:
+          - "Manual Indexer"
+
+    applications:
+      data:
+        - name: Sonarr
+          type: Sonarr # Prowlarr implementation name (Sonarr, Radarr, Lidarr, Readarr, Whisparr, ...)
+          sync_level: fullSync # disabled | addOnly | fullSync (default: fullSync)
+          fields:
+            prowlarrUrl: http://prowlarr:9696
+            baseUrl: http://sonarr:8989
+            apiKey: !secret SONARR_API_KEY
+            syncCategories: [5000, 5010, 5020, 5030, 5040, 5045, 5050]
+          tags:
+            - managed # tag name (auto-resolved / created)
+      delete_unmanaged:
+        enabled: false
+        ignore:
+          - "Manual App"
+      # After the apps are synced, run Prowlarr's global "Sync App Indexers" command
+      sync_indexers: true
+
+    # Same shape as the other *arr download_clients (no `config` / `remote_paths` for Prowlarr)
+    download_clients:
+      data:
+        - name: qbittorrent
+          type: QBittorrent
+          fields:
+            host: qbittorrent
+            port: 8080
+      delete_unmanaged:
+        enabled: false
+```
+
 ## Metadata Profiles - Common Configuration
 
 Both Readarr and Lidarr support metadata profiles to control what content is accepted.

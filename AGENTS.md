@@ -108,6 +108,11 @@ The project supports multiple \*arr applications with varying feature support:
 
 - **Full Support**: Sonarr v4, Radarr v5
 - **Experimental**: Lidarr, Readarr, Whisparr
+- **Experimental (Prowlarr v1)**: Tags, Applications, Indexers, Indexer Proxies, Download Clients
+  (dedicated `prowlarr:` config block and its own minimal pipeline in `index.ts`; not a media
+  manager, so quality profiles / custom formats / etc. do not apply). Provider resources share a
+  generic base (`src/prowlarr/providerResourceSync.ts`); see `src/prowlarr/` and
+  `src/clients/prowlarr-client.ts`.
 
 ### Unified Client Pattern
 
