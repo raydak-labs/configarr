@@ -1,5 +1,9 @@
+// The named exports of node:fs are mocked below; the default export stays real, which is what the
+// file-template importer uses - so these tests can write actual template files to a temp dir.
+import { default as realFs } from "node:fs";
+import os from "node:os";
 import path from "node:path";
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import yaml from "yaml";
 import {
   getSecrets,
@@ -107,6 +111,36 @@ radarr: {}
 
     const transformed = transformConfig(config);
     expect(transformed).not.toBeNull();
+  });
+
+  test("should normalize every profiles[].includes shorthand into include items", async () => {
+    const withProfiles: InputConfigSchema = yaml.parse(`
+radarr:
+  movies:
+    base_url: http://radarr:7878
+    api_key: test
+    profiles:
+      - name: UHD
+        includes: ./profiles/uhd.yml
+      - name: HD
+        includes:
+          - ./profiles/hd.yml
+          - template: ./profiles/trash.json
+            source: TRASH
+`);
+
+    const transformed = transformConfig(withProfiles);
+
+    expect(transformed.radarr!["movies"]!.profiles).toEqual([
+      { name: "UHD", includes: [expect.objectContaining({ template: "./profiles/uhd.yml", source: "RECYCLARR" })] },
+      {
+        name: "HD",
+        includes: [
+          expect.objectContaining({ template: "./profiles/hd.yml", source: "RECYCLARR" }),
+          expect.objectContaining({ template: "./profiles/trash.json", source: "TRASH" }),
+        ],
+      },
+    ]);
   });
 });
 
@@ -654,6 +688,269 @@ describe("mergeConfigsAndTemplates", () => {
     expect(result.config.quality_definition?.qualities).toHaveLength(2);
     expect(result.config.quality_definition?.qualities?.[0]?.quality).toBe("HDTV-720p");
     expect(result.config.quality_definition?.qualities?.[1]?.quality).toBe("Bluray-1080p");
+  });
+});
+
+describe("file template includes and profiles", () => {
+  let tmpDir: string;
+  let configDir: string;
+
+  const emptyMaps = () => {
+    vi.spyOn(reclarrImporter, "loadRecyclarrTemplates").mockReturnValue(new Map());
+    vi.spyOn(localImporter, "loadLocalRecyclarrTemplate").mockReturnValue(new Map());
+    vi.spyOn(trashGuide, "loadQPFromTrash").mockReturnValue(Promise.resolve(new Map()));
+    vi.spyOn(trashGuide, "loadAllQDsFromTrash").mockReturnValue(Promise.resolve(new Map()));
+    vi.spyOn(trashGuide, "loadTrashCustomFormatGroups").mockReturnValue(Promise.resolve(new Map()));
+  };
+
+  /** Writes a template next to the (mocked) config.yml and returns its config-relative path. */
+  const writeTemplate = (relativePath: string, content: unknown) => {
+    const target = path.join(configDir, relativePath);
+    realFs.mkdirSync(path.dirname(target), { recursive: true });
+    realFs.writeFileSync(target, typeof content === "string" ? content : yaml.stringify(content), "utf8");
+    return `./${relativePath}`;
+  };
+
+  const instance = (overrides: Partial<InputConfigArrInstance>): InputConfigArrInstance => ({
+    custom_formats: [],
+    quality_profiles: [],
+    api_key: "test",
+    base_url: "http://radarr:7878",
+    ...overrides,
+  });
+
+  beforeEach(() => {
+    vi.resetAllMocks();
+    tmpDir = realFs.mkdtempSync(path.join(os.tmpdir(), "configarr-config-test-"));
+    configDir = path.join(tmpDir, "config");
+    realFs.mkdirSync(configDir);
+
+    vi.spyOn(env, "getHelpers").mockReturnValue({
+      configLocation: path.join(configDir, "config.yml"),
+      secretLocation: path.join(configDir, "secrets.yml"),
+      repoPath: path.join(tmpDir, "repos"),
+      enableMerge: false,
+    });
+
+    emptyMaps();
+  });
+
+  afterEach(() => {
+    realFs.rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  test("should resolve a file include relative to the config directory", async () => {
+    const template = writeTemplate("templates/x.yml", {
+      custom_formats: [{ trash_ids: ["cf-file"], assign_scores_to: [{ name: "FileProfile", score: 100 }] }],
+      quality_profiles: [{ ...dummyProfile, name: "FileProfile" }],
+    });
+
+    const result = await mergeConfigsAndTemplates({}, instance({ include: [{ template }] }), "RADARR");
+
+    expect(result.config.custom_formats[0]!.trash_ids).toEqual(["cf-file"]);
+    expect(result.config.quality_profiles[0]!.name).toBe("FileProfile");
+  });
+
+  test("should resolve an absolute file include", async () => {
+    writeTemplate("abs.yml", { custom_formats: [{ trash_ids: ["cf-abs"], assign_scores_to: [{ name: "P" }] }] });
+    const absolute = path.join(configDir, "abs.yml");
+
+    const result = await mergeConfigsAndTemplates({}, instance({ include: [{ template: absolute }] }), "RADARR");
+
+    expect(result.config.custom_formats[0]!.trash_ids).toEqual(["cf-abs"]);
+  });
+
+  test("should auto-detect a TRaSH JSON file include without source", async () => {
+    const trashProfile: TrashQP = {
+      trash_id: "file-trash-id",
+      name: "TRASH From File",
+      trash_score_set: "default",
+      upgradeAllowed: true,
+      cutoff: "HDTV-1080p",
+      minFormatScore: 0,
+      cutoffFormatScore: 1000,
+      language: "Any",
+      items: [{ name: "HDTV-1080p", allowed: true }],
+      formatItems: { CF1: "cf-trash-file" },
+    };
+    const template = writeTemplate("trash.json", JSON.stringify(trashProfile));
+
+    const result = await mergeConfigsAndTemplates({}, instance({ include: [{ template }] }), "RADARR");
+
+    expect(result.config.quality_profiles[0]!.name).toBe("TRASH From File");
+  });
+
+  test("should skip a missing file include without failing the merge", async () => {
+    const result = await mergeConfigsAndTemplates({}, instance({ include: [{ template: "./nope.yml" }] }), "RADARR");
+
+    expect(result.config.custom_formats.length).toBe(0);
+    expect(result.config.quality_profiles.length).toBe(0);
+  });
+
+  test("should prefer a known template key over file interpretation", async () => {
+    // A local template whose key happens to look like a filename must keep resolving as before.
+    vi.spyOn(localImporter, "loadLocalRecyclarrTemplate").mockReturnValue(
+      new Map<string, MappedTemplates>([
+        ["weird.yml", { custom_formats: [{ trash_ids: ["cf-local"], assign_scores_to: [{ name: "P" }] }] }],
+      ]),
+    );
+
+    const result = await mergeConfigsAndTemplates({}, instance({ include: [{ template: "weird.yml" }] }), "RADARR");
+
+    expect(result.config.custom_formats[0]!.trash_ids).toEqual(["cf-local"]);
+  });
+
+  test("should bind a nameless profile file to the configured name (issue #518)", async () => {
+    const template = writeTemplate("uhd.yml", {
+      custom_formats: [
+        { trash_ids: ["cf-atmos"], assign_scores_to: [{ score: 5000 }] },
+        { trash_ids: ["cf-dtsx"], assign_scores_to: [{ score: 4500 }] },
+      ],
+    });
+
+    const result = await mergeConfigsAndTemplates({}, instance({ profiles: [{ name: "UHD", includes: template }] }), "RADARR");
+
+    expect(result.config.custom_formats).toEqual([
+      { trash_ids: ["cf-atmos"], assign_scores_to: [{ name: "UHD", score: 5000, use_default_score: false }] },
+      { trash_ids: ["cf-dtsx"], assign_scores_to: [{ name: "UHD", score: 4500, use_default_score: false }] },
+    ]);
+  });
+
+  test("should synthesise an assignment for custom formats with no assign_scores_to", async () => {
+    const template = writeTemplate("bare.yml", { custom_formats: [{ trash_ids: ["cf-bare"] }] });
+
+    const result = await mergeConfigsAndTemplates({}, instance({ profiles: [{ name: "UHD", includes: template }] }), "RADARR");
+
+    expect(result.config.custom_formats[0]!.assign_scores_to).toEqual([{ name: "UHD", score: undefined, use_default_score: false }]);
+  });
+
+  test("should rebind an already-named score assignment to the profile name", async () => {
+    const template = writeTemplate("named.yml", {
+      custom_formats: [{ trash_ids: ["cf1"], assign_scores_to: [{ name: "Upstream", score: 10 }] }],
+    });
+
+    const result = await mergeConfigsAndTemplates({}, instance({ profiles: [{ name: "UHD", includes: template }] }), "RADARR");
+
+    expect(result.config.custom_formats[0]!.assign_scores_to).toEqual([{ name: "UHD", score: 10, use_default_score: false }]);
+  });
+
+  test("should rename a single included quality profile to the bound name", async () => {
+    const template = writeTemplate("qp.yml", {
+      custom_formats: [{ trash_ids: ["cf1"], assign_scores_to: [{ name: "Foo", score: 1 }] }],
+      quality_profiles: [{ ...dummyProfile, name: "Foo" }],
+    });
+
+    const result = await mergeConfigsAndTemplates({}, instance({ profiles: [{ name: "UHD", includes: template }] }), "RADARR");
+
+    expect(result.config.quality_profiles.map((p) => p.name)).toEqual(["UHD"]);
+    expect(result.config.custom_formats[0]!.assign_scores_to).toEqual([{ name: "UHD", score: 1, use_default_score: false }]);
+  });
+
+  test("should skip a profile entry resolving to more than one quality profile", async () => {
+    const warnSpy = vi.spyOn(logger, "warn");
+    const template = writeTemplate("two.yml", {
+      quality_profiles: [
+        { ...dummyProfile, name: "A" },
+        { ...dummyProfile, name: "B" },
+      ],
+    });
+
+    const result = await mergeConfigsAndTemplates({}, instance({ profiles: [{ name: "UHD", includes: template }] }), "RADARR");
+
+    expect(result.config.quality_profiles.length).toBe(0);
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("binds exactly one name"));
+  });
+
+  test("should bind the same file to two different names", async () => {
+    const template = writeTemplate("shared.yml", {
+      custom_formats: [{ trash_ids: ["cf-shared"], assign_scores_to: [{ score: 700 }] }],
+      quality_profiles: [dummyProfile],
+    });
+
+    const result = await mergeConfigsAndTemplates(
+      {},
+      instance({
+        profiles: [
+          { name: "UHD", includes: template },
+          { name: "HD", includes: [template] },
+        ],
+      }),
+      "RADARR",
+    );
+
+    expect(result.config.quality_profiles.map((p) => p.name).sort()).toEqual(["HD", "UHD"]);
+    expect(result.config.custom_formats[0]!.assign_scores_to).toEqual([
+      { name: "UHD", score: 700, use_default_score: false },
+      { name: "HD", score: 700, use_default_score: false },
+    ]);
+  });
+
+  test("should accept a recyclarr template name inside a profile entry", async () => {
+    vi.spyOn(reclarrImporter, "loadRecyclarrTemplates").mockReturnValue(
+      new Map<string, MappedTemplates>([
+        ["some-template", { custom_formats: [{ trash_ids: ["cf-rec"], assign_scores_to: [{ name: "Original", score: 5 }] }] }],
+      ]),
+    );
+
+    const result = await mergeConfigsAndTemplates(
+      {},
+      instance({ profiles: [{ name: "UHD", includes: [{ template: "some-template" }] }] }),
+      "RADARR",
+    );
+
+    expect(result.config.custom_formats[0]!.assign_scores_to).toEqual([{ name: "UHD", score: 5, use_default_score: false }]);
+  });
+
+  test("should still apply renameQualityProfiles after profile binding", async () => {
+    const template = writeTemplate("rename.yml", {
+      custom_formats: [{ trash_ids: ["cf1"], assign_scores_to: [{ score: 3 }] }],
+      quality_profiles: [dummyProfile],
+    });
+
+    const result = await mergeConfigsAndTemplates(
+      {},
+      instance({
+        profiles: [{ name: "UHD", includes: template }],
+        renameQualityProfiles: [{ from: "UHD", to: "UHD2" }],
+      }),
+      "RADARR",
+    );
+
+    expect(result.config.quality_profiles[0]!.name).toBe("UHD2");
+    expect(result.config.custom_formats[0]!.assign_scores_to).toEqual([{ name: "UHD2", score: 3, use_default_score: false }]);
+  });
+
+  test("should not apply a nested include inside a profile file", async () => {
+    writeTemplate("nested-target.yml", { custom_formats: [{ trash_ids: ["cf-nested"], assign_scores_to: [{ name: "N" }] }] });
+    const template = writeTemplate("nested.yml", {
+      include: [{ template: "./nested-target.yml" }],
+      custom_formats: [{ trash_ids: ["cf-outer"], assign_scores_to: [{ score: 1 }] }],
+    });
+
+    const result = await mergeConfigsAndTemplates({}, instance({ profiles: [{ name: "UHD", includes: template }] }), "RADARR");
+
+    expect(result.config.custom_formats.map((cf) => cf.trash_ids)).toEqual([["cf-outer"]]);
+  });
+
+  test("should not leak `profiles` into the merged instance config", async () => {
+    const template = writeTemplate("leak.yml", { custom_formats: [{ trash_ids: ["cf1"], assign_scores_to: [{ score: 1 }] }] });
+
+    const result = await mergeConfigsAndTemplates({}, instance({ profiles: [{ name: "UHD", includes: template }] }), "RADARR");
+
+    expect("profiles" in result.config).toBe(false);
+  });
+
+  test("should drop a score assignment that has no profile name", async () => {
+    const warnSpy = vi.spyOn(logger, "warn");
+    // Reaches the merge via a plain include, so nothing binds a name to it.
+    const template = writeTemplate("orphan.yml", { custom_formats: [{ trash_ids: ["cf1"], assign_scores_to: [{ score: 1 }] }] });
+
+    const result = await mergeConfigsAndTemplates({}, instance({ include: [{ template }] }), "RADARR");
+
+    // The entry survives but assigns to nothing - crucially it does not invent a profile
+    // literally named "undefined", which is what happened before the guard.
+    expect(result.config.custom_formats[0]!.assign_scores_to).toEqual([]);
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("score assignment without a profile name"));
   });
 });
 
@@ -1785,6 +2082,23 @@ describe("InputConfigSchemaSchema (regression)", () => {
     const result = InputConfigArrInstanceSchema.parse(config);
 
     expect(result).toMatchObject({ trash_cfgroup_config: config.trash_cfgroup_config });
+  });
+
+  test("does not silently strip an arr instance's profiles, in any includes shorthand", () => {
+    const config = {
+      base_url: "http://radarr:7878",
+      api_key: "key",
+      quality_profiles: [],
+      profiles: [
+        { name: "UHD", includes: "./profiles/uhd.yml" },
+        { name: "HD", includes: ["./profiles/hd.yml", "./profiles/audio.yml"] },
+        { name: "Trash", includes: [{ template: "./profiles/trash.json", source: "TRASH" as const }] },
+      ],
+    };
+
+    const result = InputConfigArrInstanceSchema.parse(config);
+
+    expect(result).toMatchObject({ profiles: config.profiles });
   });
 
   test("does not silently strip an include item's trash_cfgroup_* overrides", () => {

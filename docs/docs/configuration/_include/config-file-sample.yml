@@ -241,6 +241,14 @@ radarr:
       - template: radarr-quality-definition-movie
       - template: radarr-quality-profile-hd-bluray-web
       - template: radarr-custom-formats-hd-bluray-web
+      # Include a template by path. Relative paths resolve against this config's folder.
+      # - template: ./profiles/radarr/extra.yml
+
+    # Reusable, name-independent profiles: the included file carries no profile name,
+    # so the same file can be bound to a different name per instance.
+    # profiles:
+    #   - name: UHD
+    #     includes: ./profiles/radarr/quality.yml
 
     custom_formats: # Custom format assignments
       - trash_ids:
