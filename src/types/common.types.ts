@@ -100,6 +100,18 @@ export type MappedTemplates = Partial<
 
 export type MappedMergedTemplates = MappedTemplates & Required<Pick<MappedTemplates, "custom_formats" | "quality_profiles">>;
 
+/**
+ * A score assignment as it may actually appear inside a template file. Template files bypass
+ * Zod entirely (they're `yaml.parse(...) as MappedTemplates`), so `name` can be missing - which
+ * is legitimate when the template is consumed through a `profiles:` entry that supplies it.
+ * `bindProfileName` is the single narrowing boundary: everything downstream sees `name: string`.
+ */
+export type TemplateScoreAssignment = {
+  name?: string;
+  score?: number;
+  use_default_score?: boolean;
+};
+
 export const ArrTypeConst = ["RADARR", "SONARR", "WHISPARR", "READARR", "LIDARR"] as const;
 export type ArrType = (typeof ArrTypeConst)[number];
 
