@@ -46,6 +46,7 @@ describe("IndexerSync", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockClient.getIndexers.mockResolvedValue([]);
+    mockClient.getAppProfiles.mockResolvedValue([{ id: 1, name: "Standard" }]);
   });
   afterEach(() => vi.clearAllMocks());
 
@@ -72,6 +73,41 @@ describe("IndexerSync", () => {
     expect(payload.enable).toBe(true);
     expect(payload.priority).toBe(10);
     expect(payload.appProfileId).toBe(1);
+  });
+
+  it("fails when the configured app profile does not exist", async () => {
+    await expect(sync().sync([{ name: "1337x", definition: "1337x", app_profile: "Nope" }], undefined, cache())).rejects.toThrow(
+      "App profile 'Nope' not found for Indexer '1337x'. Available: Standard",
+    );
+    expect(mockClient.createIndexer).not.toHaveBeenCalled();
+  });
+
+  it("fails when the app profiles cannot be loaded", async () => {
+    mockClient.getAppProfiles.mockRejectedValueOnce(new Error("connection refused"));
+
+    await expect(sync().sync([{ name: "1337x", definition: "1337x" }], undefined, cache())).rejects.toThrow("connection refused");
+    expect(mockClient.createIndexer).not.toHaveBeenCalled();
+  });
+
+  it("fails instead of guessing an id when the server has no app profiles", async () => {
+    mockClient.getAppProfiles.mockResolvedValue([]);
+
+    await expect(sync().sync([{ name: "1337x", definition: "1337x" }], undefined, cache())).rejects.toThrow(
+      "No app profile available on Prowlarr for Indexer '1337x'",
+    );
+    expect(mockClient.createIndexer).not.toHaveBeenCalled();
+  });
+
+  it("keeps the existing app profile on update when none is configured", async () => {
+    mockClient.getIndexers.mockResolvedValue([
+      { id: 3, name: "1337x", implementation: "Cardigann", appProfileId: 2, fields: [], tags: [], enable: true, priority: 25 },
+    ]);
+
+    await sync().sync([{ name: "1337x", definition: "1337x", priority: 40 }], undefined, cache());
+
+    const [, payload] = mockClient.updateIndexer.mock.calls[0]!;
+    expect(payload.appProfileId).toBe(2);
+    expect(payload.priority).toBe(40);
   });
 
   it("deletes unmanaged indexers when enabled", async () => {

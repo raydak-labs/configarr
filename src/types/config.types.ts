@@ -324,7 +324,8 @@ export const InputConfigIndexerSchema = z.object({
   // Prowlarr schema `definitionName`, e.g. "1337x", "Nyaa.si", "The Pirate Bay".
   definition: z.string(),
   enable: z.boolean().optional(),
-  // App profile name (resolved to id); defaults to the first / existing profile.
+  // App profile name (resolved to id); must exist in Prowlarr. Defaults to the indexer's
+  // existing profile on update, otherwise the first profile on the server.
   app_profile: z.string().optional(),
   priority: z.number().int().optional(),
   fields: z.record(z.string(), z.any()).optional(),

@@ -55,21 +55,25 @@ export class IndexerSync extends ProviderResourceSync<IndexerConfig, IndexerReso
     },
   ];
 
+  /**
+   * Resolves the configured `app_profile` name to its id. Throws when the name is
+   * unknown: silently falling back to another profile would bind the indexer to the
+   * wrong sync rules.
+   */
   private resolveAppProfileId(config: IndexerConfig, ctx: IndexerCtx): number | undefined {
     if (!config.app_profile) return undefined;
     const match = ctx.appProfiles.find((p) => p.name?.toLowerCase() === config.app_profile!.toLowerCase());
     if (!match?.id) {
-      this.logger.warn(`App profile '${config.app_profile}' not found for indexer '${config.name}'; using default`);
+      const available = ctx.appProfiles.map((p) => p.name).filter(Boolean);
+      throw new Error(
+        `App profile '${config.app_profile}' not found for Indexer '${config.name}'. Available: ${available.length > 0 ? available.join(", ") : "none"}`,
+      );
     }
-    return match?.id;
+    return match.id;
   }
 
   protected async loadContext(): Promise<IndexerCtx> {
-    try {
-      return { appProfiles: await this.apiClient.getAppProfiles() };
-    } catch {
-      return { appProfiles: [] };
-    }
+    return { appProfiles: await this.apiClient.getAppProfiles() };
   }
 
   protected fetchSchema() {
@@ -118,7 +122,12 @@ export class IndexerSync extends ProviderResourceSync<IndexerConfig, IndexerReso
 
     payload.enable = config.enable ?? server?.enable ?? true;
     payload.priority = config.priority ?? server?.priority ?? DEFAULT_PRIORITY;
-    payload.appProfileId = this.resolveAppProfileId(config, ctx) ?? server?.appProfileId ?? ctx.appProfiles.find((p) => p.id)?.id ?? 1;
+
+    const appProfileId = this.resolveAppProfileId(config, ctx) ?? server?.appProfileId ?? ctx.appProfiles.find((p) => p.id != null)?.id;
+    if (appProfileId == null) {
+      throw new Error(`No app profile available on Prowlarr for Indexer '${config.name}'. Create one in Prowlarr or set 'app_profile'.`);
+    }
+    payload.appProfileId = appProfileId;
 
     return payload;
   }

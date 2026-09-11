@@ -150,6 +150,25 @@ describe("ApplicationSync – syncApplications", () => {
     expect(out.diffEntries).toContainEqual({ resourceType: "Application", name: "Sync App Indexers", action: "update" });
   });
 
+  it("fails the instance when the app-indexer sync command is rejected", async () => {
+    mockClient.syncAppIndexers.mockRejectedValueOnce(new Error("500 Server Error"));
+
+    await expect(sync().syncApplications({ applications: { data: [], sync_indexers: true } }, cache())).rejects.toThrow(
+      "Failed to trigger Prowlarr App Indexer sync: 500 Server Error",
+    );
+  });
+
+  it("fails the instance when creating an application is rejected", async () => {
+    mockClient.createApplication.mockRejectedValueOnce(new Error("400 Bad Request"));
+
+    await expect(
+      sync().syncApplications(
+        { applications: { data: [{ name: "Sonarr", type: "Sonarr", fields: { baseUrl: "u", apiKey: "k" } }] } },
+        cache(),
+      ),
+    ).rejects.toThrow("Create Application 'Sonarr' failed: 400 Bad Request");
+  });
+
   it("dry-run makes no API calls", async () => {
     const { getEnvs } = await import("../env");
     vi.mocked(getEnvs).mockReturnValue({ DRY_RUN: true, LOG_LEVEL: "silent", CONFIGARR_VERSION: "test" } as any);

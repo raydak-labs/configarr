@@ -30,6 +30,9 @@ function referencedTagNames(instance: InputConfigProwlarrInstance): Set<string> 
  * Ensures the tag labels listed under `prowlarr.<instance>.tags` exist, and
  * (optionally) deletes server tags that are neither listed nor referenced by a
  * managed resource.
+ *
+ * A failed create or delete throws: provider resources reference tags by name, so
+ * continuing would silently sync them with the wrong tags.
  */
 export async function syncTags(instance: InputConfigProwlarrInstance, serverCache: ServerCache): Promise<TagSyncResult> {
   const desired = instance.tags ?? [];
@@ -49,7 +52,6 @@ export async function syncTags(instance: InputConfigProwlarrInstance, serverCach
   }
 
   // Create missing
-  const failed: string[] = [];
   for (const label of desired) {
     if (existingByLabel.has(label.toLowerCase())) continue;
 
@@ -67,14 +69,10 @@ export async function syncTags(instance: InputConfigProwlarrInstance, serverCach
       result.added++;
       logger.info(`Created tag: '${label}' (ID: ${created.id})`);
     } catch (error: unknown) {
-      failed.push(label);
-      logger.error(`Failed to create tag '${label}': ${error instanceof Error ? error.message : String(error)}`);
+      const message = `Failed to create tag '${label}': ${error instanceof Error ? error.message : String(error)}`;
+      logger.error(message);
+      throw new Error(message);
     }
-  }
-  if (failed.length > 0) {
-    // Non-fatal: a resource that actually needs a missing tag still fails its own
-    // create/update in ProviderResourceSync.createMissingTags. Surface it here too.
-    logger.warn(`Could not create ${failed.length} Prowlarr tag(s): ${failed.join(", ")}`);
   }
 
   // Delete unmanaged
@@ -102,7 +100,9 @@ export async function syncTags(instance: InputConfigProwlarrInstance, serverCach
         result.removed++;
         logger.info(`Deleted unmanaged tag: '${label}'`);
       } catch (error: unknown) {
-        logger.error(`Failed to delete tag '${label}': ${error instanceof Error ? error.message : String(error)}`);
+        const message = `Failed to delete tag '${label}': ${error instanceof Error ? error.message : String(error)}`;
+        logger.error(message);
+        throw new Error(message);
       }
     }
   }

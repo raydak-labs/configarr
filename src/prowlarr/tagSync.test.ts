@@ -57,6 +57,22 @@ describe("syncTags", () => {
     expect(res.removed).toBe(1);
   });
 
+  it("fails the run when a tag cannot be created", async () => {
+    mockClient.createTag.mockRejectedValueOnce(new Error("400 Bad Request"));
+    const cache = makeCache([]);
+
+    await expect(syncTags({ ...base, tags: ["broken"] }, cache)).rejects.toThrow("Failed to create tag 'broken': 400 Bad Request");
+    expect(cache.tags).toHaveLength(0);
+  });
+
+  it("fails the run when an unmanaged tag cannot be deleted", async () => {
+    mockClient.deleteTag.mockRejectedValueOnce(new Error("409 Conflict"));
+
+    await expect(
+      syncTags({ ...base, tags: [], delete_unmanaged_tags: { enabled: true } }, makeCache([{ id: 4, label: "orphan" }])),
+    ).rejects.toThrow("Failed to delete tag 'orphan': 409 Conflict");
+  });
+
   it("no-ops when nothing is configured", async () => {
     const res = await syncTags(base, makeCache([{ id: 1, label: "x" }]));
     expect(res).toEqual({ added: 0, removed: 0, diffEntries: [] });

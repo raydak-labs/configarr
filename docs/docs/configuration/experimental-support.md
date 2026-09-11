@@ -308,8 +308,26 @@ Each managed section (`applications`, `indexers`, `indexer_proxies`, `download_c
 `delete_unmanaged: { enabled, ignore }` block. Resources are synced in dependency order: tags →
 indexer proxies → indexers → applications → download clients.
 
+:::warning Be careful with `delete_unmanaged` on Prowlarr
+
+Prowlarr is the hub that links your stack together, so deleting the wrong resource has a wider
+blast radius than on a media manager:
+
+- deleting an unmanaged **application** unlinks that Sonarr/Radarr/... instance from Prowlarr
+- deleting an unmanaged **indexer** removes it from every connected app on the next app sync
+- deleting an unmanaged **tag** silently untags every resource that used it
+
+It is disabled by default everywhere, which is the recommended setting. Only enable it per section
+once your config lists everything that should exist on the server, use `ignore` for entries you
+manage by hand, and do a `DRY_RUN=true` run first to see exactly what would be removed.
+
+:::
+
 Not supported (out of scope for now): indexer definitions/proxies beyond CRUD, app sync profiles,
 notifications, DNS/host config.
+
+Any failure while syncing tags, indexer proxies, indexers or applications (including the
+`sync_indexers` command) fails that Prowlarr instance and is honoured by `STOP_ON_ERROR`.
 
 Enable/disable all Prowlarr instances with the top-level `prowlarrEnabled` flag (defaults to enabled).
 
@@ -350,7 +368,7 @@ prowlarr:
         - name: 1337x
           definition: 1337x
           enable: true
-          app_profile: Standard # resolved to appProfileId; defaults to the first profile
+          app_profile: Standard # resolved to appProfileId; must exist in Prowlarr
           priority: 25
           fields:
             torrentBaseSettings.seedRatio: 1.0

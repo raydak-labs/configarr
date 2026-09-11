@@ -77,7 +77,10 @@ export class ApplicationSync extends ProviderResourceSync<ApplicationConfig, App
     return payload;
   }
 
-  /** Generic add/update/delete plus the optional post-sync "Sync App Indexers" trigger. */
+  /**
+   * Generic add/update/delete plus the optional post-sync "Sync App Indexers" trigger.
+   * A failed trigger throws, so the instance is reported as failed.
+   */
   async syncApplications(
     config: {
       applications?: {
@@ -113,11 +116,11 @@ export class ApplicationSync extends ProviderResourceSync<ApplicationConfig, App
           outcome.diffEntries.push({ resourceType: "Application", name: "Sync App Indexers", action: "update" });
           this.logger.info("Prowlarr App Indexer sync triggered");
         } catch (error: unknown) {
-          const errorMessage = error instanceof Error ? error.message : String(error);
-          // Non-fatal: the apps themselves synced, and Prowlarr also runs this command
-          // on its own schedule / on app changes. `indexersSynced` stays false so the
-          // diff report does not claim it happened.
-          this.logger.error(`Failed to trigger Prowlarr App Indexer sync (continuing): ${errorMessage}`);
+          const message = `Failed to trigger Prowlarr App Indexer sync: ${error instanceof Error ? error.message : String(error)}`;
+          // Fatal: the user explicitly asked for this with `sync_indexers: true`, so a
+          // failure must fail the instance rather than report a successful run.
+          this.logger.error(message);
+          throw new Error(message);
         }
       }
     }

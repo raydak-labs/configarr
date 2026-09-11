@@ -1035,11 +1035,17 @@ prowlarr:
 
 `indexers` entries are based on a schema `definition` (the Prowlarr `definitionName`, e.g. `1337x`)
 and matched to the server by display `name`. Extra keys: `enable`, `priority`, `app_profile`
-(resolved to an app-profile id, defaults to the first profile). `indexer_proxies` are matched by
+(resolved to an app-profile id; the name must exist in Prowlarr, otherwise the sync fails).
+On a new indexer without `app_profile` the first profile on the server is used; on an update the
+existing profile is kept. `indexer_proxies` are matched by
 `name` + `type` (implementation: `FlareSolverr`, `Http`, `Socks4`, `Socks5`).
 
 `tags` is a plain list of labels to ensure exist; `delete_unmanaged_tags: { enabled, ignore }`
 prunes server tags that are neither listed nor referenced by a managed resource.
+
+`delete_unmanaged` is off by default for every Prowlarr section and should stay that way unless
+your config is the full source of truth. See the
+[warning under Experimental support](/docs/configuration/experimental-support#prowlarr-v1).
 
 Prowlarr download clients use the same `download_clients` block as the other \*Arrs, minus the
 `config` and `remote_paths` sub-sections (Prowlarr has no equivalent endpoints).

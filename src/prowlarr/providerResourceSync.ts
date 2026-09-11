@@ -458,7 +458,7 @@ export abstract class ProviderResourceSync<
         await this.createResource(await this.resolveConfig(config, serverCache.tags, ctx));
         added++;
       } catch (error) {
-        this.logError(`Create ${this.label} '${config.name}' failed`, error);
+        throw this.toError(`Create ${this.label} '${config.name}' failed`, error);
       }
     }
 
@@ -471,7 +471,7 @@ export abstract class ProviderResourceSync<
         await this.updateResource(server.id!.toString(), payload);
         updated++;
       } catch (error) {
-        this.logError(`Update ${this.label} '${config.name}' failed`, error);
+        throw this.toError(`Update ${this.label} '${config.name}' failed`, error);
       }
     }
 
@@ -482,7 +482,7 @@ export abstract class ProviderResourceSync<
         await this.deleteResource(item.id!.toString());
         removed++;
       } catch (error) {
-        this.logError(`Delete ${this.label} '${item.name ?? "Unknown"}' failed`, error);
+        throw this.toError(`Delete ${this.label} '${item.name ?? "Unknown"}' failed`, error);
       }
     }
 
@@ -495,12 +495,14 @@ export abstract class ProviderResourceSync<
     return { added, updated, removed, diffEntries };
   }
 
-  private logError(message: string, error: unknown): void {
+  /** Logs the failure (plus any server response body) and returns the error to throw. */
+  private toError(message: string, error: unknown): Error {
     const errorMessage = error instanceof Error ? error.message : String(error);
     this.logger.error(`${message}: ${errorMessage}`);
     const httpError = error as any;
     if (httpError?.response?.data) {
       this.logger.debug(`Server response: ${JSON.stringify(httpError.response.data)}`);
     }
+    return new Error(`${message}: ${errorMessage}`);
   }
 }
