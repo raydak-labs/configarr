@@ -5,9 +5,10 @@ import { getSpecificClient } from "../clients/unified-client";
 import { DiffEntry, FieldChange } from "../diffReport/diffReport.types";
 import { getEnvs } from "../env";
 import { logger } from "../logger";
+import type { TagLike } from "../types/download-client.types";
 import { camelToSnake, snakeToCamel } from "../util";
 
-export type TagLike = { id?: number; label?: string | null };
+export type { TagLike };
 
 export type ProviderField = { name?: string | null; value?: any };
 
@@ -39,7 +40,6 @@ export type ProviderDiff<TConfig, TResource> = {
   create: TConfig[];
   update: { config: TConfig; server: TResource; partialUpdate: boolean; fieldChanges: FieldChange[] }[];
   unchanged: { config: TConfig; server: TResource }[];
-  deleted: TResource[];
 };
 
 export interface ProviderSyncOutcome {
@@ -53,14 +53,16 @@ export interface ProviderSyncOutcome {
  * One extra top-level property (beyond `fields`/`tags`) that a specific provider
  * resource carries - e.g. an application's `syncLevel`, or an indexer's `enable`
  * / `priority` / `appProfileId`.
+ *
+ * A payload value is resolved as `fromConfig() ?? server[serverKey] ?? fallback()`.
  */
 export interface ExtraProp<TConfig, TCtx> {
-  /** Key on the server resource (camelCase). */
   serverKey: string;
-  /** Desired value derived from config; `undefined` means "leave to server default". */
   fromConfig: (config: TConfig, ctx: TCtx) => unknown;
   /** Whether the user explicitly set this (drives the partial-update heuristic). */
   specified: (config: TConfig) => boolean;
+  /** Value for a create when neither the config nor the server supplies one. */
+  fallback?: (config: TConfig, ctx: TCtx) => unknown;
 }
 
 const NAME_MAX_LENGTH = 100;
@@ -83,9 +85,7 @@ export abstract class ProviderResourceSync<
 
   /** Human label, e.g. "Application" / "Indexer" / "IndexerProxy". */
   protected abstract readonly label: string;
-  /** zod schema validating a single config entry. */
   protected abstract readonly configSchema: z.ZodType<any>;
-  /** Extra top-level props this resource carries beyond fields/tags. */
   protected readonly extras: ExtraProp<TConfig, TCtx>[] = [];
 
   protected abstract fetchSchema(): Promise<TResource[]>;
@@ -94,15 +94,16 @@ export abstract class ProviderResourceSync<
   protected abstract updateResource(id: string, payload: TResource): Promise<unknown>;
   protected abstract deleteResource(id: string): Promise<unknown>;
 
-  /** Locate the schema entry a config item is based on. */
   protected abstract findTemplate(config: TConfig, schema: TResource[]): TResource | undefined;
   /** Value used to describe the template in errors/logs (implementation or definition name). */
   protected abstract templateHint(config: TConfig): string;
-  /** Identity match between a config item and a server resource. */
-  protected abstract matches(config: TConfig, server: TResource): boolean;
-  /** Stable key for dedupe + delete detection. */
+  /** Stable identity key, used for matching, dedupe and detecting unmanaged server entries. */
   protected abstract configKey(config: TConfig): string;
   protected abstract serverKey(server: TResource): string;
+
+  protected matches(config: TConfig, server: TResource): boolean {
+    return this.configKey(config) === this.serverKey(server);
+  }
 
   /** Optional per-run context (e.g. app profiles) passed to `extras`. */
   protected async loadContext(): Promise<TCtx> {
@@ -189,8 +190,7 @@ export abstract class ProviderResourceSync<
       const normalizedFields = this.normalizeConfigFields(config.fields || {});
       for (const field of requiredFields) {
         const fieldName = field.name;
-        const fieldExists = fieldName && ((config.fields && fieldName in config.fields) || fieldName in normalizedFields);
-        if (fieldName && !fieldExists) {
+        if (fieldName && !(fieldName in normalizedFields)) {
           warnings.push(`Field '${camelToSnake(fieldName)}' may be required for ${this.templateHint(config)}`);
         }
       }
@@ -272,44 +272,39 @@ export abstract class ProviderResourceSync<
     return { equal: changes.length === 0, changes };
   }
 
+  /** A config that only tweaks top-level props is merged onto the server resource, not the schema. */
   private shouldUsePartialUpdate(config: TConfig): boolean {
-    const hasFieldOverrides = !!(config.fields && Object.keys(config.fields).length > 0);
-    if (hasFieldOverrides) {
+    if (config.fields && Object.keys(config.fields).length > 0) {
       return false;
     }
-    const hasTags = Array.isArray(config.tags) && config.tags.length > 0;
-    const specified = [...this.extras.map((e) => e.specified(config)), hasTags].filter(Boolean).length;
-    return specified > 0;
+    return this.extras.some((e) => e.specified(config)) || (config.tags?.length ?? 0) > 0;
   }
 
-  async calculateDiff(
-    configItems: TConfig[],
-    serverItems: TResource[],
-    serverTags: TagLike[],
-    ctx: TCtx,
-  ): Promise<ProviderDiff<TConfig, TResource>> {
-    const create: TConfig[] = [];
-    const update: ProviderDiff<TConfig, TResource>["update"] = [];
-    const unchanged: ProviderDiff<TConfig, TResource>["unchanged"] = [];
+  calculateDiff(configItems: TConfig[], serverItems: TResource[], serverTags: TagLike[], ctx: TCtx): ProviderDiff<TConfig, TResource> {
+    // First match wins, as a linear scan would.
+    const byKey = new Map<string, TResource>();
+    for (const server of serverItems) {
+      const key = this.serverKey(server);
+      if (!byKey.has(key)) byKey.set(key, server);
+    }
+
+    const diff: ProviderDiff<TConfig, TResource> = { create: [], update: [], unchanged: [] };
 
     for (const config of configItems) {
-      const server = serverItems.find((s) => this.matches(config, s));
+      const server = byKey.get(this.configKey(config));
       if (!server) {
-        create.push(config);
+        diff.create.push(config);
         continue;
       }
-      const comparison = this.isEqual(config, server, serverTags, ctx);
-      if (comparison.equal) {
-        unchanged.push({ config, server });
+      const { equal, changes } = this.isEqual(config, server, serverTags, ctx);
+      if (equal) {
+        diff.unchanged.push({ config, server });
       } else {
-        update.push({ config, server, partialUpdate: this.shouldUsePartialUpdate(config), fieldChanges: comparison.changes });
+        diff.update.push({ config, server, partialUpdate: this.shouldUsePartialUpdate(config), fieldChanges: changes });
       }
     }
 
-    const configKeys = new Set(configItems.map((c) => this.configKey(c)));
-    const deleted = serverItems.filter((s) => !configKeys.has(this.serverKey(s)));
-
-    return { create, update, unchanged, deleted };
+    return diff;
   }
 
   async resolveConfig(config: TConfig, serverTags: TagLike[], ctx: TCtx, server?: TResource, partialUpdate = false): Promise<TResource> {
@@ -353,9 +348,8 @@ export abstract class ProviderResourceSync<
     };
 
     for (const extra of this.extras) {
-      const desired = extra.fromConfig(config, ctx);
-      const fallback = (server as Record<string, unknown> | undefined)?.[extra.serverKey];
-      payload[extra.serverKey] = desired ?? fallback;
+      const fromServer = (server as Record<string, unknown> | undefined)?.[extra.serverKey];
+      payload[extra.serverKey] = extra.fromConfig(config, ctx) ?? fromServer ?? extra.fallback?.(config, ctx);
     }
 
     return payload as TResource;
@@ -408,22 +402,20 @@ export abstract class ProviderResourceSync<
       return { added: 0, updated: 0, removed: 0, diffEntries: [] };
     }
 
-    const schema = configItems.length > 0 ? await this.getSchema() : [];
-    const serverItems = await this.fetchServer();
+    const [schema, serverItems, ctx] = await Promise.all([
+      configItems.length > 0 ? this.getSchema() : Promise.resolve([] as TResource[]),
+      this.fetchServer(),
+      this.loadContext(),
+    ]);
     this.logger.info(`Found ${serverItems.length} ${this.label}(s) on server`);
 
-    const ctx = await this.loadContext();
+    const keys = configItems.map((c) => this.configKey(c));
+    const duplicates = new Set(keys.filter((key, i) => keys.indexOf(key) !== i));
 
-    // Validate (skip invalid, warn on duplicates)
     const valid: TConfig[] = [];
-    const seen = new Map<string, number>();
-    for (const c of configItems) {
-      const key = this.configKey(c);
-      seen.set(key, (seen.get(key) ?? 0) + 1);
-    }
-    for (const c of configItems) {
+    for (const [i, c] of configItems.entries()) {
       const validation = this.validate(c, schema);
-      const isDuplicate = (seen.get(this.configKey(c)) ?? 0) > 1;
+      const isDuplicate = duplicates.has(keys[i]!);
       if (!validation.valid) {
         this.logger.error(`Validation failed for ${this.label} '${c.name}': ${validation.errors.join(", ")}`);
       }
@@ -438,7 +430,7 @@ export abstract class ProviderResourceSync<
 
     await this.createMissingTags(valid, serverCache);
 
-    const diff = await this.calculateDiff(valid, serverItems, serverCache.tags, ctx);
+    const diff = this.calculateDiff(valid, serverItems, serverCache.tags, ctx);
     this.logger.info(
       `${this.label}s diff - Create: ${diff.create.length}, Update: ${diff.update.length}, Unchanged: ${diff.unchanged.length}`,
     );
@@ -495,7 +487,6 @@ export abstract class ProviderResourceSync<
     return { added, updated, removed, diffEntries };
   }
 
-  /** Logs the failure (plus any server response body) and returns the error to throw. */
   private toError(message: string, error: unknown): Error {
     const errorMessage = error instanceof Error ? error.message : String(error);
     this.logger.error(`${message}: ${errorMessage}`);

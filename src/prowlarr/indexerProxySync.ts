@@ -1,24 +1,14 @@
-import { z } from "zod";
-import { InputConfigIndexerProxy } from "../types/config.types";
+import { InputConfigIndexerProxy, InputConfigIndexerProxySchema } from "../types/config.types";
 import { ProviderResourceSync } from "./providerResourceSync";
 import { IndexerProxyResource } from "./types";
-
-const IndexerProxyConfigSchema = z.object({
-  name: z.string().min(1, "Indexer proxy name is required"),
-  type: z.string().min(1, "Indexer proxy type is required"),
-  fields: z.record(z.string(), z.unknown()).optional(),
-  tags: z.array(z.union([z.string().min(1), z.number().int().positive()])).optional(),
-});
-
-type IndexerProxyConfig = InputConfigIndexerProxy;
 
 /**
  * Syncs Prowlarr indexer proxies (FlareSolverr, HTTP, SOCKS4/5). Matched by
  * `name` + `implementation`; only `fields` and `tags` are managed.
  */
-export class IndexerProxySync extends ProviderResourceSync<IndexerProxyConfig, IndexerProxyResource> {
+export class IndexerProxySync extends ProviderResourceSync<InputConfigIndexerProxy, IndexerProxyResource> {
   protected readonly label = "IndexerProxy";
-  protected readonly configSchema = IndexerProxyConfigSchema;
+  protected readonly configSchema = InputConfigIndexerProxySchema;
 
   protected fetchSchema() {
     return this.apiClient.getIndexerProxySchema();
@@ -36,16 +26,13 @@ export class IndexerProxySync extends ProviderResourceSync<IndexerProxyConfig, I
     return this.apiClient.deleteIndexerProxy(id);
   }
 
-  protected findTemplate(config: IndexerProxyConfig, schema: IndexerProxyResource[]) {
+  protected findTemplate(config: InputConfigIndexerProxy, schema: IndexerProxyResource[]) {
     return schema.find((s) => s.implementation?.toLowerCase() === config.type.toLowerCase());
   }
-  protected templateHint(config: IndexerProxyConfig) {
+  protected templateHint(config: InputConfigIndexerProxy) {
     return config.type;
   }
-  protected matches(config: IndexerProxyConfig, server: IndexerProxyResource) {
-    return config.name === server.name && config.type.toLowerCase() === server.implementation?.toLowerCase();
-  }
-  protected configKey(config: IndexerProxyConfig) {
+  protected configKey(config: InputConfigIndexerProxy) {
     return `${config.name}::${config.type.toLowerCase()}`;
   }
   protected serverKey(server: IndexerProxyResource) {

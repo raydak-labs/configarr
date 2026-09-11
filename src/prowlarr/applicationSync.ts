@@ -1,36 +1,27 @@
-import { z } from "zod";
 import { ServerCache } from "../cache";
 import { getEnvs } from "../env";
-import { InputConfigApplication } from "../types/config.types";
-import { ExtraProp, ProviderResourceSync, ProviderSyncOutcome, TagLike } from "./providerResourceSync";
+import { InputConfigApplication, InputConfigApplicationSchema, InputConfigProwlarrInstance } from "../types/config.types";
+import { ExtraProp, ProviderResourceSync, ProviderSyncOutcome } from "./providerResourceSync";
 import { ApplicationResource } from "./types";
 
-const ApplicationConfigSchema = z.object({
-  name: z.string().min(1, "Application name is required"),
-  type: z.string().min(1, "Application type is required"),
-  sync_level: z.enum(["disabled", "addOnly", "fullSync"]).optional(),
-  fields: z.record(z.string(), z.unknown()).optional(),
-  tags: z.array(z.union([z.string().min(1), z.number().int().positive()])).optional(),
-});
-
-type ApplicationConfig = InputConfigApplication;
 type NoCtx = Record<string, never>;
-
-export interface ApplicationSyncOutcome extends ProviderSyncOutcome {
-  indexersSynced: boolean;
-}
 
 /**
  * Syncs Prowlarr "Applications" - the Sonarr/Radarr/... instances Prowlarr pushes
  * its indexers to. Matched by `name` + `implementation`; adds a `syncLevel`.
  * Optionally triggers Prowlarr's global "Sync App Indexers" command afterwards.
  */
-export class ApplicationSync extends ProviderResourceSync<ApplicationConfig, ApplicationResource> {
+export class ApplicationSync extends ProviderResourceSync<InputConfigApplication, ApplicationResource> {
   protected readonly label = "Application";
-  protected readonly configSchema = ApplicationConfigSchema;
+  protected readonly configSchema = InputConfigApplicationSchema;
 
-  protected readonly extras: ExtraProp<ApplicationConfig, NoCtx>[] = [
-    { serverKey: "syncLevel", fromConfig: (c) => c.sync_level ?? undefined, specified: (c) => c.sync_level !== undefined },
+  protected readonly extras: ExtraProp<InputConfigApplication, NoCtx>[] = [
+    {
+      serverKey: "syncLevel",
+      fromConfig: (c) => c.sync_level,
+      specified: (c) => c.sync_level !== undefined,
+      fallback: () => "fullSync",
+    },
   ];
 
   protected fetchSchema() {
@@ -49,82 +40,46 @@ export class ApplicationSync extends ProviderResourceSync<ApplicationConfig, App
     return this.apiClient.deleteApplication(id);
   }
 
-  protected findTemplate(config: ApplicationConfig, schema: ApplicationResource[]) {
+  protected findTemplate(config: InputConfigApplication, schema: ApplicationResource[]) {
     return schema.find((s) => s.implementation?.toLowerCase() === config.type.toLowerCase());
   }
-  protected templateHint(config: ApplicationConfig) {
+  protected templateHint(config: InputConfigApplication) {
     return config.type;
   }
-  protected matches(config: ApplicationConfig, server: ApplicationResource) {
-    return config.name === server.name && config.type.toLowerCase() === server.implementation?.toLowerCase();
-  }
-  protected configKey(config: ApplicationConfig) {
+  protected configKey(config: InputConfigApplication) {
     return `${config.name}::${config.type.toLowerCase()}`;
   }
   protected serverKey(server: ApplicationResource) {
     return `${server.name ?? ""}::${server.implementation?.toLowerCase() ?? ""}`;
   }
 
-  async resolveConfig(
-    config: ApplicationConfig,
-    serverTags: TagLike[],
-    ctx: NoCtx,
-    server?: ApplicationResource,
-    partialUpdate = false,
-  ): Promise<ApplicationResource> {
-    const payload = await super.resolveConfig(config, serverTags, ctx, server, partialUpdate);
-    payload.syncLevel = (config.sync_level ?? server?.syncLevel ?? "fullSync") as ApplicationResource["syncLevel"];
-    return payload;
-  }
-
-  /**
-   * Generic add/update/delete plus the optional post-sync "Sync App Indexers" trigger.
-   * A failed trigger throws, so the instance is reported as failed.
-   */
   async syncApplications(
-    config: {
-      applications?: {
-        data?: ApplicationConfig[];
-        delete_unmanaged?: { enabled: boolean; ignore?: string[] };
-        sync_indexers?: boolean;
-      };
-    },
+    applications: InputConfigProwlarrInstance["applications"],
     serverCache: ServerCache,
-  ): Promise<ApplicationSyncOutcome> {
-    const applications = config.applications;
-    const configApps = applications?.data ?? [];
-    const syncIndexers = applications?.sync_indexers ?? false;
-    const deleteUnmanaged = applications?.delete_unmanaged;
+  ): Promise<ProviderSyncOutcome> {
+    const outcome = await this.sync(applications?.data ?? [], applications?.delete_unmanaged, serverCache);
 
-    if (configApps.length === 0 && !deleteUnmanaged?.enabled && !syncIndexers) {
-      this.logger.info("No applications configured and delete_unmanaged / sync_indexers not enabled, skipping");
-      return { added: 0, updated: 0, removed: 0, indexersSynced: false, diffEntries: [] };
+    if (!applications?.sync_indexers) {
+      return outcome;
     }
 
-    const outcome = await this.sync(configApps, deleteUnmanaged, serverCache);
-
-    let indexersSynced = false;
-    if (syncIndexers) {
-      if (getEnvs().DRY_RUN) {
-        this.logger.info("DryRun: Would trigger Prowlarr App Indexer sync.");
-        outcome.diffEntries.push({ resourceType: "Application", name: "Sync App Indexers", action: "update" });
-      } else {
-        try {
-          this.logger.info("Triggering Prowlarr App Indexer sync...");
-          await this.apiClient.syncAppIndexers();
-          indexersSynced = true;
-          outcome.diffEntries.push({ resourceType: "Application", name: "Sync App Indexers", action: "update" });
-          this.logger.info("Prowlarr App Indexer sync triggered");
-        } catch (error: unknown) {
-          const message = `Failed to trigger Prowlarr App Indexer sync: ${error instanceof Error ? error.message : String(error)}`;
-          // Fatal: the user explicitly asked for this with `sync_indexers: true`, so a
-          // failure must fail the instance rather than report a successful run.
-          this.logger.error(message);
-          throw new Error(message);
-        }
+    if (getEnvs().DRY_RUN) {
+      this.logger.info("DryRun: Would trigger Prowlarr App Indexer sync.");
+    } else {
+      try {
+        this.logger.info("Triggering Prowlarr App Indexer sync...");
+        await this.apiClient.syncAppIndexers();
+        this.logger.info("Prowlarr App Indexer sync triggered");
+      } catch (error: unknown) {
+        const message = `Failed to trigger Prowlarr App Indexer sync: ${error instanceof Error ? error.message : String(error)}`;
+        // Fatal: the user explicitly asked for this with `sync_indexers: true`, so a
+        // failure must fail the instance rather than report a successful run.
+        this.logger.error(message);
+        throw new Error(message);
       }
     }
 
-    return { ...outcome, indexersSynced };
+    outcome.diffEntries.push({ resourceType: "Application", name: "Sync App Indexers", action: "update" });
+    return outcome;
   }
 }

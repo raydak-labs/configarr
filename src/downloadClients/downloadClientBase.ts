@@ -413,7 +413,10 @@ export abstract class BaseDownloadClientSync {
     return removed;
   }
 
-  public async syncDownloadClients(config: MergedConfigInstance, serverCache: ServerCache): Promise<DownloadClientSyncResult> {
+  public async syncDownloadClients(
+    config: Pick<MergedConfigInstance, "download_clients">,
+    serverCache: ServerCache,
+  ): Promise<DownloadClientSyncResult> {
     const configClients = config.download_clients?.data ?? [];
     const updatePassword = config.download_clients?.update_password ?? false;
 

@@ -21,7 +21,6 @@ const applicationSync = vi.fn(async () => ({
   added: 0,
   updated: 0,
   removed: 0,
-  indexersSynced: true,
   diffEntries: [{ resourceType: "Application", name: "a", action: "create" }],
 }));
 
@@ -59,20 +58,18 @@ describe("syncProwlarrProviders", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("runs the sub-syncs in dependency order and concatenates their diff entries", async () => {
-    const result = await syncProwlarrProviders(fullInstance, cache());
+    const entries = await syncProwlarrProviders(fullInstance, cache());
 
-    expect(result.diffEntries.map((e) => e.resourceType)).toEqual(["Tag", "IndexerProxy", "Indexer", "Application"]);
-    expect(result.indexersSynced).toBe(true);
+    expect(entries.map((e) => e.resourceType)).toEqual(["Tag", "IndexerProxy", "Indexer", "Application"]);
   });
 
-  it("skips sections that are not configured", async () => {
-    const result = await syncProwlarrProviders({ base_url: "http://p", api_key: "k" }, cache());
+  it("passes empty sections straight through, letting each sync no-op", async () => {
+    await syncProwlarrProviders({ base_url: "http://p", api_key: "k" }, cache());
 
     expect(syncTags).toHaveBeenCalledTimes(1);
-    expect(proxySync).not.toHaveBeenCalled();
-    expect(indexerSync).not.toHaveBeenCalled();
-    expect(applicationSync).not.toHaveBeenCalled();
-    expect(result.indexersSynced).toBe(false);
+    expect(proxySync).toHaveBeenCalledWith([], undefined, expect.anything());
+    expect(indexerSync).toHaveBeenCalledWith([], undefined, expect.anything());
+    expect(applicationSync).toHaveBeenCalledWith(undefined, expect.anything());
   });
 
   it("fails the whole run when tag sync fails, without touching later sections", async () => {
@@ -97,16 +94,15 @@ describe("syncProwlarrProviders", () => {
     await expect(syncProwlarrProviders(fullInstance, cache())).rejects.toThrow("app boom");
   });
 
-  it("runs applications when only sync_indexers is set", async () => {
+  it("forwards the applications section, including a bare sync_indexers", async () => {
     await syncProwlarrProviders({ base_url: "http://p", api_key: "k", applications: { sync_indexers: true } }, cache());
 
-    expect(applicationSync).toHaveBeenCalledTimes(1);
+    expect(applicationSync).toHaveBeenCalledWith({ sync_indexers: true }, expect.anything());
   });
 
-  it("runs a section that only has delete_unmanaged enabled", async () => {
+  it("forwards delete_unmanaged for a section with no data", async () => {
     await syncProwlarrProviders({ base_url: "http://p", api_key: "k", indexers: { delete_unmanaged: { enabled: true } } }, cache());
 
-    expect(indexerSync).toHaveBeenCalledTimes(1);
     expect(indexerSync).toHaveBeenCalledWith([], { enabled: true }, expect.anything());
   });
 });

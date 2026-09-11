@@ -61,18 +61,18 @@ describe("IndexerProxySync", () => {
     expect(sync().validate({ name: "nope", type: "Socks9" } as InputConfigIndexerProxy, schema).valid).toBe(false);
   });
 
-  test("matches on name plus implementation, case-insensitively", async () => {
+  test("matches on name plus implementation, case-insensitively", () => {
     const server: IndexerProxyResource[] = [
       { id: 1, name: "flare", implementation: "FlareSolverr", fields: [{ name: "host", value: "http://f:8191/" }], tags: [] },
     ];
 
-    const same = await sync().calculateDiff([{ name: "flare", type: "flaresolverr", fields: { host: "http://f:8191/" } }], server, [], {});
+    const same = sync().calculateDiff([{ name: "flare", type: "flaresolverr", fields: { host: "http://f:8191/" } }], server, [], {});
     expect(same.unchanged.map((u) => u.server.name)).toEqual(["flare"]);
 
-    // Same name, different implementation - a different resource, so create + delete.
-    const different = await sync().calculateDiff([{ name: "flare", type: "Http" }], server, [], {});
+    // Same name, different implementation is a different resource, so it is a create.
+    const different = sync().calculateDiff([{ name: "flare", type: "Http" }], server, [], {});
     expect(different.create.map((c) => c.name)).toEqual(["flare"]);
-    expect(different.deleted.map((d) => d.name)).toEqual(["flare"]);
+    expect(different.unchanged).toEqual([]);
   });
 
   it("creates a proxy with the merged fields and resolved tags", async () => {

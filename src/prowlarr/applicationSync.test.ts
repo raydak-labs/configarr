@@ -99,7 +99,7 @@ describe("ApplicationSync – pure helpers", () => {
     expect(cleared.changes).toContainEqual({ field: "tags", from: [4, 7], to: [] });
   });
 
-  test("calculateDiff classifies create / unchanged / deleted", async () => {
+  test("calculateDiff classifies create and unchanged", () => {
     const serverApps: ApplicationResource[] = [
       {
         id: 1,
@@ -111,7 +111,7 @@ describe("ApplicationSync – pure helpers", () => {
       },
       { id: 2, name: "Old", implementation: "Radarr", syncLevel: "fullSync" as any, fields: [], tags: [] },
     ];
-    const diff = await sync().calculateDiff(
+    const diff = sync().calculateDiff(
       [
         { name: "Sonarr", type: "Sonarr", fields: { baseUrl: "u" } },
         { name: "New", type: "Lidarr" },
@@ -122,7 +122,16 @@ describe("ApplicationSync – pure helpers", () => {
     );
     expect(diff.create.map((c) => c.name)).toEqual(["New"]);
     expect(diff.unchanged.map((u) => u.server.name)).toEqual(["Sonarr"]);
-    expect(diff.deleted.map((d) => d.name)).toEqual(["Old"]);
+    expect(diff.update).toEqual([]);
+  });
+
+  it("deletes a server application that is no longer configured", async () => {
+    mockClient.getApplications.mockResolvedValue([{ id: 2, name: "Old", implementation: "Radarr", fields: [], tags: [] }]);
+
+    const out = await sync().syncApplications({ data: [], delete_unmanaged: { enabled: true } }, cache());
+
+    expect(mockClient.deleteApplication).toHaveBeenCalledExactlyOnceWith("2");
+    expect(out.removed).toBe(1);
   });
 });
 
@@ -135,7 +144,7 @@ describe("ApplicationSync – syncApplications", () => {
 
   it("creates a missing application", async () => {
     const out = await sync().syncApplications(
-      { applications: { data: [{ name: "Sonarr", type: "Sonarr", fields: { baseUrl: "u", apiKey: "k" } }] } },
+      { data: [{ name: "Sonarr", type: "Sonarr", fields: { baseUrl: "u", apiKey: "k" } }] },
       cache(),
     );
     expect(mockClient.createApplication).toHaveBeenCalledTimes(1);
@@ -144,16 +153,15 @@ describe("ApplicationSync – syncApplications", () => {
   });
 
   it("triggers app-indexer sync when requested", async () => {
-    const out = await sync().syncApplications({ applications: { data: [], sync_indexers: true } }, cache());
+    const out = await sync().syncApplications({ data: [], sync_indexers: true }, cache());
     expect(mockClient.syncAppIndexers).toHaveBeenCalledTimes(1);
-    expect(out.indexersSynced).toBe(true);
     expect(out.diffEntries).toContainEqual({ resourceType: "Application", name: "Sync App Indexers", action: "update" });
   });
 
   it("fails the instance when the app-indexer sync command is rejected", async () => {
     mockClient.syncAppIndexers.mockRejectedValueOnce(new Error("500 Server Error"));
 
-    await expect(sync().syncApplications({ applications: { data: [], sync_indexers: true } }, cache())).rejects.toThrow(
+    await expect(sync().syncApplications({ data: [], sync_indexers: true }, cache())).rejects.toThrow(
       "Failed to trigger Prowlarr App Indexer sync: 500 Server Error",
     );
   });
@@ -162,10 +170,7 @@ describe("ApplicationSync – syncApplications", () => {
     mockClient.createApplication.mockRejectedValueOnce(new Error("400 Bad Request"));
 
     await expect(
-      sync().syncApplications(
-        { applications: { data: [{ name: "Sonarr", type: "Sonarr", fields: { baseUrl: "u", apiKey: "k" } }] } },
-        cache(),
-      ),
+      sync().syncApplications({ data: [{ name: "Sonarr", type: "Sonarr", fields: { baseUrl: "u", apiKey: "k" } }] }, cache()),
     ).rejects.toThrow("Create Application 'Sonarr' failed: 400 Bad Request");
   });
 
@@ -173,7 +178,7 @@ describe("ApplicationSync – syncApplications", () => {
     const { getEnvs } = await import("../env");
     vi.mocked(getEnvs).mockReturnValue({ DRY_RUN: true, LOG_LEVEL: "silent", CONFIGARR_VERSION: "test" } as any);
     const out = await sync().syncApplications(
-      { applications: { data: [{ name: "Sonarr", type: "Sonarr", fields: { baseUrl: "u", apiKey: "k" } }], sync_indexers: true } },
+      { data: [{ name: "Sonarr", type: "Sonarr", fields: { baseUrl: "u", apiKey: "k" } }], sync_indexers: true },
       cache(),
     );
     expect(mockClient.createApplication).not.toHaveBeenCalled();

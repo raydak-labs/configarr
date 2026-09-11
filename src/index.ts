@@ -46,7 +46,7 @@ import { loadServerTags } from "./tags";
 import { getTelemetryInstance, Telemetry } from "./telemetry";
 import { cloneTrashRepo, loadQualityDefinitionFromTrash, loadTrashCFConflicts, transformTrashQDs } from "./trash-guide";
 import { ArrType } from "./types/common.types";
-import { InputConfigArrInstance, InputConfigProwlarrInstance, InputConfigSchema, MergedConfigInstance } from "./types/config.types";
+import { InputConfigArrInstance, InputConfigProwlarrInstance, InputConfigSchema } from "./types/config.types";
 import { TrashArrSupported } from "./types/trashguide.types";
 import { TrashArrSupportedConst, TrashQualityDefinition, TrashQualityDefinitionQuality } from "./types/trashguide.types";
 import { isInConstArray } from "./util";
@@ -390,10 +390,14 @@ const pipeline = async (
   return { arrType, instanceName, entries: diffCollector.getEntries() };
 };
 
-const runArrType = async (
+/**
+ * Shared instance loop: skip disabled instances, run `runInstance` against each one,
+ * and tally success / failure / skipped while honouring STOP_ON_ERROR.
+ */
+const runInstances = async <TInstance extends { base_url: string; api_key: string; enabled?: boolean }>(
   arrType: ArrType,
-  globalConfig: InputConfigSchema,
-  arrEntry: Record<string, InputConfigArrInstance> | undefined,
+  entries: Record<string, TInstance> | undefined,
+  runInstance: (instance: TInstance, instanceName: string) => Promise<InstanceDiffReport>,
 ) => {
   const status = {
     success: 0,
@@ -402,14 +406,14 @@ const runArrType = async (
   };
   const reports: InstanceDiffReport[] = [];
 
-  if (!arrEntry || typeof arrEntry !== "object" || Object.keys(arrEntry).length === 0) {
+  if (!entries || typeof entries !== "object" || Object.keys(entries).length === 0) {
     logHeading(`No ${arrType} instances defined.`);
     return { status, reports };
   }
 
   logHeading(`Processing ${arrType} ...`);
 
-  for (const [instanceName, instance] of Object.entries(arrEntry)) {
+  for (const [instanceName, instance] of Object.entries(entries)) {
     logInstanceHeading(`Processing ${arrType} Instance: ${instanceName} ...`);
 
     if (instance.enabled === false) {
@@ -420,7 +424,7 @@ const runArrType = async (
 
     try {
       await configureApi(arrType, instance.base_url, instance.api_key);
-      const report = await pipeline(globalConfig, instance, arrType, instanceName);
+      const report = await runInstance(instance, instanceName);
       new ConsoleDiffFormatter().format(report);
       reports.push(report);
       status.success++;
@@ -445,6 +449,9 @@ const runArrType = async (
   return { status, reports };
 };
 
+const runArrType = (arrType: ArrType, globalConfig: InputConfigSchema, arrEntry: Record<string, InputConfigArrInstance> | undefined) =>
+  runInstances(arrType, arrEntry, (instance, instanceName) => pipeline(globalConfig, instance, arrType, instanceName));
+
 /**
  * Prowlarr is an indexer manager, not a media manager, so it runs its own minimal
  * pipeline (system status, tags, indexer proxies, indexers, applications, download
@@ -457,19 +464,17 @@ const prowlarrPipeline = async (instanceConfig: InputConfigProwlarrInstance, ins
   const system = await api.getSystemStatus();
   logger.info(`System status: ${JSON.stringify(system)}`);
 
+  // ServerCache is media-manager shaped; Prowlarr only needs its tags and download-client schema slots.
   const serverCache = new ServerCache([], [], [], []);
   serverCache.tags = await loadServerTags();
 
-  // Tags, indexer proxies, indexers, applications (+ optional "sync app indexers")
-  const providersResult = await syncProwlarrProviders(instanceConfig, serverCache);
-  diffCollector.add(providersResult.diffEntries);
+  diffCollector.add(await syncProwlarrProviders(instanceConfig, serverCache));
 
-  // Download clients - reuse the generic, arr-type-agnostic syncer
   if (instanceConfig.download_clients?.data || instanceConfig.download_clients?.delete_unmanaged?.enabled) {
     try {
       const downloadClientsResult = await syncDownloadClients(
         "PROWLARR",
-        { download_clients: instanceConfig.download_clients } as MergedConfigInstance,
+        { download_clients: instanceConfig.download_clients },
         serverCache,
       );
       diffCollector.add(downloadClientsResult.diffEntries);
@@ -481,52 +486,7 @@ const prowlarrPipeline = async (instanceConfig: InputConfigProwlarrInstance, ins
   return { arrType: "PROWLARR", instanceName, entries: diffCollector.getEntries() };
 };
 
-const runProwlarr = async (entry: Record<string, InputConfigProwlarrInstance> | undefined) => {
-  const status = { success: 0, failure: 0, skipped: 0 };
-  const reports: InstanceDiffReport[] = [];
-
-  if (!entry || typeof entry !== "object" || Object.keys(entry).length === 0) {
-    logHeading(`No PROWLARR instances defined.`);
-    return { status, reports };
-  }
-
-  logHeading(`Processing PROWLARR ...`);
-
-  for (const [instanceName, instance] of Object.entries(entry)) {
-    logInstanceHeading(`Processing PROWLARR Instance: ${instanceName} ...`);
-
-    if (instance.enabled === false) {
-      logger.info(`Instance PROWLARR - ${instanceName} is disabled!`);
-      status.skipped++;
-      continue;
-    }
-
-    try {
-      await configureApi("PROWLARR", instance.base_url, instance.api_key);
-      const report = await prowlarrPipeline(instance, instanceName);
-      new ConsoleDiffFormatter().format(report);
-      reports.push(report);
-      status.success++;
-    } catch (err: any) {
-      logger.error(
-        `Failure during configuring: PROWLARR - ${instanceName} (Detailed logs with env var: LOG_STACKTRACE=true). Error: ${err?.message}`,
-      );
-      status.failure++;
-      if (getEnvs().LOG_STACKTRACE) {
-        logger.error(err);
-      }
-      if (getEnvs().STOP_ON_ERROR) {
-        throw new Error(`Stopping further execution because 'STOP_ON_ERROR' is enabled.`);
-      }
-    } finally {
-      unsetApi();
-    }
-
-    logger.info("");
-  }
-
-  return { status, reports };
-};
+const runProwlarr = (entry: Record<string, InputConfigProwlarrInstance> | undefined) => runInstances("PROWLARR", entry, prowlarrPipeline);
 
 const run = async () => {
   logger.info(`Support the project: https://ko-fi.com/blackdark93 - Star on Github! https://github.com/raydak-labs/configarr`);

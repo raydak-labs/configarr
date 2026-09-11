@@ -46,10 +46,6 @@ export class ProwlarrClient implements IArrClient {
     this.api = new Api(httpClient);
   }
 
-  // ---------------------------------------------------------------------------
-  // Applications (Prowlarr-specific)
-  // ---------------------------------------------------------------------------
-
   async getApplicationSchema(): Promise<ApplicationResource[]> {
     return this.api.v1ApplicationsSchemaList();
   }
@@ -70,10 +66,6 @@ export class ProwlarrClient implements IArrClient {
     return this.api.v1ApplicationsDelete(+id);
   }
 
-  async testApplication(application: ApplicationResource): Promise<any> {
-    return this.api.v1ApplicationsTestCreate(application);
-  }
-
   /**
    * Trigger Prowlarr's global "Sync App Indexers" command so it pushes its indexer
    * list to every configured application. Command names are runtime strings and are
@@ -82,10 +74,6 @@ export class ProwlarrClient implements IArrClient {
   async syncAppIndexers(): Promise<CommandResource> {
     return this.api.v1CommandCreate({ name: "ApplicationIndexerSync" });
   }
-
-  // ---------------------------------------------------------------------------
-  // Indexers (Prowlarr-specific)
-  // ---------------------------------------------------------------------------
 
   async getIndexerSchema(): Promise<IndexerResource[]> {
     return this.api.v1IndexerSchemaList();
@@ -107,17 +95,9 @@ export class ProwlarrClient implements IArrClient {
     return this.api.v1IndexerDelete(+id);
   }
 
-  async testIndexer(indexer: IndexerResource): Promise<any> {
-    return this.api.v1IndexerTestCreate(indexer);
-  }
-
   async getAppProfiles(): Promise<AppProfileResource[]> {
     return this.api.v1AppprofileList();
   }
-
-  // ---------------------------------------------------------------------------
-  // Indexer proxies (Prowlarr-specific)
-  // ---------------------------------------------------------------------------
 
   async getIndexerProxySchema(): Promise<IndexerProxyResource[]> {
     return this.api.v1IndexerproxySchemaList();
@@ -138,14 +118,6 @@ export class ProwlarrClient implements IArrClient {
   async deleteIndexerProxy(id: string): Promise<void> {
     return this.api.v1IndexerproxyDelete(+id);
   }
-
-  async testIndexerProxy(proxy: IndexerProxyResource): Promise<any> {
-    return this.api.v1IndexerproxyTestCreate(proxy);
-  }
-
-  // ---------------------------------------------------------------------------
-  // Download Clients (shared/generic sync)
-  // ---------------------------------------------------------------------------
 
   async getDownloadClientSchema(): Promise<DownloadClientResource[]> {
     return this.api.v1DownloadclientSchemaList() as unknown as Promise<DownloadClientResource[]>;
@@ -171,10 +143,6 @@ export class ProwlarrClient implements IArrClient {
     return this.api.v1DownloadclientTestCreate(client as any);
   }
 
-  // ---------------------------------------------------------------------------
-  // Tags
-  // ---------------------------------------------------------------------------
-
   async getTags() {
     return this.api.v1TagList();
   }
@@ -186,10 +154,6 @@ export class ProwlarrClient implements IArrClient {
   async deleteTag(id: string): Promise<void> {
     return this.api.v1TagDelete(+id);
   }
-
-  // ---------------------------------------------------------------------------
-  // System / Health
-  // ---------------------------------------------------------------------------
 
   getSystemStatus() {
     return this.api.v1SystemStatusList();
@@ -207,10 +171,8 @@ export class ProwlarrClient implements IArrClient {
     return true;
   }
 
-  // ---------------------------------------------------------------------------
-  // Unsupported media-manager features (never called for Prowlarr)
-  // ---------------------------------------------------------------------------
-
+  // Media-manager members of IArrClient. Prowlarr has no such endpoints and the
+  // Prowlarr pipeline never calls them.
   getLanguages(): Promise<any> {
     throw NOT_SUPPORTED("Languages");
   }

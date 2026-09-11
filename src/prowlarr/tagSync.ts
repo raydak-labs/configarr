@@ -51,7 +51,6 @@ export async function syncTags(instance: InputConfigProwlarrInstance, serverCach
     if (tag.label) existingByLabel.set(tag.label.toLowerCase(), tag);
   }
 
-  // Create missing
   for (const label of desired) {
     if (existingByLabel.has(label.toLowerCase())) continue;
 
@@ -75,7 +74,6 @@ export async function syncTags(instance: InputConfigProwlarrInstance, serverCach
     }
   }
 
-  // Delete unmanaged
   if (deleteConfig?.enabled) {
     const keep = new Set<string>([
       ...desired.map((t) => t.toLowerCase()),
@@ -83,7 +81,8 @@ export async function syncTags(instance: InputConfigProwlarrInstance, serverCach
       ...referencedTagNames(instance),
     ]);
 
-    for (const tag of [...serverCache.tags]) {
+    const deletedIds = new Set<number>();
+    for (const tag of serverCache.tags) {
       const label = tag.label ?? "";
       if (!label || keep.has(label.toLowerCase()) || tag.id == null) continue;
 
@@ -95,7 +94,7 @@ export async function syncTags(instance: InputConfigProwlarrInstance, serverCach
       }
       try {
         await api.deleteTag(tag.id.toString());
-        serverCache.tags = serverCache.tags.filter((t) => t.id !== tag.id);
+        deletedIds.add(tag.id);
         result.diffEntries.push({ resourceType: "Tag", name: label, action: "delete" });
         result.removed++;
         logger.info(`Deleted unmanaged tag: '${label}'`);
@@ -105,6 +104,7 @@ export async function syncTags(instance: InputConfigProwlarrInstance, serverCach
         throw new Error(message);
       }
     }
+    serverCache.tags = serverCache.tags.filter((t) => t.id == null || !deletedIds.has(t.id));
   }
 
   return result;

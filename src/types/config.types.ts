@@ -302,17 +302,13 @@ export type InputConfigReadarrMetadataProfile = z.infer<typeof InputConfigReadar
 export const InputConfigMetadataProfileSchema = z.union([InputConfigLidarrMetadataProfileSchema, InputConfigReadarrMetadataProfileSchema]);
 export type InputConfigMetadataProfile = z.infer<typeof InputConfigMetadataProfileSchema>;
 
-// ---------------------------------------------------------------------------
-// Prowlarr (experimental) - indexer manager, not a media manager. Only its
-// Tags, Applications, Indexers, Indexer Proxies and Download Clients are
-// managed, so it gets a dedicated instance schema instead of reusing
-// InputConfigArrInstanceSchema.
-// ---------------------------------------------------------------------------
+// Prowlarr (experimental) is an indexer manager, not a media manager, so it gets a
+// dedicated instance schema instead of reusing InputConfigArrInstanceSchema.
 
 export const InputConfigApplicationSchema = z.object({
-  name: z.string(),
+  name: z.string().min(1),
   // Prowlarr implementation name, e.g. "Sonarr", "Radarr", "LazyLibrarian".
-  type: z.string(),
+  type: z.string().min(1),
   sync_level: z.enum(["disabled", "addOnly", "fullSync"]).optional(),
   fields: z.record(z.string(), z.any()).optional(),
   tags: z.array(z.union([z.string(), z.number()])).optional(),
@@ -320,9 +316,9 @@ export const InputConfigApplicationSchema = z.object({
 export type InputConfigApplication = z.infer<typeof InputConfigApplicationSchema>;
 
 export const InputConfigIndexerSchema = z.object({
-  name: z.string(),
+  name: z.string().min(1),
   // Prowlarr schema `definitionName`, e.g. "1337x", "Nyaa.si", "The Pirate Bay".
-  definition: z.string(),
+  definition: z.string().min(1),
   enable: z.boolean().optional(),
   // App profile name (resolved to id); must exist in Prowlarr. Defaults to the indexer's
   // existing profile on update, otherwise the first profile on the server.
@@ -334,9 +330,9 @@ export const InputConfigIndexerSchema = z.object({
 export type InputConfigIndexer = z.infer<typeof InputConfigIndexerSchema>;
 
 export const InputConfigIndexerProxySchema = z.object({
-  name: z.string(),
+  name: z.string().min(1),
   // Prowlarr implementation name, e.g. "FlareSolverr", "Http", "Socks4", "Socks5".
-  type: z.string(),
+  type: z.string().min(1),
   fields: z.record(z.string(), z.any()).optional(),
   tags: z.array(z.union([z.string(), z.number()])).optional(),
 });

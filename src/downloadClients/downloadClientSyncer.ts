@@ -11,7 +11,7 @@ function createDownloadClientSync(arrType: ArrType): BaseDownloadClientSync {
 
 export async function syncDownloadClients(
   arrType: ArrType,
-  config: MergedConfigInstance,
+  config: Pick<MergedConfigInstance, "download_clients">,
   serverCache: ServerCache,
 ): Promise<DownloadClientSyncResult> {
   const sync = createDownloadClientSync(arrType);
