@@ -74,7 +74,7 @@ const config: Config = {
       injectHtmlTags() {
         return {
           headTags: [
-            `<script defer data-domain="configarr.de" src="https://plausible.raydak.de/js/script.file-downloads.hash.outbound-links.tagged-events.js"></script>
+            `<script defer data-domain="configarr.de" src="https://plausi.raydak.de/js/script.file-downloads.hash.outbound-links.tagged-events.js"></script>
 <script>window.plausible = window.plausible || function() { (window.plausible.q = window.plausible.q || []).push(arguments) }</script>
 `,
           ],
