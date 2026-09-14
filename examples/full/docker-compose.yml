@@ -7,9 +7,12 @@ services:
       - PUID=1000
       - PGID=1000
       - TZ=Etc/UTC
+      - SONARR__APP__INSTANCENAME=Sonarr
+      - SONARR__AUTH__APIKEY=5e792b7e0fe14f58b8e92bf0902d4a44
+      - SONARR__AUTH__REQUIRED=DisabledForLocalAddresses
+      - SONARR__AUTH__METHOD=Forms
     volumes:
       - sonarr:/config
-      - ${PWD}/sonarr.xml:/config/config.xml:rw
     ports:
       - 6500:8989
     restart: unless-stopped
@@ -22,11 +25,14 @@ services:
       - PUID=1000
       - PGID=1000
       - TZ=Etc/UTC
+      - RADARR__APP__INSTANCENAME=Radarr
+      - RADARR__AUTH__APIKEY=0daa3a2b940f4e08bac991e9a30e9e12
+      - RADARR__AUTH__REQUIRED=DisabledForLocalAddresses
+      - RADARR__AUTH__METHOD=Forms
     volumes:
       - radarr:/config
       - radarr-download1:/downloads/1
       - radarr-download2:/downloads/2
-      - ${PWD}/radarr.xml:/config/config.xml:rw
     ports:
       - 6501:7878
     restart: unless-stopped
@@ -43,9 +49,12 @@ services:
       - PGID=1000
       - UMASK=002
       - TZ=Etc/UTC
+      - WHISPARR__APP__INSTANCENAME=Whisparr
+      - WHISPARR__AUTH__APIKEY=2ebd18db81e14c2d98d06ef4b865aaa8
+      - WHISPARR__AUTH__REQUIRED=DisabledForLocalAddresses
+      - WHISPARR__AUTH__METHOD=Forms
     volumes:
       - whisparr:/config
-      - ${PWD}/whisparr.xml:/config/config.xml:rw
     restart: unless-stopped
 
   # experimental
@@ -57,9 +66,12 @@ services:
       - PUID=1000
       - PGID=1000
       - TZ=Etc/UTC
+      - READARR__APP__INSTANCENAME=Readarr
+      - READARR__AUTH__APIKEY=e001718ba38a424d8aae7cb391b5d27a
+      - READARR__AUTH__REQUIRED=DisabledForLocalAddresses
+      - READARR__AUTH__METHOD=Forms
     volumes:
       - readarr:/config
-      - ${PWD}/readarr.xml:/config/config.xml:rw
     ports:
       - 6503:8787
     restart: unless-stopped
@@ -73,9 +85,12 @@ services:
       - PUID=1000
       - PGID=1000
       - TZ=Etc/UTC
+      - LIDARR__APP__INSTANCENAME=Lidarr
+      - LIDARR__AUTH__APIKEY=713067b7319045df9c7fa6847d8ce717
+      - LIDARR__AUTH__REQUIRED=DisabledForLocalAddresses
+      - LIDARR__AUTH__METHOD=Forms
     volumes:
       - lidarr:/config
-      - ${PWD}/lidarr.xml:/config/config.xml:rw
     ports:
       - 6504:8686
     restart: unless-stopped
