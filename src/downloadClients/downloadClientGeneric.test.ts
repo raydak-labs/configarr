@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { DownloadProtocol } from "../__generated__/radarr/data-contracts";
 import { ServerCache } from "../cache";
+import { getUnifiedClient } from "../clients/unified-client";
+import { logger } from "../logger";
 import { ArrType } from "../types/common.types";
 import type { InputConfigDownloadClient } from "../types/config.types";
 import { GenericDownloadClientSync } from "./downloadClientGeneric";
@@ -526,6 +528,94 @@ describe("GenericDownloadClientSync – ARR type handling", () => {
 
       const payload = await sync.resolveConfig(config, cache);
       expect(payload).not.toHaveProperty("categories");
+    });
+  });
+
+  describe("syncDownloadClients failed create", () => {
+    const mockClient = (createDownloadClient: ReturnType<typeof vi.fn>) => {
+      vi.mocked(getUnifiedClient).mockReturnValue({
+        getDownloadClients: vi.fn(async () => []),
+        getDownloadClientSchema: vi.fn(async () => [qbitSchema({ categories: [] }), qbitSchema({ implementation: "Transmission" })]),
+        createDownloadClient,
+        updateDownloadClient: vi.fn(),
+        deleteDownloadClient: vi.fn(),
+        testDownloadClient: vi.fn(),
+      } as never);
+    };
+
+    test("failed create does not throw, omits create from diff, and does not log no changes needed", async () => {
+      mockClient(
+        vi.fn(async () => {
+          throw new Error("HTTP Error: 409 Conflict. NOT NULL constraint failed: DownloadClients.Categories");
+        }),
+      );
+
+      const infoSpy = vi.spyOn(logger, "info");
+      const warnSpy = vi.spyOn(logger, "warn");
+      try {
+        const sync = new GenericDownloadClientSync("PROWLARR");
+        const result = await sync.syncDownloadClients(
+          { download_clients: { data: [{ name: "qBittorrent", type: "qbittorrent", fields: { host: "qbittorrent" } }] } },
+          new ServerCache([], [], [], []),
+        );
+
+        expect(result.added).toBe(0);
+        expect(result.diffEntries).toEqual([]);
+        expect(infoSpy.mock.calls.flat().join("\n")).not.toMatch(/no changes needed/);
+        expect(warnSpy.mock.calls.flat().join("\n")).toMatch(/1 change\(s\) failed/);
+      } finally {
+        infoSpy.mockRestore();
+        warnSpy.mockRestore();
+      }
+    });
+
+    test("mixed create success and failure reports success and warns about the failure", async () => {
+      mockClient(
+        vi.fn(async (payload: { name?: string }) => {
+          if (payload.name === "Broken") {
+            throw new Error("HTTP Error: 409 Conflict");
+          }
+          return payload;
+        }),
+      );
+
+      const infoSpy = vi.spyOn(logger, "info");
+      const warnSpy = vi.spyOn(logger, "warn");
+      try {
+        const sync = new GenericDownloadClientSync("PROWLARR");
+        const result = await sync.syncDownloadClients(
+          {
+            download_clients: {
+              data: [
+                { name: "qBittorrent", type: "qbittorrent", fields: { host: "qbittorrent" } },
+                { name: "Broken", type: "transmission", fields: { host: "x" } },
+              ],
+            },
+          },
+          new ServerCache([], [], [], []),
+        );
+
+        expect(result.added).toBe(1);
+        expect(result.diffEntries).toEqual([{ resourceType: "DownloadClient", name: "qBittorrent", action: "create" }]);
+        expect(infoSpy.mock.calls.flat().join("\n")).toMatch(/\+1 ~/);
+        expect(warnSpy.mock.calls.flat().join("\n")).toMatch(/1 change\(s\) failed/);
+      } finally {
+        infoSpy.mockRestore();
+        warnSpy.mockRestore();
+      }
+    });
+
+    test("successful create is reported in diffEntries", async () => {
+      mockClient(vi.fn(async (c) => c));
+
+      const sync = new GenericDownloadClientSync("PROWLARR");
+      const result = await sync.syncDownloadClients(
+        { download_clients: { data: [{ name: "qBittorrent", type: "qbittorrent", fields: { host: "qbittorrent" } }] } },
+        new ServerCache([], [], [], []),
+      );
+
+      expect(result.added).toBe(1);
+      expect(result.diffEntries).toEqual([{ resourceType: "DownloadClient", name: "qBittorrent", action: "create" }]);
     });
   });
 });

@@ -326,12 +326,8 @@ export abstract class BaseDownloadClientSync {
     }
   }
 
-  private async createClients(configs: InputConfigDownloadClient[], serverCache: ServerCache): Promise<number> {
-    if (configs.length === 0) {
-      return 0;
-    }
-
-    let added = 0;
+  private async createClients(configs: InputConfigDownloadClient[], serverCache: ServerCache): Promise<InputConfigDownloadClient[]> {
+    const created: InputConfigDownloadClient[] = [];
 
     for (const config of configs) {
       try {
@@ -340,7 +336,7 @@ export abstract class BaseDownloadClientSync {
         const payload = await this.resolveConfig(config, serverCache);
 
         await this.getApi().createDownloadClient(payload);
-        added++;
+        created.push(config);
         this.logger.info(`Created download client: '${config.name}' (${config.type})`);
       } catch (error: unknown) {
         const errorMessage = error instanceof Error ? error.message : String(error);
@@ -352,17 +348,14 @@ export abstract class BaseDownloadClientSync {
       }
     }
 
-    return added;
+    return created;
   }
 
-  private async updateClients(updates: DownloadClientDiff["update"], serverCache: ServerCache): Promise<number> {
-    if (updates.length === 0) {
-      return 0;
-    }
+  private async updateClients(updates: DownloadClientDiff["update"], serverCache: ServerCache): Promise<DownloadClientDiff["update"]> {
+    const updated: DownloadClientDiff["update"] = [];
 
-    let updated = 0;
-
-    for (const { config, server, partialUpdate } of updates) {
+    for (const item of updates) {
+      const { config, server, partialUpdate } = item;
       try {
         const updateType = partialUpdate ? "partial" : "full";
         this.logger.info(`Updating download client: '${config.name}' (${updateType} update)...`);
@@ -371,7 +364,7 @@ export abstract class BaseDownloadClientSync {
         payload.id = server.id; // Preserve server ID
 
         await this.getApi().updateDownloadClient(server.id!.toString(), payload);
-        updated++;
+        updated.push(item);
         this.logger.info(`Updated download client: '${config.name}' (${config.type})`);
       } catch (error: unknown) {
         const errorMessage = error instanceof Error ? error.message : String(error);
@@ -386,18 +379,14 @@ export abstract class BaseDownloadClientSync {
     return updated;
   }
 
-  private async deleteUnmanagedClients(unmanagedClients: DownloadClientResource[]): Promise<number> {
-    if (unmanagedClients.length === 0) {
-      return 0;
-    }
-
-    let removed = 0;
+  private async deleteUnmanagedClients(unmanagedClients: DownloadClientResource[]): Promise<DownloadClientResource[]> {
+    const removed: DownloadClientResource[] = [];
 
     for (const client of unmanagedClients) {
       try {
         this.logger.info(`Deleting unmanaged download client: '${client.name ?? "Unknown"}' (${client.implementation})...`);
         await this.getApi().deleteDownloadClient(client.id!.toString());
-        removed++;
+        removed.push(client);
         this.logger.info(`Deleted unmanaged download client: '${client.name ?? "Unknown"}'`);
       } catch (error: unknown) {
         const errorMessage = error instanceof Error ? error.message : String(error);
@@ -452,32 +441,48 @@ export abstract class BaseDownloadClientSync {
       ? this.filterUnmanagedClients(serverClients, configClients, config.download_clients.delete_unmanaged)
       : [];
 
-    const diffEntries = downloadClientDiffToDiffEntries(diff, unmanagedToDelete);
-
     if (getEnvs().DRY_RUN) {
       this.logger.info("DryRun: Would update download clients.");
       return {
         added: diff.create.length,
         updated: diff.update.length,
-        removed: diff.deleted.length,
-        diffEntries,
+        removed: unmanagedToDelete.length,
+        diffEntries: downloadClientDiffToDiffEntries(diff, unmanagedToDelete),
       };
     }
 
-    // Execute changes
-    const [added, updated] = await Promise.all([
+    const [created, updatedItems] = await Promise.all([
       this.createClients(diff.create, serverCache),
       this.updateClients(diff.update, serverCache),
     ]);
 
-    const removed = config.download_clients?.delete_unmanaged?.enabled ? await this.deleteUnmanagedClients(unmanagedToDelete) : 0;
+    const deletedItems = config.download_clients?.delete_unmanaged?.enabled ? await this.deleteUnmanagedClients(unmanagedToDelete) : [];
+
+    const added = created.length;
+    const updated = updatedItems.length;
+    const removed = deletedItems.length;
+    const failedCreates = diff.create.length - added;
+    const failedUpdates = diff.update.length - updated;
+    const failedDeletes = unmanagedToDelete.length - removed;
+    const failed = failedCreates + failedUpdates + failedDeletes;
 
     if (added > 0 || updated > 0 || removed > 0) {
       this.logger.info(`Download client synchronization complete: +${added} ~${updated} -${removed}`);
-    } else {
+    } else if (failed === 0) {
       this.logger.info("Download client synchronization complete - no changes needed");
     }
+    if (failed > 0) {
+      this.logger.warn(`Download client synchronization complete - ${failed} change(s) failed`);
+    }
 
-    return { added, updated, removed, diffEntries };
+    return {
+      added,
+      updated,
+      removed,
+      diffEntries: downloadClientDiffToDiffEntries(
+        { create: created, update: updatedItems, unchanged: diff.unchanged, deleted: [] },
+        deletedItems,
+      ),
+    };
   }
 }
