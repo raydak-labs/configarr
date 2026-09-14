@@ -219,11 +219,29 @@ export class HttpClient<SecurityDataType = unknown> {
           const contentType = response.headers.get("content-type");
 
           if (contentType && contentType.includes("application/json")) {
+            let text = "";
+            try {
+              text = await response.clone().text();
+            } catch {
+              try {
+                text = await response.text();
+              } catch {
+                text = "";
+              }
+            }
+
             let errorJson: unknown;
             try {
-              errorJson = await response.json();
+              errorJson = text ? JSON.parse(text) : undefined;
             } catch {
-              const message = `HTTP Error: ${response.status} ${response.statusText}. Failed to read response body.`;
+              const snippet = text.length > 500 ? `${text.slice(0, 500)}…` : text;
+              const message = `HTTP Error: ${response.status} ${response.statusText}.${snippet ? ` ${snippet}` : " empty body"}`;
+              logger.error(message);
+              throw new Error(message, { cause: error });
+            }
+
+            if (errorJson === undefined) {
+              const message = `HTTP Error: ${response.status} ${response.statusText}. empty body`;
               logger.error(message);
               throw new Error(message, { cause: error });
             }
