@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { MergedCustomFormatResource } from "./types/merged.types";
-import { getUnifiedClient } from "./clients/unified-client";
+import { getClient } from "./clients/unified-client";
 import { getConfig } from "./config";
 import { DiffEntry } from "./diffReport/diffReport.types";
 import { getEnvs } from "./env";
@@ -13,7 +13,7 @@ import { TrashCF } from "./types/trashguide.types";
 import { compareCustomFormats, loadJsonFile, mapImportCfToRequestCf, toCarrCF } from "./util";
 
 export const deleteAllCustomFormats = async () => {
-  const api = getUnifiedClient();
+  const api = getClient();
   const cfOnServer = await api.getCustomFormats();
 
   for (const cf of cfOnServer) {
@@ -23,7 +23,7 @@ export const deleteAllCustomFormats = async () => {
 };
 
 export const deleteCustomFormat = async (customFormat: MergedCustomFormatResource) => {
-  const api = getUnifiedClient();
+  const api = getClient();
 
   await api.deleteCustomFormat(customFormat.id + "");
   logger.info(`Deleted CF: '${customFormat.name}'`);
@@ -33,14 +33,14 @@ export const loadServerCustomFormats = async (): Promise<MergedCustomFormatResou
   if (getEnvs().LOAD_LOCAL_SAMPLES) {
     return loadJsonFile<MergedCustomFormatResource[]>(path.resolve(__dirname, "../tests/samples/cfs.json"));
   }
-  const api = getUnifiedClient();
+  const api = getClient();
   const cfOnServer = await api.getCustomFormats();
   return cfOnServer;
 };
 
 export const manageCf = async (cfProcessing: CFProcessing, serverCfs: Map<string, MergedCustomFormatResource>) => {
   const { cfNameToCarrConfig } = cfProcessing;
-  const api = getUnifiedClient();
+  const api = getClient();
 
   let updatedCFs: MergedCustomFormatResource[] = [];
   let errorCFs: string[] = [];

@@ -906,7 +906,7 @@ describe("QualityProfiles", async () => {
       const deleteFn = vi.fn().mockResolvedValue(undefined);
       const getFn = vi.fn().mockResolvedValue([qp1, qp2, qp3]);
 
-      vi.spyOn(uclient, "getUnifiedClient").mockReturnValue({
+      vi.spyOn(uclient, "getClient").mockReturnValue({
         getQualityProfiles: getFn,
         deleteQualityProfile: deleteFn,
       } as any);
@@ -932,7 +932,7 @@ describe("QualityProfiles", async () => {
       const deleteFn = vi.fn();
       const getFn = vi.fn().mockResolvedValue([] as any[]);
 
-      vi.spyOn(uclient, "getUnifiedClient").mockReturnValue({
+      vi.spyOn(uclient, "getClient").mockReturnValue({
         getQualityProfiles: getFn,
         deleteQualityProfile: deleteFn,
       } as any);
@@ -959,7 +959,7 @@ describe("QualityProfiles", async () => {
 
       const deleteFn = vi.fn().mockResolvedValue(undefined);
 
-      vi.spyOn(uclient, "getUnifiedClient").mockReturnValue({
+      vi.spyOn(uclient, "getClient").mockReturnValue({
         deleteQualityProfile: deleteFn,
       } as any);
 

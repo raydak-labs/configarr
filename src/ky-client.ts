@@ -2,7 +2,7 @@
 import type { BeforeRequestHook, Hooks, KyInstance, Options as KyOptions, NormalizedOptions } from "ky";
 import ky, { HTTPError } from "ky";
 import { logger } from "./logger";
-import { createConnectionErrorParts } from "./clients/unified-client";
+import { createConnectionErrorParts } from "./clients/connection";
 
 function toErrorMessage(value: unknown): string {
   if (value === null) return "null";

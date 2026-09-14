@@ -1,11 +1,11 @@
-import { getUnifiedClient } from "./clients/unified-client";
+import { getClient } from "./clients/unified-client";
 import { DiffEntry, FieldChange } from "./diffReport/diffReport.types";
 import { logger } from "./logger";
 import { InputConfigDelayProfile } from "./types/config.types";
 import { MergedDelayProfileProtocolItem, MergedDelayProfileResource, MergedTagResource } from "./types/merged.types";
 
 export const deleteAdditionalDelayProfiles = async () => {
-  const api = getUnifiedClient();
+  const api = getClient();
 
   const serverData: MergedDelayProfileResource[] = await api.getDelayProfiles();
   const { additional: serverAdditional = [] } = splitServerDelayProfiles(serverData);
@@ -95,7 +95,7 @@ export const calculateDelayProfilesDiff = async (
     return null;
   }
 
-  const api = getUnifiedClient();
+  const api = getClient();
   const serverData: MergedDelayProfileResource[] = await api.getDelayProfiles();
   const { default: serverDefault, additional: serverAdditional = [] } = splitServerDelayProfiles(serverData);
 

@@ -59,6 +59,7 @@ describe("configureApi / getClient", () => {
     const client = await configureApi("SONARR", "http://localhost", "key");
     expect(client).toBeInstanceOf(SonarrClient);
     expect(getClient("SONARR")).toBe(client);
+    expect(getClient()).toBe(client);
     expect(getSpecificClient("SONARR")).toBe(client);
   });
 

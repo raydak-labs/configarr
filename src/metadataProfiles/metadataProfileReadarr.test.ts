@@ -2,11 +2,11 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ReadarrMetadataProfileSync } from "./metadataProfileReadarr";
 import { ServerCache } from "../cache";
 import { InputConfigReadarrMetadataProfile } from "../types/config.types";
-import { getUnifiedClient, getSpecificClient } from "../clients/unified-client";
+import { getClient, getSpecificClient } from "../clients/unified-client";
 
 // Mock the unified client
 vi.mock("../clients/unified-client", () => ({
-  getUnifiedClient: vi.fn(),
+  getClient: vi.fn(),
   getSpecificClient: vi.fn(),
 }));
 
@@ -22,7 +22,7 @@ describe("ReadarrMetadataProfileSync", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    (getUnifiedClient as any).mockReturnValue({
+    (getClient as any).mockReturnValue({
       api: mockApi,
     });
     (getSpecificClient as any).mockReturnValue(mockApi);

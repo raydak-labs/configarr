@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { ServerCache } from "../cache";
-import { getUnifiedClient, IArrClient } from "../clients/unified-client";
+import { getClient, IArrClient } from "../clients/unified-client";
 import { DiffEntry } from "../diffReport/diffReport.types";
 import { getEnvs } from "../env";
 import { logger } from "../logger";
@@ -66,7 +66,7 @@ export abstract class BaseDownloadClientSync {
 
   protected getApi(): IArrClient {
     if (!this._api) {
-      this._api = getUnifiedClient();
+      this._api = getClient(this.getArrType());
     }
     return this._api;
   }

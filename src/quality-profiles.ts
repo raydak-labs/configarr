@@ -7,7 +7,7 @@ import {
   MergedQualityProfileResource,
 } from "./types/merged.types";
 import { ServerCache } from "./cache";
-import { ArrClientLanguageResource, getUnifiedClient } from "./clients/unified-client";
+import { ArrClientLanguageResource, getClient } from "./clients/unified-client";
 import { DiffEntry, FieldChange } from "./diffReport/diffReport.types";
 import { getEnvs } from "./env";
 import { logger } from "./logger";
@@ -17,7 +17,7 @@ import type { TrashCFConflict } from "./types/trashguide.types";
 import { ANY_LANGUAGE_NAME, cloneWithJSON, loadJsonFile, notEmpty, zip } from "./util";
 
 export const deleteAllQualityProfiles = async () => {
-  const api = getUnifiedClient();
+  const api = getClient();
   const qualityProfilesOnServer = await api.getQualityProfiles();
 
   for (const qualityProfile of qualityProfilesOnServer) {
@@ -27,7 +27,7 @@ export const deleteAllQualityProfiles = async () => {
 };
 
 export const deleteQualityProfile = async (qualityProfile: MergedQualityProfileResource) => {
-  const api = getUnifiedClient();
+  const api = getClient();
 
   await api.deleteQualityProfile(qualityProfile.id + "");
   logger.info(`Deleted QP: '${qualityProfile.name || qualityProfile.id}'`);
@@ -99,7 +99,7 @@ export const loadQualityProfilesFromServer = async (): Promise<MergedQualityProf
   if (getEnvs().LOAD_LOCAL_SAMPLES) {
     return loadJsonFile(path.resolve(__dirname, `../tests/samples/quality_profiles.json`));
   }
-  const api = getUnifiedClient();
+  const api = getClient();
 
   const qualityProfiles = await api.getQualityProfiles();
   // TODO type hack

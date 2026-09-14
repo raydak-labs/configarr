@@ -19,7 +19,7 @@ const mockClient = {
 };
 vi.mock("../clients/unified-client", () => ({
   getSpecificClient: vi.fn(() => mockClient),
-  getUnifiedClient: vi.fn(() => ({ api: mockClient })),
+  getClient: vi.fn(() => ({ api: mockClient })),
 }));
 
 /** Minimal concrete resource + config so the base class can be exercised directly. */

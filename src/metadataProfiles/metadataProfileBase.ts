@@ -1,5 +1,5 @@
 import { ServerCache } from "../cache";
-import { getUnifiedClient, IArrClient } from "../clients/unified-client";
+import { IArrClient } from "../clients/unified-client";
 import { getEnvs } from "../env";
 import { logger } from "../logger";
 import { ArrType } from "../types/common.types";
@@ -23,7 +23,7 @@ export function metadataProfileDiffToDiffEntries(diff: MetadataProfileDiff): Dif
 
 // Base class for metadata profile synchronization
 export abstract class BaseMetadataProfileSync<T extends BaseMetadataProfileResource = any> {
-  protected api: IArrClient = getUnifiedClient();
+  protected abstract api: IArrClient;
   protected logger = logger;
 
   protected abstract loadFromServer(): Promise<T[]>;

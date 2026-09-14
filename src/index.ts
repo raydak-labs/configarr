@@ -6,7 +6,7 @@ initEnvs();
 import fs from "node:fs";
 import { MergedCustomFormatResource, MergedQualityProfileResource } from "./types/merged.types";
 import { ServerCache } from "./cache";
-import { configureApi, getUnifiedClient, unsetApi } from "./clients/unified-client";
+import { configureApi, getClient, IArrClient, unsetApi } from "./clients/unified-client";
 import { getConfig, mergeConfigsAndTemplates } from "./config";
 import { calculateCFsToManage, deleteCustomFormat, loadCustomFormatDefinitions, loadServerCustomFormats, manageCf } from "./custom-formats";
 import {
@@ -45,7 +45,7 @@ import { cloneRecyclarrTemplateRepo } from "./recyclarr-importer";
 import { loadServerTags } from "./tags";
 import { getTelemetryInstance, Telemetry } from "./telemetry";
 import { cloneTrashRepo, loadQualityDefinitionFromTrash, loadTrashCFConflicts, transformTrashQDs } from "./trash-guide";
-import { ArrType } from "./types/common.types";
+import { ArrType, MediaArrType } from "./types/common.types";
 import { InputConfigArrInstance, InputConfigProwlarrInstance, InputConfigSchema } from "./types/config.types";
 import { TrashArrSupported } from "./types/trashguide.types";
 import { TrashArrSupportedConst, TrashQualityDefinition, TrashQualityDefinitionQuality } from "./types/trashguide.types";
@@ -55,10 +55,11 @@ import { syncRootFolders } from "./rootFolder/rootFolderSyncer";
 const pipeline = async (
   globalConfig: InputConfigSchema,
   instanceConfig: InputConfigArrInstance,
-  arrType: ArrType,
+  arrType: MediaArrType,
   instanceName: string,
 ): Promise<InstanceDiffReport> => {
-  const api = getUnifiedClient();
+  // Merged* payloads remain until QP/QD/naming modules migrate; then this is getClient(arrType).
+  const api: IArrClient = getClient(arrType);
   const diffCollector = new DiffCollector();
 
   const system = await api.getSystemStatus();
@@ -449,7 +450,7 @@ const runInstances = async <TInstance extends { base_url: string; api_key: strin
   return { status, reports };
 };
 
-const runArrType = (arrType: ArrType, globalConfig: InputConfigSchema, arrEntry: Record<string, InputConfigArrInstance> | undefined) =>
+const runArrType = (arrType: MediaArrType, globalConfig: InputConfigSchema, arrEntry: Record<string, InputConfigArrInstance> | undefined) =>
   runInstances(arrType, arrEntry, (instance, instanceName) => pipeline(globalConfig, instance, arrType, instanceName));
 
 /**
@@ -458,7 +459,7 @@ const runArrType = (arrType: ArrType, globalConfig: InputConfigSchema, arrEntry:
  * clients) instead of the media `pipeline()`.
  */
 const prowlarrPipeline = async (instanceConfig: InputConfigProwlarrInstance, instanceName: string): Promise<InstanceDiffReport> => {
-  const api = getUnifiedClient();
+  const api = getClient("PROWLARR");
   const diffCollector = new DiffCollector();
 
   const system = await api.getSystemStatus();
@@ -536,7 +537,7 @@ const run = async () => {
 
   for (const { type, enabled, config } of arrTypes) {
     if (enabled == null || enabled) {
-      const result = await runArrType(type as ArrType, globalConfig, config);
+      const result = await runArrType(type as MediaArrType, globalConfig, config);
       totalStatus.push(`${type}: (${result.status.success}/${result.status.failure}/${result.status.skipped})`);
       allReports.push(...result.reports);
     } else {

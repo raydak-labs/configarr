@@ -1,17 +1,17 @@
-import { getUnifiedClient } from "./clients/unified-client";
+import { getClient } from "./clients/unified-client";
 import { DiffEntry, FieldChange } from "./diffReport/diffReport.types";
 import { logger } from "./logger";
 import { MediaManagementType, MediaNamingApiType } from "./types/config.types";
 import { compareMediamanagement, compareNaming } from "./util";
 
 const loadNamingFromServer = async () => {
-  const api = getUnifiedClient();
+  const api = getClient();
   const result = await api.getNaming();
   return result;
 };
 
 const loadMediamanagementConfigFromServer = async () => {
-  const api = getUnifiedClient();
+  const api = getClient();
   const result = await api.getMediamanagement();
   return result;
 };

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { DownloadProtocol } from "../__generated__/radarr/data-contracts";
 import { ServerCache } from "../cache";
-import { getUnifiedClient } from "../clients/unified-client";
+import { getClient } from "../clients/unified-client";
 import { logger } from "../logger";
 import { ArrType } from "../types/common.types";
 import type { InputConfigDownloadClient } from "../types/config.types";
@@ -9,7 +9,7 @@ import { GenericDownloadClientSync } from "./downloadClientGeneric";
 import { DownloadClientResource } from "../types/download-client.types";
 
 vi.mock("../clients/unified-client", () => ({
-  getUnifiedClient: vi.fn(() => ({
+  getClient: vi.fn(() => ({
     getDownloadClients: vi.fn(),
     getDownloadClientSchema: vi.fn(),
     createDownloadClient: vi.fn(),
@@ -533,7 +533,7 @@ describe("GenericDownloadClientSync – ARR type handling", () => {
 
   describe("syncDownloadClients failed create", () => {
     const mockClient = (createDownloadClient: ReturnType<typeof vi.fn>) => {
-      vi.mocked(getUnifiedClient).mockReturnValue({
+      vi.mocked(getClient).mockReturnValue({
         getDownloadClients: vi.fn(async () => []),
         getDownloadClientSchema: vi.fn(async () => [qbitSchema({ categories: [] }), qbitSchema({ implementation: "Transmission" })]),
         createDownloadClient,

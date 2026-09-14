@@ -238,10 +238,10 @@ describe("CustomFormats", () => {
       const serverCfs = new Map<string, MergedCustomFormatResource>([["Dup", serverCf]]);
 
       const updateCustomFormat = vi.fn();
-      vi.spyOn(unifiedClient, "getUnifiedClient").mockReturnValue({
+      vi.spyOn(unifiedClient, "getClient").mockReturnValue({
         updateCustomFormat,
         createCustomFormat: vi.fn(),
-      } as unknown as ReturnType<typeof unifiedClient.getUnifiedClient>);
+      } as unknown as ReturnType<typeof unifiedClient.getClient>);
 
       const out = await manageCf(cfProcessing, serverCfs);
 
@@ -282,10 +282,10 @@ describe("CustomFormats", () => {
       const serverCfs = new Map<string, MergedCustomFormatResource>([["Dup", serverCfStale]]);
 
       const updateCustomFormat = vi.fn().mockResolvedValue({ id: 1, name: "Dup", ...requestConfigB });
-      vi.spyOn(unifiedClient, "getUnifiedClient").mockReturnValue({
+      vi.spyOn(unifiedClient, "getClient").mockReturnValue({
         updateCustomFormat,
         createCustomFormat: vi.fn(),
-      } as unknown as ReturnType<typeof unifiedClient.getUnifiedClient>);
+      } as unknown as ReturnType<typeof unifiedClient.getClient>);
 
       await manageCf(cfProcessing, serverCfs);
 
@@ -310,10 +310,10 @@ describe("CustomFormats", () => {
 
       const serverCfs = new Map<string, MergedCustomFormatResource>();
 
-      vi.spyOn(unifiedClient, "getUnifiedClient").mockReturnValue({
+      vi.spyOn(unifiedClient, "getClient").mockReturnValue({
         createCustomFormat: vi.fn().mockResolvedValue({ id: 1, name: "NewCF", ...requestConfig }),
         updateCustomFormat: vi.fn(),
-      } as unknown as ReturnType<typeof unifiedClient.getUnifiedClient>);
+      } as unknown as ReturnType<typeof unifiedClient.getClient>);
 
       const out = await manageCf(cfProcessing, serverCfs);
 
@@ -338,10 +338,10 @@ describe("CustomFormats", () => {
       existingCf.specifications![0]!.negate = true;
       const serverCfs = new Map<string, MergedCustomFormatResource>([["ChangedCF", existingCf]]);
 
-      vi.spyOn(unifiedClient, "getUnifiedClient").mockReturnValue({
+      vi.spyOn(unifiedClient, "getClient").mockReturnValue({
         createCustomFormat: vi.fn(),
         updateCustomFormat: vi.fn(),
-      } as unknown as ReturnType<typeof unifiedClient.getUnifiedClient>);
+      } as unknown as ReturnType<typeof unifiedClient.getClient>);
 
       const out = await manageCf(cfProcessing, serverCfs);
 

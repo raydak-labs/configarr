@@ -16,7 +16,7 @@ vi.mock("./logger", () => ({
   logger: { debug: vi.fn(), error: vi.fn(), warn: vi.fn(), info: vi.fn() },
 }));
 
-vi.mock("./clients/unified-client", () => ({
+vi.mock("./clients/connection", () => ({
   createConnectionErrorParts: vi.fn().mockReturnValue([]),
 }));
 

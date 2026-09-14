@@ -12,7 +12,8 @@ import {
 } from "../__generated__/lidarr/data-contracts";
 import { logger } from "../logger";
 import type { DownloadClientResource } from "../types/download-client.types";
-import { IArrClient, logConnectionError, validateClientParams } from "./unified-client";
+import { logConnectionError, validateClientParams } from "./connection";
+import { IArrClient } from "./unified-client";
 
 export class LidarrClient implements IArrClient<QualityProfileResource, QualityDefinitionResource, CustomFormatResource, LanguageResource> {
   private api!: Api<unknown>;

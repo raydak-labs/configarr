@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { syncRemotePaths, remotePathsToDiffEntries } from "./remotePathSyncer";
-import { getUnifiedClient, getSpecificClient } from "../clients/unified-client";
+import { getClient, getSpecificClient } from "../clients/unified-client";
 import { RemotePathMappingResource } from "./remotePath.types";
 
 // Mock env - use importOriginal to preserve other env functions
@@ -76,7 +76,7 @@ describe("remotePathSyncer", () => {
         deleteRemotePathMapping: vi.fn(),
       };
 
-      vi.mocked(getUnifiedClient).mockReturnValue({
+      vi.mocked(getClient).mockReturnValue({
         api: mockRadarrClient,
       } as any);
 

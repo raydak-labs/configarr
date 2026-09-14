@@ -12,7 +12,8 @@ import {
 import { logger } from "../logger";
 import type { DownloadClientResource } from "../types/download-client.types";
 import { ANY_LANGUAGE_NAME, cloneWithJSON } from "../util";
-import { IArrClient, logConnectionError, validateClientParams } from "./unified-client";
+import { logConnectionError, validateClientParams } from "./connection";
+import { IArrClient } from "./unified-client";
 
 /**
  * Overwrite wrong types for now

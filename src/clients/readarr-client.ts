@@ -12,7 +12,8 @@ import {
 } from "../__generated__/readarr/data-contracts";
 import { logger } from "../logger";
 import type { DownloadClientResource } from "../types/download-client.types";
-import { IArrClient, logConnectionError, validateClientParams } from "./unified-client";
+import { logConnectionError, validateClientParams } from "./connection";
+import { IArrClient } from "./unified-client";
 
 export class ReadarrClient implements IArrClient<
   QualityProfileResource,

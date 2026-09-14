@@ -1,11 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { GenericRootFolderSync } from "./rootFolderBase";
-import { getUnifiedClient } from "../clients/unified-client";
+import { getClient } from "../clients/unified-client";
 import { ServerCache } from "../cache";
 
 // Mock the unified client
 vi.mock("../clients/unified-client", () => ({
-  getUnifiedClient: vi.fn(),
+  getClient: vi.fn(),
 }));
 
 describe("GenericRootFolderSync", () => {
@@ -17,7 +17,7 @@ describe("GenericRootFolderSync", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    (getUnifiedClient as any).mockReturnValue(mockApi);
+    (getClient as any).mockReturnValue(mockApi);
     serverCache = new ServerCache([], [], [], []);
   });
 

@@ -43,7 +43,7 @@ const mockClient = {
 };
 vi.mock("../clients/unified-client", () => ({
   getSpecificClient: vi.fn(() => mockClient),
-  getUnifiedClient: vi.fn(() => ({ api: mockClient })),
+  getClient: vi.fn(() => ({ api: mockClient })),
 }));
 
 const cache = (tags: { id: number; label: string }[] = []) => ({ tags: [...tags] }) as unknown as ServerCache;

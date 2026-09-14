@@ -1,6 +1,6 @@
 import { MergedRootFolderResource } from "../types/merged.types";
 import { ServerCache } from "../cache";
-import { getUnifiedClient, IArrClient } from "../clients/unified-client";
+import { getClient, IArrClient } from "../clients/unified-client";
 import { DiffEntry } from "../diffReport/diffReport.types";
 import { getEnvs } from "../env";
 import { logger } from "../logger";
@@ -101,10 +101,11 @@ export abstract class BaseRootFolderSync<TConfig extends InputConfigRootFolder =
 
 // Generic sync for most arr types (Radarr, Sonarr, etc.)
 export class GenericRootFolderSync extends BaseRootFolderSync<InputConfigRootFolder> {
-  protected api: IArrClient = getUnifiedClient();
+  protected api: IArrClient;
 
   constructor(private arrType: ArrType) {
     super();
+    this.api = getClient(arrType);
   }
 
   protected getArrType(): ArrType {

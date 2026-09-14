@@ -44,7 +44,7 @@ vi.mock("../clients/unified-client", () => {
     updateDownloadClientConfig: vi.fn(() => mockServerConfig),
   };
   return {
-    getUnifiedClient: vi.fn(() => ({
+    getClient: vi.fn(() => ({
       api: mockClient,
     })),
     getSpecificClient: vi.fn(() => mockClient),
