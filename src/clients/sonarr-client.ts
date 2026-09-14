@@ -2,11 +2,17 @@ import { KyHttpClient } from "../ky-client";
 import { Api } from "../__generated__/sonarr/Api";
 import {
   CustomFormatResource,
+  DelayProfileResource,
   DownloadClientConfigResource,
   LanguageResource,
+  MediaManagementConfigResource,
+  NamingConfigResource,
   QualityDefinitionResource,
   QualityProfileResource,
   RemotePathMappingResource,
+  RootFolderResource,
+  SystemResource,
+  TagResource,
   UiConfigResource,
 } from "../__generated__/sonarr/data-contracts";
 import { logger } from "../logger";
@@ -105,19 +111,19 @@ export class SonarrClient
     return this.api.v3CustomformatDelete(+id);
   }
 
-  async getNaming() {
+  async getNaming(): Promise<NamingConfigResource> {
     return this.api.v3ConfigNamingList();
   }
 
-  async updateNaming(id: string, data: any) {
+  async updateNaming(id: string, data: NamingConfigResource): Promise<NamingConfigResource> {
     return this.api.v3ConfigNamingUpdate(id, data);
   }
 
-  async getMediamanagement() {
+  async getMediamanagement(): Promise<MediaManagementConfigResource> {
     return this.api.v3ConfigMediamanagementList();
   }
 
-  async updateMediamanagement(id: string, data: any) {
+  async updateMediamanagement(id: string, data: MediaManagementConfigResource): Promise<MediaManagementConfigResource> {
     return this.api.v3ConfigMediamanagementUpdate(id, data);
   }
 
@@ -129,44 +135,44 @@ export class SonarrClient
     return this.api.v3ConfigUiUpdate(id, data);
   }
 
-  async getRootfolders() {
+  async getRootfolders(): Promise<RootFolderResource[]> {
     return this.api.v3RootfolderList();
   }
 
-  async addRootFolder(data: any) {
+  async addRootFolder(data: RootFolderResource): Promise<RootFolderResource> {
     return this.api.v3RootfolderCreate(data);
   }
 
-  async updateRootFolder(id: string, data: any) {
+  async updateRootFolder(id: string, data: RootFolderResource): Promise<RootFolderResource> {
     throw new Error("Sonarr does not support updating root folders");
   }
 
-  async deleteRootFolder(id: string) {
+  async deleteRootFolder(id: string): Promise<void> {
     return this.api.v3RootfolderDelete(+id);
   }
 
   // Delay Profiles
-  async getDelayProfiles() {
+  async getDelayProfiles(): Promise<DelayProfileResource[]> {
     return this.api.v3DelayprofileList();
   }
 
-  async createDelayProfile(profile: any) {
+  async createDelayProfile(profile: DelayProfileResource): Promise<DelayProfileResource> {
     return this.api.v3DelayprofileCreate(profile);
   }
 
-  async updateDelayProfile(id: string, data: any) {
+  async updateDelayProfile(id: string, data: DelayProfileResource): Promise<DelayProfileResource> {
     return this.api.v3DelayprofileUpdate(id, data);
   }
 
-  async deleteDelayProfile(id: string) {
+  async deleteDelayProfile(id: string): Promise<void> {
     return this.api.v3DelayprofileDelete(+id);
   }
 
-  async getTags() {
+  async getTags(): Promise<TagResource[]> {
     return this.api.v3TagList();
   }
 
-  async createTag(tag: any) {
+  async createTag(tag: TagResource): Promise<TagResource> {
     return this.api.v3TagCreate(tag);
   }
 
@@ -191,7 +197,7 @@ export class SonarrClient
     return this.api.v3DownloadclientDelete(+id);
   }
 
-  async testDownloadClient(client: DownloadClientResource): Promise<any> {
+  async testDownloadClient(client: DownloadClientResource): Promise<void> {
     return this.api.v3DownloadclientTestCreate(client);
   }
 
@@ -222,7 +228,7 @@ export class SonarrClient
   }
 
   // System/Health Check
-  getSystemStatus() {
+  getSystemStatus(): Promise<SystemResource> {
     return this.api.v3SystemStatusList();
   }
 

@@ -205,8 +205,7 @@ const pipeline = async (
     if (getEnvs().DRY_RUN) {
       logger.info("DryRun: Would update MediaNaming.");
     } else {
-      // TODO this will need a radarr/sonarr separation for sure to have good and correct typings
-      await api.updateNaming(namingDiff.updatedData.id! + "", namingDiff.updatedData as any); // Ignore types
+      await api.updateNaming(namingDiff.updatedData.id! + "", namingDiff.updatedData);
       logger.info(`Updated MediaNaming`);
     }
   }
@@ -219,8 +218,7 @@ const pipeline = async (
     if (getEnvs().DRY_RUN) {
       logger.info("DryRun: Would update MediaManagement.");
     } else {
-      // TODO this will need a radarr/sonarr separation for sure to have good and correct typings
-      await api.updateMediamanagement(managementDiff.updatedData.id! + "", managementDiff.updatedData as any); // Ignore types
+      await api.updateMediamanagement(managementDiff.updatedData.id! + "", managementDiff.updatedData);
       logger.info(`Updated MediaManagement`);
     }
   }

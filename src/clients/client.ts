@@ -2,6 +2,7 @@ import { MergedCustomFormatResource, MergedQualityDefinitionResource, MergedQual
 import { logger } from "../logger";
 import { ArrType } from "../types/common.types";
 import type { DownloadClientResource } from "../types/download-client.types";
+import type { TagLike } from "./capabilities";
 import { LidarrClient } from "./lidarr-client";
 import { ProwlarrClient } from "./prowlarr-client";
 import { RadarrClient } from "./radarr-client";
@@ -116,34 +117,34 @@ export interface IArrClient<
   updateCustomFormat(id: string, format: CF): Promise<CF>;
   deleteCustomFormat(id: string): Promise<void>;
 
-  getNaming(): Promise<any>;
-  updateNaming(id: string, data: any): Promise<any>;
+  getNaming(): Promise<unknown>;
+  updateNaming(id: string, data: unknown): Promise<unknown>;
 
-  getMediamanagement(): Promise<any>;
-  updateMediamanagement(id: string, data: any): Promise<any>;
+  getMediamanagement(): Promise<unknown>;
+  updateMediamanagement(id: string, data: unknown): Promise<unknown>;
 
-  getRootfolders(): Promise<any>;
-  addRootFolder(data: any): Promise<any>;
-  updateRootFolder(id: string, data: any): Promise<any>;
-  deleteRootFolder(id: string): Promise<any>;
+  getRootfolders(): Promise<unknown>;
+  addRootFolder(data: unknown): Promise<unknown>;
+  updateRootFolder(id: string, data: unknown): Promise<unknown>;
+  deleteRootFolder(id: string): Promise<unknown>;
 
   getLanguages(): Promise<L[]>;
 
-  getDelayProfiles(): Promise<any>;
-  createDelayProfile(profile: any): Promise<any>;
-  updateDelayProfile(id: string, data: any): Promise<any>;
-  deleteDelayProfile(id: string): Promise<any>;
+  getDelayProfiles(): Promise<unknown>;
+  createDelayProfile(profile: unknown): Promise<unknown>;
+  updateDelayProfile(id: string, data: unknown): Promise<unknown>;
+  deleteDelayProfile(id: string): Promise<unknown>;
 
-  getTags(): Promise<any>;
-  createTag(tag: any): Promise<any>;
+  getTags(): Promise<TagLike[]>;
+  createTag(tag: TagLike): Promise<TagLike>;
 
   getDownloadClientSchema(): Promise<DownloadClientResource[]>;
   getDownloadClients(): Promise<DownloadClientResource[]>;
   createDownloadClient(client: DownloadClientResource): Promise<DownloadClientResource>;
   updateDownloadClient(id: string, client: DownloadClientResource): Promise<DownloadClientResource>;
   deleteDownloadClient(id: string): Promise<void>;
-  testDownloadClient(client: DownloadClientResource): Promise<any>;
+  testDownloadClient(client: DownloadClientResource): Promise<unknown>;
 
-  getSystemStatus(): Promise<any>;
+  getSystemStatus(): Promise<unknown>;
   testConnection(): Promise<boolean>;
 }
