@@ -12,9 +12,11 @@ import { getConfig, mergeConfigsAndTemplates } from "./config";
 import { calculateCFsToManage, deleteCustomFormat, loadCustomFormatDefinitions, loadServerCustomFormats, manageCf } from "./custom-formats";
 import {
   calculateDelayProfilesDiff,
+  createDelayProfileOnServer,
   delayProfilesToDiffEntries,
   deleteAdditionalDelayProfiles,
   mapToServerDelayProfile,
+  updateDelayProfileOnServer,
 } from "./delay-profiles";
 import { syncDownloadClients } from "./downloadClients/downloadClientSyncer";
 import { syncProwlarrProviders } from "./prowlarr/prowlarrSyncer";
@@ -73,7 +75,7 @@ const pipeline = async (
 
   const serverCFs = await loadServerCustomFormats(arrType);
   const serverQD = await loadQualityDefinitionFromServer(arrType);
-  const languages = await api.getLanguages();
+  const languages = await getClient(arrType).getLanguages();
 
   const serverCache = new ServerCache(serverQD, [], serverCFs, languages);
 
@@ -324,7 +326,7 @@ const pipeline = async (
         if (delayProfilesDiff.defaultProfileChanged && delayProfilesDiff.defaultProfile) {
           logger.info(`Updating default DelayProfile`);
           const mappedDefaultDelayProfile = mapToServerDelayProfile(delayProfilesDiff.defaultProfile, serverCache.tags);
-          await api.updateDelayProfile("1", mappedDefaultDelayProfile);
+          await updateDelayProfileOnServer(arrType, "1", mappedDefaultDelayProfile);
         }
 
         if (delayProfilesDiff.missingTags.length > 0) {
@@ -347,7 +349,7 @@ const pipeline = async (
 
           for (const profile of delayProfilesDiff.additionalProfiles) {
             const mappedProfile = mapToServerDelayProfile(profile, serverCache.tags);
-            await api.createDelayProfile(mappedProfile); // Create or update profile
+            await createDelayProfileOnServer(arrType, mappedProfile);
           }
         }
 

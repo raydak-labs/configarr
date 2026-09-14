@@ -68,3 +68,39 @@ export interface QualityDefinitionsClient<QD extends QualityDefinitionLike = Qua
   getQualityDefinitions(): Promise<QD[]>;
   updateQualityDefinitions(definitions: QD[]): Promise<QD[]>;
 }
+
+export interface LanguageLike {
+  id?: number;
+  name?: string | null;
+  nameLower?: string | null;
+}
+
+export interface DelayProfileProtocolItem {
+  name?: string | null;
+  protocol?: string | null;
+  allowed?: boolean;
+  delay?: number;
+}
+
+export interface DelayProfileLike {
+  id?: number;
+  name?: string | null;
+  tags?: number[] | null;
+  enableUsenet?: boolean;
+  enableTorrent?: boolean;
+  preferredProtocol?: string;
+  usenetDelay?: number;
+  torrentDelay?: number;
+  bypassIfHighestQuality?: boolean;
+  bypassIfAboveCustomFormatScore?: boolean;
+  minimumCustomFormatScore?: number;
+  order?: number;
+  items?: DelayProfileProtocolItem[] | null;
+}
+
+export interface DelayProfilesClient<DP extends DelayProfileLike = DelayProfileLike> {
+  getDelayProfiles(): Promise<DP[]>;
+  createDelayProfile(profile: DP): Promise<DP>;
+  updateDelayProfile(id: string, data: DP): Promise<DP>;
+  deleteDelayProfile(id: string): Promise<unknown>;
+}

@@ -6,8 +6,8 @@ import {
   MergedQualityProfileResource,
 } from "./types/merged.types";
 import { ServerCache } from "./cache";
-import { CustomFormatLike, QualityDefinitionLike } from "./clients/capabilities";
-import { ArrClientLanguageResource, getClient } from "./clients/client";
+import { CustomFormatLike, LanguageLike, QualityDefinitionLike } from "./clients/capabilities";
+import { getClient } from "./clients/client";
 import { DiffEntry, FieldChange } from "./diffReport/diffReport.types";
 import { getEnvs } from "./env";
 import { logger } from "./logger";
@@ -328,7 +328,7 @@ export const calculateQualityProfilesDiff = async (
     const scoringForQP = scoring.get(name);
     const mappedQualities = mapQualities(serverCache.qd, value);
 
-    let profileLanguage: ArrClientLanguageResource | undefined;
+    let profileLanguage: LanguageLike | undefined;
 
     if (value.language) {
       profileLanguage = languageMap.get(value.language);

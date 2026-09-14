@@ -1,6 +1,5 @@
 import { MergedQualityProfileResource, MergedTagResource } from "./types/merged.types";
-import { CustomFormatLike, QualityDefinitionLike } from "./clients/capabilities";
-import { ArrClientLanguageResource } from "./clients/client";
+import { CustomFormatLike, LanguageLike, QualityDefinitionLike } from "./clients/capabilities";
 import { logger } from "./logger";
 import type { DownloadClientResource } from "./types/download-client.types";
 
@@ -10,15 +9,10 @@ export class ServerCache {
   private _qp: MergedQualityProfileResource[];
   private _cf: CustomFormatLike[];
   private _tags: MergedTagResource[] = [];
-  private _languages: ArrClientLanguageResource[];
+  private _languages: LanguageLike[];
   private _downloadClientSchema: DownloadClientResource[] | null = null;
 
-  constructor(
-    qd: QualityDefinitionLike[],
-    qp: MergedQualityProfileResource[],
-    cf: CustomFormatLike[],
-    languages: ArrClientLanguageResource[],
-  ) {
+  constructor(qd: QualityDefinitionLike[], qp: MergedQualityProfileResource[], cf: CustomFormatLike[], languages: LanguageLike[]) {
     this._qd = qd;
     this._qp = qp;
     this._cf = cf;
@@ -72,7 +66,7 @@ export class ServerCache {
     return this._languages;
   }
 
-  public set languages(newLanguages: ArrClientLanguageResource[]) {
+  public set languages(newLanguages: LanguageLike[]) {
     if (newLanguages == null || newLanguages.length <= 0) {
       // Empty should never happen
       logger.debug(`No Languages received from server.`);

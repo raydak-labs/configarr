@@ -1,20 +1,30 @@
+import { DelayProfileLike, DelayProfileProtocolItem, DelayProfilesClient, TagLike } from "./clients/capabilities";
 import { getClient } from "./clients/client";
 import { DiffEntry, FieldChange } from "./diffReport/diffReport.types";
 import { logger } from "./logger";
 import { MediaArrType } from "./types/common.types";
 import { InputConfigDelayProfile } from "./types/config.types";
-import { MergedDelayProfileProtocolItem, MergedDelayProfileResource, MergedTagResource } from "./types/merged.types";
+
+const delayApi = (arrType: MediaArrType): DelayProfilesClient => getClient(arrType);
 
 export const deleteAdditionalDelayProfiles = async (arrType: MediaArrType) => {
-  const api = getClient(arrType);
+  const api = delayApi(arrType);
 
-  const serverData = (await api.getDelayProfiles()) as MergedDelayProfileResource[];
+  const serverData = await api.getDelayProfiles();
   const { additional: serverAdditional = [] } = splitServerDelayProfiles(serverData);
 
   for (const p of serverAdditional) {
     await api.deleteDelayProfile(p.id + "");
     logger.info(`Deleted Delay Profile: '${p.id}'`);
   }
+};
+
+export const createDelayProfileOnServer = async (arrType: MediaArrType, profile: DelayProfileLike) => {
+  return delayApi(arrType).createDelayProfile(profile);
+};
+
+export const updateDelayProfileOnServer = async (arrType: MediaArrType, id: string, profile: DelayProfileLike) => {
+  return delayApi(arrType).updateDelayProfile(id, profile);
 };
 
 // Helper to flatten delay profiles (default + additional) to a single array
@@ -26,12 +36,12 @@ export function flattenDelayProfiles<T extends { tags?: number[] | null }>(delay
 }
 
 // Helper to split server delay profiles into default/additional
-export function splitServerDelayProfiles(serverProfiles: MergedDelayProfileResource[]): {
-  default?: MergedDelayProfileResource;
-  additional?: MergedDelayProfileResource[];
+export function splitServerDelayProfiles(serverProfiles: DelayProfileLike[]): {
+  default?: DelayProfileLike;
+  additional?: DelayProfileLike[];
 } {
-  let defaultProfile: MergedDelayProfileResource | undefined = undefined;
-  const additional: MergedDelayProfileResource[] = [];
+  let defaultProfile: DelayProfileLike | undefined = undefined;
+  const additional: DelayProfileLike[] = [];
   for (const p of serverProfiles) {
     if (!Array.isArray(p.tags) || p.tags.length === 0) {
       defaultProfile = p;
@@ -42,7 +52,7 @@ export function splitServerDelayProfiles(serverProfiles: MergedDelayProfileResou
   return { default: defaultProfile, additional: additional.length > 0 ? additional : undefined };
 }
 
-export const mapToServerDelayProfile = (profile: InputConfigDelayProfile, serverTags: MergedTagResource[]): MergedDelayProfileResource => {
+export const mapToServerDelayProfile = (profile: InputConfigDelayProfile, serverTags: TagLike[]): DelayProfileLike => {
   const mappedTags = profile.tags?.map((tagName) => serverTags.find((t) => t.label === tagName)?.id).filter((t) => t !== undefined) || [];
   const shared = {
     bypassIfHighestQuality: profile.bypassIfHighestQuality,
@@ -88,7 +98,7 @@ export interface DelayProfilesDiff {
 export const calculateDelayProfilesDiff = async (
   arrType: MediaArrType,
   delayProfilesObj: { default?: InputConfigDelayProfile; additional?: InputConfigDelayProfile[] },
-  tags: MergedTagResource[],
+  tags: TagLike[],
 ): Promise<DelayProfilesDiff | null> => {
   const { default: configDefault, additional: configAdditional = [] } = delayProfilesObj;
 
@@ -97,8 +107,8 @@ export const calculateDelayProfilesDiff = async (
     return null;
   }
 
-  const api = getClient(arrType);
-  const serverData = (await api.getDelayProfiles()) as MergedDelayProfileResource[];
+  const api = delayApi(arrType);
+  const serverData = await api.getDelayProfiles();
   const { default: serverDefault, additional: serverAdditional = [] } = splitServerDelayProfiles(serverData);
 
   // Check default profile (no tag comparison for default)
@@ -162,11 +172,11 @@ type ComparisonKeys = keyof Pick<
   | "order"
 >;
 
-const getProfileTags = (profile: MergedDelayProfileResource): number[] => {
+const getProfileTags = (profile: DelayProfileLike): number[] => {
   return "tags" in profile && Array.isArray(profile.tags) ? profile.tags : [];
 };
 
-const normalizeDelayProfileItems = (items: MergedDelayProfileProtocolItem[] | null | undefined) =>
+const normalizeDelayProfileItems = (items: DelayProfileProtocolItem[] | null | undefined) =>
   (items ?? []).map((item) => ({
     name: item.name ?? undefined,
     protocol: item.protocol ?? undefined,
@@ -174,14 +184,11 @@ const normalizeDelayProfileItems = (items: MergedDelayProfileProtocolItem[] | nu
     delay: item.delay,
   }));
 
-const areDelayProfileItemsEqual = (
-  configItems: InputConfigDelayProfile["items"],
-  serverItems: MergedDelayProfileResource["items"],
-): boolean => {
+const areDelayProfileItemsEqual = (configItems: InputConfigDelayProfile["items"], serverItems: DelayProfileLike["items"]): boolean => {
   return JSON.stringify(normalizeDelayProfileItems(configItems)) === JSON.stringify(normalizeDelayProfileItems(serverItems));
 };
 
-const compareProfileFields = (config: InputConfigDelayProfile, server: MergedDelayProfileResource): FieldChange[] => {
+const compareProfileFields = (config: InputConfigDelayProfile, server: DelayProfileLike): FieldChange[] => {
   const keys: ComparisonKeys[] = [
     "enableUsenet",
     "enableTorrent",
@@ -209,10 +216,7 @@ const compareProfileFields = (config: InputConfigDelayProfile, server: MergedDel
 };
 
 // Default profile: no tag comparison
-const compareDefaultProfile = (
-  config: InputConfigDelayProfile,
-  server: MergedDelayProfileResource,
-): { equal: boolean; changes: FieldChange[] } => {
+const compareDefaultProfile = (config: InputConfigDelayProfile, server: DelayProfileLike): { equal: boolean; changes: FieldChange[] } => {
   const changes = compareProfileFields(config, server);
   return { equal: changes.length === 0, changes };
 };
@@ -220,7 +224,7 @@ const compareDefaultProfile = (
 // Additional profiles: includes tag comparison
 const compareAdditionalProfile = (
   config: InputConfigDelayProfile,
-  server: MergedDelayProfileResource,
+  server: DelayProfileLike,
   mappedTags: Array<number>,
 ): { equal: boolean; changes: FieldChange[] } => {
   const changes = compareProfileFields(config, server);

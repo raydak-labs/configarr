@@ -2,7 +2,7 @@ import { MergedCustomFormatResource, MergedQualityDefinitionResource, MergedQual
 import { logger } from "../logger";
 import { ArrType } from "../types/common.types";
 import type { DownloadClientResource } from "../types/download-client.types";
-import type { TagLike } from "./capabilities";
+import type { LanguageLike, TagLike } from "./capabilities";
 import { LidarrClient } from "./lidarr-client";
 import { ProwlarrClient } from "./prowlarr-client";
 import { RadarrClient } from "./radarr-client";
@@ -92,17 +92,11 @@ export type ArrClientQualityProfile = {
   name?: string | null;
 };
 
-export type ArrClientLanguageResource = {
-  id?: number;
-  name?: string | null;
-  nameLower?: string | null;
-};
-
 export interface IArrClient<
   QP extends ArrClientQualityProfile = MergedQualityProfileResource,
   QD extends ArrClientQualityDefinition = MergedQualityDefinitionResource,
   CF extends ArrClientCustomFormat = MergedCustomFormatResource,
-  L extends ArrClientLanguageResource = ArrClientLanguageResource,
+  L extends LanguageLike = LanguageLike,
 > {
   getQualityDefinitions(): Promise<QD[]>;
   updateQualityDefinitions(definitions: QD[]): Promise<QD[]>;
