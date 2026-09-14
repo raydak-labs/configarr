@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.31.0](https://github.com/raydak-labs/configarr/compare/v1.30.2...v1.31.0) (2026-09-14)
+
+### Features
+
+- add Prowlarr support ([#520](https://github.com/raydak-labs/configarr/issues/520)) ([edc6c89](https://github.com/raydak-labs/configarr/commit/edc6c89f04a0f7bb18c8160f7e363f4d86cb42b4))
+
+### Bug Fixes
+
+- **deps:** update dependencies (non-major) ([#517](https://github.com/raydak-labs/configarr/issues/517)) ([780042b](https://github.com/raydak-labs/configarr/commit/780042bcfc0ac2bc98c6c65fb281ba6e1a8b3c5c))
+- include Servarr error text when the body is not JSON ([6a0cd94](https://github.com/raydak-labs/configarr/commit/6a0cd949bcdefe13024b51f80d7961e5279b41d7))
+- only count download clients that actually applied ([9c8ca6b](https://github.com/raydak-labs/configarr/commit/9c8ca6b9bbb5d20b1cbce8a2e7525b1920d284fc))
+- send categories when creating Prowlarr download clients ([2c4ea9d](https://github.com/raydak-labs/configarr/commit/2c4ea9d3ac1adf739bb35aece39bbebf70e4f3fb))
+
 ## [1.30.2](https://github.com/raydak-labs/configarr/compare/v1.30.1...v1.30.2) (2026-08-11)
 
 ### Bug Fixes
