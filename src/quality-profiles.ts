@@ -1,13 +1,12 @@
 import path from "node:path";
 import {
-  MergedCustomFormatResource,
   MergedProfileFormatItemResource,
   MergedQualityDefinitionResource,
   MergedQualityProfileQualityItemResource,
   MergedQualityProfileResource,
 } from "./types/merged.types";
 import { ServerCache } from "./cache";
-import { QualityDefinitionLike } from "./clients/capabilities";
+import { CustomFormatLike, QualityDefinitionLike } from "./clients/capabilities";
 import { ArrClientLanguageResource, getClient } from "./clients/client";
 import { DiffEntry, FieldChange } from "./diffReport/diffReport.types";
 import { getEnvs } from "./env";
@@ -369,7 +368,7 @@ export const calculateQualityProfilesDiff = async (
         return p;
       }, new Map());
 
-      const cfs: Map<string, MergedCustomFormatResource> = new Map(JSON.parse(JSON.stringify(Array.from(cfServerMap))));
+      const cfs: Map<string, CustomFormatLike> = new Map(JSON.parse(JSON.stringify(Array.from(cfServerMap))));
 
       const customFormatsMapped = Array.from(cfs.values()).map<MergedProfileFormatItemResource>((e) => {
         let score = 0;

@@ -4,7 +4,8 @@ import { getBuildInfo, getEnvs, initEnvs } from "./env";
 initEnvs();
 
 import fs from "node:fs";
-import { MergedCustomFormatResource, MergedQualityProfileResource } from "./types/merged.types";
+import { MergedQualityProfileResource } from "./types/merged.types";
+import { CustomFormatLike } from "./clients/capabilities";
 import { ServerCache } from "./cache";
 import { configureApi, getClient, IArrClient, unsetApi } from "./clients/client";
 import { getConfig, mergeConfigsAndTemplates } from "./config";
@@ -98,7 +99,7 @@ const pipeline = async (
   const serverCFMapping = serverCache.cf.reduce((p, c) => {
     p.set(c.name!, c);
     return p;
-  }, new Map<string, MergedCustomFormatResource>());
+  }, new Map<string, CustomFormatLike>());
 
   const cfUpdateResult = await manageCf(arrType, mergedCFs, serverCFMapping);
   diffCollector.add(cfUpdateResult.diffEntries);

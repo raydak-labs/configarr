@@ -1,5 +1,5 @@
-import { MergedCustomFormatResource, MergedQualityProfileResource, MergedTagResource } from "./types/merged.types";
-import { QualityDefinitionLike } from "./clients/capabilities";
+import { MergedQualityProfileResource, MergedTagResource } from "./types/merged.types";
+import { CustomFormatLike, QualityDefinitionLike } from "./clients/capabilities";
 import { ArrClientLanguageResource } from "./clients/client";
 import { logger } from "./logger";
 import type { DownloadClientResource } from "./types/download-client.types";
@@ -8,7 +8,7 @@ export class ServerCache {
   private cache: Record<string, any> = {};
   private _qd: QualityDefinitionLike[];
   private _qp: MergedQualityProfileResource[];
-  private _cf: MergedCustomFormatResource[];
+  private _cf: CustomFormatLike[];
   private _tags: MergedTagResource[] = [];
   private _languages: ArrClientLanguageResource[];
   private _downloadClientSchema: DownloadClientResource[] | null = null;
@@ -16,7 +16,7 @@ export class ServerCache {
   constructor(
     qd: QualityDefinitionLike[],
     qp: MergedQualityProfileResource[],
-    cf: MergedCustomFormatResource[],
+    cf: CustomFormatLike[],
     languages: ArrClientLanguageResource[],
   ) {
     this._qd = qd;
@@ -61,7 +61,7 @@ export class ServerCache {
     return this._cf;
   }
 
-  public set cf(newCf: MergedCustomFormatResource[]) {
+  public set cf(newCf: CustomFormatLike[]) {
     if (newCf == null || newCf.length <= 0) {
       logger.debug(`No CustomFormats received from server.`);
     }

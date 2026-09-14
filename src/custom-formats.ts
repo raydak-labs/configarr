@@ -1,7 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
-import { MergedCustomFormatResource } from "./types/merged.types";
+import { CustomFormatLike, CustomFormatsClient } from "./clients/capabilities";
 import { getClient } from "./clients/client";
+import { MergedCustomFormatResource } from "./types/merged.types";
 import { getConfig } from "./config";
 import { DiffEntry } from "./diffReport/diffReport.types";
 import { getEnvs } from "./env";
@@ -13,7 +14,7 @@ import { TrashCF } from "./types/trashguide.types";
 import { compareCustomFormats, loadJsonFile, mapImportCfToRequestCf, toCarrCF } from "./util";
 
 export const deleteAllCustomFormats = async (arrType: MediaArrType) => {
-  const api = getClient(arrType);
+  const api: CustomFormatsClient = getClient(arrType);
   const cfOnServer = await api.getCustomFormats();
 
   for (const cf of cfOnServer) {
@@ -22,30 +23,29 @@ export const deleteAllCustomFormats = async (arrType: MediaArrType) => {
   }
 };
 
-export const deleteCustomFormat = async (arrType: MediaArrType, customFormat: MergedCustomFormatResource) => {
-  const api = getClient(arrType);
+export const deleteCustomFormat = async (arrType: MediaArrType, customFormat: CustomFormatLike) => {
+  const api: CustomFormatsClient = getClient(arrType);
 
   await api.deleteCustomFormat(customFormat.id + "");
   logger.info(`Deleted CF: '${customFormat.name}'`);
 };
 
-export const loadServerCustomFormats = async (arrType: MediaArrType): Promise<MergedCustomFormatResource[]> => {
+export const loadServerCustomFormats = async (arrType: MediaArrType): Promise<CustomFormatLike[]> => {
   if (getEnvs().LOAD_LOCAL_SAMPLES) {
-    return loadJsonFile<MergedCustomFormatResource[]>(path.resolve(__dirname, "../tests/samples/cfs.json"));
+    return loadJsonFile<CustomFormatLike[]>(path.resolve(__dirname, "../tests/samples/cfs.json"));
   }
-  const api = getClient(arrType);
-  const cfOnServer = await api.getCustomFormats();
-  return cfOnServer;
+  const api: CustomFormatsClient = getClient(arrType);
+  return api.getCustomFormats();
 };
 
-export const manageCf = async (arrType: MediaArrType, cfProcessing: CFProcessing, serverCfs: Map<string, MergedCustomFormatResource>) => {
+export const manageCf = async (arrType: MediaArrType, cfProcessing: CFProcessing, serverCfs: Map<string, CustomFormatLike>) => {
   const { cfNameToCarrConfig } = cfProcessing;
-  const api = getClient(arrType);
+  const api: CustomFormatsClient = getClient(arrType);
 
-  let updatedCFs: MergedCustomFormatResource[] = [];
+  let updatedCFs: CustomFormatLike[] = [];
   let errorCFs: string[] = [];
   const validCFs: ConfigarrCF[] = [];
-  let createCFs: MergedCustomFormatResource[] = [];
+  let createCFs: CustomFormatLike[] = [];
   const diffEntries: DiffEntry[] = [];
 
   const manageSingle = async (cfName: string, carrConfig: ConfigarrCF) => {

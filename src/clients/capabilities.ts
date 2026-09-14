@@ -38,6 +38,9 @@ export interface QualityProfilesClient<QP extends QualityProfileLike = QualityPr
 
 export interface CustomFormatLike {
   id?: number;
+  name?: string | null;
+  includeCustomFormatWhenRenaming?: boolean | null;
+  specifications?: unknown;
 }
 
 export interface CustomFormatsClient<CF extends CustomFormatLike = CustomFormatLike> {
