@@ -1,7 +1,7 @@
 import { MetadataProfileResource, PrimaryAlbumType, ReleaseStatus, SecondaryAlbumType } from "../__generated__/lidarr/data-contracts";
 import { ServerCache } from "../cache";
 import { LidarrClient } from "../clients/lidarr-client";
-import { getClient } from "../clients/unified-client";
+import { getClient } from "../clients/client";
 import { InputConfigLidarrMetadataProfile, InputConfigMetadataProfile } from "../types/config.types";
 import { FieldChange } from "../diffReport/diffReport.types";
 import { MetadataProfileDiff } from "./metadataProfile.types";

@@ -1,10 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { GenericRootFolderSync } from "./rootFolderBase";
-import { getClient } from "../clients/unified-client";
+import { getClient } from "../clients/client";
 import { ServerCache } from "../cache";
 
-// Mock the unified client
-vi.mock("../clients/unified-client", () => ({
+vi.mock("../clients/client", () => ({
   getClient: vi.fn(),
 }));
 

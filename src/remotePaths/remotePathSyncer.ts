@@ -1,4 +1,4 @@
-import { getClient } from "../clients/unified-client";
+import { getClient } from "../clients/client";
 import { logger } from "../logger";
 import { MediaArrType } from "../types/common.types";
 import { RemotePathMappingResource, RemotePathSyncResult, RemotePathDiff } from "./remotePath.types";

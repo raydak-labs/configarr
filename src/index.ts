@@ -6,7 +6,7 @@ initEnvs();
 import fs from "node:fs";
 import { MergedCustomFormatResource, MergedQualityProfileResource } from "./types/merged.types";
 import { ServerCache } from "./cache";
-import { configureApi, getClient, IArrClient, unsetApi } from "./clients/unified-client";
+import { configureApi, getClient, IArrClient, unsetApi } from "./clients/client";
 import { getConfig, mergeConfigsAndTemplates } from "./config";
 import { calculateCFsToManage, deleteCustomFormat, loadCustomFormatDefinitions, loadServerCustomFormats, manageCf } from "./custom-formats";
 import {

@@ -1,6 +1,6 @@
 import { MergedRootFolderResource } from "../types/merged.types";
 import { ServerCache } from "../cache";
-import { getClient, IArrClient } from "../clients/unified-client";
+import { getClient, IArrClient } from "../clients/client";
 import { DiffEntry } from "../diffReport/diffReport.types";
 import { getEnvs } from "../env";
 import { logger } from "../logger";

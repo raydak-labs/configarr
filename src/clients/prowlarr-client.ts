@@ -11,7 +11,7 @@ import {
 import { logger } from "../logger";
 import type { DownloadClientResource } from "../types/download-client.types";
 import { logConnectionError, validateClientParams } from "./connection";
-import { IArrClient } from "./unified-client";
+import { IArrClient } from "./client";
 
 const NOT_SUPPORTED = (feature: string) => new Error(`${feature} is not supported for Prowlarr`);
 

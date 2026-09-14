@@ -2,7 +2,7 @@ import { describe, expect, test, vi, beforeEach } from "vitest";
 import { BaseDownloadClientSync } from "./downloadClientBase";
 import type { InputConfigDownloadClient } from "../types/config.types";
 import type { ServerCache } from "../cache";
-import type { IArrClient } from "../clients/unified-client";
+import type { IArrClient } from "../clients/client";
 import type { TagResource } from "../__generated__/radarr/data-contracts";
 import { DownloadProtocol } from "../__generated__/radarr/data-contracts";
 import { ArrType } from "../types/common.types";

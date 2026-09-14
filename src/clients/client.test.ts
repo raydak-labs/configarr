@@ -5,7 +5,7 @@ import { RadarrClient } from "./radarr-client";
 import { ReadarrClient } from "./readarr-client";
 import { SonarrClient } from "./sonarr-client";
 import { WhisparrClient } from "./whisparr-client";
-import { configureApi, getClient, unsetApi } from "./unified-client";
+import { configureApi, getClient, unsetApi } from "./client";
 
 vi.mock("./sonarr-client", () => ({
   SonarrClient: class {

@@ -13,7 +13,7 @@ const mockClient = {
   createTag: vi.fn(async (t: { label: string }) => ({ id: Math.floor(Math.random() * 1000) + 10, label: t.label })),
   deleteTag: vi.fn(async () => undefined),
 };
-vi.mock("../clients/unified-client", () => ({
+vi.mock("../clients/client", () => ({
   getClient: vi.fn(() => mockClient),
 }));
 

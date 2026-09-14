@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { MergedCustomFormatResource } from "./types/merged.types";
-import { getClient } from "./clients/unified-client";
+import { getClient } from "./clients/client";
 import { getConfig } from "./config";
 import { DiffEntry } from "./diffReport/diffReport.types";
 import { getEnvs } from "./env";

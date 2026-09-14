@@ -1,10 +1,10 @@
 import { describe, expect, test, vi, beforeEach, afterEach } from "vitest";
 import { syncUiConfig } from "./uiConfigSyncer";
-import { getClient } from "../clients/unified-client";
+import { getClient } from "../clients/client";
 import { getEnvs } from "../env";
 
 // Mock dependencies
-vi.mock("../clients/unified-client", () => ({
+vi.mock("../clients/client", () => ({
   getClient: vi.fn(),
 }));
 

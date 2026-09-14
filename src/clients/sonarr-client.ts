@@ -12,7 +12,7 @@ import {
 import { logger } from "../logger";
 import type { DownloadClientResource } from "../types/download-client.types";
 import { logConnectionError, validateClientParams } from "./connection";
-import { IArrClient } from "./unified-client";
+import { IArrClient } from "./client";
 
 export type SonarrQualityProfileResource = {
   id?: number;

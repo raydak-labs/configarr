@@ -30,7 +30,7 @@ vi.mock("../logger", () => ({
 }));
 
 // Mock clients
-vi.mock("../clients/unified-client", () => {
+vi.mock("../clients/client", () => {
   const mockServerConfig = {
     downloadClientWorkingFolders: "/downloads/completed",
     enableCompletedDownloadHandling: true,
@@ -101,7 +101,7 @@ describe("downloadClientConfigSyncer", () => {
 
     it("should normalize field names from snake_case to camelCase", async () => {
       const { syncDownloadClientConfig } = await import("./downloadClientConfigSyncer");
-      const { getClient } = await import("../clients/unified-client");
+      const { getClient } = await import("../clients/client");
       const { getEnvs } = await import("../env");
 
       const mockGetEnvs = vi.mocked(getEnvs);
@@ -154,7 +154,7 @@ describe("downloadClientConfigSyncer", () => {
 
     it("should filter Radarr-only fields for Radarr", async () => {
       const { syncDownloadClientConfig } = await import("./downloadClientConfigSyncer");
-      const { getClient } = await import("../clients/unified-client");
+      const { getClient } = await import("../clients/client");
       const { getEnvs } = await import("../env");
 
       const mockGetEnvs = vi.mocked(getEnvs);
@@ -201,7 +201,7 @@ describe("downloadClientConfigSyncer", () => {
 
     it("should filter out Radarr-only fields for Sonarr", async () => {
       const { syncDownloadClientConfig } = await import("./downloadClientConfigSyncer");
-      const { getClient } = await import("../clients/unified-client");
+      const { getClient } = await import("../clients/client");
       const { getEnvs } = await import("../env");
 
       const mockGetEnvs = vi.mocked(getEnvs);
@@ -250,7 +250,7 @@ describe("downloadClientConfigSyncer", () => {
 
     it("should filter out autoRedownloadFailedFromInteractiveSearch for Whisparr", async () => {
       const { syncDownloadClientConfig } = await import("./downloadClientConfigSyncer");
-      const { getClient } = await import("../clients/unified-client");
+      const { getClient } = await import("../clients/client");
       const { getEnvs } = await import("../env");
 
       const mockGetEnvs = vi.mocked(getEnvs);
@@ -299,7 +299,7 @@ describe("downloadClientConfigSyncer", () => {
 
     it("returns structured fieldChanges when config differs", async () => {
       const { syncDownloadClientConfig } = await import("./downloadClientConfigSyncer");
-      const { getClient } = await import("../clients/unified-client");
+      const { getClient } = await import("../clients/client");
       const { getEnvs } = await import("../env");
 
       const mockGetEnvs = vi.mocked(getEnvs);
@@ -336,7 +336,7 @@ describe("downloadClientConfigSyncer", () => {
 
     it("should not update if config is already up-to-date", async () => {
       const { syncDownloadClientConfig } = await import("./downloadClientConfigSyncer");
-      const { getClient } = await import("../clients/unified-client");
+      const { getClient } = await import("../clients/client");
       const { getEnvs } = await import("../env");
 
       const mockGetEnvs = vi.mocked(getEnvs);
@@ -381,7 +381,7 @@ describe("downloadClientConfigSyncer", () => {
 
     it("should handle DRY_RUN mode", async () => {
       const { syncDownloadClientConfig } = await import("./downloadClientConfigSyncer");
-      const { getClient } = await import("../clients/unified-client");
+      const { getClient } = await import("../clients/client");
       const { getEnvs } = await import("../env");
 
       const mockGetEnvs = vi.mocked(getEnvs);
@@ -424,7 +424,7 @@ describe("downloadClientConfigSyncer", () => {
 
     it("should throw error on API call failure", async () => {
       const { syncDownloadClientConfig } = await import("./downloadClientConfigSyncer");
-      const { getClient } = await import("../clients/unified-client");
+      const { getClient } = await import("../clients/client");
       const { getEnvs } = await import("../env");
 
       const mockGetEnvs = vi.mocked(getEnvs);
@@ -461,7 +461,7 @@ describe("downloadClientConfigSyncer", () => {
 
     it("should include common fields for all arrTypes", async () => {
       const { syncDownloadClientConfig } = await import("./downloadClientConfigSyncer");
-      const { getClient } = await import("../clients/unified-client");
+      const { getClient } = await import("../clients/client");
       const { getEnvs } = await import("../env");
 
       const mockGetEnvs = vi.mocked(getEnvs);

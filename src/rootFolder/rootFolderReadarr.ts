@@ -7,7 +7,7 @@ import {
   TagResource,
 } from "../__generated__/readarr/data-contracts";
 import { ServerCache } from "../cache";
-import { getClient } from "../clients/unified-client";
+import { getClient } from "../clients/client";
 import { FieldChange } from "../diffReport/diffReport.types";
 import { loadQualityProfilesFromServer } from "../quality-profiles";
 import { InputConfigRootFolderReadarr } from "../types/config.types";

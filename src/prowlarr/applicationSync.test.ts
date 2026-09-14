@@ -32,7 +32,7 @@ const mockClient = {
   syncAppIndexers: vi.fn(async () => ({ id: 1 })),
   createTag: vi.fn(async (t: { label: string }) => ({ id: 9, label: t.label })),
 };
-vi.mock("../clients/unified-client", () => ({
+vi.mock("../clients/client", () => ({
   getClient: vi.fn(() => mockClient),
 }));
 

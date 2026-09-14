@@ -17,7 +17,7 @@ const mockClient = {
   remove: vi.fn(),
   createTag: vi.fn(async (t: { label: string }) => ({ id: 42, label: t.label })),
 };
-vi.mock("../clients/unified-client", () => ({
+vi.mock("../clients/client", () => ({
   getClient: vi.fn(() => mockClient),
 }));
 

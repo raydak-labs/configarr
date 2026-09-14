@@ -1,4 +1,4 @@
-import { getClient } from "./clients/unified-client";
+import { getClient } from "./clients/client";
 import { logger } from "./logger";
 import { ArrType } from "./types/common.types";
 import { InputConfigDelayProfile } from "./types/config.types";

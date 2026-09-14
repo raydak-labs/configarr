@@ -1,6 +1,6 @@
 import path from "path";
 import { beforeEach, afterEach, describe, expect, test, vi } from "vitest";
-import * as uclient from "./clients/unified-client";
+import * as uclient from "./clients/client";
 import * as log from "./logger";
 import {
   MergedCustomFormatResource,

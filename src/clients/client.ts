@@ -9,8 +9,6 @@ import { ReadarrClient } from "./readarr-client";
 import { SonarrClient } from "./sonarr-client";
 import { WhisparrClient } from "./whisparr-client";
 
-export { createConnectionErrorParts, logConnectionError, validateClientParams } from "./connection";
-
 export type ArrTypeToClient = {
   RADARR: RadarrClient;
   SONARR: SonarrClient;

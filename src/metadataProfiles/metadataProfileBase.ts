@@ -1,5 +1,5 @@
 import { ServerCache } from "../cache";
-import { IArrClient } from "../clients/unified-client";
+import { IArrClient } from "../clients/client";
 import { getEnvs } from "../env";
 import { logger } from "../logger";
 import { ArrType } from "../types/common.types";

@@ -1,4 +1,4 @@
-import { getClient } from "./clients/unified-client";
+import { getClient } from "./clients/client";
 import { DiffEntry, FieldChange } from "./diffReport/diffReport.types";
 import { logger } from "./logger";
 import { MediaArrType } from "./types/common.types";

@@ -1,6 +1,6 @@
 import path from "node:path";
 import { MergedQualityDefinitionResource } from "./types/merged.types";
-import { getClient } from "./clients/unified-client";
+import { getClient } from "./clients/client";
 import { getEnvs } from "./env";
 import { logger } from "./logger";
 import { MediaArrType } from "./types/common.types";

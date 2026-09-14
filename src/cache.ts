@@ -4,7 +4,7 @@ import {
   MergedQualityProfileResource,
   MergedTagResource,
 } from "./types/merged.types";
-import { ArrClientLanguageResource } from "./clients/unified-client";
+import { ArrClientLanguageResource } from "./clients/client";
 import { logger } from "./logger";
 import type { DownloadClientResource } from "./types/download-client.types";
 

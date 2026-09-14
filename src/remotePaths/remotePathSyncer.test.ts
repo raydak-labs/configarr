@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { syncRemotePaths, remotePathsToDiffEntries } from "./remotePathSyncer";
-import { getClient } from "../clients/unified-client";
+import { getClient } from "../clients/client";
 import { RemotePathMappingResource } from "./remotePath.types";
 
 // Mock env - use importOriginal to preserve other env functions
@@ -18,7 +18,7 @@ vi.mock("../env", async (importOriginal) => {
   };
 });
 
-vi.mock("../clients/unified-client");
+vi.mock("../clients/client");
 vi.mock("../logger");
 
 describe("remotePathSyncer", () => {

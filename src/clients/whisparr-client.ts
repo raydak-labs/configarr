@@ -13,7 +13,7 @@ import { logger } from "../logger";
 import type { DownloadClientResource } from "../types/download-client.types";
 import { ANY_LANGUAGE_NAME, cloneWithJSON } from "../util";
 import { logConnectionError, validateClientParams } from "./connection";
-import { IArrClient } from "./unified-client";
+import { IArrClient } from "./client";
 
 /**
  * Overwrite wrong types for now

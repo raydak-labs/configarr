@@ -8,7 +8,7 @@ import {
 } from "../__generated__/lidarr/data-contracts";
 import { ServerCache } from "../cache";
 import { LidarrClient } from "../clients/lidarr-client";
-import { getClient } from "../clients/unified-client";
+import { getClient } from "../clients/client";
 import { FieldChange } from "../diffReport/diffReport.types";
 import { loadQualityProfilesFromServer } from "../quality-profiles";
 import { InputConfigRootFolderLidarr } from "../types/config.types";

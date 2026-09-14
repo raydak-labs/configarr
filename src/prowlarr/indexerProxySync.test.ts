@@ -41,7 +41,7 @@ const mockClient = {
   deleteIndexerProxy: vi.fn(async () => undefined),
   createTag: vi.fn(async (t: { label: string }) => ({ id: 3, label: t.label })),
 };
-vi.mock("../clients/unified-client", () => ({
+vi.mock("../clients/client", () => ({
   getClient: vi.fn(() => mockClient),
 }));
 

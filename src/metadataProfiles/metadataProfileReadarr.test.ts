@@ -2,9 +2,9 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ReadarrMetadataProfileSync } from "./metadataProfileReadarr";
 import { ServerCache } from "../cache";
 import { InputConfigReadarrMetadataProfile } from "../types/config.types";
-import { getClient } from "../clients/unified-client";
+import { getClient } from "../clients/client";
 
-vi.mock("../clients/unified-client", () => ({
+vi.mock("../clients/client", () => ({
   getClient: vi.fn(),
 }));
 

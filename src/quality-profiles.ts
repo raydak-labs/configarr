@@ -7,7 +7,7 @@ import {
   MergedQualityProfileResource,
 } from "./types/merged.types";
 import { ServerCache } from "./cache";
-import { ArrClientLanguageResource, getClient } from "./clients/unified-client";
+import { ArrClientLanguageResource, getClient } from "./clients/client";
 import { DiffEntry, FieldChange } from "./diffReport/diffReport.types";
 import { getEnvs } from "./env";
 import { logger } from "./logger";

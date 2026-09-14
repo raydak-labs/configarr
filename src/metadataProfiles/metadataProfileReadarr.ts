@@ -1,7 +1,7 @@
 import { MetadataProfileResource } from "../__generated__/readarr/data-contracts";
 import { ServerCache } from "../cache";
 import { ReadarrClient } from "../clients/readarr-client";
-import { getClient } from "../clients/unified-client";
+import { getClient } from "../clients/client";
 import { InputConfigReadarrMetadataProfile, InputConfigMetadataProfile } from "../types/config.types";
 import { compareObjectsCarr } from "../util";
 import { FieldChange } from "../diffReport/diffReport.types";

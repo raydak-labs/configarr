@@ -1,14 +1,14 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { DownloadProtocol } from "../__generated__/radarr/data-contracts";
 import { ServerCache } from "../cache";
-import { getClient } from "../clients/unified-client";
+import { getClient } from "../clients/client";
 import { logger } from "../logger";
 import { ArrType } from "../types/common.types";
 import type { InputConfigDownloadClient } from "../types/config.types";
 import { GenericDownloadClientSync } from "./downloadClientGeneric";
 import { DownloadClientResource } from "../types/download-client.types";
 
-vi.mock("../clients/unified-client", () => ({
+vi.mock("../clients/client", () => ({
   getClient: vi.fn(() => ({
     getDownloadClients: vi.fn(),
     getDownloadClientSchema: vi.fn(),

@@ -34,7 +34,7 @@ const mockClient = {
   getAppProfiles: vi.fn(async () => [{ id: 1, name: "Standard" }]),
   createTag: vi.fn(async (t: { label: string }) => ({ id: 7, label: t.label })),
 };
-vi.mock("../clients/unified-client", () => ({
+vi.mock("../clients/client", () => ({
   getClient: vi.fn(() => mockClient),
 }));
 

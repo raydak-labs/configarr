@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { ServerCache } from "../cache";
 import { ProwlarrClient } from "../clients/prowlarr-client";
-import { getClient } from "../clients/unified-client";
+import { getClient } from "../clients/client";
 import { DiffEntry, FieldChange } from "../diffReport/diffReport.types";
 import { getEnvs } from "../env";
 import { logger } from "../logger";

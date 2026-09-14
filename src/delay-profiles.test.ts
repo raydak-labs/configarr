@@ -4,7 +4,7 @@ import { MergedDelayProfileResource } from "./types/merged.types";
 // Hoist the mock to ensure it runs before imports
 const mockGetDelayProfiles = vi.hoisted(() => vi.fn());
 
-vi.mock("./clients/unified-client", () => ({
+vi.mock("./clients/client", () => ({
   getClient: () => ({
     getDelayProfiles: mockGetDelayProfiles,
   }),
