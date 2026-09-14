@@ -78,11 +78,15 @@ describe("HttpClient error handling", () => {
       await expect(client.request({ path: "/api/test", method: "GET" })).rejects.toThrow("Resource not found");
     });
 
-    test("handles invalid JSON despite application/json content-type", async () => {
-      const error = makeHTTPError(500, "Internal Server Error", "not valid json {{{", "application/json");
+    test("includes non-JSON body when content-type is application/json", async () => {
+      const error = makeHTTPError(409, "Conflict", "NOT NULL constraint failed: DownloadClients.Categories", "application/json");
       mockKyFn.mockRejectedValueOnce(error);
 
-      await expect(client.request({ path: "/api/test", method: "GET" })).rejects.toThrow("Failed to read response body");
+      const thrown = await client.request({ path: "/api/test", method: "GET" }).catch((e: Error) => e);
+      expect((thrown as Error).message).toContain("409 Conflict");
+      expect((thrown as Error).message).toContain("NOT NULL constraint failed: DownloadClients.Categories");
+      const cause = (thrown as Error).cause as { response?: Response };
+      expect(await cause.response!.clone().text()).toContain("NOT NULL constraint failed");
     });
   });
 
