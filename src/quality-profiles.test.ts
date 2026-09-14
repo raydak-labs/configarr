@@ -914,7 +914,7 @@ describe("QualityProfiles", async () => {
       const logSpy = vi.spyOn(log.logger, "info").mockImplementation(() => {});
 
       // Act
-      await deleteAllQualityProfiles();
+      await deleteAllQualityProfiles("SONARR");
 
       // Assert
       expect(deleteFn).toHaveBeenCalledTimes(3);
@@ -938,7 +938,7 @@ describe("QualityProfiles", async () => {
       } as any);
 
       // Act
-      await deleteAllQualityProfiles();
+      await deleteAllQualityProfiles("SONARR");
 
       // Assert
       expect(getFn).toHaveBeenCalledTimes(1);
@@ -966,7 +966,7 @@ describe("QualityProfiles", async () => {
       const logSpy = vi.spyOn(log.logger, "info").mockImplementation(() => {});
 
       // Act
-      await deleteQualityProfile(qp1);
+      await deleteQualityProfile("SONARR", qp1);
 
       // Assert
       expect(deleteFn).toHaveBeenCalledTimes(1);

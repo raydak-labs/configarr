@@ -47,22 +47,17 @@ const createClient = (type: ArrType, baseUrl: string, apiKey: string): ArrTypeTo
   }
 };
 
-export function getClient(): ArrTypeToClient[ArrType];
-export function getClient<T extends ArrType>(arrType: T): ArrTypeToClient[T];
-export function getClient<T extends ArrType>(arrType?: T): ArrTypeToClient[T] | ArrTypeToClient[ArrType] {
+export function getClient<T extends ArrType>(arrType: T): ArrTypeToClient[T] {
   if (!configured) {
     throw new Error("Please configure API first.");
   }
-  if (arrType !== undefined && configured.type !== arrType) {
+  if (configured.type !== arrType) {
     throw new Error(
       `Type mismatch: requested ${arrType} but client is configured for ${configured.type}. Ensure configureApi is called with the correct arrType.`,
     );
   }
   return configured.api as ArrTypeToClient[T];
 }
-
-/** @deprecated Use {@link getClient}. */
-export const getSpecificClient = getClient;
 
 export const configureApi = async <T extends ArrType>(type: T, baseUrl: string, apiKey: string): Promise<ArrTypeToClient[T]> => {
   unsetApi();

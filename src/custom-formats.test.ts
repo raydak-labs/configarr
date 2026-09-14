@@ -243,7 +243,7 @@ describe("CustomFormats", () => {
         createCustomFormat: vi.fn(),
       } as unknown as ReturnType<typeof unifiedClient.getClient>);
 
-      const out = await manageCf(cfProcessing, serverCfs);
+      const out = await manageCf("SONARR", cfProcessing, serverCfs);
 
       expect(updateCustomFormat).not.toHaveBeenCalled();
       expect(out.errorCFs.length).toBe(0);
@@ -287,7 +287,7 @@ describe("CustomFormats", () => {
         createCustomFormat: vi.fn(),
       } as unknown as ReturnType<typeof unifiedClient.getClient>);
 
-      await manageCf(cfProcessing, serverCfs);
+      await manageCf("SONARR", cfProcessing, serverCfs);
 
       expect(updateCustomFormat).toHaveBeenCalledTimes(1);
       const updatePayload = updateCustomFormat.mock.calls[0]?.[1];
@@ -315,7 +315,7 @@ describe("CustomFormats", () => {
         updateCustomFormat: vi.fn(),
       } as unknown as ReturnType<typeof unifiedClient.getClient>);
 
-      const out = await manageCf(cfProcessing, serverCfs);
+      const out = await manageCf("SONARR", cfProcessing, serverCfs);
 
       expect(out.diffEntries).toEqual([{ resourceType: "CustomFormat", name: "NewCF", action: "create" }]);
     });
@@ -343,7 +343,7 @@ describe("CustomFormats", () => {
         updateCustomFormat: vi.fn(),
       } as unknown as ReturnType<typeof unifiedClient.getClient>);
 
-      const out = await manageCf(cfProcessing, serverCfs);
+      const out = await manageCf("SONARR", cfProcessing, serverCfs);
 
       expect(out.diffEntries).toHaveLength(1);
       expect(out.diffEntries[0]!.resourceType).toBe("CustomFormat");

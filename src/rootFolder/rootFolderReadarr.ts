@@ -7,7 +7,7 @@ import {
   TagResource,
 } from "../__generated__/readarr/data-contracts";
 import { ServerCache } from "../cache";
-import { getSpecificClient } from "../clients/unified-client";
+import { getClient } from "../clients/unified-client";
 import { FieldChange } from "../diffReport/diffReport.types";
 import { loadQualityProfilesFromServer } from "../quality-profiles";
 import { InputConfigRootFolderReadarr } from "../types/config.types";
@@ -16,7 +16,7 @@ import { RootFolderDiff } from "./rootFolder.types";
 import { BaseRootFolderSync } from "./rootFolderBase";
 
 export class ReadarrRootFolderSync extends BaseRootFolderSync<InputConfigRootFolderReadarr> {
-  protected api = getSpecificClient("READARR");
+  protected api = getClient("READARR");
 
   protected getArrType(): "READARR" {
     return "READARR";
@@ -28,7 +28,10 @@ export class ReadarrRootFolderSync extends BaseRootFolderSync<InputConfigRootFol
     }
 
     // Load quality profiles and metadata profiles for Readarr
-    const [qualityProfiles, metadataProfiles] = await Promise.all([loadQualityProfilesFromServer(), this.api.getMetadataProfiles()]);
+    const [qualityProfiles, metadataProfiles] = await Promise.all([
+      loadQualityProfilesFromServer("READARR"),
+      this.api.getMetadataProfiles(),
+    ]);
 
     const qualityProfileMap = new Map<string, number>();
     const metadataProfileMap = new Map<string, number>();

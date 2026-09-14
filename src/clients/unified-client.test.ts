@@ -5,7 +5,7 @@ import { RadarrClient } from "./radarr-client";
 import { ReadarrClient } from "./readarr-client";
 import { SonarrClient } from "./sonarr-client";
 import { WhisparrClient } from "./whisparr-client";
-import { configureApi, getClient, getSpecificClient, unsetApi } from "./unified-client";
+import { configureApi, getClient, unsetApi } from "./unified-client";
 
 vi.mock("./sonarr-client", () => ({
   SonarrClient: class {
@@ -59,8 +59,6 @@ describe("configureApi / getClient", () => {
     const client = await configureApi("SONARR", "http://localhost", "key");
     expect(client).toBeInstanceOf(SonarrClient);
     expect(getClient("SONARR")).toBe(client);
-    expect(getClient()).toBe(client);
-    expect(getSpecificClient("SONARR")).toBe(client);
   });
 
   it("returns each arr's concrete client", async () => {

@@ -1,11 +1,11 @@
 import { describe, expect, test, vi, beforeEach, afterEach } from "vitest";
 import { syncUiConfig } from "./uiConfigSyncer";
-import { getSpecificClient } from "../clients/unified-client";
+import { getClient } from "../clients/unified-client";
 import { getEnvs } from "../env";
 
 // Mock dependencies
 vi.mock("../clients/unified-client", () => ({
-  getSpecificClient: vi.fn(),
+  getClient: vi.fn(),
 }));
 
 vi.mock("../env", () => ({
@@ -31,7 +31,7 @@ describe("uiConfigSyncer", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(getSpecificClient).mockReturnValue({
+    vi.mocked(getClient).mockReturnValue({
       getUiConfig: mockGetUiConfig,
       updateUiConfig: mockUpdateUiConfig,
     } as any);
@@ -46,7 +46,7 @@ describe("uiConfigSyncer", () => {
       const result = await syncUiConfig("RADARR", undefined);
 
       expect(result).toEqual({ updated: false, arrType: "RADARR", fieldChanges: [] });
-      expect(getSpecificClient).not.toHaveBeenCalled();
+      expect(getClient).not.toHaveBeenCalled();
       expect(mockGetUiConfig).not.toHaveBeenCalled();
     });
 
@@ -60,7 +60,7 @@ describe("uiConfigSyncer", () => {
       // The diff calculation will compare null against server config
       const result = await syncUiConfig("SONARR", null as any);
 
-      expect(getSpecificClient).toHaveBeenCalledWith("SONARR");
+      expect(getClient).toHaveBeenCalledWith("SONARR");
       expect(mockGetUiConfig).toHaveBeenCalled();
     });
 
@@ -166,7 +166,7 @@ describe("uiConfigSyncer", () => {
         const result = await syncUiConfig(arrType, localConfig);
 
         expect(result).toEqual({ updated: true, arrType, fieldChanges: [{ field: "theme", from: "light", to: "dark" }] });
-        expect(getSpecificClient).toHaveBeenCalledWith(arrType);
+        expect(getClient).toHaveBeenCalledWith(arrType);
       }
     });
 

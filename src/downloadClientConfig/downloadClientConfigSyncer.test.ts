@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { syncDownloadClientConfig } from "./downloadClientConfigSyncer";
 import type { ServerCache } from "../cache";
 import type { MergedConfigInstance } from "../types/config.types";
-import type { ArrType } from "../types/common.types";
+import type { MediaArrType } from "../types/common.types";
 
 // Mock env - use importOriginal to preserve getHelpers and getBuildInfo
 vi.mock("../env", async (importOriginal) => {
@@ -44,18 +44,9 @@ vi.mock("../clients/unified-client", () => {
     updateDownloadClientConfig: vi.fn(() => mockServerConfig),
   };
   return {
-    getClient: vi.fn(() => ({
-      api: mockClient,
-    })),
-    getSpecificClient: vi.fn(() => mockClient),
+    getClient: vi.fn(() => mockClient),
   };
 });
-
-vi.mock("../clients/radarr-client");
-vi.mock("../clients/sonarr-client");
-vi.mock("../clients/lidarr-client");
-vi.mock("../clients/readarr-client");
-vi.mock("../clients/whisparr-client");
 
 // Create a mock ServerCache
 const createMockServerCache = (): ServerCache => {
@@ -94,7 +85,7 @@ describe("downloadClientConfigSyncer", () => {
 
     it("should handle all arrTypes without error", async () => {
       const { syncDownloadClientConfig } = await import("./downloadClientConfigSyncer");
-      const arrTypes: ArrType[] = ["RADARR", "SONARR", "LIDARR", "READARR", "WHISPARR"];
+      const arrTypes: MediaArrType[] = ["RADARR", "SONARR", "LIDARR", "READARR", "WHISPARR"];
       const baseConfig: MergedConfigInstance = {
         custom_formats: [],
         quality_profiles: [],
@@ -110,7 +101,7 @@ describe("downloadClientConfigSyncer", () => {
 
     it("should normalize field names from snake_case to camelCase", async () => {
       const { syncDownloadClientConfig } = await import("./downloadClientConfigSyncer");
-      const { getSpecificClient } = await import("../clients/unified-client");
+      const { getClient } = await import("../clients/unified-client");
       const { getEnvs } = await import("../env");
 
       const mockGetEnvs = vi.mocked(getEnvs);
@@ -134,7 +125,7 @@ describe("downloadClientConfigSyncer", () => {
         getDownloadClientConfig: mockGetConfig,
         updateDownloadClientConfig: mockUpdateConfig,
       };
-      vi.mocked(getSpecificClient).mockReturnValue(mockClient as any);
+      vi.mocked(getClient).mockReturnValue(mockClient as any);
 
       const config: MergedConfigInstance = {
         custom_formats: [],
@@ -163,7 +154,7 @@ describe("downloadClientConfigSyncer", () => {
 
     it("should filter Radarr-only fields for Radarr", async () => {
       const { syncDownloadClientConfig } = await import("./downloadClientConfigSyncer");
-      const { getSpecificClient } = await import("../clients/unified-client");
+      const { getClient } = await import("../clients/unified-client");
       const { getEnvs } = await import("../env");
 
       const mockGetEnvs = vi.mocked(getEnvs);
@@ -186,7 +177,7 @@ describe("downloadClientConfigSyncer", () => {
         getDownloadClientConfig: mockGetConfig,
         updateDownloadClientConfig: mockUpdateConfig,
       };
-      vi.mocked(getSpecificClient).mockReturnValue(mockClient as any);
+      vi.mocked(getClient).mockReturnValue(mockClient as any);
 
       const config: MergedConfigInstance = {
         custom_formats: [],
@@ -210,7 +201,7 @@ describe("downloadClientConfigSyncer", () => {
 
     it("should filter out Radarr-only fields for Sonarr", async () => {
       const { syncDownloadClientConfig } = await import("./downloadClientConfigSyncer");
-      const { getSpecificClient } = await import("../clients/unified-client");
+      const { getClient } = await import("../clients/unified-client");
       const { getEnvs } = await import("../env");
 
       const mockGetEnvs = vi.mocked(getEnvs);
@@ -233,7 +224,7 @@ describe("downloadClientConfigSyncer", () => {
         getDownloadClientConfig: mockGetConfig,
         updateDownloadClientConfig: mockUpdateConfig,
       };
-      vi.mocked(getSpecificClient).mockReturnValue(mockClient as any);
+      vi.mocked(getClient).mockReturnValue(mockClient as any);
 
       const config: MergedConfigInstance = {
         custom_formats: [],
@@ -259,7 +250,7 @@ describe("downloadClientConfigSyncer", () => {
 
     it("should filter out autoRedownloadFailedFromInteractiveSearch for Whisparr", async () => {
       const { syncDownloadClientConfig } = await import("./downloadClientConfigSyncer");
-      const { getSpecificClient } = await import("../clients/unified-client");
+      const { getClient } = await import("../clients/unified-client");
       const { getEnvs } = await import("../env");
 
       const mockGetEnvs = vi.mocked(getEnvs);
@@ -282,7 +273,7 @@ describe("downloadClientConfigSyncer", () => {
         getDownloadClientConfig: mockGetConfig,
         updateDownloadClientConfig: mockUpdateConfig,
       };
-      vi.mocked(getSpecificClient).mockReturnValue(mockClient as any);
+      vi.mocked(getClient).mockReturnValue(mockClient as any);
 
       const config: MergedConfigInstance = {
         custom_formats: [],
@@ -308,7 +299,7 @@ describe("downloadClientConfigSyncer", () => {
 
     it("returns structured fieldChanges when config differs", async () => {
       const { syncDownloadClientConfig } = await import("./downloadClientConfigSyncer");
-      const { getSpecificClient } = await import("../clients/unified-client");
+      const { getClient } = await import("../clients/unified-client");
       const { getEnvs } = await import("../env");
 
       const mockGetEnvs = vi.mocked(getEnvs);
@@ -327,7 +318,7 @@ describe("downloadClientConfigSyncer", () => {
         getDownloadClientConfig: mockGetConfig,
         updateDownloadClientConfig: mockUpdateConfig,
       };
-      vi.mocked(getSpecificClient).mockReturnValue(mockClient as any);
+      vi.mocked(getClient).mockReturnValue(mockClient as any);
 
       const config = {
         download_clients: { config: { enable_completed_download_handling: true } },
@@ -345,7 +336,7 @@ describe("downloadClientConfigSyncer", () => {
 
     it("should not update if config is already up-to-date", async () => {
       const { syncDownloadClientConfig } = await import("./downloadClientConfigSyncer");
-      const { getSpecificClient } = await import("../clients/unified-client");
+      const { getClient } = await import("../clients/unified-client");
       const { getEnvs } = await import("../env");
 
       const mockGetEnvs = vi.mocked(getEnvs);
@@ -369,7 +360,7 @@ describe("downloadClientConfigSyncer", () => {
         getDownloadClientConfig: mockGetConfig,
         updateDownloadClientConfig: mockUpdateConfig,
       };
-      vi.mocked(getSpecificClient).mockReturnValue(mockClient as any);
+      vi.mocked(getClient).mockReturnValue(mockClient as any);
 
       const config: MergedConfigInstance = {
         custom_formats: [],
@@ -390,7 +381,7 @@ describe("downloadClientConfigSyncer", () => {
 
     it("should handle DRY_RUN mode", async () => {
       const { syncDownloadClientConfig } = await import("./downloadClientConfigSyncer");
-      const { getSpecificClient } = await import("../clients/unified-client");
+      const { getClient } = await import("../clients/unified-client");
       const { getEnvs } = await import("../env");
 
       const mockGetEnvs = vi.mocked(getEnvs);
@@ -413,7 +404,7 @@ describe("downloadClientConfigSyncer", () => {
         getDownloadClientConfig: mockGetConfig,
         updateDownloadClientConfig: mockUpdateConfig,
       };
-      vi.mocked(getSpecificClient).mockReturnValue(mockClient as any);
+      vi.mocked(getClient).mockReturnValue(mockClient as any);
 
       const config: MergedConfigInstance = {
         custom_formats: [],
@@ -433,7 +424,7 @@ describe("downloadClientConfigSyncer", () => {
 
     it("should throw error on API call failure", async () => {
       const { syncDownloadClientConfig } = await import("./downloadClientConfigSyncer");
-      const { getSpecificClient } = await import("../clients/unified-client");
+      const { getClient } = await import("../clients/unified-client");
       const { getEnvs } = await import("../env");
 
       const mockGetEnvs = vi.mocked(getEnvs);
@@ -451,7 +442,7 @@ describe("downloadClientConfigSyncer", () => {
         getDownloadClientConfig: mockGetConfig,
         updateDownloadClientConfig: vi.fn(),
       };
-      vi.mocked(getSpecificClient).mockReturnValue(mockClient as any);
+      vi.mocked(getClient).mockReturnValue(mockClient as any);
 
       const config: MergedConfigInstance = {
         custom_formats: [],
@@ -470,7 +461,7 @@ describe("downloadClientConfigSyncer", () => {
 
     it("should include common fields for all arrTypes", async () => {
       const { syncDownloadClientConfig } = await import("./downloadClientConfigSyncer");
-      const { getSpecificClient } = await import("../clients/unified-client");
+      const { getClient } = await import("../clients/unified-client");
       const { getEnvs } = await import("../env");
 
       const mockGetEnvs = vi.mocked(getEnvs);
@@ -494,7 +485,7 @@ describe("downloadClientConfigSyncer", () => {
         getDownloadClientConfig: mockGetConfig,
         updateDownloadClientConfig: mockUpdateConfig,
       };
-      vi.mocked(getSpecificClient).mockReturnValue(mockClient as any);
+      vi.mocked(getClient).mockReturnValue(mockClient as any);
 
       const config: MergedConfigInstance = {
         custom_formats: [],
@@ -507,7 +498,7 @@ describe("downloadClientConfigSyncer", () => {
         },
       };
 
-      const arrTypes: ArrType[] = ["RADARR", "SONARR", "LIDARR", "READARR"];
+      const arrTypes: MediaArrType[] = ["RADARR", "SONARR", "LIDARR", "READARR"];
 
       for (const arrType of arrTypes) {
         mockUpdateConfig.mockClear();

@@ -3,15 +3,16 @@ import { MergedQualityDefinitionResource } from "./types/merged.types";
 import { getClient } from "./clients/unified-client";
 import { getEnvs } from "./env";
 import { logger } from "./logger";
+import { MediaArrType } from "./types/common.types";
 import { TrashQualityDefinitionQuality } from "./types/trashguide.types";
 import { cloneWithJSON, loadJsonFile, roundToDecimal } from "./util";
 import { DiffEntry, FieldChange } from "./diffReport/diffReport.types";
 
-export const loadQualityDefinitionFromServer = async (): Promise<MergedQualityDefinitionResource[]> => {
+export const loadQualityDefinitionFromServer = async (arrType: MediaArrType): Promise<MergedQualityDefinitionResource[]> => {
   if (getEnvs().LOAD_LOCAL_SAMPLES) {
     return loadJsonFile(path.resolve(__dirname, "../tests/samples/qualityDefinition.json"));
   }
-  return await getClient().getQualityDefinitions();
+  return await getClient(arrType).getQualityDefinitions();
 };
 
 export const calculateQualityDefinitionDiff = (

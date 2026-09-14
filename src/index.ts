@@ -65,8 +65,8 @@ const pipeline = async (
   const system = await api.getSystemStatus();
   logger.info(`System status: ${JSON.stringify(system)}`);
 
-  const serverCFs = await loadServerCustomFormats();
-  const serverQD = await loadQualityDefinitionFromServer();
+  const serverCFs = await loadServerCustomFormats(arrType);
+  const serverQD = await loadQualityDefinitionFromServer(arrType);
   const languages = await api.getLanguages();
 
   const serverCache = new ServerCache(serverQD, [], serverCFs, languages);
@@ -95,14 +95,14 @@ const pipeline = async (
     return p;
   }, new Map<string, MergedCustomFormatResource>());
 
-  const cfUpdateResult = await manageCf(mergedCFs, serverCFMapping);
+  const cfUpdateResult = await manageCf(arrType, mergedCFs, serverCFMapping);
   diffCollector.add(cfUpdateResult.diffEntries);
 
   // add missing CFs to list because we need it for further steps
   // serverCFs.push(...cfUpdateResult.createCFs);
   if (cfUpdateResult.createCFs.length > 0 || cfUpdateResult.updatedCFs.length > 0) {
     // refresh cfs
-    serverCache.cf = await loadServerCustomFormats();
+    serverCache.cf = await loadServerCustomFormats(arrType);
   }
 
   if (config.delete_unmanaged_custom_formats?.enabled) {
@@ -135,7 +135,7 @@ const pipeline = async (
         );
 
         for (const element of cfsToDelete) {
-          await deleteCustomFormat(element);
+          await deleteCustomFormat(arrType, element);
         }
       }
     }
@@ -144,7 +144,7 @@ const pipeline = async (
   logger.info(`CustomFormats synchronized`);
 
   // load tags
-  const serverTags = await loadServerTags();
+  const serverTags = await loadServerTags(arrType);
   serverCache.tags = serverTags;
 
   if (config.quality_definition != null) {
@@ -187,7 +187,7 @@ const pipeline = async (
         logger.info(`Diffs in quality definitions found ${changeMap.values()}`);
         await api.updateQualityDefinitions(restData);
         // refresh QDs
-        serverCache.qd = await loadQualityDefinitionFromServer();
+        serverCache.qd = await loadQualityDefinitionFromServer(arrType);
         logger.info(`Updated QualityDefinitions`);
       }
     } else {
@@ -197,7 +197,7 @@ const pipeline = async (
     logger.debug(`No QualityDefinition configured.`);
   }
 
-  const namingDiff = await calculateNamingDiff(config.media_naming_api);
+  const namingDiff = await calculateNamingDiff(arrType, config.media_naming_api);
 
   if (namingDiff) {
     diffCollector.add(namingDiffToDiffEntries(namingDiff));
@@ -211,7 +211,7 @@ const pipeline = async (
     }
   }
 
-  const managementDiff = await calculateMediamanagementDiff(config.media_management);
+  const managementDiff = await calculateMediamanagementDiff(arrType, config.media_management);
 
   if (managementDiff) {
     diffCollector.add(mediamanagementDiffToDiffEntries(managementDiff));
@@ -228,7 +228,7 @@ const pipeline = async (
   const uiConfigResult = await syncUiConfig(arrType, config.ui_config);
   diffCollector.add(uiConfigDiffToDiffEntries(uiConfigResult));
 
-  const serverQP = await loadQualityProfilesFromServer();
+  const serverQP = await loadQualityProfilesFromServer(arrType);
   serverCache.qp = serverQP;
 
   logger.info(`Server objects: QualityProfiles ${serverQP.length}`);
@@ -287,7 +287,7 @@ const pipeline = async (
           "This QualityProfile will be deleted:",
         );
         for (const element of qpsToDelete) {
-          await deleteQualityProfile(element);
+          await deleteQualityProfile(arrType, element);
         }
       }
     }
@@ -307,7 +307,7 @@ const pipeline = async (
   ) {
     logger.debug(`Config 'delay_profiles' not specified. Ignoring.`);
   } else {
-    const delayProfilesDiff = await calculateDelayProfilesDiff(config.delay_profiles, serverCache.tags);
+    const delayProfilesDiff = await calculateDelayProfilesDiff(arrType, config.delay_profiles, serverCache.tags);
 
     if (delayProfilesDiff) {
       diffCollector.add(delayProfilesToDiffEntries(delayProfilesDiff));
@@ -339,7 +339,7 @@ const pipeline = async (
         if (delayProfilesDiff.additionalProfilesChanged && delayProfilesDiff.additionalProfiles) {
           logger.info(`Updating additional DelayProfiles (deleting old ones and recreate all) ...`);
 
-          await deleteAdditionalDelayProfiles();
+          await deleteAdditionalDelayProfiles(arrType);
 
           for (const profile of delayProfilesDiff.additionalProfiles) {
             const mappedProfile = mapToServerDelayProfile(profile, serverCache.tags);
@@ -467,7 +467,7 @@ const prowlarrPipeline = async (instanceConfig: InputConfigProwlarrInstance, ins
 
   // ServerCache is media-manager shaped; Prowlarr only needs its tags and download-client schema slots.
   const serverCache = new ServerCache([], [], [], []);
-  serverCache.tags = await loadServerTags();
+  serverCache.tags = await loadServerTags("PROWLARR");
 
   diffCollector.add(await syncProwlarrProviders(instanceConfig, serverCache));
 

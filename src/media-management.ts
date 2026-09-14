@@ -1,28 +1,29 @@
 import { getClient } from "./clients/unified-client";
 import { DiffEntry, FieldChange } from "./diffReport/diffReport.types";
 import { logger } from "./logger";
+import { MediaArrType } from "./types/common.types";
 import { MediaManagementType, MediaNamingApiType } from "./types/config.types";
 import { compareMediamanagement, compareNaming } from "./util";
 
-const loadNamingFromServer = async () => {
-  const api = getClient();
+const loadNamingFromServer = async (arrType: MediaArrType) => {
+  const api = getClient(arrType);
   const result = await api.getNaming();
   return result;
 };
 
-const loadMediamanagementConfigFromServer = async () => {
-  const api = getClient();
+const loadMediamanagementConfigFromServer = async (arrType: MediaArrType) => {
+  const api = getClient(arrType);
   const result = await api.getMediamanagement();
   return result;
 };
 
-export const calculateNamingDiff = async (mediaNaming?: MediaNamingApiType) => {
+export const calculateNamingDiff = async (arrType: MediaArrType, mediaNaming?: MediaNamingApiType) => {
   if (mediaNaming == null) {
     logger.debug(`Config 'media_naming_api' not specified. Ignoring.`);
     return null;
   }
 
-  const serverData = await loadNamingFromServer();
+  const serverData = await loadNamingFromServer(arrType);
 
   const { changes, equal } = compareNaming(serverData, mediaNaming);
 
@@ -43,13 +44,13 @@ export const calculateNamingDiff = async (mediaNaming?: MediaNamingApiType) => {
   };
 };
 
-export const calculateMediamanagementDiff = async (mediaManagement?: MediaManagementType) => {
+export const calculateMediamanagementDiff = async (arrType: MediaArrType, mediaManagement?: MediaManagementType) => {
   if (mediaManagement == null) {
     logger.debug(`Config 'media_management' not specified. Ignoring.`);
     return null;
   }
 
-  const serverData = await loadMediamanagementConfigFromServer();
+  const serverData = await loadMediamanagementConfigFromServer(arrType);
 
   logger.debug(serverData, "Media Server");
   logger.debug(mediaManagement, "Media Local");

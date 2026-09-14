@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ReadarrRootFolderSync } from "./rootFolderReadarr";
-import { getSpecificClient } from "../clients/unified-client";
+import { getClient } from "../clients/unified-client";
 import { ServerCache } from "../cache";
 import { InputConfigRootFolderReadarr } from "../types/config.types";
 
 // Mock the unified client
 vi.mock("../clients/unified-client", () => ({
-  getSpecificClient: vi.fn(),
+  getClient: vi.fn(),
 }));
 
 // Mock the quality profiles loader
@@ -27,7 +27,7 @@ describe("ReadarrRootFolderSync", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    (getSpecificClient as any).mockReturnValue(mockApi);
+    vi.mocked(getClient).mockReturnValue(mockApi as unknown as ReturnType<typeof getClient>);
     serverCache = new ServerCache([], [], [], []);
     serverCache.tags = [];
     vi.mocked(loadQualityProfilesFromServer).mockResolvedValue([

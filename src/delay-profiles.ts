@@ -1,13 +1,14 @@
 import { getClient } from "./clients/unified-client";
 import { DiffEntry, FieldChange } from "./diffReport/diffReport.types";
 import { logger } from "./logger";
+import { MediaArrType } from "./types/common.types";
 import { InputConfigDelayProfile } from "./types/config.types";
 import { MergedDelayProfileProtocolItem, MergedDelayProfileResource, MergedTagResource } from "./types/merged.types";
 
-export const deleteAdditionalDelayProfiles = async () => {
-  const api = getClient();
+export const deleteAdditionalDelayProfiles = async (arrType: MediaArrType) => {
+  const api = getClient(arrType);
 
-  const serverData: MergedDelayProfileResource[] = await api.getDelayProfiles();
+  const serverData = (await api.getDelayProfiles()) as MergedDelayProfileResource[];
   const { additional: serverAdditional = [] } = splitServerDelayProfiles(serverData);
 
   for (const p of serverAdditional) {
@@ -85,6 +86,7 @@ export interface DelayProfilesDiff {
 }
 
 export const calculateDelayProfilesDiff = async (
+  arrType: MediaArrType,
   delayProfilesObj: { default?: InputConfigDelayProfile; additional?: InputConfigDelayProfile[] },
   tags: MergedTagResource[],
 ): Promise<DelayProfilesDiff | null> => {
@@ -95,8 +97,8 @@ export const calculateDelayProfilesDiff = async (
     return null;
   }
 
-  const api = getClient();
-  const serverData: MergedDelayProfileResource[] = await api.getDelayProfiles();
+  const api = getClient(arrType);
+  const serverData = (await api.getDelayProfiles()) as MergedDelayProfileResource[];
   const { default: serverDefault, additional: serverAdditional = [] } = splitServerDelayProfiles(serverData);
 
   // Check default profile (no tag comparison for default)

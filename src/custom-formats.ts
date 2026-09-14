@@ -7,13 +7,13 @@ import { DiffEntry } from "./diffReport/diffReport.types";
 import { getEnvs } from "./env";
 import { logger } from "./logger";
 import { loadTrashCFs } from "./trash-guide";
-import { ArrType, CFIDToConfigGroup, CFProcessing, ConfigarrCF } from "./types/common.types";
+import { ArrType, CFIDToConfigGroup, CFProcessing, ConfigarrCF, MediaArrType } from "./types/common.types";
 import { ConfigCustomFormatList, CustomFormatDefinitions } from "./types/config.types";
 import { TrashCF } from "./types/trashguide.types";
 import { compareCustomFormats, loadJsonFile, mapImportCfToRequestCf, toCarrCF } from "./util";
 
-export const deleteAllCustomFormats = async () => {
-  const api = getClient();
+export const deleteAllCustomFormats = async (arrType: MediaArrType) => {
+  const api = getClient(arrType);
   const cfOnServer = await api.getCustomFormats();
 
   for (const cf of cfOnServer) {
@@ -22,25 +22,25 @@ export const deleteAllCustomFormats = async () => {
   }
 };
 
-export const deleteCustomFormat = async (customFormat: MergedCustomFormatResource) => {
-  const api = getClient();
+export const deleteCustomFormat = async (arrType: MediaArrType, customFormat: MergedCustomFormatResource) => {
+  const api = getClient(arrType);
 
   await api.deleteCustomFormat(customFormat.id + "");
   logger.info(`Deleted CF: '${customFormat.name}'`);
 };
 
-export const loadServerCustomFormats = async (): Promise<MergedCustomFormatResource[]> => {
+export const loadServerCustomFormats = async (arrType: MediaArrType): Promise<MergedCustomFormatResource[]> => {
   if (getEnvs().LOAD_LOCAL_SAMPLES) {
     return loadJsonFile<MergedCustomFormatResource[]>(path.resolve(__dirname, "../tests/samples/cfs.json"));
   }
-  const api = getClient();
+  const api = getClient(arrType);
   const cfOnServer = await api.getCustomFormats();
   return cfOnServer;
 };
 
-export const manageCf = async (cfProcessing: CFProcessing, serverCfs: Map<string, MergedCustomFormatResource>) => {
+export const manageCf = async (arrType: MediaArrType, cfProcessing: CFProcessing, serverCfs: Map<string, MergedCustomFormatResource>) => {
   const { cfNameToCarrConfig } = cfProcessing;
-  const api = getClient();
+  const api = getClient(arrType);
 
   let updatedCFs: MergedCustomFormatResource[] = [];
   let errorCFs: string[] = [];

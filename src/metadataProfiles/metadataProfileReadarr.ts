@@ -1,7 +1,7 @@
 import { MetadataProfileResource } from "../__generated__/readarr/data-contracts";
 import { ServerCache } from "../cache";
 import { ReadarrClient } from "../clients/readarr-client";
-import { getSpecificClient } from "../clients/unified-client";
+import { getClient } from "../clients/unified-client";
 import { InputConfigReadarrMetadataProfile, InputConfigMetadataProfile } from "../types/config.types";
 import { compareObjectsCarr } from "../util";
 import { FieldChange } from "../diffReport/diffReport.types";
@@ -9,7 +9,7 @@ import { MetadataProfileDiff } from "./metadataProfile.types";
 import { BaseMetadataProfileSync } from "./metadataProfileBase";
 
 export class ReadarrMetadataProfileSync extends BaseMetadataProfileSync<MetadataProfileResource> {
-  protected api: ReadarrClient = getSpecificClient("READARR");
+  protected api: ReadarrClient = getClient("READARR");
 
   protected getArrType(): "READARR" {
     return "READARR";

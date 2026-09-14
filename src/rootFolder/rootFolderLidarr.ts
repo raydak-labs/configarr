@@ -8,7 +8,7 @@ import {
 } from "../__generated__/lidarr/data-contracts";
 import { ServerCache } from "../cache";
 import { LidarrClient } from "../clients/lidarr-client";
-import { getSpecificClient } from "../clients/unified-client";
+import { getClient } from "../clients/unified-client";
 import { FieldChange } from "../diffReport/diffReport.types";
 import { loadQualityProfilesFromServer } from "../quality-profiles";
 import { InputConfigRootFolderLidarr } from "../types/config.types";
@@ -17,7 +17,7 @@ import { RootFolderDiff } from "./rootFolder.types";
 import { BaseRootFolderSync } from "./rootFolderBase";
 
 export class LidarrRootFolderSync extends BaseRootFolderSync<InputConfigRootFolderLidarr> {
-  protected api: LidarrClient = getSpecificClient("LIDARR");
+  protected api: LidarrClient = getClient("LIDARR");
 
   protected getArrType(): "LIDARR" {
     return "LIDARR";
@@ -29,7 +29,10 @@ export class LidarrRootFolderSync extends BaseRootFolderSync<InputConfigRootFold
     }
 
     // Load quality profiles and metadata profiles for Lidarr
-    const [qualityProfiles, metadataProfiles] = await Promise.all([loadQualityProfilesFromServer(), this.api.getMetadataProfiles()]);
+    const [qualityProfiles, metadataProfiles] = await Promise.all([
+      loadQualityProfilesFromServer("LIDARR"),
+      this.api.getMetadataProfiles(),
+    ]);
 
     const qualityProfileMap = new Map<string, number>();
     const metadataProfileMap = new Map<string, number>();

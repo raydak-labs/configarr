@@ -1,5 +1,5 @@
 import { ServerCache } from "../cache";
-import { getSpecificClient } from "../clients/unified-client";
+import { getClient } from "../clients/unified-client";
 import { DiffEntry } from "../diffReport/diffReport.types";
 import { getEnvs } from "../env";
 import { logger } from "../logger";
@@ -43,7 +43,7 @@ export async function syncTags(instance: InputConfigProwlarrInstance, serverCach
     return result;
   }
 
-  const api = getSpecificClient("PROWLARR");
+  const api = getClient("PROWLARR");
   const dryRun = getEnvs().DRY_RUN;
 
   const existingByLabel = new Map<string, { id?: number; label?: string | null }>();

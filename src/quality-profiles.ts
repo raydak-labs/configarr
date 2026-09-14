@@ -11,13 +11,13 @@ import { ArrClientLanguageResource, getClient } from "./clients/unified-client";
 import { DiffEntry, FieldChange } from "./diffReport/diffReport.types";
 import { getEnvs } from "./env";
 import { logger } from "./logger";
-import { ArrType, CFProcessing } from "./types/common.types";
+import { ArrType, CFProcessing, MediaArrType } from "./types/common.types";
 import { ConfigQualityProfile, ConfigQualityProfileItem, MergedConfigInstance } from "./types/config.types";
 import type { TrashCFConflict } from "./types/trashguide.types";
 import { ANY_LANGUAGE_NAME, cloneWithJSON, loadJsonFile, notEmpty, zip } from "./util";
 
-export const deleteAllQualityProfiles = async () => {
-  const api = getClient();
+export const deleteAllQualityProfiles = async (arrType: MediaArrType) => {
+  const api = getClient(arrType);
   const qualityProfilesOnServer = await api.getQualityProfiles();
 
   for (const qualityProfile of qualityProfilesOnServer) {
@@ -26,8 +26,8 @@ export const deleteAllQualityProfiles = async () => {
   }
 };
 
-export const deleteQualityProfile = async (qualityProfile: MergedQualityProfileResource) => {
-  const api = getClient();
+export const deleteQualityProfile = async (arrType: MediaArrType, qualityProfile: MergedQualityProfileResource) => {
+  const api = getClient(arrType);
 
   await api.deleteQualityProfile(qualityProfile.id + "");
   logger.info(`Deleted QP: '${qualityProfile.name || qualityProfile.id}'`);
@@ -95,11 +95,11 @@ export const mapQualityProfiles = ({ carrIdMapping }: CFProcessing, { custom_for
   return profileScores;
 };
 
-export const loadQualityProfilesFromServer = async (): Promise<MergedQualityProfileResource[]> => {
+export const loadQualityProfilesFromServer = async (arrType: MediaArrType): Promise<MergedQualityProfileResource[]> => {
   if (getEnvs().LOAD_LOCAL_SAMPLES) {
     return loadJsonFile(path.resolve(__dirname, `../tests/samples/quality_profiles.json`));
   }
-  const api = getClient();
+  const api = getClient(arrType);
 
   const qualityProfiles = await api.getQualityProfiles();
   // TODO type hack

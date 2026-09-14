@@ -72,7 +72,7 @@ describe("DelayProfiles", () => {
     mockGetDelayProfiles.mockResolvedValue(serverProfiles);
 
     const { calculateDelayProfilesDiff } = await import("./delay-profiles");
-    const diff = await calculateDelayProfilesDiff(configProfiles, [{ label: "test", id: 1 }]);
+    const diff = await calculateDelayProfilesDiff("SONARR", configProfiles, [{ label: "test", id: 1 }]);
 
     expect(diff).toBeNull();
   });
@@ -110,7 +110,7 @@ describe("DelayProfiles", () => {
     mockGetDelayProfiles.mockResolvedValue(serverProfiles);
 
     const { calculateDelayProfilesDiff } = await import("./delay-profiles");
-    const diff = await calculateDelayProfilesDiff(configProfiles, []);
+    const diff = await calculateDelayProfilesDiff("SONARR", configProfiles, []);
 
     expect(diff).not.toBeNull();
     expect(diff?.defaultProfileChanged).toBe(true);
@@ -169,7 +169,7 @@ describe("DelayProfiles", () => {
     mockGetDelayProfiles.mockResolvedValue(serverProfiles);
 
     const { calculateDelayProfilesDiff } = await import("./delay-profiles");
-    const diff = await calculateDelayProfilesDiff(configProfiles, []);
+    const diff = await calculateDelayProfilesDiff("SONARR", configProfiles, []);
 
     expect(diff).not.toBeNull();
     expect(diff?.defaultProfileChanged).toBe(false);
@@ -228,7 +228,7 @@ describe("DelayProfiles", () => {
     mockGetDelayProfiles.mockResolvedValue(serverProfiles);
 
     const { calculateDelayProfilesDiff } = await import("./delay-profiles");
-    const diff = await calculateDelayProfilesDiff(configProfiles, []);
+    const diff = await calculateDelayProfilesDiff("SONARR", configProfiles, []);
 
     expect(diff).not.toBeNull();
     expect(diff?.missingTags).toHaveLength(1);
@@ -268,7 +268,7 @@ describe("DelayProfiles", () => {
     mockGetDelayProfiles.mockResolvedValue(serverProfiles);
 
     const { calculateDelayProfilesDiff } = await import("./delay-profiles");
-    const diff = await calculateDelayProfilesDiff(configProfiles, []);
+    const diff = await calculateDelayProfilesDiff("SONARR", configProfiles, []);
 
     expect(diff?.defaultProfileChanged).toBe(true);
     expect(diff?.defaultProfileFieldChanges).toEqual([{ field: "usenetDelay", from: 0, to: 10 }]);

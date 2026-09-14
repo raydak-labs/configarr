@@ -2,12 +2,10 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { LidarrMetadataProfileSync } from "./metadataProfileLidarr";
 import { ServerCache } from "../cache";
 import { InputConfigLidarrMetadataProfile } from "../types/config.types";
-import { getClient, getSpecificClient } from "../clients/unified-client";
+import { getClient } from "../clients/unified-client";
 
-// Mock the unified client
 vi.mock("../clients/unified-client", () => ({
   getClient: vi.fn(),
-  getSpecificClient: vi.fn(),
 }));
 
 describe("LidarrMetadataProfileSync", () => {
@@ -23,10 +21,7 @@ describe("LidarrMetadataProfileSync", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockApi.getMetadataProfiles.mockResolvedValue([]);
-    (getClient as any).mockReturnValue({
-      api: mockApi,
-    });
-    (getSpecificClient as any).mockReturnValue(mockApi);
+    (getClient as any).mockReturnValue(mockApi);
     serverCache = new ServerCache([], [], [], []);
   });
 

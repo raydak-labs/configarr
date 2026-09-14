@@ -25,7 +25,7 @@ const NOT_SUPPORTED = (feature: string) => new Error(`${feature} is not supporte
  *
  * Download client sync is shared/generic (see `downloadClients/`) and works through
  * the methods below. Application sync is Prowlarr-specific and uses the concrete
- * `getApplications*` / `*Application` methods via `getSpecificClient("PROWLARR")`.
+ * `getApplications*` / `*Application` methods via `getClient("PROWLARR")`.
  */
 export class ProwlarrClient implements IArrClient {
   private api!: Api<unknown>;

@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { ServerCache } from "../cache";
 import { ProwlarrClient } from "../clients/prowlarr-client";
-import { getSpecificClient } from "../clients/unified-client";
+import { getClient } from "../clients/unified-client";
 import { DiffEntry, FieldChange } from "../diffReport/diffReport.types";
 import { getEnvs } from "../env";
 import { logger } from "../logger";
@@ -116,7 +116,7 @@ export abstract class ProviderResourceSync<
   /** Lazily resolved so pure helper methods stay usable without a configured API. */
   protected get apiClient(): ProwlarrClient {
     if (!this._api) {
-      this._api = getSpecificClient("PROWLARR");
+      this._api = getClient("PROWLARR");
     }
     return this._api;
   }
