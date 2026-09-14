@@ -16,6 +16,7 @@ import {
   mapToServerDelayProfile,
 } from "./delay-profiles";
 import { syncDownloadClients } from "./downloadClients/downloadClientSyncer";
+import { syncProwlarrProviders } from "./prowlarr/prowlarrSyncer";
 import { downloadClientConfigDiffToDiffEntries, syncDownloadClientConfig } from "./downloadClientConfig/downloadClientConfigSyncer";
 import { syncRemotePaths } from "./remotePaths/remotePathSyncer";
 import { syncUiConfig, uiConfigDiffToDiffEntries } from "./uiConfigs/uiConfigSyncer";
@@ -45,7 +46,7 @@ import { loadServerTags } from "./tags";
 import { getTelemetryInstance, Telemetry } from "./telemetry";
 import { cloneTrashRepo, loadQualityDefinitionFromTrash, loadTrashCFConflicts, transformTrashQDs } from "./trash-guide";
 import { ArrType } from "./types/common.types";
-import { InputConfigArrInstance, InputConfigSchema } from "./types/config.types";
+import { InputConfigArrInstance, InputConfigProwlarrInstance, InputConfigSchema } from "./types/config.types";
 import { TrashArrSupported } from "./types/trashguide.types";
 import { TrashArrSupportedConst, TrashQualityDefinition, TrashQualityDefinitionQuality } from "./types/trashguide.types";
 import { isInConstArray } from "./util";
@@ -389,10 +390,14 @@ const pipeline = async (
   return { arrType, instanceName, entries: diffCollector.getEntries() };
 };
 
-const runArrType = async (
+/**
+ * Shared instance loop: skip disabled instances, run `runInstance` against each one,
+ * and tally success / failure / skipped while honouring STOP_ON_ERROR.
+ */
+const runInstances = async <TInstance extends { base_url: string; api_key: string; enabled?: boolean }>(
   arrType: ArrType,
-  globalConfig: InputConfigSchema,
-  arrEntry: Record<string, InputConfigArrInstance> | undefined,
+  entries: Record<string, TInstance> | undefined,
+  runInstance: (instance: TInstance, instanceName: string) => Promise<InstanceDiffReport>,
 ) => {
   const status = {
     success: 0,
@@ -401,14 +406,14 @@ const runArrType = async (
   };
   const reports: InstanceDiffReport[] = [];
 
-  if (!arrEntry || typeof arrEntry !== "object" || Object.keys(arrEntry).length === 0) {
+  if (!entries || typeof entries !== "object" || Object.keys(entries).length === 0) {
     logHeading(`No ${arrType} instances defined.`);
     return { status, reports };
   }
 
   logHeading(`Processing ${arrType} ...`);
 
-  for (const [instanceName, instance] of Object.entries(arrEntry)) {
+  for (const [instanceName, instance] of Object.entries(entries)) {
     logInstanceHeading(`Processing ${arrType} Instance: ${instanceName} ...`);
 
     if (instance.enabled === false) {
@@ -419,7 +424,7 @@ const runArrType = async (
 
     try {
       await configureApi(arrType, instance.base_url, instance.api_key);
-      const report = await pipeline(globalConfig, instance, arrType, instanceName);
+      const report = await runInstance(instance, instanceName);
       new ConsoleDiffFormatter().format(report);
       reports.push(report);
       status.success++;
@@ -443,6 +448,45 @@ const runArrType = async (
 
   return { status, reports };
 };
+
+const runArrType = (arrType: ArrType, globalConfig: InputConfigSchema, arrEntry: Record<string, InputConfigArrInstance> | undefined) =>
+  runInstances(arrType, arrEntry, (instance, instanceName) => pipeline(globalConfig, instance, arrType, instanceName));
+
+/**
+ * Prowlarr is an indexer manager, not a media manager, so it runs its own minimal
+ * pipeline (system status, tags, indexer proxies, indexers, applications, download
+ * clients) instead of the media `pipeline()`.
+ */
+const prowlarrPipeline = async (instanceConfig: InputConfigProwlarrInstance, instanceName: string): Promise<InstanceDiffReport> => {
+  const api = getUnifiedClient();
+  const diffCollector = new DiffCollector();
+
+  const system = await api.getSystemStatus();
+  logger.info(`System status: ${JSON.stringify(system)}`);
+
+  // ServerCache is media-manager shaped; Prowlarr only needs its tags and download-client schema slots.
+  const serverCache = new ServerCache([], [], [], []);
+  serverCache.tags = await loadServerTags();
+
+  diffCollector.add(await syncProwlarrProviders(instanceConfig, serverCache));
+
+  if (instanceConfig.download_clients?.data || instanceConfig.download_clients?.delete_unmanaged?.enabled) {
+    try {
+      const downloadClientsResult = await syncDownloadClients(
+        "PROWLARR",
+        { download_clients: instanceConfig.download_clients },
+        serverCache,
+      );
+      diffCollector.add(downloadClientsResult.diffEntries);
+    } catch (err: any) {
+      logger.error(`Failed to sync download clients: ${err.message}`);
+    }
+  }
+
+  return { arrType: "PROWLARR", instanceName, entries: diffCollector.getEntries() };
+};
+
+const runProwlarr = (entry: Record<string, InputConfigProwlarrInstance> | undefined) => runInstances("PROWLARR", entry, prowlarrPipeline);
 
 const run = async () => {
   logger.info(`Support the project: https://ko-fi.com/blackdark93 - Star on Github! https://github.com/raydak-labs/configarr`);
@@ -499,6 +543,15 @@ const run = async () => {
       logger.debug(`${type} disabled in config`);
       disabledArrs.push(type);
     }
+  }
+
+  if (globalConfig.prowlarrEnabled == null || globalConfig.prowlarrEnabled) {
+    const result = await runProwlarr(globalConfig.prowlarr);
+    totalStatus.push(`PROWLARR: (${result.status.success}/${result.status.failure}/${result.status.skipped})`);
+    allReports.push(...result.reports);
+  } else {
+    logger.debug(`PROWLARR disabled in config`);
+    disabledArrs.push("PROWLARR");
   }
 
   logger.info(``);

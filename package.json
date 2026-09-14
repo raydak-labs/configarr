@@ -10,7 +10,7 @@
   "scripts": {
     "build": "tsx esbuild.ts",
     "coverage": "vitest run --coverage",
-    "generateApi": "tsx generate-api.ts && prettier src/__generated__ --write",
+    "generateApi": "tsx generate-api.ts",
     "lint": "prettier --log-level error --check .",
     "lint:fix": "prettier --list-different --write --log-level error .",
     "start": "tsx src/index.ts",

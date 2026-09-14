@@ -3,6 +3,7 @@ import { logger } from "../logger";
 import { ArrType } from "../types/common.types";
 import type { DownloadClientResource } from "../types/download-client.types";
 import { LidarrClient } from "./lidarr-client";
+import { ProwlarrClient } from "./prowlarr-client";
 import { RadarrClient } from "./radarr-client";
 import { ReadarrClient } from "./readarr-client";
 import { SonarrClient } from "./sonarr-client";
@@ -30,6 +31,7 @@ type ArrTypeToClient = {
   LIDARR: LidarrClient;
   READARR: ReadarrClient;
   WHISPARR: WhisparrClient;
+  PROWLARR: ProwlarrClient;
 };
 
 /**
@@ -251,6 +253,9 @@ export class UnifiedClient implements IArrClient {
         break;
       case "LIDARR":
         this.api = new LidarrClient(baseUrl, apiKey);
+        break;
+      case "PROWLARR":
+        this.api = new ProwlarrClient(baseUrl, apiKey);
         break;
       default:
         throw new Error(`Invalid API type: ${type}`);

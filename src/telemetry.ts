@@ -125,7 +125,7 @@ export class Telemetry {
     }
   }
 
-  public trackFeatureUsage(globalConfig: InputConfigSchema, instances: Record<ArrType, InputConfigArrInstance[]>): void {
+  public trackFeatureUsage(globalConfig: InputConfigSchema, instances: Partial<Record<ArrType, InputConfigArrInstance[]>>): void {
     if (!Telemetry.isEnabledCache || this.hasTracked) {
       return;
     }
@@ -247,9 +247,14 @@ export class Telemetry {
     }
   }
 
-  private collectTelemetryData(globalConfig: InputConfigSchema, instances: Record<ArrType, InputConfigArrInstance[]>): TelemetryData {
+  private collectTelemetryData(
+    globalConfig: InputConfigSchema,
+    instances: Partial<Record<ArrType, InputConfigArrInstance[]>>,
+  ): TelemetryData {
     const arrTypes = Object.keys(instances) as ArrType[];
-    const allInstances = Object.values(instances).flat();
+    const allInstances = Object.values(instances)
+      .flat()
+      .filter((i): i is InputConfigArrInstance => i != null);
 
     // Count template sources
     let recyclarrTemplateCount = 0;

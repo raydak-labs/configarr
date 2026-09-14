@@ -413,3 +413,80 @@ lidarr:
 
     delete_unmanaged_metadata_profiles:
       enabled: true
+
+# (experimental) since v1.31.0 - Prowlarr: tags, applications, indexers, indexer proxies, download clients
+# check https://configarr.rayak.de/docs/configuration/experimental-support#prowlarr-v1
+prowlarr:
+  instance1:
+    base_url: http://prowlarr:9696
+    api_key: !secret PROWLARR_API_KEY
+
+    # Ensure these tag labels exist (created if missing)
+    tags:
+      - configarr
+    delete_unmanaged_tags:
+      enabled: false
+
+    # Indexer proxies (FlareSolverr / Http / Socks4 / Socks5)
+    indexer_proxies:
+      data:
+        - name: flaresolverr
+          type: FlareSolverr
+          fields:
+            host: http://flaresolverr:8191/
+          tags:
+            - configarr
+      delete_unmanaged:
+        enabled: false
+
+    # Indexers: `definition` is the Prowlarr schema definitionName, matched on the server by `name`
+    indexers:
+      data:
+        - name: The Pirate Bay
+          definition: The Pirate Bay
+          enable: true
+          priority: 25
+          tags:
+            - configarr
+      delete_unmanaged:
+        enabled: false
+        ignore:
+          - "Manual Indexer"
+
+    applications:
+      data:
+        - name: Sonarr
+          type: Sonarr
+          sync_level: fullSync
+          fields:
+            prowlarrUrl: http://prowlarr:9696
+            baseUrl: http://sonarr:8989
+            apiKey: !secret SONARR_API_KEY
+            syncCategories: [5000, 5010, 5020, 5030, 5040, 5045, 5050]
+          tags:
+            - configarr
+        - name: Radarr
+          type: Radarr
+          sync_level: fullSync
+          fields:
+            prowlarrUrl: http://prowlarr:9696
+            baseUrl: http://radarr:7878
+            apiKey: !secret RADARR_API_KEY
+            syncCategories: [2000, 2010, 2020, 2030, 2040, 2045, 2050, 2060]
+      delete_unmanaged:
+        enabled: false
+        ignore:
+          - "Manual App"
+      # Trigger Prowlarr's global "Sync App Indexers" command after the apps are synced
+      sync_indexers: true
+
+    download_clients:
+      data:
+        - name: qBittorrent
+          type: qbittorrent
+          enable: false
+          fields:
+            host: qbittorrent
+            port: 8080
+      delete_unmanaged:
+        enabled: false

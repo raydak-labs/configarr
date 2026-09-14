@@ -80,6 +80,31 @@ services:
       - 6504:8686
     restart: unless-stopped
 
+  # experimental
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:2.5.2
+    networks:
+      - configarr-full
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+    volumes:
+      - prowlarr:/config
+      - ${PWD}/prowlarr.xml:/config/config.xml:rw
+    ports:
+      - 6505:9696
+    restart: unless-stopped
+
+  # used by the Prowlarr indexer-proxy example
+  flaresolverr:
+    image: ghcr.io/flaresolverr/flaresolverr:v3.3.21
+    networks:
+      - configarr-full
+    environment:
+      - LOG_LEVEL=info
+    restart: unless-stopped
+
 networks:
   configarr-full:
     name: configarr-full
@@ -90,5 +115,6 @@ volumes:
   whisparr:
   readarr:
   lidarr:
+  prowlarr:
   radarr-download1:
   radarr-download2:

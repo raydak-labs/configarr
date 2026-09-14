@@ -34,3 +34,34 @@ sonarr:
 radarr:
   instance1:
     define: true
+
+# Experimental: Prowlarr (tags, applications, indexers, indexer proxies, download clients)
+# See https://configarr.de/docs/configuration/experimental-support#prowlarr-v1
+#prowlarr:
+#  main:
+#    base_url: http://localhost:9696
+#    api_key: !secret PROWLARR_API_KEY
+#    tags:
+#      - configarr
+#    indexers:
+#      data:
+#        - name: The Pirate Bay
+#          definition: The Pirate Bay
+#          enable: true
+#    indexer_proxies:
+#      data:
+#        - name: flaresolverr
+#          type: FlareSolverr
+#          fields:
+#            host: http://flaresolverr:8191/
+#    applications:
+#      data:
+#        - name: Sonarr
+#          type: Sonarr
+#          sync_level: fullSync
+#          fields:
+#            prowlarrUrl: http://prowlarr:9696
+#            baseUrl: http://sonarr:8989
+#            apiKey: !secret SONARR_API_KEY
+#            syncCategories: [5000, 5010, 5020, 5030, 5040]
+#      sync_indexers: true
