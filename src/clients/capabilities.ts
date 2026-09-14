@@ -104,3 +104,21 @@ export interface DelayProfilesClient<DP extends DelayProfileLike = DelayProfileL
   updateDelayProfile(id: string, data: DP): Promise<DP>;
   deleteDelayProfile(id: string): Promise<unknown>;
 }
+
+export interface NamingLike {
+  id?: number;
+}
+
+export interface NamingClient<N extends NamingLike = NamingLike> {
+  getNaming(): Promise<N>;
+  updateNaming(id: string, data: N): Promise<N>;
+}
+
+export interface MediaManagementLike {
+  id?: number;
+}
+
+export interface MediaManagementClient<M extends MediaManagementLike = MediaManagementLike> {
+  getMediamanagement(): Promise<M>;
+  updateMediamanagement(id: string, data: M): Promise<M>;
+}

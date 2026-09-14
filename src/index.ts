@@ -29,6 +29,8 @@ import {
   calculateNamingDiff,
   mediamanagementDiffToDiffEntries,
   namingDiffToDiffEntries,
+  updateMediamanagementOnServer,
+  updateNamingOnServer,
 } from "./media-management";
 import {
   calculateQualityDefinitionDiff,
@@ -213,7 +215,7 @@ const pipeline = async (
     if (getEnvs().DRY_RUN) {
       logger.info("DryRun: Would update MediaNaming.");
     } else {
-      await api.updateNaming(namingDiff.updatedData.id! + "", namingDiff.updatedData);
+      await updateNamingOnServer(arrType, namingDiff.updatedData.id! + "", namingDiff.updatedData);
       logger.info(`Updated MediaNaming`);
     }
   }
@@ -226,7 +228,7 @@ const pipeline = async (
     if (getEnvs().DRY_RUN) {
       logger.info("DryRun: Would update MediaManagement.");
     } else {
-      await api.updateMediamanagement(managementDiff.updatedData.id! + "", managementDiff.updatedData);
+      await updateMediamanagementOnServer(arrType, managementDiff.updatedData.id! + "", managementDiff.updatedData);
       logger.info(`Updated MediaManagement`);
     }
   }

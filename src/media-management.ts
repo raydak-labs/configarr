@@ -1,3 +1,4 @@
+import { MediaManagementClient, NamingClient, NamingLike, MediaManagementLike } from "./clients/capabilities";
 import { getClient } from "./clients/client";
 import { DiffEntry, FieldChange } from "./diffReport/diffReport.types";
 import { logger } from "./logger";
@@ -5,16 +6,23 @@ import { MediaArrType } from "./types/common.types";
 import { MediaManagementType, MediaNamingApiType } from "./types/config.types";
 import { compareMediamanagement, compareNaming } from "./util";
 
+const namingApi = (arrType: MediaArrType): NamingClient => getClient(arrType);
+const mediaManagementApi = (arrType: MediaArrType): MediaManagementClient => getClient(arrType);
+
 const loadNamingFromServer = async (arrType: MediaArrType) => {
-  const api = getClient(arrType);
-  const result = await api.getNaming();
-  return result;
+  return namingApi(arrType).getNaming();
 };
 
 const loadMediamanagementConfigFromServer = async (arrType: MediaArrType) => {
-  const api = getClient(arrType);
-  const result = await api.getMediamanagement();
-  return result;
+  return mediaManagementApi(arrType).getMediamanagement();
+};
+
+export const updateNamingOnServer = async (arrType: MediaArrType, id: string, data: NamingLike) => {
+  return namingApi(arrType).updateNaming(id, data);
+};
+
+export const updateMediamanagementOnServer = async (arrType: MediaArrType, id: string, data: MediaManagementLike) => {
+  return mediaManagementApi(arrType).updateMediamanagement(id, data);
 };
 
 export const calculateNamingDiff = async (arrType: MediaArrType, mediaNaming?: MediaNamingApiType) => {
