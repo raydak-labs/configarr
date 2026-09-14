@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { ServerCache } from "../cache";
-import { getClient, IArrClient } from "../clients/client";
+import { getClient } from "../clients/client";
+import type { DownloadClientsClient, TagsClient } from "../clients/capabilities";
 import { DiffEntry } from "../diffReport/diffReport.types";
 import { getEnvs } from "../env";
 import { logger } from "../logger";
@@ -61,10 +62,10 @@ export function downloadClientDiffToDiffEntries(diff: DownloadClientDiff, unmana
 }
 
 export abstract class BaseDownloadClientSync {
-  private _api: IArrClient | undefined;
+  private _api: (DownloadClientsClient & TagsClient) | undefined;
   protected readonly logger = logger;
 
-  protected getApi(): IArrClient {
+  protected getApi(): DownloadClientsClient & TagsClient {
     if (!this._api) {
       this._api = getClient(this.getArrType());
     }

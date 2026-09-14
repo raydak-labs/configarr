@@ -13,6 +13,14 @@ import { logger } from "../logger";
 import type { DownloadClientResource } from "../types/download-client.types";
 import { logConnectionError, validateClientParams } from "./connection";
 import { IArrClient } from "./client";
+import {
+  CustomFormatsClient,
+  DownloadClientsClient,
+  QualityDefinitionsClient,
+  QualityProfilesClient,
+  SystemClient,
+  TagsClient,
+} from "./capabilities";
 
 export type SonarrQualityProfileResource = {
   id?: number;
@@ -20,7 +28,16 @@ export type SonarrQualityProfileResource = {
   // Add other common properties that all quality profiles share
 };
 
-export class SonarrClient implements IArrClient<QualityProfileResource, QualityDefinitionResource, CustomFormatResource, LanguageResource> {
+export class SonarrClient
+  implements
+    IArrClient<QualityProfileResource, QualityDefinitionResource, CustomFormatResource, LanguageResource>,
+    SystemClient,
+    TagsClient,
+    DownloadClientsClient,
+    QualityProfilesClient<QualityProfileResource>,
+    CustomFormatsClient<CustomFormatResource>,
+    QualityDefinitionsClient<QualityDefinitionResource>
+{
   private api!: Api<unknown>;
 
   constructor(baseUrl: string, apiKey: string) {

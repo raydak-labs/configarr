@@ -11,23 +11,13 @@ import {
 import { logger } from "../logger";
 import type { DownloadClientResource } from "../types/download-client.types";
 import { logConnectionError, validateClientParams } from "./connection";
-import { IArrClient } from "./client";
-
-const NOT_SUPPORTED = (feature: string) => new Error(`${feature} is not supported for Prowlarr`);
+import { DownloadClientsClient, SystemClient, TagsClient } from "./capabilities";
 
 /**
- * Prowlarr client.
- *
- * Prowlarr is an indexer manager, not a media manager: it has no quality profiles,
- * custom formats, quality definitions, naming, media management, root folders,
- * metadata profiles, delay profiles or languages. Those `IArrClient` members are
- * implemented as throwing stubs and are never called by the Prowlarr pipeline.
- *
- * Download client sync is shared/generic (see `downloadClients/`) and works through
- * the methods below. Application sync is Prowlarr-specific and uses the concrete
- * `getApplications*` / `*Application` methods via `getClient("PROWLARR")`.
+ * Prowlarr is an indexer manager, not a media manager. It implements System, Tags,
+ * and DownloadClients plus Prowlarr-only application, indexer, and proxy APIs.
  */
-export class ProwlarrClient implements IArrClient {
+export class ProwlarrClient implements SystemClient, TagsClient<TagResource>, DownloadClientsClient {
   private api!: Api<unknown>;
 
   constructor(baseUrl: string, apiKey: string) {
@@ -170,133 +160,5 @@ export class ProwlarrClient implements IArrClient {
     }
 
     return true;
-  }
-
-  // Media-manager members of IArrClient. Prowlarr has no such endpoints and the
-  // Prowlarr pipeline never calls them.
-  getLanguages(): Promise<any> {
-    throw NOT_SUPPORTED("Languages");
-  }
-
-  getQualityDefinitions(): Promise<any> {
-    throw NOT_SUPPORTED("Quality definitions");
-  }
-
-  updateQualityDefinitions(): Promise<any> {
-    throw NOT_SUPPORTED("Quality definitions");
-  }
-
-  getQualityProfiles(): Promise<any> {
-    throw NOT_SUPPORTED("Quality profiles");
-  }
-
-  createQualityProfile(): Promise<any> {
-    throw NOT_SUPPORTED("Quality profiles");
-  }
-
-  updateQualityProfile(): Promise<any> {
-    throw NOT_SUPPORTED("Quality profiles");
-  }
-
-  deleteQualityProfile(): Promise<void> {
-    throw NOT_SUPPORTED("Quality profiles");
-  }
-
-  getCustomFormats(): Promise<any> {
-    throw NOT_SUPPORTED("Custom formats");
-  }
-
-  createCustomFormat(): Promise<any> {
-    throw NOT_SUPPORTED("Custom formats");
-  }
-
-  updateCustomFormat(): Promise<any> {
-    throw NOT_SUPPORTED("Custom formats");
-  }
-
-  deleteCustomFormat(): Promise<void> {
-    throw NOT_SUPPORTED("Custom formats");
-  }
-
-  getNaming(): Promise<any> {
-    throw NOT_SUPPORTED("Naming");
-  }
-
-  updateNaming(): Promise<any> {
-    throw NOT_SUPPORTED("Naming");
-  }
-
-  getMediamanagement(): Promise<any> {
-    throw NOT_SUPPORTED("Media management");
-  }
-
-  updateMediamanagement(): Promise<any> {
-    throw NOT_SUPPORTED("Media management");
-  }
-
-  getRootfolders(): Promise<any> {
-    throw NOT_SUPPORTED("Root folders");
-  }
-
-  addRootFolder(): Promise<any> {
-    throw NOT_SUPPORTED("Root folders");
-  }
-
-  updateRootFolder(): Promise<any> {
-    throw NOT_SUPPORTED("Root folders");
-  }
-
-  deleteRootFolder(): Promise<any> {
-    throw NOT_SUPPORTED("Root folders");
-  }
-
-  getDelayProfiles(): Promise<any> {
-    throw NOT_SUPPORTED("Delay profiles");
-  }
-
-  createDelayProfile(): Promise<any> {
-    throw NOT_SUPPORTED("Delay profiles");
-  }
-
-  updateDelayProfile(): Promise<any> {
-    throw NOT_SUPPORTED("Delay profiles");
-  }
-
-  deleteDelayProfile(): Promise<any> {
-    throw NOT_SUPPORTED("Delay profiles");
-  }
-
-  // Client-specific extras shared by the media *arr clients. Prowlarr has none of
-  // these endpoints; present only so `getSpecificClient()`'s union stays structural.
-  getUiConfig(): Promise<any> {
-    throw NOT_SUPPORTED("UI config");
-  }
-
-  updateUiConfig(): Promise<any> {
-    throw NOT_SUPPORTED("UI config");
-  }
-
-  getDownloadClientConfig(): Promise<any> {
-    throw NOT_SUPPORTED("Download client config");
-  }
-
-  updateDownloadClientConfig(): Promise<any> {
-    throw NOT_SUPPORTED("Download client config");
-  }
-
-  getRemotePathMappings(): Promise<any> {
-    throw NOT_SUPPORTED("Remote path mappings");
-  }
-
-  createRemotePathMapping(): Promise<any> {
-    throw NOT_SUPPORTED("Remote path mappings");
-  }
-
-  updateRemotePathMapping(): Promise<any> {
-    throw NOT_SUPPORTED("Remote path mappings");
-  }
-
-  deleteRemotePathMapping(): Promise<any> {
-    throw NOT_SUPPORTED("Remote path mappings");
   }
 }

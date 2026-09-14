@@ -14,6 +14,14 @@ import type { DownloadClientResource } from "../types/download-client.types";
 import { ANY_LANGUAGE_NAME, cloneWithJSON } from "../util";
 import { logConnectionError, validateClientParams } from "./connection";
 import { IArrClient } from "./client";
+import {
+  CustomFormatsClient,
+  DownloadClientsClient,
+  QualityDefinitionsClient,
+  QualityProfilesClient,
+  SystemClient,
+  TagsClient,
+} from "./capabilities";
 
 /**
  * Overwrite wrong types for now
@@ -24,12 +32,16 @@ declare module "../__generated__/whisparr/data-contracts" {
   }
 }
 
-export class WhisparrClient implements IArrClient<
-  QualityProfileResource,
-  QualityDefinitionResource,
-  CustomFormatResource,
-  LanguageResource
-> {
+export class WhisparrClient
+  implements
+    IArrClient<QualityProfileResource, QualityDefinitionResource, CustomFormatResource, LanguageResource>,
+    SystemClient,
+    TagsClient,
+    DownloadClientsClient,
+    QualityProfilesClient<QualityProfileResource>,
+    CustomFormatsClient<CustomFormatResource>,
+    QualityDefinitionsClient<QualityDefinitionResource>
+{
   private api!: Api<unknown>;
   private languageMap: Map<string, LanguageResource> = new Map();
 

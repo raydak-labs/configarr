@@ -71,17 +71,4 @@ describe("ProwlarrClient", () => {
       expect(logger.error).toHaveBeenCalled();
     });
   });
-
-  describe("unsupported media-manager features", () => {
-    it.each([
-      ["getQualityProfiles", "Quality profiles"],
-      ["getCustomFormats", "Custom formats"],
-      ["getRootfolders", "Root folders"],
-      ["getLanguages", "Languages"],
-      ["getDelayProfiles", "Delay profiles"],
-      ["getRemotePathMappings", "Remote path mappings"],
-    ])("%s throws a descriptive error", (method, feature) => {
-      expect(() => (client() as any)[method]()).toThrow(`${feature} is not supported for Prowlarr`);
-    });
-  });
 });

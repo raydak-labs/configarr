@@ -1,12 +1,12 @@
 import { ServerCache } from "../cache";
-import { ArrType } from "../types/common.types";
+import { MediaArrType } from "../types/common.types";
 import { InputConfigRootFolder } from "../types/config.types";
 import { RootFolderSyncResult } from "./rootFolder.types";
 import { BaseRootFolderSync, GenericRootFolderSync } from "./rootFolderBase";
 import { LidarrRootFolderSync } from "./rootFolderLidarr";
 import { ReadarrRootFolderSync } from "./rootFolderReadarr";
 
-export function createRootFolderSync(arrType: ArrType): BaseRootFolderSync {
+export function createRootFolderSync(arrType: MediaArrType): BaseRootFolderSync {
   switch (arrType) {
     case "LIDARR":
       return new LidarrRootFolderSync();
@@ -18,7 +18,7 @@ export function createRootFolderSync(arrType: ArrType): BaseRootFolderSync {
 }
 
 export async function syncRootFolders(
-  arrType: ArrType,
+  arrType: MediaArrType,
   rootFolders: InputConfigRootFolder[] | undefined,
   serverCache: ServerCache,
 ): Promise<RootFolderSyncResult> {

@@ -4,7 +4,7 @@ import { getClient, IArrClient } from "../clients/client";
 import { DiffEntry } from "../diffReport/diffReport.types";
 import { getEnvs } from "../env";
 import { logger } from "../logger";
-import { ArrType } from "../types/common.types";
+import { MediaArrType } from "../types/common.types";
 import { InputConfigRootFolder } from "../types/config.types";
 import { RootFolderDiff, RootFolderSyncResult } from "./rootFolder.types";
 
@@ -96,19 +96,19 @@ export abstract class BaseRootFolderSync<TConfig extends InputConfigRootFolder =
     return result as MergedRootFolderResource[];
   }
 
-  protected abstract getArrType(): ArrType;
+  protected abstract getArrType(): MediaArrType;
 }
 
 // Generic sync for most arr types (Radarr, Sonarr, etc.)
 export class GenericRootFolderSync extends BaseRootFolderSync<InputConfigRootFolder> {
   protected api: IArrClient;
 
-  constructor(private arrType: ArrType) {
+  constructor(private arrType: MediaArrType) {
     super();
     this.api = getClient(arrType);
   }
 
-  protected getArrType(): ArrType {
+  protected getArrType(): MediaArrType {
     return this.arrType;
   }
 
