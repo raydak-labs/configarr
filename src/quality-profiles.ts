@@ -14,6 +14,7 @@ import { logger } from "./logger";
 import { ArrType, CFProcessing } from "./types/common.types";
 import { ConfigQualityProfile, ConfigQualityProfileItem, MergedConfigInstance } from "./types/config.types";
 import type { TrashCFConflict } from "./types/trashguide.types";
+import { ConfigValidationError } from "./validation";
 import { ANY_LANGUAGE_NAME, cloneWithJSON, loadJsonFile, notEmpty, zip } from "./util";
 
 export const deleteAllQualityProfiles = async () => {
@@ -154,7 +155,7 @@ export const mapQualities = (qd_source: MergedQualityDefinitionResource[], value
 
       if (serverQD == null) {
         logger.warn(`Unknown requested quality "${obj.name}" for quality profile ${value.name}`);
-        throw new Error(`Please correct your config.`);
+        throw new ConfigValidationError(`QualityProfile '${value.name}': unknown requested quality '${obj.name}'`);
       }
 
       qdMap.delete(serverQD.quality?.name);
@@ -287,7 +288,7 @@ const getDisabledUpgradeCutoff = (
   const fallbackId = fallback?.id ?? fallback?.quality?.id;
 
   if (fallbackId == null) {
-    throw new Error(`QualityProfile '${profileName}': no allowed quality found to use as cutoff when upgrade is disabled`);
+    throw new ConfigValidationError(`QualityProfile '${profileName}': no allowed quality found to use as cutoff when upgrade is disabled`);
   }
 
   if (untilQuality == null) {
@@ -394,7 +395,7 @@ export const calculateQualityProfilesDiff = async (
 
       if (value.upgrade.allowed) {
         if (value.upgrade.until_quality == null) {
-          throw new Error(`QualityProfile '${name}': upgrade.until_quality is required when upgrade.allowed is true`);
+          throw new ConfigValidationError(`QualityProfile '${name}': upgrade.until_quality is required when upgrade.allowed is true`);
         }
 
         Object.assign<MergedQualityProfileResource, MergedQualityProfileResource | null | undefined>(newP, {
@@ -471,13 +472,15 @@ export const calculateQualityProfilesDiff = async (
       // Further diffs only necessary if upgrade is allowed
       if (value.upgrade.allowed) {
         if (value.upgrade.until_quality == null) {
-          throw new Error(`QualityProfile '${name}': upgrade.until_quality is required when upgrade.allowed is true`);
+          throw new ConfigValidationError(`QualityProfile '${name}': upgrade.until_quality is required when upgrade.allowed is true`);
         }
 
         const upgradeUntil = qualityToId.get(value.upgrade.until_quality);
 
         if (upgradeUntil == null) {
-          throw new Error(`Did not find expected Quality to upgrade until: ${value.upgrade.until_quality}`);
+          throw new ConfigValidationError(
+            `QualityProfile '${name}': configured upgrade.until_quality '${value.upgrade.until_quality}' was not found on the server`,
+          );
         }
 
         if (serverMatch.cutoff !== upgradeUntil) {

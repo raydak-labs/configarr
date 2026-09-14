@@ -67,7 +67,43 @@ sonarr:
       - template: sonarr-cf
       - template: sonarr-quality
 
+      - template: bef99584217af744e404ed44a33af589 # series quality definition
+        source: TRASH
+      - template: 387e6278d8e06083d813358762e0ac63 # anime quality definition
+        source: TRASH
+
+      - template: 72dae194fc92bf828f32cde7744e51a1 # WEB-1080p
+        source: TRASH
+      - template: d1498e7d189fbe6c7110ceaabb7473e6 # WEB-2160p
+        source: TRASH
+      - template: 20e0fc959f1f1704bed501f23bdae76f # [Anime] Remux-1080p
+        source: TRASH
+
     custom_formats:
+      - trash_ids:
+          # HQ Source Groups
+          - 9965a052eb87b0d10313b1cea89eb451 # Remux Tier 01
+          # Audio Formats
+          - 0d7824bb924701997f874e7ff7d4844a # TrueHD ATMOS
+          - e0c1a67f23908a55b6ae9834e8ed6727 # Single Episode
+        assign_scores_to:
+          - name: HD-1080p
+      - trash_ids:
+          - 21d9d08e39b05523ec36811ab06b8308 # Black & White
+        assign_scores_to:
+          - name: HD-1080p
+            score: -10
+      - trash_ids:
+          # Streaming Services Anime
+          - a370d974bc7b80374de1d9ba7519760b # ABEMA
+          - e0c1a67f23908a55b6ae9834e8ed6727 # Single Episode
+        assign_scores_to:
+          - name: Remux-1080p - Anime
+      - trash_ids:
+          - 418f50b10f1907201b6cfdf881f467b7 # Anime Dual Audio
+        assign_scores_to:
+          - name: Remux-1080p - Anime
+            score: 2000
       - trash_ids:
           - e6258996055b9fbab7e9cb2f75819294
         assign_scores_to:
@@ -368,9 +404,6 @@ readarr:
       ignore:
         - Standard
         - None
-
-    delete_unmanaged_profiles:
-      enabled: true
 
 lidarr:
   instance1:

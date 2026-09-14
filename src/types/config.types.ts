@@ -19,11 +19,7 @@ import { TrashCF, TrashCFSchema, TrashQualityDefinitionQualitySchema, TrashScore
 export const CustomFormatDefinitionsSchema = z.array(z.union([TrashCFSchema, ConfigarrCFSchema]));
 export type CustomFormatDefinitions = (TrashCF | ConfigarrCF)[];
 
-const ScoreAssignmentSchema = z.object({
-  name: z.string(),
-  score: z.number().optional(),
-  use_default_score: z.boolean().optional(),
-});
+const ScoreAssignmentSchema = z.object({ name: z.string(), score: z.number().optional(), use_default_score: z.boolean().optional() });
 
 export const InputConfigIncludeItemSchema = z.object({
   // depends on source what this actually is. Can be the filename -> recyclarr or id in the files -> trash
@@ -56,12 +52,7 @@ export type InputConfigQualityProfileItem = z.infer<typeof InputConfigQualityPro
 
 export const InputConfigQualityProfileSchema = z.object({
   name: z.string(),
-  reset_unmatched_scores: z
-    .object({
-      enabled: z.boolean(),
-      except: z.array(z.string()).optional(),
-    })
-    .optional(),
+  reset_unmatched_scores: z.object({ enabled: z.boolean(), except: z.array(z.string()).optional() }).optional(),
   // Not a discriminated union on `allowed`: real-world configs (e.g. examples/full)
   // omit `allowed` entirely and rely on its runtime-truthy default of "disabled"
   // (see quality-profiles.ts). The until_quality-required-when-allowed=true invariant
@@ -106,14 +97,7 @@ export type InputConfigCfGroupTrashGuideItem = z.infer<typeof InputConfigCfGroup
 
 export const InputConfigCustomFormatGroupSchema = z.object({
   trash_guide: z.array(InputConfigCfGroupTrashGuideItemSchema).optional(),
-  assign_scores_to: z
-    .array(
-      z.object({
-        name: z.string(),
-        score: z.number().optional(),
-      }),
-    )
-    .optional(),
+  assign_scores_to: z.array(z.object({ name: z.string(), score: z.number().optional() })).optional(),
 });
 export type InputConfigCustomFormatGroup = z.infer<typeof InputConfigCustomFormatGroupSchema>;
 
@@ -186,11 +170,7 @@ export const InputConfigDownloadClientConfigSchema = z.object({
 });
 export type InputConfigDownloadClientConfig = z.infer<typeof InputConfigDownloadClientConfigSchema>;
 
-export const InputConfigRemotePathSchema = z.object({
-  host: z.string(),
-  remote_path: z.string(),
-  local_path: z.string(),
-});
+export const InputConfigRemotePathSchema = z.object({ host: z.string(), remote_path: z.string(), local_path: z.string() });
 export type InputConfigRemotePath = z.infer<typeof InputConfigRemotePathSchema>;
 
 export const InputConfigDelayProfileItemSchema = z.object({
@@ -254,29 +234,16 @@ export type MediaNamingApiType = z.infer<typeof MediaNamingApiTypeSchema>;
 
 export const MediaNamingTypeSchema = z.object({
   folder: z.string().optional(),
-  movie: z
-    .object({
-      rename: z.boolean().optional(),
-      standard: z.string().optional(),
-    })
-    .optional(),
+  movie: z.object({ rename: z.boolean().optional(), standard: z.string().optional() }).optional(),
   series: z.string().optional(),
   season: z.string().optional(),
   episodes: z
-    .object({
-      rename: z.boolean().optional(),
-      standard: z.string().optional(),
-      daily: z.string().optional(),
-      anime: z.string().optional(),
-    })
+    .object({ rename: z.boolean().optional(), standard: z.string().optional(), daily: z.string().optional(), anime: z.string().optional() })
     .optional(),
 });
 export type MediaNamingType = z.infer<typeof MediaNamingTypeSchema>;
 
-const DeleteUnmanagedSchema = z.object({
-  enabled: z.boolean(),
-  ignore: z.array(z.string()).optional(),
-});
+const DeleteUnmanagedSchema = z.object({ enabled: z.boolean(), ignore: z.array(z.string()).optional() });
 
 export const InputConfigLidarrMetadataProfileSchema = z.object({
   name: z.string(),
@@ -335,10 +302,7 @@ export const InputConfigArrInstanceSchema = z.object({
   delete_unmanaged_metadata_profiles: DeleteUnmanagedSchema.optional(),
   root_folders: z.array(InputConfigRootFolderSchema).optional(),
   delay_profiles: z
-    .object({
-      default: InputConfigDelayProfileSchema.optional(),
-      additional: z.array(InputConfigDelayProfileSchema).optional(),
-    })
+    .object({ default: InputConfigDelayProfileSchema.optional(), additional: z.array(InputConfigDelayProfileSchema).optional() })
     .optional(),
   download_clients: z
     .object({

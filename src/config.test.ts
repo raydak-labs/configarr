@@ -28,6 +28,7 @@ import {
 import { TrashQP, TrashQualityDefinition } from "./types/trashguide.types";
 import { cloneWithJSON } from "./util";
 import { logger } from "./logger";
+import { ConfigValidationError, validateConfig } from "./validation";
 
 // Mock ky for URL template tests
 const mockKyGet = vi.hoisted(() => vi.fn());
@@ -1767,6 +1768,44 @@ describe("InputConfigSchemaSchema (regression)", () => {
     const result = InputConfigSchemaSchema.parse(config);
 
     expect(result).toMatchObject(config);
+  });
+
+  test("rejects unknown static configuration keys only when enforcement is enabled", () => {
+    const config = {
+      unknown_root_key: true,
+      radarr: {
+        main: {
+          base_url: "http://radarr:7878",
+          api_key: "key",
+          unknown_instance_key: true,
+          quality_profiles: [{ name: "HD", unknown_profile_key: true }],
+        },
+      },
+    };
+
+    const lenientResult = validateConfig(InputConfigSchemaSchema, config, "config file", false);
+    expect(lenientResult).not.toHaveProperty("unknown_root_key");
+
+    expect(() => validateConfig(InputConfigSchemaSchema, config, "config file", true)).toThrow(ConfigValidationError);
+  });
+
+  test("allows dynamic fields that require server-specific validation", () => {
+    const result = InputConfigSchemaSchema.safeParse({
+      radarr: {
+        main: {
+          base_url: "http://radarr:7878",
+          api_key: "key",
+          media_management: { renameMovies: true },
+          ui_config: { movieInfoLanguage: 1 },
+          media_naming_api: { standardMovieFormat: "{Movie Title}" },
+          download_clients: {
+            data: [{ name: "ruTorrent movies", type: "rtorrent", fields: { movie_imported_category: "movies" } }],
+          },
+        },
+      },
+    });
+
+    expect(result.success).toBe(true);
   });
 
   test("does not silently strip an arr instance's trash_cfgroup_config", () => {
