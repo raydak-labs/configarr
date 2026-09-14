@@ -24,6 +24,7 @@ const ScoreAssignmentSchema = z.object({
   score: z.number().optional(),
   use_default_score: z.boolean().optional(),
 });
+export type ScoreAssignment = z.infer<typeof ScoreAssignmentSchema>;
 
 export const InputConfigIncludeItemSchema = z.object({
   // depends on source what this actually is. Can be the filename -> recyclarr or id in the files -> trash
@@ -46,6 +47,16 @@ export const InputConfigIncludeItemSchema = z.object({
   trash_cfgroup_exclude_cfs: z.array(z.object({ id: z.string() })).optional(),
 });
 export type InputConfigIncludeItem = z.infer<typeof InputConfigIncludeItemSchema>;
+
+// @experimental - A reusable profile: load template(s) and bind every unnamed quality profile
+// inside them to `name`. Lets one file be shared across instances under different names.
+export const InputConfigProfileSchema = z.object({
+  name: z.string(),
+  // A single path/URL/template name, or a list mixing plain strings and full include
+  // items (the latter for `source: TRASH`, `preferred_ratio`, `trash_cfgroup_*`, ...).
+  includes: z.union([z.string(), z.array(z.union([z.string(), InputConfigIncludeItemSchema]))]),
+});
+export type InputConfigProfile = z.infer<typeof InputConfigProfileSchema>;
 
 export const InputConfigQualityProfileItemSchema = z.object({
   name: z.string(),
@@ -316,6 +327,8 @@ export const InputConfigArrInstanceSchema = z.object({
     })
     .optional(),
   include: z.array(InputConfigIncludeItemSchema).optional(),
+  // @experimental - Reusable, name-independent profiles. Processed after `include`.
+  profiles: z.array(InputConfigProfileSchema).optional(),
   // @experimental since v1.12.0 (expanded cf-group semantics since v1.28.0)
   custom_format_groups: z.array(InputConfigCustomFormatGroupSchema).optional(),
   // @experimental @since v1.28.0 - Instance-level defaults for TRaSH auto CF-group loading.
@@ -404,8 +417,9 @@ export type ConfigCustomFormat = Pick<InputConfigCustomFormat, "trash_ids"> & Pi
 
 export type ConfigCustomFormatList = Pick<ConfigArrInstance, "custom_formats">;
 
-export type ConfigArrInstance = OmitTyped<InputConfigArrInstance, "custom_formats" | "include" | "quality_profiles"> & {
+export type ConfigArrInstance = OmitTyped<InputConfigArrInstance, "custom_formats" | "include" | "profiles" | "quality_profiles"> & {
   include?: ConfigIncludeItem[];
+  profiles?: ConfigProfile[];
   custom_formats: ConfigCustomFormat[];
   quality_profiles: ConfigQualityProfile[];
   metadata_profiles?: InputConfigMetadataProfile[];
@@ -425,5 +439,12 @@ export type ConfigIncludeItem = OmitTyped<InputConfigIncludeItem, "source"> & {
   source: InputConfigIncludeItem["source"];
 };
 
+/** A `profiles[]` entry with its shorthand `includes` normalized to a list of include items. */
+export type ConfigProfile = OmitTyped<InputConfigProfile, "includes"> & {
+  includes: ConfigIncludeItem[];
+};
+
 export type InputConfigInstance = OmitTyped<InputConfigArrInstance, "api_key" | "base_url">;
-export type MergedConfigInstance = OmitTyped<ConfigArrInstance, "api_key" | "base_url" | "include">;
+// `include`/`profiles` are fully resolved during merging - omitting them here makes any
+// downstream read of them a compile error instead of a silently ignored field.
+export type MergedConfigInstance = OmitTyped<ConfigArrInstance, "api_key" | "base_url" | "include" | "profiles">;

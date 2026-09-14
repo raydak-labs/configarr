@@ -250,6 +250,12 @@ radarr:
         trash_cfgroup_exclude_cfs:
           - id: dc98083864ea246d05a42df0d05f81cc # remove x265 (HD)
 
+    # (experimental) Reusable profiles: the included file carries no profile name, so the same
+    # file can be bound to a different name here and in any other instance.
+    profiles:
+      - name: ExampleBoundProfile
+        includes: ./profiles/radarr-audio.yml
+
     # Experimental defaults for all TRaSH profile includes in this instance (since v1.28.0)
     trash_cfgroup_config:
       include_optional: true

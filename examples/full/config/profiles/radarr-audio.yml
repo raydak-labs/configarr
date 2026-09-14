@@ -1,0 +1,39 @@
+# Reusable profile definition (experimental).
+#
+# Note that no profile name appears anywhere in this file. It is supplied by the `profiles:`
+# entry in config.yml that includes it, so the same file can be bound to several names, in
+# several instances, without being edited.
+#
+# Included from config.yml as:
+#   profiles:
+#     - name: ExampleBoundProfile
+#       includes: ./profiles/radarr-audio.yml
+
+quality_profiles:
+  - upgrade:
+      allowed: true
+      until_quality: WEB 2160p
+      until_score: 1000
+      min_format_score: 5
+    min_format_score: 0
+    quality_sort: top
+    qualities:
+      - name: Remux-2160p
+      - name: WEB 2160p
+        qualities:
+          - WEBDL-2160p
+          - WEBRip-2160p
+
+custom_formats:
+  - trash_ids:
+      - 496f355514737f7d83bf7aa4d24f8169 # TrueHD Atmos
+    assign_scores_to:
+      - score: 5000
+  - trash_ids:
+      - 2f22d89048b01681dde8afe203bf2e95 # DTS X
+    assign_scores_to:
+      - score: 4500
+  - trash_ids:
+      - 417804f7f2c4308c1f4c5d380d4c4475 # ATMOS (undefined)
+    assign_scores_to:
+      - score: 3000

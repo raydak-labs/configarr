@@ -96,6 +96,34 @@ sonarr:
 - When loading TRaSH-Guides templates from URLs, specify `source: TRASH` in the include entry
 - Network requests have a 30-second timeout
 
+4. **File Templates** <span className="badge badge--warning">Experimental</span>: Include a template by its path on disk
+
+   - Lets you organise templates in subfolders instead of the single flat `localConfigTemplatesPath` directory
+   - The same file can be included from several instances, so a profile lives in exactly one place
+   - Any `include` entry whose `template` contains a `/` or `\`, or ends in `.yml` / `.yaml` / `.json`, is treated as a path
+
+```yaml title="config.yml"
+radarr:
+  movies:
+    # ...
+    include:
+      # Relative paths resolve against the folder containing your config.yml
+      - template: ./profiles/radarr/uhd.yml
+      # Absolute paths are used as-is
+      - template: /data/profiles/shared/audio.yml
+      # TRaSH-Guides JSON is detected automatically from its trash_id
+      - template: ./profiles/radarr/trash-profile.json
+```
+
+**Notes:**
+
+- Relative paths are resolved against the **directory holding `config.yml`** (see `CONFIG_LOCATION`), never the working directory, so the same config behaves identically however configarr is started
+- Both Recyclarr-format YAML and TRaSH-Guides-format JSON are accepted. A file containing a `trash_id` is treated as TRaSH automatically, so `source: TRASH` is optional
+- A template _name_ always wins: if the value also matches a known Recyclarr, local or TRaSH template, that template is used and the file is never read
+- File templates are processed **last**, so they take precedence over the name-resolved sources
+- A missing or malformed file is logged and skipped - it never aborts the run
+- Nested `include:` inside a file template is **not** supported (it logs a warning and is ignored)
+
 ### Repository URL Configuration
 
 You can override the default repository URLs for TRaSH-Guides and Recyclarr templates:
@@ -582,6 +610,79 @@ Notes:
 - not supported in templates and will therefore not be merged!
 - clone order will be displayed in `DEBUG` log
 - **experimental**, available since `v1.10.0`
+
+### Reusable Profiles {#profiles}
+
+<span className="badge badge--warning">Experimental</span>
+
+`profiles:` lets a template file stay free of any profile name, and binds it to one in the config.
+That makes the file reusable: the same file can be shared by several instances, each under a
+different name, without editing it.
+
+```yaml title="config.yml"
+radarr:
+  movies:
+    base_url: !secret RADARR_URL
+    api_key: !secret RADARR_API_KEY
+    profiles:
+      - name: UHD
+        includes: ./profiles/radarr/quality.yml
+      - name: HD
+        # The very same file, bound to a second name
+        includes: ./profiles/radarr/quality.yml
+```
+
+```yaml title="profiles/radarr/quality.yml"
+# Note there is no profile name anywhere in this file.
+custom_formats:
+  - trash_ids:
+      - 496f355514737f7d83bf7aa4d24f8169 # TrueHD Atmos
+    assign_scores_to:
+      - score: 5000
+  - trash_ids:
+      - 2f22d89048b01681dde8afe203bf2e95 # DTS X
+    assign_scores_to:
+      - score: 4500
+```
+
+`includes` accepts a single entry, a list, or full include items - so a profile can be built from
+any template source, not just files:
+
+```yaml
+profiles:
+  - name: UHD
+    includes: ./profiles/uhd.yml # a single path
+  - name: HD
+    includes: # a list
+      - ./profiles/hd.yml
+      - radarr-custom-formats-hd-bluray-web # a Recyclarr template
+  - name: Trash
+    includes:
+      - template: ./profiles/trash-profile.json # a full include item
+        source: TRASH
+```
+
+**How the name is bound:**
+
+| In the included template                   | Result                                                            |
+| ------------------------------------------ | ----------------------------------------------------------------- |
+| No quality profile                         | Only custom format scores are bound to `name`                     |
+| Exactly one quality profile                | It is renamed to `name`, whatever it was called                   |
+| More than one quality profile              | The entry is **skipped** with a warning - use `include:` instead  |
+| A custom format with no `assign_scores_to` | An assignment to `name` is created                                |
+| Any `assign_scores_to` entry               | Its name is set to `name`; `score` / `use_default_score` are kept |
+
+Notes:
+
+- Every score assignment is redirected to `name`, including ones that already name a profile. That
+  is what lets an unmodified upstream template be reused under a name of your choosing.
+- Because only one quality profile may be bound per entry, there is never any ambiguity about
+  which profile those scores belong to.
+- `profiles:` is processed **after** `include:` and **before** the instance's own `custom_formats`
+  and `quality_profiles`, so your instance-level config still wins.
+- [`renameQualityProfiles`](#quality-profile-rename) and [`cloneQualityProfiles`](#quality-profile-clone)
+  run afterwards, so a bound profile can still be renamed or cloned.
+- Binding two entries to the same name is allowed - they merge like any other same-named profiles.
 
 ## Custom Formats Definitions {#custom-format-definitions}
 

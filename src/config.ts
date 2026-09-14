@@ -5,6 +5,7 @@ import yaml from "yaml";
 import { NamingConfigResource as RadarrNamingConfigResource } from "./__generated__/radarr/data-contracts";
 import { NamingConfigResource as SonarrNamingConfigResource } from "./__generated__/sonarr/data-contracts";
 import { getHelpers } from "./env";
+import { isFilePath, loadTemplateFromFile } from "./file-template-importer";
 import { loadLocalRecyclarrTemplate } from "./local-importer";
 import { logger } from "./logger";
 import { filterInvalidQualityProfiles } from "./quality-profiles";
@@ -23,11 +24,12 @@ import {
   transformTrashQPCFs,
   transformTrashQPToTemplate,
 } from "./trash-guide";
-import { ArrType, MappedMergedTemplates, MappedTemplates } from "./types/common.types";
+import { ArrType, MappedMergedTemplates, MappedTemplates, TemplateScoreAssignment } from "./types/common.types";
 import {
   ConfigArrInstance,
   ConfigCustomFormat,
   ConfigIncludeItem,
+  ConfigProfile,
   ConfigQualityProfile,
   ConfigSchema,
   InputConfigArrInstance,
@@ -36,6 +38,7 @@ import {
   InputConfigIncludeItem,
   InputConfigInstance,
   InputConfigMetadataProfile,
+  InputConfigProfile,
   InputConfigRemotePath,
   InputConfigSchema,
   InputConfigSchemaSchema,
@@ -261,7 +264,12 @@ export const transformConfig = (input: InputConfigSchema): ConfigSchema => {
           return { ...rest, assign_scores_to: mapped_assign_scores };
         });
 
-        p[key] = { ...value, include: value.include?.map(parseIncludes), custom_formats: mappedCustomFormats };
+        p[key] = {
+          ...value,
+          include: value.include?.map(parseIncludes),
+          profiles: value.profiles?.map(parseProfile),
+          custom_formats: mappedCustomFormats,
+        };
         return p;
       },
       {} as Record<string, InputConfigArrInstance>,
@@ -287,6 +295,20 @@ export const parseIncludes = (input: InputConfigIncludeItem): ConfigIncludeItem 
   trash_cfgroup_include_cfs: input.trash_cfgroup_include_cfs,
   trash_cfgroup_exclude_cfs: input.trash_cfgroup_exclude_cfs,
 });
+
+/**
+ * Normalize a `profiles[].includes` shorthand into the same shape `include:` uses. Done here
+ * rather than in a Zod `.transform` because validation runs in lenient mode and hands back the
+ * raw, untransformed data on failure - a bare string would then leak downstream.
+ */
+export const parseProfile = (input: InputConfigProfile): ConfigProfile => {
+  const asList = Array.isArray(input.includes) ? input.includes : [input.includes];
+
+  return {
+    name: input.name,
+    includes: asList.map((e) => parseIncludes(typeof e === "string" ? { template: e } : e)),
+  };
+};
 
 /**
  * Validate remote path mappings configuration
@@ -493,6 +515,18 @@ const applyQualityDefinitionFromInclude = (
   logger.info(`QualityDefinition: Applied '${qd.type}' from include (${qualities.length} qualities).`);
 };
 
+/** Everything needed to resolve an `include` list. Shared by `include:` and `profiles:`. */
+type IncludeResolutionContext = {
+  recyclarr: Map<string, MappedTemplates>;
+  local: Map<string, MappedTemplates>;
+  trash: Map<string, TrashQP>;
+  trashQD: Map<string, TrashQualityDefinition>;
+  trashCFGroupMapping: TrashCFGroupMapping;
+  useExcludeSemantics: boolean;
+  cfGroupOptions?: TransformTrashCFGroupsOptions;
+  autoTrashCfGroupDefaults: TransformTrashQPCFGroupsOptions;
+};
+
 const includeTemplateOrderDefault = async (
   include: InputConfigIncludeItem[],
   {
@@ -504,16 +538,7 @@ const includeTemplateOrderDefault = async (
     useExcludeSemantics,
     cfGroupOptions,
     autoTrashCfGroupDefaults,
-  }: {
-    recyclarr: Map<string, MappedTemplates>;
-    local: Map<string, MappedTemplates>;
-    trash: Map<string, TrashQP>;
-    trashQD: Map<string, TrashQualityDefinition>;
-    trashCFGroupMapping: TrashCFGroupMapping;
-    useExcludeSemantics: boolean;
-    cfGroupOptions?: TransformTrashCFGroupsOptions;
-    autoTrashCfGroupDefaults: TransformTrashQPCFGroupsOptions;
-  },
+  }: IncludeResolutionContext,
   { mergedTemplates }: { mergedTemplates: MappedMergedTemplates },
 ) => {
   const resolveAutoTrashCfGroupOptions = (includeItem: InputConfigIncludeItem): TransformTrashQPCFGroupsOptions => ({
@@ -529,11 +554,22 @@ const includeTemplateOrderDefault = async (
     recyclarr: InputConfigIncludeItem[];
     trash: InputConfigIncludeItem[];
     url: InputConfigIncludeItem[];
+    file: InputConfigIncludeItem[];
   }>(
     (previous, current) => {
       // Check if template is a URL - all URLs go to url array, source is passed to loader
       if (isUrl(current.template)) {
         previous.url.push(current);
+        return previous;
+      }
+
+      // Only treat it as a path once it has been ruled out as a known template key, so any
+      // value that resolves today keeps resolving exactly the same way.
+      const isKnownTemplateKey =
+        recyclarr.has(current.template) || local.has(current.template) || trash.has(current.template) || trashQD.has(current.template);
+
+      if (!isKnownTemplateKey && isFilePath(current.template)) {
+        previous.file.push(current);
         return previous;
       }
 
@@ -583,23 +619,24 @@ const includeTemplateOrderDefault = async (
 
       return previous;
     },
-    { recyclarr: [], trash: [], local: [], url: [] },
+    { recyclarr: [], trash: [], local: [], url: [], file: [] },
   );
 
   logger.info(
-    `Found ${include.length} templates to include. Mapped to [recyclarr]=${mappedIncludes.recyclarr.length}, [local]=${mappedIncludes.local.length}, [trash]=${mappedIncludes.trash.length}, [url]=${mappedIncludes.url.length} ...`,
+    `Found ${include.length} templates to include. Mapped to [recyclarr]=${mappedIncludes.recyclarr.length}, [local]=${mappedIncludes.local.length}, [trash]=${mappedIncludes.trash.length}, [url]=${mappedIncludes.url.length}, [file]=${mappedIncludes.file.length} ...`,
   );
 
-  // Process URL templates
-  for (const e of mappedIncludes.url) {
-    const resolvedTemplate = await loadTemplateFromUrl(e.template, e.source);
-    if (resolvedTemplate == null) {
-      logger.warn(`Failed to load template from URL: '${e.template}'`);
-      continue;
-    }
-
-    // Route to appropriate handler based on source
-    if (e.source === "TRASH") {
+  /**
+   * Route an already-resolved template to the right merge function. `kind` is passed in rather
+   * than sniffed here so each caller keeps its own detection rules (URL includes stay keyed on
+   * `source` alone; file includes can auto-detect TRaSH by `trash_id`).
+   */
+  const applyResolvedTemplate = (
+    e: InputConfigIncludeItem,
+    resolvedTemplate: MappedTemplates | TrashQP | TrashQualityDefinition,
+    kind: "TRASH" | "RECYCLARR",
+  ) => {
+    if (kind === "TRASH") {
       if (isTrashQualityDefinition(resolvedTemplate)) {
         applyQualityDefinitionFromInclude(resolvedTemplate, e.preferred_ratio, mergedTemplates);
       } else {
@@ -613,6 +650,18 @@ const includeTemplateOrderDefault = async (
     } else {
       includeRecyclarrTemplate(resolvedTemplate as MappedTemplates, { mergedTemplates, trashCFGroupMapping, cfGroupOptions });
     }
+  };
+
+  // Process URL templates
+  for (const e of mappedIncludes.url) {
+    const resolvedTemplate = await loadTemplateFromUrl(e.template, e.source);
+    if (resolvedTemplate == null) {
+      logger.warn(`Failed to load template from URL: '${e.template}'`);
+      continue;
+    }
+
+    // Route to appropriate handler based on source
+    applyResolvedTemplate(e, resolvedTemplate, e.source === "TRASH" ? "TRASH" : "RECYCLARR");
   }
 
   mappedIncludes.trash.forEach((e) => {
@@ -651,6 +700,102 @@ const includeTemplateOrderDefault = async (
     }
     includeRecyclarrTemplate(resolvedTemplate, { mergedTemplates, trashCFGroupMapping, cfGroupOptions });
   });
+  // File templates last: an explicit path is the most direct reference a user can write, so it
+  // sits closest to the config and wins over the name-resolved sources (see docs/general.md).
+  mappedIncludes.file.forEach((e) => {
+    const loaded = loadTemplateFromFile(e.template, e.source);
+    if (loaded == null) {
+      // loadTemplateFromFile already logged the concrete reason and resolved path.
+      return;
+    }
+    applyResolvedTemplate(e, loaded.template, loaded.kind);
+  });
+};
+
+/**
+ * Rebind everything a single `profiles[]` entry resolved to onto `name`, so a template file can
+ * stay free of any profile name and be reused under a different one per instance.
+ *
+ * Returns false when the entry must be skipped entirely (already logged).
+ */
+export const bindProfileName = (name: string, scratch: MappedMergedTemplates): boolean => {
+  if (scratch.quality_profiles.length > 1) {
+    logger.warn(
+      `Profile '${name}': includes resolve to ${scratch.quality_profiles.length} quality profiles, but a profile entry binds exactly one name. Ignoring this entry - use a plain 'include:' instead, or split the templates.`,
+    );
+    return false;
+  }
+
+  const [qualityProfile] = scratch.quality_profiles;
+
+  if (qualityProfile == null) {
+    // Legitimate: a profile file may only carry custom formats, with the quality profile itself
+    // managed elsewhere (or already present on the server).
+    logger.debug(`Profile '${name}': includes resolve to no quality profile. Binding custom format scores only.`);
+  } else {
+    if (qualityProfile.name !== name) {
+      logger.info(`Profile '${name}': bound included quality profile '${qualityProfile.name}' -> '${name}'.`);
+    }
+    qualityProfile.name = name;
+  }
+
+  // Every score assignment is redirected to the bound name - including ones that already carry a
+  // name. That is what lets an unmodified upstream template be reused under any name; it is safe
+  // because the check above guarantees this scratch holds at most one quality profile, so there
+  // is no other legitimate target for these scores.
+  scratch.custom_formats.forEach((cf) => {
+    const assignments = cf.assign_scores_to as TemplateScoreAssignment[] | undefined;
+
+    if (assignments == null || assignments.length === 0) {
+      cf.assign_scores_to = [{ name }];
+      return;
+    }
+
+    assignments.forEach((assignment) => {
+      if (assignment.name != null && assignment.name !== name) {
+        logger.debug(`Profile '${name}': rebound custom format score assignment '${assignment.name}' -> '${name}'.`);
+      }
+      assignment.name = name;
+    });
+  });
+
+  return true;
+};
+
+/**
+ * Resolve each `profiles[]` entry in isolation and merge the result under the configured name.
+ *
+ * Resolution reuses `includeTemplateOrderDefault` against a scratch buffer, so a profile entry
+ * accepts every include form (file path, URL, recyclarr/local name, trash id) for free.
+ */
+const includeProfileDefinitions = async (
+  profiles: InputConfigProfile[],
+  ctx: IncludeResolutionContext,
+  { mergedTemplates }: { mergedTemplates: MappedMergedTemplates },
+) => {
+  for (const rawProfile of profiles) {
+    // parseProfile is idempotent, so this is safe whether or not transformConfig already ran.
+    const profile: ConfigProfile = parseProfile(rawProfile);
+
+    if (profile.includes.length === 0) {
+      logger.warn(`Profile '${profile.name}' does not include anything. Ignoring.`);
+      continue;
+    }
+
+    const scratch: MappedMergedTemplates = { custom_formats: [], quality_profiles: [] };
+    await includeTemplateOrderDefault(profile.includes, ctx, { mergedTemplates: scratch });
+
+    if (!bindProfileName(profile.name, scratch)) {
+      continue;
+    }
+
+    // A MappedMergedTemplates is a MappedTemplates, so the ordinary merge applies unchanged.
+    includeRecyclarrTemplate(scratch, {
+      mergedTemplates,
+      trashCFGroupMapping: ctx.trashCFGroupMapping,
+      cfGroupOptions: ctx.cfGroupOptions,
+    });
+  }
 };
 
 type MergedScoreInfo = {
@@ -677,6 +822,13 @@ const mergeAndReduceCustomFormats = (cfs: InputConfigCustomFormat[]) => {
       const existing = idToQualityProfileToScore.get(id)!;
 
       [...(cf.quality_profiles || []), ...(cf.assign_scores_to || [])].forEach((qp) => {
+        // Template files bypass schema validation, so a nameless assignment can reach here.
+        // Without this it would silently create a quality profile literally named "undefined".
+        if ((qp as TemplateScoreAssignment).name == null) {
+          logger.warn(`Custom format '${id}' has a score assignment without a profile name. Ignoring it.`);
+          return;
+        }
+
         const hasUseDefaultScore = qp.use_default_score === true;
 
         if (!existing.has(qp.name)) {
@@ -761,23 +913,25 @@ export const mergeConfigsAndTemplates = async (
   const cfGroupOptions: TransformTrashCFGroupsOptions = {
     silenceRequiredCfGroupExclusionWarnings: globalConfig.silenceRequiredCfGroupExclusionWarnings === true,
   };
+  const includeContext: IncludeResolutionContext = {
+    recyclarr: recyclarrTemplateMap,
+    local: localTemplateMap,
+    trash: trashTemplates,
+    trashQD: trashQDTemplates,
+    trashCFGroupMapping,
+    useExcludeSemantics,
+    cfGroupOptions,
+    autoTrashCfGroupDefaults,
+  };
+
   if (instanceConfig.include) {
-    await includeTemplateOrderDefault(
-      instanceConfig.include,
-      {
-        recyclarr: recyclarrTemplateMap,
-        local: localTemplateMap,
-        trash: trashTemplates,
-        trashQD: trashQDTemplates,
-        trashCFGroupMapping,
-        useExcludeSemantics,
-        cfGroupOptions,
-        autoTrashCfGroupDefaults,
-      },
-      {
-        mergedTemplates,
-      },
-    );
+    await includeTemplateOrderDefault(instanceConfig.include, includeContext, { mergedTemplates });
+  }
+
+  // After `include` (so a bound profile can build on included templates) but before the instance's
+  // own custom_formats/quality_profiles, which must keep winning over anything template-provided.
+  if (instanceConfig.profiles) {
+    await includeProfileDefinitions(instanceConfig.profiles, includeContext, { mergedTemplates });
   }
 
   // Now handle instanceConfig custom_format_groups before direct custom_formats

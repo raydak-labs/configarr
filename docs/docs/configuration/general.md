@@ -27,6 +27,8 @@ At the moment we have the following order:
 - TRaSH
 - Recyclarr templates
 - Local Files
+- File templates (`include:` with a path)
+- Profiles (`profiles:`)
 - Config file (global level)
 - Config file (instance level)
 

@@ -1,4 +1,5 @@
 import { getEnvs } from "./env";
+import { isFilePath } from "./file-template-importer";
 import { logger } from "./logger";
 import { ArrType } from "./types/common.types";
 import { InputConfigSchema, InputConfigArrInstance, MergedConfigInstance } from "./types/config.types";
@@ -23,6 +24,7 @@ export interface TelemetryData {
   recyclarr_templates: boolean;
   trash_guide_templates: boolean;
   local_templates: boolean;
+  file_templates: boolean;
 
   // Local paths usage
   local_custom_formats_path: boolean;
@@ -40,6 +42,7 @@ export interface TelemetryData {
   quality_definition: boolean;
   rename_quality_profiles: boolean;
   clone_quality_profiles: boolean;
+  config_profiles: boolean;
   delete_unmanaged_quality_profiles: boolean;
 
   // Media management features
@@ -255,11 +258,14 @@ export class Telemetry {
     let recyclarrTemplateCount = 0;
     let trashGuideTemplateCount = 0;
     let localTemplateCount = 0;
+    let fileTemplateCount = 0;
 
     for (const instance of allInstances) {
       if (instance.include) {
         for (const include of instance.include) {
-          if (include.source === "RECYCLARR") {
+          if (isFilePath(include.template)) {
+            fileTemplateCount++;
+          } else if (include.source === "RECYCLARR") {
             recyclarrTemplateCount++;
           } else if (include.source === "TRASH") {
             trashGuideTemplateCount++;
@@ -297,6 +303,7 @@ export class Telemetry {
       recyclarr_templates: recyclarrTemplateCount > 0,
       trash_guide_templates: trashGuideTemplateCount > 0,
       local_templates: localTemplateCount > 0,
+      file_templates: fileTemplateCount > 0,
 
       // Local paths usage
       local_custom_formats_path: globalConfig.localCustomFormatsPath !== undefined,
@@ -312,6 +319,7 @@ export class Telemetry {
       quality_definition: allInstances.some((i) => i.quality_definition !== undefined),
       rename_quality_profiles: allInstances.some((i) => i.renameQualityProfiles && i.renameQualityProfiles.length > 0),
       clone_quality_profiles: allInstances.some((i) => i.cloneQualityProfiles && i.cloneQualityProfiles.length > 0),
+      config_profiles: allInstances.some((i) => i.profiles && i.profiles.length > 0),
       delete_unmanaged_quality_profiles: allInstances.some((i) => i.delete_unmanaged_quality_profiles?.enabled),
 
       media_management: allInstances.some((i) => i.media_management !== undefined),
