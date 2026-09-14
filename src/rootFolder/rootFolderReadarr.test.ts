@@ -8,17 +8,11 @@ vi.mock("../clients/client", () => ({
   getClient: vi.fn(),
 }));
 
-// Mock the quality profiles loader
-vi.mock("../quality-profiles", () => ({
-  loadQualityProfilesFromServer: vi.fn(),
-}));
-
-import { loadQualityProfilesFromServer } from "../quality-profiles";
-
 describe("ReadarrRootFolderSync", () => {
   const mockApi = {
     getRootfolders: vi.fn(),
     getMetadataProfiles: vi.fn(),
+    getQualityProfiles: vi.fn(),
     createTag: vi.fn(),
   };
 
@@ -29,7 +23,7 @@ describe("ReadarrRootFolderSync", () => {
     vi.mocked(getClient).mockReturnValue(mockApi as unknown as ReturnType<typeof getClient>);
     serverCache = new ServerCache([], [], [], []);
     serverCache.tags = [];
-    vi.mocked(loadQualityProfilesFromServer).mockResolvedValue([
+    mockApi.getQualityProfiles.mockResolvedValue([
       { id: 1, name: "eBook" },
       { id: 2, name: "Audiobook" },
     ]);

@@ -1,12 +1,20 @@
-import { MergedRootFolderResource } from "../types/merged.types";
 import { ServerCache } from "../cache";
-import { getClient, IArrClient } from "../clients/client";
+import { getClient } from "../clients/client";
+import { RadarrClient } from "../clients/radarr-client";
+import { SonarrClient } from "../clients/sonarr-client";
+import { WhisparrClient } from "../clients/whisparr-client";
 import { DiffEntry } from "../diffReport/diffReport.types";
 import { getEnvs } from "../env";
 import { logger } from "../logger";
 import { MediaArrType } from "../types/common.types";
 import { InputConfigRootFolder } from "../types/config.types";
-import { RootFolderDiff, RootFolderSyncResult } from "./rootFolder.types";
+import {
+  GenericRootFolderArrType,
+  RootFolderClient,
+  RootFolderDiff,
+  RootFolderServerResource,
+  RootFolderSyncResult,
+} from "./rootFolder.types";
 
 export function rootFolderDiffToDiffEntries(diff: RootFolderDiff): DiffEntry[] {
   const entries: DiffEntry[] = diff.missingOnServer.map((folder) => ({
@@ -37,11 +45,11 @@ export function rootFolderDiffToDiffEntries(diff: RootFolderDiff): DiffEntry[] {
 
 // Base class for root folder synchronization
 export abstract class BaseRootFolderSync<TConfig extends InputConfigRootFolder = InputConfigRootFolder> {
-  protected api!: IArrClient;
+  protected api!: RootFolderClient;
   protected logger = logger;
 
   abstract calculateDiff(rootFolders: TConfig[], serverCache: ServerCache): Promise<RootFolderDiff<TConfig> | null>;
-  public abstract resolveRootFolderConfig(config: TConfig, serverCache: ServerCache): Promise<MergedRootFolderResource>;
+  public abstract resolveRootFolderConfig(config: TConfig, serverCache: ServerCache): Promise<RootFolderServerResource>;
 
   async syncRootFolders(rootFolders: TConfig[], serverCache: ServerCache): Promise<RootFolderSyncResult> {
     const diff = await this.calculateDiff(rootFolders, serverCache);
@@ -91,9 +99,8 @@ export abstract class BaseRootFolderSync<TConfig extends InputConfigRootFolder =
     return { added, removed, updated, diffEntries };
   }
 
-  protected async loadRootFoldersFromServer(): Promise<MergedRootFolderResource[]> {
-    const result = await this.api.getRootfolders();
-    return result as MergedRootFolderResource[];
+  protected async loadRootFoldersFromServer(): Promise<RootFolderServerResource[]> {
+    return this.api.getRootfolders();
   }
 
   protected abstract getArrType(): MediaArrType;
@@ -101,18 +108,18 @@ export abstract class BaseRootFolderSync<TConfig extends InputConfigRootFolder =
 
 // Generic sync for most arr types (Radarr, Sonarr, etc.)
 export class GenericRootFolderSync extends BaseRootFolderSync<InputConfigRootFolder> {
-  protected api: IArrClient;
+  protected api: SonarrClient | RadarrClient | WhisparrClient;
 
-  constructor(private arrType: MediaArrType) {
+  constructor(private arrType: GenericRootFolderArrType) {
     super();
     this.api = getClient(arrType);
   }
 
-  protected getArrType(): MediaArrType {
+  protected getArrType(): GenericRootFolderArrType {
     return this.arrType;
   }
 
-  public async resolveRootFolderConfig(config: InputConfigRootFolder, serverCache: ServerCache): Promise<MergedRootFolderResource> {
+  public async resolveRootFolderConfig(config: InputConfigRootFolder, serverCache: ServerCache): Promise<RootFolderServerResource> {
     if (typeof config === "string") {
       return { path: config };
     }
@@ -155,7 +162,7 @@ export class GenericRootFolderSync extends BaseRootFolderSync<InputConfigRootFol
     const serverDataSet = new Set(serverDataStrings);
 
     const missingOnServer: InputConfigRootFolder[] = [];
-    const notAvailableAnymore: MergedRootFolderResource[] = [];
+    const notAvailableAnymore: RootFolderServerResource[] = [];
 
     rootFolders.forEach((folder) => {
       const folderPath = typeof folder === "string" ? folder : folder.path;
@@ -185,9 +192,5 @@ export class GenericRootFolderSync extends BaseRootFolderSync<InputConfigRootFol
       notAvailableAnymore,
       changed: [],
     };
-  }
-
-  protected async loadRootFoldersFromServer(): Promise<MergedRootFolderResource[]> {
-    return super.loadRootFoldersFromServer();
   }
 }

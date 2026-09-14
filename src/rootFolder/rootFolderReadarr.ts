@@ -9,7 +9,6 @@ import {
 import { ServerCache } from "../cache";
 import { getClient } from "../clients/client";
 import { FieldChange } from "../diffReport/diffReport.types";
-import { loadQualityProfilesFromServer } from "../quality-profiles";
 import { InputConfigRootFolderReadarr } from "../types/config.types";
 import { compareObjectsCarr } from "../util";
 import { RootFolderDiff } from "./rootFolder.types";
@@ -28,10 +27,7 @@ export class ReadarrRootFolderSync extends BaseRootFolderSync<InputConfigRootFol
     }
 
     // Load quality profiles and metadata profiles for Readarr
-    const [qualityProfiles, metadataProfiles] = await Promise.all([
-      loadQualityProfilesFromServer("READARR"),
-      this.api.getMetadataProfiles(),
-    ]);
+    const [qualityProfiles, metadataProfiles] = await Promise.all([this.api.getQualityProfiles(), this.api.getMetadataProfiles()]);
 
     const qualityProfileMap = new Map<string, number>();
     const metadataProfileMap = new Map<string, number>();
