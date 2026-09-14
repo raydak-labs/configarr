@@ -25,7 +25,7 @@ export const getUnifiedClient = (): UnifiedClient => {
 /**
  * Type map that maps ArrType to its corresponding client type
  */
-type ArrTypeToClient = {
+export type ArrTypeToClient = {
   RADARR: RadarrClient;
   SONARR: SonarrClient;
   LIDARR: LidarrClient;
@@ -40,7 +40,7 @@ type ArrTypeToClient = {
  * Type-safe: TypeScript will infer the correct client type based on the arrType parameter.
  * @throws Error if the requested arrType doesn't match the configured client type
  */
-export function getSpecificClient<T extends ArrType>(arrType: T): ArrTypeToClient[T] {
+export function getClient<T extends ArrType>(arrType: T): ArrTypeToClient[T] {
   const client = getUnifiedClient();
   // Validate that the requested type matches the configured client type
   if (client.type !== arrType) {
@@ -48,7 +48,12 @@ export function getSpecificClient<T extends ArrType>(arrType: T): ArrTypeToClien
       `Type mismatch: requested ${arrType} but client is configured for ${client.type}. Ensure configureApi is called with the correct arrType.`,
     );
   }
-  return (client as any).api;
+  return client.getApi() as ArrTypeToClient[T];
+}
+
+/** @deprecated Use {@link getClient}. */
+export function getSpecificClient<T extends ArrType>(arrType: T): ArrTypeToClient[T] {
+  return getClient(arrType);
 }
 
 export const validateClientParams = (url: string, apiKey: string, arrType: ArrType) => {
@@ -132,7 +137,7 @@ export const createConnectionErrorParts = (error: unknown): string[] => {
   return [friendly, structuredMessage, errorMessage].filter((part, index, self) => part && self.indexOf(part) === index) as string[];
 };
 
-export const configureApi = async (type: ArrType, baseUrl: string, apiKey: string) => {
+export const configureApi = async <T extends ArrType>(type: T, baseUrl: string, apiKey: string): Promise<ArrTypeToClient[T]> => {
   unsetApi();
 
   unifiedClient = new UnifiedClient(type, baseUrl, apiKey);
@@ -140,7 +145,7 @@ export const configureApi = async (type: ArrType, baseUrl: string, apiKey: strin
 
   try {
     connectionSuccessful = await unifiedClient.testConnection();
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error(`Unhandled connection error.`);
     throw error;
   }
@@ -149,7 +154,7 @@ export const configureApi = async (type: ArrType, baseUrl: string, apiKey: strin
     throw new Error(`Could not connect to client: ${type} - ${baseUrl}`);
   }
 
-  return unifiedClient;
+  return getClient(type);
 };
 
 export type ArrClientCustomFormat = {
@@ -235,6 +240,10 @@ export interface IArrClient<
 export class UnifiedClient implements IArrClient {
   private api!: IArrClient;
   readonly type: ArrType;
+
+  getApi(): IArrClient {
+    return this.api;
+  }
 
   constructor(type: ArrType, baseUrl: string, apiKey: string) {
     this.type = type;
