@@ -7,6 +7,7 @@ import {
   MergedQualityProfileResource,
 } from "./types/merged.types";
 import { ServerCache } from "./cache";
+import { QualityDefinitionLike } from "./clients/capabilities";
 import { ArrClientLanguageResource, getClient } from "./clients/client";
 import { DiffEntry, FieldChange } from "./diffReport/diffReport.types";
 import { getEnvs } from "./env";
@@ -107,7 +108,7 @@ export const loadQualityProfilesFromServer = async (arrType: MediaArrType): Prom
 };
 
 // TODO should we use clones or not?
-export const mapQualities = (qd_source: MergedQualityDefinitionResource[], value_source: ConfigQualityProfile) => {
+export const mapQualities = (qd_source: QualityDefinitionLike[], value_source: ConfigQualityProfile) => {
   const qd = cloneWithJSON(qd_source);
   const value = cloneWithJSON(value_source);
 

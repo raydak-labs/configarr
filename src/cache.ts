@@ -1,16 +1,12 @@
-import {
-  MergedCustomFormatResource,
-  MergedQualityDefinitionResource,
-  MergedQualityProfileResource,
-  MergedTagResource,
-} from "./types/merged.types";
+import { MergedCustomFormatResource, MergedQualityProfileResource, MergedTagResource } from "./types/merged.types";
+import { QualityDefinitionLike } from "./clients/capabilities";
 import { ArrClientLanguageResource } from "./clients/client";
 import { logger } from "./logger";
 import type { DownloadClientResource } from "./types/download-client.types";
 
 export class ServerCache {
   private cache: Record<string, any> = {};
-  private _qd: MergedQualityDefinitionResource[];
+  private _qd: QualityDefinitionLike[];
   private _qp: MergedQualityProfileResource[];
   private _cf: MergedCustomFormatResource[];
   private _tags: MergedTagResource[] = [];
@@ -18,7 +14,7 @@ export class ServerCache {
   private _downloadClientSchema: DownloadClientResource[] | null = null;
 
   constructor(
-    qd: MergedQualityDefinitionResource[],
+    qd: QualityDefinitionLike[],
     qp: MergedQualityProfileResource[],
     cf: MergedCustomFormatResource[],
     languages: ArrClientLanguageResource[],
@@ -41,7 +37,7 @@ export class ServerCache {
     return this._qd;
   }
 
-  public set qd(newQd: MergedQualityDefinitionResource[]) {
+  public set qd(newQd: QualityDefinitionLike[]) {
     if (newQd == null || newQd.length <= 0) {
       // Empty should never happen
       logger.debug(`No QualityDefinition received from server.`);

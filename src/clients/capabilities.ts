@@ -49,6 +49,16 @@ export interface CustomFormatsClient<CF extends CustomFormatLike = CustomFormatL
 
 export interface QualityDefinitionLike {
   id?: number;
+  title?: string | null;
+  minSize?: number | null;
+  maxSize?: number | null;
+  preferredSize?: number | null;
+  quality?: {
+    id?: number;
+    name?: string | null;
+    resolution?: number;
+    source?: string;
+  } | null;
 }
 
 export interface QualityDefinitionsClient<QD extends QualityDefinitionLike = QualityDefinitionLike> {

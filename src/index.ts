@@ -27,7 +27,12 @@ import {
   mediamanagementDiffToDiffEntries,
   namingDiffToDiffEntries,
 } from "./media-management";
-import { calculateQualityDefinitionDiff, loadQualityDefinitionFromServer, qualityDefinitionsToDiffEntries } from "./quality-definitions";
+import {
+  calculateQualityDefinitionDiff,
+  loadQualityDefinitionFromServer,
+  qualityDefinitionsToDiffEntries,
+  updateQualityDefinitionsOnServer,
+} from "./quality-definitions";
 import { DiffCollector } from "./diffReport/diffCollector";
 import { ConsoleDiffFormatter } from "./diffReport/formatters/consoleFormatter";
 import { writeJsonDiffReport } from "./diffReport/formatters/jsonFormatter";
@@ -185,7 +190,7 @@ const pipeline = async (
         logger.info("DryRun: Would update QualityDefinitions.");
       } else {
         logger.info(`Diffs in quality definitions found ${changeMap.values()}`);
-        await api.updateQualityDefinitions(restData);
+        await updateQualityDefinitionsOnServer(arrType, restData);
         // refresh QDs
         serverCache.qd = await loadQualityDefinitionFromServer(arrType);
         logger.info(`Updated QualityDefinitions`);

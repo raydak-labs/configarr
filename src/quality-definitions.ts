@@ -1,5 +1,5 @@
 import path from "node:path";
-import { MergedQualityDefinitionResource } from "./types/merged.types";
+import { QualityDefinitionLike, QualityDefinitionsClient } from "./clients/capabilities";
 import { getClient } from "./clients/client";
 import { getEnvs } from "./env";
 import { logger } from "./logger";
@@ -8,15 +8,20 @@ import { TrashQualityDefinitionQuality } from "./types/trashguide.types";
 import { cloneWithJSON, loadJsonFile, roundToDecimal } from "./util";
 import { DiffEntry, FieldChange } from "./diffReport/diffReport.types";
 
-export const loadQualityDefinitionFromServer = async (arrType: MediaArrType): Promise<MergedQualityDefinitionResource[]> => {
+export const loadQualityDefinitionFromServer = async (arrType: MediaArrType): Promise<QualityDefinitionLike[]> => {
   if (getEnvs().LOAD_LOCAL_SAMPLES) {
     return loadJsonFile(path.resolve(__dirname, "../tests/samples/qualityDefinition.json"));
   }
   return await getClient(arrType).getQualityDefinitions();
 };
 
+export const updateQualityDefinitionsOnServer = async (arrType: MediaArrType, restData: QualityDefinitionLike[]) => {
+  const api: QualityDefinitionsClient = getClient(arrType);
+  return api.updateQualityDefinitions(restData);
+};
+
 export const calculateQualityDefinitionDiff = (
-  serverQDs: MergedQualityDefinitionResource[],
+  serverQDs: QualityDefinitionLike[],
   // TODO: this does not has to include all QDs right?
   qualityDefinitions: TrashQualityDefinitionQuality[],
   // TODO add config defined qualities
@@ -24,10 +29,10 @@ export const calculateQualityDefinitionDiff = (
   const serverMap = serverQDs.reduce((p, c) => {
     p.set(c.quality!.name!, c);
     return p;
-  }, new Map<string, MergedQualityDefinitionResource>());
+  }, new Map<string, QualityDefinitionLike>());
 
   const changeMap = new Map<string, FieldChange[]>();
-  const restData: MergedQualityDefinitionResource[] = [];
+  const restData: QualityDefinitionLike[] = [];
 
   const missingServerQualities = new Map(serverMap);
 
