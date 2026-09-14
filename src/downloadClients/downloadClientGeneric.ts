@@ -213,7 +213,7 @@ export class GenericDownloadClientSync extends BaseDownloadClientSync {
       partialUpdate,
     );
 
-    return {
+    const payload: DownloadClientResource = {
       enable: config.enable ?? serverClient?.enable ?? true,
       protocol: template.protocol,
       priority: config.priority ?? serverClient?.priority ?? 1,
@@ -227,5 +227,14 @@ export class GenericDownloadClientSync extends BaseDownloadClientSync {
       infoLink: template.infoLink,
       tags: tagIds,
     };
+
+    // Prowlarr SQLite requires Categories NOT NULL; media *arrs have no such field.
+    if (this.arrType === "PROWLARR") {
+      const serverCategories = (serverClient as { categories?: unknown } | undefined)?.categories;
+      const templateCategories = (template as { categories?: unknown }).categories;
+      return Object.assign({}, payload, { categories: serverCategories ?? templateCategories ?? [] });
+    }
+
+    return payload;
   }
 }

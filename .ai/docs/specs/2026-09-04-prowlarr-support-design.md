@@ -24,7 +24,10 @@ command, whose name is a runtime string absent from the OpenAPI spec.
 
 Prowlarr's `DownloadClientResource` is not added to the shared union because it lacks
 `removeCompleted/FailedDownloads`. The client casts its download client returns to the shared
-type, which lets the arr-agnostic `syncDownloadClients` run unchanged.
+type, which lets the arr-agnostic `syncDownloadClients` run unchanged. Prowlarr SQLite still
+requires `categories` on write (OpenAPI marks it optional; schema default is `[]`). `resolveConfig`
+copies `categories` from the server resource, else the schema template, else `[]`, only for
+`PROWLARR`.
 
 Applications, indexers and indexer proxies are all provider resources: a named thing backed by
 an implementation schema, with a `fields[]` array and numeric `tags[]`. They share

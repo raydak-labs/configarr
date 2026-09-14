@@ -17,6 +17,17 @@ vi.mock("../clients/unified-client", () => ({
   })),
 }));
 
+const qbitSchema = (extra: Record<string, unknown> = {}): DownloadClientResource =>
+  ({
+    implementation: "QBittorrent",
+    implementationName: "qBittorrent",
+    protocol: DownloadProtocol.Torrent,
+    fields: [{ name: "host", value: "" }],
+    configContract: "QBittorrentSettings",
+    infoLink: "",
+    ...extra,
+  }) as DownloadClientResource;
+
 describe("GenericDownloadClientSync – ARR type handling", () => {
   let sync: GenericDownloadClientSync;
 
@@ -464,6 +475,57 @@ describe("GenericDownloadClientSync – ARR type handling", () => {
       const unmanagedClients = sync.filterUnmanagedClients(serverClients, configClients, deleteConfig);
 
       expect(unmanagedClients).toEqual([]);
+    });
+  });
+
+  describe("resolveConfig categories", () => {
+    const config: InputConfigDownloadClient = {
+      name: "qBittorrent",
+      type: "qbittorrent",
+      enable: false,
+      fields: { host: "qbittorrent" },
+    };
+
+    test("PROWLARR create uses schema categories (default [])", async () => {
+      const sync = new GenericDownloadClientSync("PROWLARR");
+      const cache = new ServerCache([], [], [], []);
+      cache.setDownloadClientSchema([qbitSchema({ categories: [] })]);
+
+      const payload = await sync.resolveConfig(config, cache);
+      expect((payload as { categories?: unknown }).categories).toEqual([]);
+      expect(payload.removeCompletedDownloads).toBe(true);
+    });
+
+    test("PROWLARR create uses [] when schema omits categories", async () => {
+      const sync = new GenericDownloadClientSync("PROWLARR");
+      const cache = new ServerCache([], [], [], []);
+      cache.setDownloadClientSchema([qbitSchema()]);
+
+      const payload = await sync.resolveConfig(config, cache);
+      expect((payload as { categories?: unknown }).categories).toEqual([]);
+    });
+
+    test("PROWLARR update keeps server categories", async () => {
+      const sync = new GenericDownloadClientSync("PROWLARR");
+      const cache = new ServerCache([], [], [], []);
+      cache.setDownloadClientSchema([qbitSchema({ categories: [] })]);
+      const server = qbitSchema({
+        id: 1,
+        name: "qBittorrent",
+        categories: [{ clientCategory: "tv", categories: [5000] }],
+      });
+
+      const payload = await sync.resolveConfig(config, cache, server);
+      expect((payload as { categories?: unknown }).categories).toEqual([{ clientCategory: "tv", categories: [5000] }]);
+    });
+
+    test("RADARR create does not set categories", async () => {
+      const sync = new GenericDownloadClientSync("RADARR");
+      const cache = new ServerCache([], [], [], []);
+      cache.setDownloadClientSchema([qbitSchema({ categories: [] })]);
+
+      const payload = await sync.resolveConfig(config, cache);
+      expect(payload).not.toHaveProperty("categories");
     });
   });
 });
