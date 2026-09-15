@@ -1,6 +1,6 @@
 # Post-handler cleanup (bugs, N+1, leftovers)
 
-Status: implementing (2026-09-15). Follows generated-contracts / handler-split. Cross-checked against the tree.
+Status: implemented (2026-09-15). Follows generated-contracts / handler-split. Cross-checked against the tree.
 
 Constraints: pnpm; no `CHANGELOG.md`; no `toContract` / DI / handler cache / `Merged*`; Pattern A one class file per *arr; YAML→enum via that arr’s enum object; OpenAPI extras as intersection in that arr file; `src/<feature>/*.types.ts` = YAML / TRaSH / diff only; `QualityProfileShared` stays a mapping DTO.
 
