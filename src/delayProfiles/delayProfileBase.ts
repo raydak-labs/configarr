@@ -107,7 +107,10 @@ export function areDelayProfileItemsEqual(
 }
 
 export function areTagsEqual(tags1: number[], tags2: number[]): boolean {
-  return tags1.length === tags2.length && tags1.sort().join(",") === tags2.sort().join(",");
+  if (tags1.length !== tags2.length) return false;
+  const a = [...tags1].sort((x, y) => x - y);
+  const b = [...tags2].sort((x, y) => x - y);
+  return a.every((v, i) => v === b[i]);
 }
 
 export function getProfileTags(profile: { tags?: number[] | null }): number[] {

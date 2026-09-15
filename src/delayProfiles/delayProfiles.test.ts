@@ -348,3 +348,15 @@ describe("DelayProfiles", () => {
     });
   });
 });
+
+describe("areTagsEqual", () => {
+  test("does not mutate input arrays", async () => {
+    const { areTagsEqual } = await import("./delayProfileBase");
+    const left = [3, 1, 2];
+    const right = [2, 3, 1];
+
+    expect(areTagsEqual(left, right)).toBe(true);
+    expect(left).toEqual([3, 1, 2]);
+    expect(right).toEqual([2, 3, 1]);
+  });
+});
