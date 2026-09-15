@@ -2,10 +2,10 @@ import { DiffEntry, FieldChange } from "../diffReport/diffReport.types";
 import { logger } from "../logger";
 import type { MediaManagementClient } from "../clients/capabilities";
 import { MediaManagementType, MediaNamingApiType } from "../types/config.types";
-import { compareMediamanagement, compareNaming } from "../util";
+import { compareObjectsCarr } from "../util";
 
 export function calculateNamingDiffFor<T extends { id?: number }>(server: T, config: MediaNamingApiType) {
-  const { changes, equal } = compareNaming(server, config);
+  const { changes, equal } = compareObjectsCarr(server, config);
 
   if (equal) {
     logger.debug(`Media naming API settings are in sync`);
@@ -27,7 +27,7 @@ export function calculateNamingDiffFor<T extends { id?: number }>(server: T, con
 export function calculateMediamanagementDiffFor<T extends { id?: number }>(server: T, config: MediaManagementType) {
   logger.debug(server as object, "Media Server");
   logger.debug(config as object, "Media Local");
-  const { changes, equal } = compareMediamanagement(server, config);
+  const { changes, equal } = compareObjectsCarr(server, config);
 
   if (equal) {
     logger.debug(`Media management settings are in sync`);

@@ -117,14 +117,6 @@ export function compareCustomFormats(
   return compareObjectsCarr(serverObject, localObject);
 }
 
-export function compareNaming(serverObject: any, localObject: any): ReturnType<typeof compareObjectsCarr> {
-  return compareObjectsCarr(serverObject, localObject);
-}
-
-export function compareMediamanagement(serverObject: any, localObject: any): ReturnType<typeof compareObjectsCarr> {
-  return compareObjectsCarr(serverObject, localObject);
-}
-
 // Detects a pure reorder: same length, not already in the same order, but every element in one
 // array has a matching element (by count) in the other. Duplicate-aware so a real count change
 // (e.g. two "a"s becoming one "a" and one extra "b") isn't mistaken for a reorder.
