@@ -8,11 +8,10 @@ import { ReadarrClient } from "../../src/clients/readarr-client";
 import { SonarrClient } from "../../src/clients/sonarr-client";
 import { WhisparrClient } from "../../src/clients/whisparr-client";
 import { DelayProfilePayload } from "../../src/delayProfiles/delayProfile.types";
+import type { MediaArrType } from "../../src/types/common.types";
 
 export const DEFAULT_API_KEY = "e2etestapikey0123456789abcdef012";
 export const arrE2eEnabled = process.env.ARR_E2E === "1";
-
-export type ArrKind = "sonarr" | "radarr" | "whisparr" | "readarr" | "lidarr";
 
 export type DelayProfileClient = {
   getSystemStatus: () => Promise<{ version?: string | null; appName?: string | null }>;
@@ -21,7 +20,7 @@ export type DelayProfileClient = {
 };
 
 type ArrTarget = {
-  kind: ArrKind;
+  kind: MediaArrType;
   defaultBaseUrl: string;
   statusPath: string;
   createClient: (baseUrl: string, apiKey: string) => DelayProfileClient;
@@ -29,38 +28,38 @@ type ArrTarget = {
 
 export const ARR_TARGETS: ArrTarget[] = [
   {
-    kind: "sonarr",
+    kind: "SONARR",
     defaultBaseUrl: "http://127.0.0.1:18989",
     statusPath: "/api/v3/system/status",
     createClient: (baseUrl, apiKey) => new SonarrClient(baseUrl, apiKey),
   },
   {
-    kind: "radarr",
+    kind: "RADARR",
     defaultBaseUrl: "http://127.0.0.1:17878",
     statusPath: "/api/v3/system/status",
     createClient: (baseUrl, apiKey) => new RadarrClient(baseUrl, apiKey),
   },
   {
-    kind: "whisparr",
+    kind: "WHISPARR",
     defaultBaseUrl: "http://127.0.0.1:16969",
     statusPath: "/api/v3/system/status",
     createClient: (baseUrl, apiKey) => new WhisparrClient(baseUrl, apiKey),
   },
   {
-    kind: "readarr",
+    kind: "READARR",
     defaultBaseUrl: "http://127.0.0.1:18787",
     statusPath: "/api/v1/system/status",
     createClient: (baseUrl, apiKey) => new ReadarrClient(baseUrl, apiKey),
   },
   {
-    kind: "lidarr",
+    kind: "LIDARR",
     defaultBaseUrl: "http://127.0.0.1:18686",
     statusPath: "/api/v1/system/status",
     createClient: (baseUrl, apiKey) => new LidarrClient(baseUrl, apiKey),
   },
 ];
 
-export function resolveArrConnection(kind: ArrKind, defaultBaseUrl: string): { baseUrl: string; apiKey: string } {
+export function resolveArrConnection(kind: MediaArrType, defaultBaseUrl: string): { baseUrl: string; apiKey: string } {
   const upper = kind.toUpperCase();
   return {
     baseUrl: process.env[`${upper}_BASE_URL`] ?? defaultBaseUrl,
@@ -87,7 +86,7 @@ export const LEGACY_DELAY_PROFILE_RESET = {
   bypassIfHighestQuality: false,
 };
 
-export function defaultDelayProfile(profiles: DelayProfilePayload[]): DelayProfilePayload | undefined {
+export function defaultDelayProfile<T extends DelayProfilePayload>(profiles: T[]): T | undefined {
   return profiles.find((p) => !p.tags?.length) ?? profiles[0];
 }
 
@@ -118,8 +117,8 @@ export async function waitForAllArrApis(timeoutMs = 180_000): Promise<void> {
   );
 }
 
-function delayProfilesYaml(kind: ArrKind): string {
-  if (kind === "lidarr") {
+function delayProfilesYaml(kind: MediaArrType): string {
+  if (kind === "LIDARR") {
     return `    delay_profiles:
       default:
         items:
@@ -152,7 +151,7 @@ function delayProfilesYaml(kind: ArrKind): string {
 export function buildFullPipelineConfigYaml(): string {
   const blocks = ARR_TARGETS.map((target) => {
     const { baseUrl, apiKey } = resolveArrConnection(target.kind, target.defaultBaseUrl);
-    return `${target.kind}:
+    return `${target.kind.toLowerCase() as Lowercase<MediaArrType>}:
   e2e:
     base_url: ${baseUrl}
     api_key: ${apiKey}
@@ -219,7 +218,7 @@ export async function runConfigarr(env: Record<string, string>, timeoutMs = 300_
   });
 }
 
-export function assertPipelineSucceeded(result: ConfigarrRunResult, kinds: ArrKind[] = ARR_TARGETS.map((t) => t.kind)): void {
+export function assertPipelineSucceeded(result: ConfigarrRunResult, kinds: MediaArrType[] = ARR_TARGETS.map((t) => t.kind)): void {
   if (result.exitCode !== 0) {
     throw new Error(`configarr exited ${result.exitCode}\n--- stdout ---\n${result.stdout}\n--- stderr ---\n${result.stderr}`);
   }

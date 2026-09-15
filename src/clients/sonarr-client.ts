@@ -4,6 +4,7 @@ import {
   CustomFormatResource,
   DelayProfileResource,
   DownloadClientConfigResource,
+  DownloadClientResource as GeneratedDownloadClientResource,
   LanguageResource,
   MediaManagementConfigResource,
   NamingConfigResource,
@@ -16,7 +17,11 @@ import {
   UiConfigResource,
 } from "../__generated__/sonarr/data-contracts";
 import { logger } from "../logger";
-import type { DownloadClientResource } from "../types/download-client.types";
+import type { CustomFormatRequest } from "../customFormats/customFormat.types";
+import type { DelayProfileGenericResource } from "../delayProfiles/delayProfile.types";
+import type { MediaDownloadClientResource } from "../downloadClients/downloadClient.types";
+import type { QualityDefinitionPreferredResource } from "../qualityDefinitions/qualityDefinition.types";
+import type { QualityProfileSonarrResource } from "../qualityProfiles/qualityProfile.types";
 import { logConnectionError, validateClientParams } from "./connection";
 import {
   CustomFormatsClient,
@@ -31,9 +36,9 @@ export class SonarrClient
     SystemClient,
     TagsClient,
     DownloadClientsClient,
-    QualityProfilesClient<QualityProfileResource>,
-    CustomFormatsClient<CustomFormatResource>,
-    QualityDefinitionsClient<QualityDefinitionResource>
+    QualityProfilesClient<QualityProfileSonarrResource>,
+    CustomFormatsClient,
+    QualityDefinitionsClient<QualityDefinitionPreferredResource>
 {
   private api!: Api<unknown>;
 
@@ -59,13 +64,13 @@ export class SonarrClient
   }
 
   // Quality Management
-  getQualityDefinitions() {
-    return this.api.v3QualitydefinitionList();
+  getQualityDefinitions(): Promise<QualityDefinitionPreferredResource[]> {
+    return this.api.v3QualitydefinitionList() as Promise<QualityDefinitionPreferredResource[]>;
   }
 
-  async updateQualityDefinitions(definitions: QualityDefinitionResource[]) {
-    this.api.v3QualitydefinitionUpdateUpdate(definitions);
-    return this.api.v3QualitydefinitionList();
+  async updateQualityDefinitions(definitions: QualityDefinitionPreferredResource[]): Promise<QualityDefinitionPreferredResource[]> {
+    this.api.v3QualitydefinitionUpdateUpdate(definitions as QualityDefinitionResource[]);
+    return this.api.v3QualitydefinitionList() as Promise<QualityDefinitionPreferredResource[]>;
   }
 
   // Quality Profiles
@@ -73,12 +78,12 @@ export class SonarrClient
     return this.api.v3QualityprofileList();
   }
 
-  createQualityProfile(profile: QualityProfileResource) {
-    return this.api.v3QualityprofileCreate(profile);
+  createQualityProfile(profile: QualityProfileSonarrResource) {
+    return this.api.v3QualityprofileCreate(profile as QualityProfileResource);
   }
 
-  updateQualityProfile(id: string, profile: QualityProfileResource) {
-    return this.api.v3QualityprofileUpdate(id, profile);
+  updateQualityProfile(id: string, profile: QualityProfileSonarrResource) {
+    return this.api.v3QualityprofileUpdate(id, profile as QualityProfileResource);
   }
 
   deleteQualityProfile(id: string): Promise<void> {
@@ -90,12 +95,12 @@ export class SonarrClient
     return this.api.v3CustomformatList();
   }
 
-  createCustomFormat(format: CustomFormatResource) {
-    return this.api.v3CustomformatCreate(format);
+  createCustomFormat(format: CustomFormatRequest) {
+    return this.api.v3CustomformatCreate(format as CustomFormatResource);
   }
 
-  updateCustomFormat(id: string, format: CustomFormatResource) {
-    return this.api.v3CustomformatUpdate(id, format);
+  updateCustomFormat(id: string, format: CustomFormatRequest) {
+    return this.api.v3CustomformatUpdate(id, format as CustomFormatResource);
   }
 
   deleteCustomFormat(id: string) {
@@ -147,12 +152,12 @@ export class SonarrClient
     return this.api.v3DelayprofileList();
   }
 
-  async createDelayProfile(profile: DelayProfileResource): Promise<DelayProfileResource> {
-    return this.api.v3DelayprofileCreate(profile);
+  async createDelayProfile(profile: DelayProfileGenericResource): Promise<DelayProfileResource> {
+    return this.api.v3DelayprofileCreate(profile as DelayProfileResource);
   }
 
-  async updateDelayProfile(id: string, data: DelayProfileResource): Promise<DelayProfileResource> {
-    return this.api.v3DelayprofileUpdate(id, data);
+  async updateDelayProfile(id: string, data: DelayProfileGenericResource): Promise<DelayProfileResource> {
+    return this.api.v3DelayprofileUpdate(id, data as DelayProfileResource);
   }
 
   async deleteDelayProfile(id: string): Promise<void> {
@@ -168,28 +173,28 @@ export class SonarrClient
   }
 
   // Download Clients
-  async getDownloadClientSchema(): Promise<DownloadClientResource[]> {
+  async getDownloadClientSchema(): Promise<MediaDownloadClientResource[]> {
     return this.api.v3DownloadclientSchemaList();
   }
 
-  async getDownloadClients(): Promise<DownloadClientResource[]> {
+  async getDownloadClients(): Promise<MediaDownloadClientResource[]> {
     return this.api.v3DownloadclientList();
   }
 
-  async createDownloadClient(client: DownloadClientResource): Promise<DownloadClientResource> {
-    return this.api.v3DownloadclientCreate(client);
+  async createDownloadClient(client: MediaDownloadClientResource): Promise<MediaDownloadClientResource> {
+    return this.api.v3DownloadclientCreate(client as GeneratedDownloadClientResource);
   }
 
-  async updateDownloadClient(id: string, client: DownloadClientResource): Promise<DownloadClientResource> {
-    return this.api.v3DownloadclientUpdate(+id, client);
+  async updateDownloadClient(id: string, client: MediaDownloadClientResource): Promise<MediaDownloadClientResource> {
+    return this.api.v3DownloadclientUpdate(+id, client as GeneratedDownloadClientResource);
   }
 
   async deleteDownloadClient(id: string): Promise<void> {
     return this.api.v3DownloadclientDelete(+id);
   }
 
-  async testDownloadClient(client: DownloadClientResource): Promise<void> {
-    return this.api.v3DownloadclientTestCreate(client);
+  async testDownloadClient(client: MediaDownloadClientResource): Promise<void> {
+    return this.api.v3DownloadclientTestCreate(client as GeneratedDownloadClientResource);
   }
 
   // Download Client Configuration

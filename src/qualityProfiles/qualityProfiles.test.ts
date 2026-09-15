@@ -4,7 +4,7 @@ import * as uclient from "../clients/client";
 import * as log from "../logger";
 import { CustomFormatRequest } from "../customFormats/customFormat.types";
 import { QualityDefinitionPayload } from "../qualityDefinitions/qualityDefinition.types";
-import { QualityItem, QualityProfilePayload } from "./qualityProfile.types";
+import { QualityItem, QualityProfilePayload, QualityProfileRadarrWhisparrResource } from "./qualityProfile.types";
 import { ServerCache } from "../cache";
 import {
   calculateQualityProfilesDiff,
@@ -19,12 +19,12 @@ import {
   mapQualityProfiles,
   qualityProfilesToDiffEntries,
 } from "./qualityProfiles";
-import { CFProcessing } from "../types/common.types";
+import { CFProcessing } from "../customFormats/customFormat.types";
 import { ConfigQualityProfile, ConfigQualityProfileItem, MergedConfigInstance } from "../types/config.types";
 import { cloneWithJSON, loadJsonFile } from "../util";
 
 describe("QualityProfiles", async () => {
-  const sampleQualityProfile = loadJsonFile<QualityProfilePayload>(
+  const sampleQualityProfile = loadJsonFile<QualityProfileRadarrWhisparrResource>(
     path.resolve(__dirname, `../../tests/samples/single_quality_profile.json`),
   );
 
@@ -474,7 +474,7 @@ describe("QualityProfiles", async () => {
 
     const diff = await calculateQualityProfilesDiff("RADARR", cfMap, config, serverCache);
     expect(diff.changedQPs.length).toBe(1);
-    expect(diff.changedQPs[0]!.language).toEqual({ id: 0, name: "Any" });
+    expect((diff.changedQPs[0] as QualityProfileRadarrWhisparrResource).language).toEqual({ id: 0, name: "Any" });
   });
 
   test("calculateQualityProfilesDiff - should warn when default Any language is missing from server (radarr)", async ({}) => {

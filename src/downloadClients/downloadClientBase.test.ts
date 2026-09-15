@@ -1,19 +1,20 @@
-import { describe, expect, test, vi, beforeEach } from "vitest";
+import { describe, expect, test, beforeEach } from "vitest";
 import { BaseDownloadClientSync } from "./downloadClientBase";
 import type { InputConfigDownloadClient } from "../types/config.types";
 import type { ServerCache } from "../cache";
 import type { DownloadClientsClient, TagsClient } from "../clients/capabilities";
+import { getClient } from "../clients/client";
 import type { TagResource } from "../__generated__/radarr/data-contracts";
 import { DownloadProtocol } from "../__generated__/radarr/data-contracts";
 import { ArrType } from "../types/common.types";
-import { DownloadClientResource } from "../types/download-client.types";
+import { MediaDownloadClientResource } from "./downloadClient.types";
 
-class MockDownloadClientSync extends BaseDownloadClientSync {
+class MockDownloadClientSync extends BaseDownloadClientSync<MediaDownloadClientResource> {
   constructor() {
     super();
   }
 
-  public testValidateDownloadClient(config: InputConfigDownloadClient, schema: DownloadClientResource[]) {
+  public testValidateDownloadClient(config: InputConfigDownloadClient, schema: MediaDownloadClientResource[]) {
     return this.validateDownloadClient(config, schema);
   }
 
@@ -29,13 +30,17 @@ class MockDownloadClientSync extends BaseDownloadClientSync {
     return this.getApi();
   }
 
+  protected getApi(): DownloadClientsClient<MediaDownloadClientResource> & TagsClient {
+    return getClient("RADARR");
+  }
+
   protected getArrType(): ArrType {
     return "RADARR";
   }
 
   protected async calculateDiff(
     configClients: InputConfigDownloadClient[],
-    serverClients: DownloadClientResource[],
+    serverClients: MediaDownloadClientResource[],
     cache: ServerCache,
     updatePassword?: boolean,
   ) {
@@ -50,10 +55,10 @@ class MockDownloadClientSync extends BaseDownloadClientSync {
   public async resolveConfig(
     config: InputConfigDownloadClient,
     cache: ServerCache,
-    serverClient?: DownloadClientResource,
+    serverClient?: MediaDownloadClientResource,
     partialUpdate?: boolean,
   ) {
-    return {} as DownloadClientResource;
+    return {} as MediaDownloadClientResource;
   }
 
   protected createClient() {
@@ -166,7 +171,7 @@ describe("BaseDownloadClientSync – utility methods", () => {
 
   describe("validation", () => {
     test("validates valid configuration", () => {
-      const mockSchema: DownloadClientResource[] = [
+      const mockSchema: MediaDownloadClientResource[] = [
         {
           id: 0,
           name: "TestClient",
@@ -195,7 +200,7 @@ describe("BaseDownloadClientSync – utility methods", () => {
     });
 
     test("rejects configuration with missing name", () => {
-      const mockSchema: DownloadClientResource[] = [
+      const mockSchema: MediaDownloadClientResource[] = [
         {
           id: 0,
           name: "TestClient",
@@ -222,7 +227,7 @@ describe("BaseDownloadClientSync – utility methods", () => {
     });
 
     test("rejects configuration with missing type", () => {
-      const mockSchema: DownloadClientResource[] = [
+      const mockSchema: MediaDownloadClientResource[] = [
         {
           id: 0,
           name: "TestClient",

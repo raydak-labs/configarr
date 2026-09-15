@@ -297,6 +297,7 @@ describe("DelayProfiles", () => {
   test("mapToServerDelayProfile - items-only payload omits legacy protocol fields", async () => {
     const { mapToServerDelayProfile } = await import("./delayProfiles");
     const mapped = mapToServerDelayProfile(
+      "LIDARR",
       {
         items: [
           { name: "Usenet", protocol: "UsenetDownloadProtocol", allowed: true, delay: 2 },

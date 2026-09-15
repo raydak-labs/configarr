@@ -1,13 +1,12 @@
-import type { DownloadClientResource } from "../types/download-client.types";
+import type { CustomFormatRequest } from "../customFormats/customFormat.types";
+import type { MediaDownloadClientResource } from "../downloadClients/downloadClient.types";
+import type { Tag } from "../tags/tag.types";
+
+export type { Tag };
 
 export interface SystemClient {
   getSystemStatus(): Promise<unknown>;
   testConnection(): Promise<boolean>;
-}
-
-export interface Tag {
-  id?: number;
-  label?: string | null;
 }
 
 export interface TagsClient<T extends Tag = Tag> {
@@ -15,30 +14,30 @@ export interface TagsClient<T extends Tag = Tag> {
   createTag(tag: T): Promise<T>;
 }
 
-export interface DownloadClientsClient<DC = DownloadClientResource> {
-  getDownloadClientSchema(): Promise<DC[]>;
-  getDownloadClients(): Promise<DC[]>;
-  createDownloadClient(client: DC): Promise<DC>;
-  updateDownloadClient(id: string, client: DC): Promise<DC>;
+export interface DownloadClientsClient<DownloadClient = MediaDownloadClientResource> {
+  getDownloadClientSchema(): Promise<DownloadClient[]>;
+  getDownloadClients(): Promise<DownloadClient[]>;
+  createDownloadClient(client: DownloadClient): Promise<DownloadClient>;
+  updateDownloadClient(id: string, client: DownloadClient): Promise<DownloadClient>;
   deleteDownloadClient(id: string): Promise<void>;
-  testDownloadClient(client: DC): Promise<unknown>;
+  testDownloadClient(client: DownloadClient): Promise<unknown>;
 }
 
-export interface QualityProfilesClient<QP extends { id?: number; name?: string | null }> {
-  getQualityProfiles(): Promise<QP[]>;
-  createQualityProfile(profile: QP): Promise<QP>;
-  updateQualityProfile(id: string, profile: QP): Promise<QP>;
+export interface QualityProfilesClient<QualityProfile extends { id?: number; name?: string | null }> {
+  getQualityProfiles(): Promise<QualityProfile[]>;
+  createQualityProfile(profile: QualityProfile): Promise<QualityProfile>;
+  updateQualityProfile(id: string, profile: QualityProfile): Promise<QualityProfile>;
   deleteQualityProfile(id: string): Promise<void>;
 }
 
-export interface CustomFormatsClient<CF extends { id?: number; name?: string | null }> {
-  getCustomFormats(): Promise<CF[]>;
-  createCustomFormat(format: CF): Promise<CF>;
-  updateCustomFormat(id: string, format: CF): Promise<CF>;
+export interface CustomFormatsClient<CustomFormat extends { id?: number; name?: string | null } = CustomFormatRequest> {
+  getCustomFormats(): Promise<CustomFormat[]>;
+  createCustomFormat(format: CustomFormatRequest): Promise<CustomFormat>;
+  updateCustomFormat(id: string, format: CustomFormatRequest): Promise<CustomFormat>;
   deleteCustomFormat(id: string): Promise<void>;
 }
 
-export interface QualityDefinitionsClient<QD extends { id?: number }> {
-  getQualityDefinitions(): Promise<QD[]>;
-  updateQualityDefinitions(definitions: QD[]): Promise<QD[]>;
+export interface QualityDefinitionsClient<QualityDefinition extends { id?: number }> {
+  getQualityDefinitions(): Promise<QualityDefinition[]>;
+  updateQualityDefinitions(definitions: QualityDefinition[]): Promise<QualityDefinition[]>;
 }

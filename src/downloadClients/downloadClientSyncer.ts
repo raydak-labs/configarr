@@ -1,12 +1,17 @@
 import { ServerCache } from "../cache";
 import { ArrType } from "../types/common.types";
 import { MergedConfigInstance } from "../types/config.types";
-import { BaseDownloadClientSync } from "./downloadClientBase";
-import { GenericDownloadClientSync } from "./downloadClientGeneric";
-import { DownloadClientSyncResult } from "../types/download-client.types";
+import { DownloadClientSyncResult } from "./downloadClient.types";
+import { MediaDownloadClientSync } from "./downloadClientMedia";
+import { ProwlarrDownloadClientSync } from "./downloadClientProwlarr";
 
-function createDownloadClientSync(arrType: ArrType): BaseDownloadClientSync {
-  return new GenericDownloadClientSync(arrType);
+export function createDownloadClientSync(arrType: ArrType): MediaDownloadClientSync | ProwlarrDownloadClientSync {
+  switch (arrType) {
+    case "PROWLARR":
+      return new ProwlarrDownloadClientSync();
+    default:
+      return new MediaDownloadClientSync(arrType);
+  }
 }
 
 export async function syncDownloadClients(

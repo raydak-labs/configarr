@@ -1,25 +1,12 @@
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { describe, expect, test } from "vitest";
 import { DownloadProtocol } from "../__generated__/radarr/data-contracts";
 import { ServerCache } from "../cache";
-import { getClient } from "../clients/client";
-import { logger } from "../logger";
-import { ArrType } from "../types/common.types";
+import { MediaArrType } from "../types/common.types";
 import type { InputConfigDownloadClient } from "../types/config.types";
-import { GenericDownloadClientSync } from "./downloadClientGeneric";
-import { DownloadClientResource } from "../types/download-client.types";
+import { MediaDownloadClientResource } from "./downloadClient.types";
+import { MediaDownloadClientSync } from "./downloadClientMedia";
 
-vi.mock("../clients/client", () => ({
-  getClient: vi.fn(() => ({
-    getDownloadClients: vi.fn(),
-    getDownloadClientSchema: vi.fn(),
-    createDownloadClient: vi.fn(),
-    updateDownloadClient: vi.fn(),
-    deleteDownloadClient: vi.fn(),
-    testDownloadClient: vi.fn(),
-  })),
-}));
-
-const qbitSchema = (extra: Record<string, unknown> = {}): DownloadClientResource =>
+const qbitSchema = (extra: Record<string, unknown> = {}): MediaDownloadClientResource =>
   ({
     implementation: "QBittorrent",
     implementationName: "qBittorrent",
@@ -28,48 +15,44 @@ const qbitSchema = (extra: Record<string, unknown> = {}): DownloadClientResource
     configContract: "QBittorrentSettings",
     infoLink: "",
     ...extra,
-  }) as DownloadClientResource;
+  }) as MediaDownloadClientResource;
 
-describe("GenericDownloadClientSync – ARR type handling", () => {
-  let sync: GenericDownloadClientSync;
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
+describe("MediaDownloadClientSync – ARR type handling", () => {
+  let sync: MediaDownloadClientSync;
 
   describe("constructor and ARR type initialization", () => {
     test("creates instance for RADARR", () => {
-      sync = new GenericDownloadClientSync("RADARR");
-      expect(sync).toBeInstanceOf(GenericDownloadClientSync);
+      sync = new MediaDownloadClientSync("RADARR");
+      expect(sync).toBeInstanceOf(MediaDownloadClientSync);
     });
 
     test("creates instance for SONARR", () => {
-      sync = new GenericDownloadClientSync("SONARR");
-      expect(sync).toBeInstanceOf(GenericDownloadClientSync);
+      sync = new MediaDownloadClientSync("SONARR");
+      expect(sync).toBeInstanceOf(MediaDownloadClientSync);
     });
 
     test("creates instance for LIDARR", () => {
-      sync = new GenericDownloadClientSync("LIDARR");
-      expect(sync).toBeInstanceOf(GenericDownloadClientSync);
+      sync = new MediaDownloadClientSync("LIDARR");
+      expect(sync).toBeInstanceOf(MediaDownloadClientSync);
     });
 
     test("creates instance for READARR", () => {
-      sync = new GenericDownloadClientSync("READARR");
-      expect(sync).toBeInstanceOf(GenericDownloadClientSync);
+      sync = new MediaDownloadClientSync("READARR");
+      expect(sync).toBeInstanceOf(MediaDownloadClientSync);
     });
 
     test("creates instance for WHISPARR", () => {
-      sync = new GenericDownloadClientSync("WHISPARR");
-      expect(sync).toBeInstanceOf(GenericDownloadClientSync);
+      sync = new MediaDownloadClientSync("WHISPARR");
+      expect(sync).toBeInstanceOf(MediaDownloadClientSync);
     });
   });
 
   describe("ARR type-specific behavior", () => {
     test("normalizes fields consistently across different ARR types", () => {
-      const testCases: [ArrType][] = [["SONARR"], ["LIDARR"], ["RADARR"], ["WHISPARR"], ["READARR"]];
+      const testCases: [MediaArrType][] = [["SONARR"], ["LIDARR"], ["RADARR"], ["WHISPARR"], ["READARR"]];
 
       testCases.forEach(([arrType]) => {
-        sync = new GenericDownloadClientSync(arrType);
+        sync = new MediaDownloadClientSync(arrType);
         // Test snake_case to camelCase normalization (no category handling)
         const result = sync.normalizeConfigFields(
           {
@@ -95,10 +78,10 @@ describe("GenericDownloadClientSync – ARR type handling", () => {
     const makeCache = () => new ServerCache([], [], [], []);
 
     test("compares clients correctly with omission semantics", () => {
-      sync = new GenericDownloadClientSync("RADARR");
+      sync = new MediaDownloadClientSync("RADARR");
       const cache = makeCache();
 
-      const serverClient: DownloadClientResource = {
+      const serverClient: MediaDownloadClientResource = {
         id: 1,
         name: "Test Client",
         implementation: "qBittorrent",
@@ -123,10 +106,10 @@ describe("GenericDownloadClientSync – ARR type handling", () => {
     });
 
     test("detects differences in specified fields", () => {
-      sync = new GenericDownloadClientSync("RADARR");
+      sync = new MediaDownloadClientSync("RADARR");
       const cache = makeCache();
 
-      const serverClient: DownloadClientResource = {
+      const serverClient: MediaDownloadClientResource = {
         id: 1,
         name: "Test Client",
         implementation: "qBittorrent",
@@ -152,10 +135,10 @@ describe("GenericDownloadClientSync – ARR type handling", () => {
     });
 
     test("handles exact field name matches", () => {
-      sync = new GenericDownloadClientSync("SONARR");
+      sync = new MediaDownloadClientSync("SONARR");
       const cache = makeCache();
 
-      const serverClient: DownloadClientResource = {
+      const serverClient: MediaDownloadClientResource = {
         id: 1,
         name: "Test Client",
         implementation: "qBittorrent",
@@ -186,11 +169,11 @@ describe("GenericDownloadClientSync – ARR type handling", () => {
     });
 
     test("handles password and apiKey masking without false diff", () => {
-      sync = new GenericDownloadClientSync("RADARR");
+      sync = new MediaDownloadClientSync("RADARR");
       const cache = new ServerCache([], [], [], []);
 
       // Server with masked password
-      const serverClient: DownloadClientResource = {
+      const serverClient: MediaDownloadClientResource = {
         id: 2,
         name: "qBit 4K",
         enable: false,
@@ -227,7 +210,7 @@ describe("GenericDownloadClientSync – ARR type handling", () => {
     });
 
     test("uses exact field names without false diff", () => {
-      sync = new GenericDownloadClientSync("RADARR");
+      sync = new MediaDownloadClientSync("RADARR");
       const cache = new ServerCache([], [], [], []);
       cache.tags = [
         { id: 2, label: "4K" },
@@ -235,7 +218,7 @@ describe("GenericDownloadClientSync – ARR type handling", () => {
       ];
 
       // EXACT server data from your JSON
-      const serverClient: DownloadClientResource = {
+      const serverClient: MediaDownloadClientResource = {
         enable: false,
         protocol: DownloadProtocol.Torrent,
         priority: 1,
@@ -293,11 +276,11 @@ describe("GenericDownloadClientSync – ARR type handling", () => {
     });
 
     test("update_password forces password comparison", () => {
-      sync = new GenericDownloadClientSync("RADARR");
+      sync = new MediaDownloadClientSync("RADARR");
       const cache = new ServerCache([], [], [], []);
 
       // Server with masked password
-      const serverClient: DownloadClientResource = {
+      const serverClient: MediaDownloadClientResource = {
         id: 2,
         name: "qBit 4K",
         enable: false,
@@ -337,7 +320,7 @@ describe("GenericDownloadClientSync – ARR type handling", () => {
 
   describe("partial update logic", () => {
     test("correctly identifies when to use partial updates", () => {
-      sync = new GenericDownloadClientSync("RADARR");
+      sync = new MediaDownloadClientSync("RADARR");
 
       // Config with no properties should not use partial update
       const createConfig: InputConfigDownloadClient = {
@@ -378,9 +361,9 @@ describe("GenericDownloadClientSync – ARR type handling", () => {
 
   describe("client filtering logic", () => {
     test("correctly identifies unmanaged clients", () => {
-      sync = new GenericDownloadClientSync("RADARR");
+      sync = new MediaDownloadClientSync("RADARR");
 
-      const serverClients: DownloadClientResource[] = [
+      const serverClients: MediaDownloadClientResource[] = [
         {
           id: 1,
           name: "Managed Client",
@@ -426,9 +409,9 @@ describe("GenericDownloadClientSync – ARR type handling", () => {
     });
 
     test("respects delete unmanaged disabled", () => {
-      sync = new GenericDownloadClientSync("RADARR");
+      sync = new MediaDownloadClientSync("RADARR");
 
-      const serverClients: DownloadClientResource[] = [
+      const serverClients: MediaDownloadClientResource[] = [
         {
           id: 1,
           name: "Client",
@@ -452,9 +435,9 @@ describe("GenericDownloadClientSync – ARR type handling", () => {
     });
 
     test("respects ignore list", () => {
-      sync = new GenericDownloadClientSync("RADARR");
+      sync = new MediaDownloadClientSync("RADARR");
 
-      const serverClients: DownloadClientResource[] = [
+      const serverClients: MediaDownloadClientResource[] = [
         {
           id: 1,
           name: "Ignored Client",
@@ -480,7 +463,7 @@ describe("GenericDownloadClientSync – ARR type handling", () => {
     });
   });
 
-  describe("resolveConfig categories", () => {
+  describe("resolveConfig", () => {
     const config: InputConfigDownloadClient = {
       name: "qBittorrent",
       type: "qbittorrent",
@@ -488,134 +471,13 @@ describe("GenericDownloadClientSync – ARR type handling", () => {
       fields: { host: "qbittorrent" },
     };
 
-    test("PROWLARR create uses schema categories (default [])", async () => {
-      const sync = new GenericDownloadClientSync("PROWLARR");
-      const cache = new ServerCache([], [], [], []);
-      cache.setDownloadClientSchema([qbitSchema({ categories: [] })]);
-
-      const payload = await sync.resolveConfig(config, cache);
-      expect((payload as { categories?: unknown }).categories).toEqual([]);
-      expect(payload).not.toHaveProperty("removeCompletedDownloads");
-    });
-
-    test("PROWLARR create uses [] when schema omits categories", async () => {
-      const sync = new GenericDownloadClientSync("PROWLARR");
-      const cache = new ServerCache([], [], [], []);
-      cache.setDownloadClientSchema([qbitSchema()]);
-
-      const payload = await sync.resolveConfig(config, cache);
-      expect((payload as { categories?: unknown }).categories).toEqual([]);
-    });
-
-    test("PROWLARR update keeps server categories", async () => {
-      const sync = new GenericDownloadClientSync("PROWLARR");
-      const cache = new ServerCache([], [], [], []);
-      cache.setDownloadClientSchema([qbitSchema({ categories: [] })]);
-      const server = qbitSchema({
-        id: 1,
-        name: "qBittorrent",
-        categories: [{ clientCategory: "tv", categories: [5000] }],
-      });
-
-      const payload = await sync.resolveConfig(config, cache, server);
-      expect((payload as { categories?: unknown }).categories).toEqual([{ clientCategory: "tv", categories: [5000] }]);
-    });
-
     test("RADARR create does not set categories", async () => {
-      const sync = new GenericDownloadClientSync("RADARR");
+      const sync = new MediaDownloadClientSync("RADARR");
       const cache = new ServerCache([], [], [], []);
       cache.setDownloadClientSchema([qbitSchema({ categories: [] })]);
 
       const payload = await sync.resolveConfig(config, cache);
       expect(payload).not.toHaveProperty("categories");
-    });
-  });
-
-  describe("syncDownloadClients failed create", () => {
-    const mockClient = (createDownloadClient: ReturnType<typeof vi.fn>) => {
-      vi.mocked(getClient).mockReturnValue({
-        getDownloadClients: vi.fn(async () => []),
-        getDownloadClientSchema: vi.fn(async () => [qbitSchema({ categories: [] }), qbitSchema({ implementation: "Transmission" })]),
-        createDownloadClient,
-        updateDownloadClient: vi.fn(),
-        deleteDownloadClient: vi.fn(),
-        testDownloadClient: vi.fn(),
-      } as never);
-    };
-
-    test("failed create does not throw, omits create from diff, and does not log no changes needed", async () => {
-      mockClient(
-        vi.fn(async () => {
-          throw new Error("HTTP Error: 409 Conflict. NOT NULL constraint failed: DownloadClients.Categories");
-        }),
-      );
-
-      const infoSpy = vi.spyOn(logger, "info");
-      const warnSpy = vi.spyOn(logger, "warn");
-      try {
-        const sync = new GenericDownloadClientSync("PROWLARR");
-        const result = await sync.syncDownloadClients(
-          { download_clients: { data: [{ name: "qBittorrent", type: "qbittorrent", fields: { host: "qbittorrent" } }] } },
-          new ServerCache([], [], [], []),
-        );
-
-        expect(result.added).toBe(0);
-        expect(result.diffEntries).toEqual([]);
-        expect(infoSpy.mock.calls.flat().join("\n")).not.toMatch(/no changes needed/);
-        expect(warnSpy.mock.calls.flat().join("\n")).toMatch(/1 change\(s\) failed/);
-      } finally {
-        infoSpy.mockRestore();
-        warnSpy.mockRestore();
-      }
-    });
-
-    test("mixed create success and failure reports success and warns about the failure", async () => {
-      mockClient(
-        vi.fn(async (payload: { name?: string }) => {
-          if (payload.name === "Broken") {
-            throw new Error("HTTP Error: 409 Conflict");
-          }
-          return payload;
-        }),
-      );
-
-      const infoSpy = vi.spyOn(logger, "info");
-      const warnSpy = vi.spyOn(logger, "warn");
-      try {
-        const sync = new GenericDownloadClientSync("PROWLARR");
-        const result = await sync.syncDownloadClients(
-          {
-            download_clients: {
-              data: [
-                { name: "qBittorrent", type: "qbittorrent", fields: { host: "qbittorrent" } },
-                { name: "Broken", type: "transmission", fields: { host: "x" } },
-              ],
-            },
-          },
-          new ServerCache([], [], [], []),
-        );
-
-        expect(result.added).toBe(1);
-        expect(result.diffEntries).toEqual([{ resourceType: "DownloadClient", name: "qBittorrent", action: "create" }]);
-        expect(infoSpy.mock.calls.flat().join("\n")).toMatch(/\+1 ~/);
-        expect(warnSpy.mock.calls.flat().join("\n")).toMatch(/1 change\(s\) failed/);
-      } finally {
-        infoSpy.mockRestore();
-        warnSpy.mockRestore();
-      }
-    });
-
-    test("successful create is reported in diffEntries", async () => {
-      mockClient(vi.fn(async (c) => c));
-
-      const sync = new GenericDownloadClientSync("PROWLARR");
-      const result = await sync.syncDownloadClients(
-        { download_clients: { data: [{ name: "qBittorrent", type: "qbittorrent", fields: { host: "qbittorrent" } }] } },
-        new ServerCache([], [], [], []),
-      );
-
-      expect(result.added).toBe(1);
-      expect(result.diffEntries).toEqual([{ resourceType: "DownloadClient", name: "qBittorrent", action: "create" }]);
     });
   });
 });

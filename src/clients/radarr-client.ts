@@ -9,6 +9,7 @@ import {
   SystemResource,
   TagResource,
   DownloadClientConfigResource,
+  DownloadClientResource as GeneratedDownloadClientResource,
   LanguageResource,
   QualityDefinitionResource,
   QualityProfileResource,
@@ -16,7 +17,11 @@ import {
   UiConfigResource,
 } from "../__generated__/radarr/data-contracts";
 import { logger } from "../logger";
-import type { DownloadClientResource } from "../types/download-client.types";
+import type { CustomFormatRequest } from "../customFormats/customFormat.types";
+import type { DelayProfileGenericResource } from "../delayProfiles/delayProfile.types";
+import type { MediaDownloadClientResource } from "../downloadClients/downloadClient.types";
+import type { QualityDefinitionPreferredResource } from "../qualityDefinitions/qualityDefinition.types";
+import type { QualityProfileRadarrWhisparrResource } from "../qualityProfiles/qualityProfile.types";
 import { ANY_LANGUAGE_NAME, cloneWithJSON } from "../util";
 import { logConnectionError, validateClientParams } from "./connection";
 import {
@@ -32,9 +37,9 @@ export class RadarrClient
     SystemClient,
     TagsClient,
     DownloadClientsClient,
-    QualityProfilesClient<QualityProfileResource>,
-    CustomFormatsClient<CustomFormatResource>,
-    QualityDefinitionsClient<QualityDefinitionResource>
+    QualityProfilesClient<QualityProfileRadarrWhisparrResource>,
+    CustomFormatsClient,
+    QualityDefinitionsClient<QualityDefinitionPreferredResource>
 {
   private api!: Api<unknown>;
   private languageMap: Map<string, LanguageResource> = new Map();
@@ -61,22 +66,22 @@ export class RadarrClient
   }
 
   // Quality Management
-  getQualityDefinitions() {
-    return this.api.v3QualitydefinitionList();
+  getQualityDefinitions(): Promise<QualityDefinitionPreferredResource[]> {
+    return this.api.v3QualitydefinitionList() as Promise<QualityDefinitionPreferredResource[]>;
   }
 
-  async updateQualityDefinitions(definitions: QualityDefinitionResource[]) {
-    await this.api.v3QualitydefinitionUpdateUpdate(definitions);
+  async updateQualityDefinitions(definitions: QualityDefinitionPreferredResource[]): Promise<QualityDefinitionPreferredResource[]> {
+    await this.api.v3QualitydefinitionUpdateUpdate(definitions as QualityDefinitionResource[]);
     this.api.v3LanguageList();
     return this.getQualityDefinitions();
   }
 
   // Quality Profiles
-  getQualityProfiles(): Promise<QualityProfileResource[]> {
+  getQualityProfiles(): Promise<QualityProfileRadarrWhisparrResource[]> {
     return this.api.v3QualityprofileList();
   }
 
-  async createQualityProfile(profile: QualityProfileResource): Promise<QualityProfileResource> {
+  async createQualityProfile(profile: QualityProfileRadarrWhisparrResource): Promise<QualityProfileRadarrWhisparrResource> {
     const cloned = cloneWithJSON(profile);
 
     if (this.languageMap.size <= 0) {
@@ -88,11 +93,11 @@ export class RadarrClient
       cloned.language = this.languageMap.get(ANY_LANGUAGE_NAME);
     }
 
-    return this.api.v3QualityprofileCreate(cloned);
+    return this.api.v3QualityprofileCreate(cloned as QualityProfileResource);
   }
 
-  updateQualityProfile(id: string, profile: QualityProfileResource): Promise<QualityProfileResource> {
-    return this.api.v3QualityprofileUpdate(id, profile);
+  updateQualityProfile(id: string, profile: QualityProfileRadarrWhisparrResource): Promise<QualityProfileRadarrWhisparrResource> {
+    return this.api.v3QualityprofileUpdate(id, profile as QualityProfileResource);
   }
 
   deleteQualityProfile(id: string): Promise<void> {
@@ -104,12 +109,12 @@ export class RadarrClient
     return this.api.v3CustomformatList();
   }
 
-  createCustomFormat(format: CustomFormatResource) {
-    return this.api.v3CustomformatCreate(format);
+  createCustomFormat(format: CustomFormatRequest) {
+    return this.api.v3CustomformatCreate(format as CustomFormatResource);
   }
 
-  updateCustomFormat(id: string, format: CustomFormatResource) {
-    return this.api.v3CustomformatUpdate(id, format);
+  updateCustomFormat(id: string, format: CustomFormatRequest) {
+    return this.api.v3CustomformatUpdate(id, format as CustomFormatResource);
   }
 
   deleteCustomFormat(id: string) {
@@ -161,12 +166,12 @@ export class RadarrClient
     return this.api.v3DelayprofileList();
   }
 
-  async createDelayProfile(profile: DelayProfileResource): Promise<DelayProfileResource> {
-    return this.api.v3DelayprofileCreate(profile);
+  async createDelayProfile(profile: DelayProfileGenericResource): Promise<DelayProfileResource> {
+    return this.api.v3DelayprofileCreate(profile as DelayProfileResource);
   }
 
-  async updateDelayProfile(id: string, data: DelayProfileResource): Promise<DelayProfileResource> {
-    return this.api.v3DelayprofileUpdate(id, data);
+  async updateDelayProfile(id: string, data: DelayProfileGenericResource): Promise<DelayProfileResource> {
+    return this.api.v3DelayprofileUpdate(id, data as DelayProfileResource);
   }
 
   async deleteDelayProfile(id: string): Promise<void> {
@@ -182,28 +187,28 @@ export class RadarrClient
   }
 
   // Download Clients
-  async getDownloadClientSchema(): Promise<DownloadClientResource[]> {
+  async getDownloadClientSchema(): Promise<MediaDownloadClientResource[]> {
     return this.api.v3DownloadclientSchemaList();
   }
 
-  async getDownloadClients(): Promise<DownloadClientResource[]> {
+  async getDownloadClients(): Promise<MediaDownloadClientResource[]> {
     return this.api.v3DownloadclientList();
   }
 
-  async createDownloadClient(client: DownloadClientResource): Promise<DownloadClientResource> {
-    return this.api.v3DownloadclientCreate(client);
+  async createDownloadClient(client: MediaDownloadClientResource): Promise<MediaDownloadClientResource> {
+    return this.api.v3DownloadclientCreate(client as GeneratedDownloadClientResource);
   }
 
-  async updateDownloadClient(id: string, client: DownloadClientResource): Promise<DownloadClientResource> {
-    return this.api.v3DownloadclientUpdate(+id, client);
+  async updateDownloadClient(id: string, client: MediaDownloadClientResource): Promise<MediaDownloadClientResource> {
+    return this.api.v3DownloadclientUpdate(+id, client as GeneratedDownloadClientResource);
   }
 
   async deleteDownloadClient(id: string): Promise<void> {
     return this.api.v3DownloadclientDelete(+id);
   }
 
-  async testDownloadClient(client: DownloadClientResource): Promise<void> {
-    return this.api.v3DownloadclientTestCreate(client);
+  async testDownloadClient(client: MediaDownloadClientResource): Promise<void> {
+    return this.api.v3DownloadclientTestCreate(client as GeneratedDownloadClientResource);
   }
 
   // Download Client Configuration

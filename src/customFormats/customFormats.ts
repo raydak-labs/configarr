@@ -1,17 +1,16 @@
 import fs from "node:fs";
 import path from "node:path";
-import { asGenerated } from "../arr/cast";
 import { getClient } from "../clients/client";
 import { getConfig } from "../config";
 import { DiffEntry } from "../diffReport/diffReport.types";
 import { getEnvs } from "../env";
 import { logger } from "../logger";
 import { loadTrashCFs } from "../trash-guide";
-import { ArrType, CFIDToConfigGroup, CFProcessing, ConfigarrCF, MediaArrType } from "../types/common.types";
+import { ArrType, MediaArrType } from "../types/common.types";
 import { ConfigCustomFormatList, CustomFormatDefinitions } from "../types/config.types";
 import { TrashCF } from "../types/trashguide.types";
 import { compareCustomFormats, loadJsonFile, mapImportCfToRequestCf, toCarrCF } from "../util";
-import { CustomFormatRequest } from "./customFormat.types";
+import { CFIDToConfigGroup, CFProcessing, ConfigarrCF, CustomFormatRequest } from "./customFormat.types";
 
 export const deleteAllCustomFormats = async (arrType: MediaArrType) => {
   const cfOnServer = await getClient(arrType).getCustomFormats();
@@ -32,36 +31,6 @@ export const loadServerCustomFormats = async (arrType: MediaArrType): Promise<Cu
     return loadJsonFile<CustomFormatRequest[]>(path.resolve(__dirname, "../../tests/samples/cfs.json"));
   }
   return getClient(arrType).getCustomFormats();
-};
-
-const createCustomFormatOnServer = async (arrType: MediaArrType, format: CustomFormatRequest) => {
-  switch (arrType) {
-    case "SONARR":
-      return getClient("SONARR").createCustomFormat(asGenerated(format));
-    case "RADARR":
-      return getClient("RADARR").createCustomFormat(asGenerated(format));
-    case "LIDARR":
-      return getClient("LIDARR").createCustomFormat(asGenerated(format));
-    case "READARR":
-      return getClient("READARR").createCustomFormat(asGenerated(format));
-    case "WHISPARR":
-      return getClient("WHISPARR").createCustomFormat(asGenerated(format));
-  }
-};
-
-const updateCustomFormatOnServer = async (arrType: MediaArrType, id: string, format: CustomFormatRequest) => {
-  switch (arrType) {
-    case "SONARR":
-      return getClient("SONARR").updateCustomFormat(id, asGenerated(format));
-    case "RADARR":
-      return getClient("RADARR").updateCustomFormat(id, asGenerated(format));
-    case "LIDARR":
-      return getClient("LIDARR").updateCustomFormat(id, asGenerated(format));
-    case "READARR":
-      return getClient("READARR").updateCustomFormat(id, asGenerated(format));
-    case "WHISPARR":
-      return getClient("WHISPARR").updateCustomFormat(id, asGenerated(format));
-  }
 };
 
 export const manageCf = async (arrType: MediaArrType, cfProcessing: CFProcessing, serverCfs: Map<string, CustomFormatRequest>) => {
@@ -90,7 +59,7 @@ export const manageCf = async (arrType: MediaArrType, cfProcessing: CFProcessing
             logger.info(`DryRun: Would update CF: ${existingCf.id} - ${existingCf.name}`);
             updatedCFs.push(existingCf);
           } else {
-            const updatedCf = await updateCustomFormatOnServer(arrType, existingCf.id + "", {
+            const updatedCf = await getClient(arrType).updateCustomFormat(existingCf.id + "", {
               id: existingCf.id,
               ...requestConfig,
             });
@@ -116,7 +85,7 @@ export const manageCf = async (arrType: MediaArrType, cfProcessing: CFProcessing
         if (getEnvs().DRY_RUN) {
           logger.info(`Would create CF: ${requestConfig.name}`);
         } else {
-          const createResult = await createCustomFormatOnServer(arrType, requestConfig);
+          const createResult = await getClient(arrType).createCustomFormat(requestConfig);
           logger.info(`Created CF ${requestConfig.name}`);
           createCFs.push(createResult);
           serverCfs.set(createResult.name!, createResult);

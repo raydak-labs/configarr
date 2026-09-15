@@ -99,7 +99,6 @@ src/
 │   ├── metadataProfileReadarr.ts
 │   └── metadataProfileSyncer.ts
 ├── rootFolder/            # Root folder sync
-├── arr/                   # Per-*arr feature flags (language, preferredSize, …)
 ├── types/                 # Shared config / YAML types
 │   ├── config.types.ts    # Configuration types
 │   ├── common.types.ts    # Shared types

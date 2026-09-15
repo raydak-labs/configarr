@@ -12,8 +12,7 @@ export type QualityProfileLanguage = { id?: number; name?: string | null; nameLo
 
 export type CustomFormatRef = { id?: number; name?: string | null };
 
-/** Config→API mapping document. Arr-specific fields are omitted before send. */
-export type QualityProfilePayload = {
+export type QualityProfileShared = {
   id?: number;
   name?: string | null;
   upgradeAllowed?: boolean;
@@ -21,7 +20,19 @@ export type QualityProfilePayload = {
   items?: QualityItem[] | null;
   minFormatScore?: number;
   cutoffFormatScore?: number;
-  minUpgradeFormatScore?: number;
   formatItems?: FormatItem[] | null;
+};
+
+export type QualityProfileSonarrResource = QualityProfileShared & {
+  minUpgradeFormatScore?: number;
+};
+
+export type QualityProfileRadarrWhisparrResource = QualityProfileShared & {
+  minUpgradeFormatScore?: number;
   language?: QualityProfileLanguage | null;
 };
+
+export type QualityProfileLidarrReadarrResource = QualityProfileShared;
+
+export type QualityProfilePayload =
+  QualityProfileSonarrResource | QualityProfileRadarrWhisparrResource | QualityProfileLidarrReadarrResource;

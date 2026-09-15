@@ -1,4 +1,4 @@
-import type { Tag } from "../clients/capabilities";
+import type { Tag } from "./tag.types";
 import { getClient } from "../clients/client";
 import { getEnvs } from "../env";
 import { ArrType } from "../types/common.types";

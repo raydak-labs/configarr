@@ -1,29 +1,28 @@
 import { logger } from "./logger";
-import type { Tag } from "./clients/capabilities";
 import type { CustomFormatRequest } from "./customFormats/customFormat.types";
 import type { QualityDefinitionPayload } from "./qualityDefinitions/qualityDefinition.types";
 import type { QualityProfileLanguage, QualityProfilePayload } from "./qualityProfiles/qualityProfile.types";
-import type { DownloadClientResource } from "./types/download-client.types";
+import type { Tag } from "./tags/tag.types";
+import type { MediaDownloadClientResource, ProwlarrDownloadClientResource } from "./downloadClients/downloadClient.types";
 
-export class ServerCache<
-  QD = QualityDefinitionPayload,
-  QP extends { name?: string | null } = QualityProfilePayload,
-  CF extends { name?: string | null } = CustomFormatRequest,
-  L extends { name?: string | null } = QualityProfileLanguage,
-  TTag extends Tag = Tag,
-> {
+export class ServerCache {
   private cache: Record<string, unknown> = {};
-  private _qd: QD[];
-  private _qp: QP[];
-  private _cf: CF[];
-  private _tags: TTag[] = [];
-  private _languages: L[];
-  private _downloadClientSchema: DownloadClientResource[] | null = null;
+  private _qualityDefinitions: QualityDefinitionPayload[];
+  private _qualityProfiles: QualityProfilePayload[];
+  private _customFormats: CustomFormatRequest[];
+  private _tags: Tag[] = [];
+  private _languages: QualityProfileLanguage[];
+  private _downloadClientSchema: (MediaDownloadClientResource | ProwlarrDownloadClientResource)[] | null = null;
 
-  constructor(qd: QD[], qp: QP[], cf: CF[], languages: L[]) {
-    this._qd = qd;
-    this._qp = qp;
-    this._cf = cf;
+  constructor(
+    qualityDefinitions: QualityDefinitionPayload[],
+    qualityProfiles: QualityProfilePayload[],
+    customFormats: CustomFormatRequest[],
+    languages: QualityProfileLanguage[],
+  ) {
+    this._qualityDefinitions = qualityDefinitions;
+    this._qualityProfiles = qualityProfiles;
+    this._customFormats = customFormats;
     this._languages = languages;
   }
 
@@ -35,45 +34,45 @@ export class ServerCache<
     this.cache[key] = value;
   }
 
-  public get qd() {
-    return this._qd;
+  public get qualityDefinitions() {
+    return this._qualityDefinitions;
   }
 
-  public set qd(newQd: QD[]) {
+  public set qualityDefinitions(newQd: QualityDefinitionPayload[]) {
     if (newQd == null || newQd.length <= 0) {
       logger.debug(`No QualityDefinition received from server.`);
       throw new Error("No QualityDefinitions received from server.");
     }
-    this._qd = newQd;
+    this._qualityDefinitions = newQd;
   }
 
-  public get qp() {
-    return this._qp;
+  public get qualityProfiles() {
+    return this._qualityProfiles;
   }
 
-  public set qp(newQp: QP[]) {
+  public set qualityProfiles(newQp: QualityProfilePayload[]) {
     if (newQp == null || newQp.length <= 0) {
       logger.debug(`No QualityProfiles received from server.`);
     }
-    this._qp = newQp;
+    this._qualityProfiles = newQp;
   }
 
-  public get cf() {
-    return this._cf;
+  public get customFormats() {
+    return this._customFormats;
   }
 
-  public set cf(newCf: CF[]) {
+  public set customFormats(newCf: CustomFormatRequest[]) {
     if (newCf == null || newCf.length <= 0) {
       logger.debug(`No CustomFormats received from server.`);
     }
-    this._cf = newCf;
+    this._customFormats = newCf;
   }
 
   public get languages() {
     return this._languages;
   }
 
-  public set languages(newLanguages: L[]) {
+  public set languages(newLanguages: QualityProfileLanguage[]) {
     if (newLanguages == null || newLanguages.length <= 0) {
       logger.debug(`No Languages received from server.`);
       throw new Error("No Languages received from server.");
@@ -84,18 +83,18 @@ export class ServerCache<
   public get tags() {
     return this._tags;
   }
-  public set tags(newTags: TTag[]) {
+  public set tags(newTags: Tag[]) {
     if (newTags == null || newTags.length <= 0) {
       logger.debug(`No Tags received from server.`);
     }
     this._tags = newTags;
   }
 
-  public getDownloadClientSchema(): DownloadClientResource[] | null {
+  public getDownloadClientSchema(): (MediaDownloadClientResource | ProwlarrDownloadClientResource)[] | null {
     return this._downloadClientSchema;
   }
 
-  public setDownloadClientSchema(schema: DownloadClientResource[]): void {
+  public setDownloadClientSchema(schema: (MediaDownloadClientResource | ProwlarrDownloadClientResource)[]): void {
     this._downloadClientSchema = schema;
   }
 }

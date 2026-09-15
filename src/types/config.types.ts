@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ConfigarrCF, ConfigarrCFSchema } from "./common.types";
+import { ConfigarrCF, ConfigarrCFSchema } from "../customFormats/customFormat.types";
 import { TrashCF, TrashCFSchema, TrashQualityDefinitionQualitySchema, TrashScoresSchema } from "./trashguide.types";
 
 // ============================================================================
@@ -8,7 +8,7 @@ import { TrashCF, TrashCFSchema, TrashQualityDefinitionQualitySchema, TrashScore
 // a schema becomes a compile error at every place the code reads it, instead of
 // silently disappearing at runtime (Zod strips unrecognized keys on a successful
 // parse). Two kinds of exception keep a manually-written type instead:
-//   - ImportCF/ConfigarrCF (common.types.ts) extend generated __generated__ API
+//   - ImportCF/ConfigarrCF (customFormat.types.ts) extend generated __generated__ API
 //     client types, which aren't reasonably re-modeled in Zod.
 //   - The "Derived types" section at the end (ConfigArrInstance, ConfigQualityProfile,
 //     etc.) is the merged/output shape produced by this app's own code (transformConfig,

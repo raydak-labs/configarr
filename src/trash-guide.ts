@@ -1,11 +1,11 @@
 import fs from "node:fs";
 import path from "node:path";
 import { z } from "zod";
-import { CustomFormatRequest } from "./customFormats/customFormat.types";
+import { CFIDToConfigGroup, ConfigarrCF, CustomFormatRequest } from "./customFormats/customFormat.types";
 import { getConfig } from "./config";
 import { logger } from "./logger";
 import { interpolateSize } from "./qualityDefinitions/qualityDefinitions";
-import { CFIDToConfigGroup, ConfigarrCF, QualityDefinitionsRadarr, QualityDefinitionsSonarr } from "./types/common.types";
+import { QualityDefinitionsRadarr, QualityDefinitionsSonarr } from "./types/common.types";
 import {
   ConfigCustomFormat,
   ConfigQualityProfile,

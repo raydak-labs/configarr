@@ -1,8 +1,8 @@
 import { z } from "zod";
 import { ServerCache } from "../cache";
-import type { DownloadClientsClient, Tag, TagsClient } from "../clients/capabilities";
-import { getClient } from "../clients/client";
-import { DiffEntry } from "../diffReport/diffReport.types";
+import type { DownloadClientsClient, TagsClient } from "../clients/capabilities";
+import type { Tag } from "../tags/tag.types";
+import { DiffEntry, FieldChange } from "../diffReport/diffReport.types";
 import { getEnvs } from "../env";
 import { logger } from "../logger";
 import { ArrType } from "../types/common.types";
@@ -10,10 +10,10 @@ import { InputConfigDownloadClient, MergedConfigInstance } from "../types/config
 import {
   DownloadClientDiff,
   DownloadClientField,
-  DownloadClientResource,
+  DownloadClientShared,
   DownloadClientSyncResult,
   ValidationResult,
-} from "../types/download-client.types";
+} from "./downloadClient.types";
 import { camelToSnake, snakeToCamel } from "../util";
 
 // Constants
@@ -38,7 +38,10 @@ const DownloadClientConfigSchema = z.object({
     .default([]),
 });
 
-export function downloadClientDiffToDiffEntries(diff: DownloadClientDiff, unmanagedToDelete: DownloadClientResource[]): DiffEntry[] {
+export function downloadClientDiffToDiffEntries<T extends DownloadClientShared>(
+  diff: DownloadClientDiff<T>,
+  unmanagedToDelete: T[],
+): DiffEntry[] {
   const entries: DiffEntry[] = diff.create.map((c) => ({
     resourceType: "DownloadClient",
     name: c.name,
@@ -60,32 +63,26 @@ export function downloadClientDiffToDiffEntries(diff: DownloadClientDiff, unmana
   return entries;
 }
 
-export abstract class BaseDownloadClientSync {
-  private _api: (DownloadClientsClient & TagsClient) | undefined;
+export abstract class BaseDownloadClientSync<T extends DownloadClientShared> {
   protected readonly logger = logger;
 
-  protected getApi(): DownloadClientsClient & TagsClient {
-    if (!this._api) {
-      this._api = getClient(this.getArrType());
-    }
-    return this._api;
-  }
+  protected abstract getApi(): DownloadClientsClient<T> & TagsClient;
 
   protected abstract getArrType(): ArrType;
 
   protected abstract calculateDiff(
     configClients: InputConfigDownloadClient[],
-    serverClients: DownloadClientResource[],
+    serverClients: T[],
     cache: ServerCache,
     updatePassword?: boolean,
-  ): Promise<DownloadClientDiff>;
+  ): Promise<DownloadClientDiff<T>>;
 
   public abstract resolveConfig(
     config: InputConfigDownloadClient,
     cache: ServerCache,
-    serverClient?: DownloadClientResource,
+    serverClient?: T,
     partialUpdate?: boolean,
-  ): Promise<DownloadClientResource>;
+  ): Promise<T>;
 
   public normalizeConfigFields(configFields: Record<string, unknown>, arrType: ArrType): Record<string, unknown> {
     const normalized: Record<string, unknown> = {};
@@ -124,7 +121,81 @@ export abstract class BaseDownloadClientSync {
     return { ids, missingTags };
   }
 
-  protected findImplementationInSchema(schema: DownloadClientResource[], implementation: string): DownloadClientResource | undefined {
+  protected collectSharedFieldChanges(
+    config: InputConfigDownloadClient,
+    server: T,
+    cache: ServerCache,
+    updatePassword: boolean,
+  ): FieldChange[] {
+    const changes: FieldChange[] = [];
+
+    if (config.enable !== undefined && config.enable !== server.enable) {
+      changes.push({ field: "enable", from: server.enable, to: config.enable });
+    }
+    if (config.priority !== undefined && config.priority !== server.priority) {
+      changes.push({ field: "priority", from: server.priority, to: config.priority });
+    }
+
+    const normalizedConfigFields = this.normalizeConfigFields(config.fields || {}, this.getArrType());
+    const serverFields = server.fields || [];
+
+    for (const serverField of serverFields) {
+      const fieldName = serverField.name;
+      if (!fieldName) continue;
+
+      const configValue = normalizedConfigFields[fieldName];
+      const serverValue = serverField.value;
+
+      if (configValue === undefined) continue;
+
+      let valuesMatch = JSON.stringify(configValue) === JSON.stringify(serverValue);
+
+      if (
+        !valuesMatch &&
+        (fieldName.toLowerCase().includes("password") || fieldName.toLowerCase().includes("apikey")) &&
+        serverValue === "********" &&
+        typeof configValue === "string" &&
+        configValue.length > 0 &&
+        !updatePassword
+      ) {
+        valuesMatch = true;
+      }
+
+      if (!valuesMatch) {
+        changes.push({ field: `fields.${fieldName}`, from: serverValue, to: configValue });
+      }
+    }
+
+    const serverFieldNames = new Set(
+      serverFields.map((f: DownloadClientField) => f.name).filter((name): name is string => typeof name === "string" && name.length > 0),
+    );
+
+    for (const key of Object.keys(normalizedConfigFields)) {
+      if (key !== snakeToCamel(key)) {
+        continue;
+      }
+
+      if (!serverFieldNames.has(key) && normalizedConfigFields[key] !== undefined) {
+        this.logger.warn(`Config field '${key}' does not exist on server`);
+        changes.push({ field: `fields.${key}`, from: undefined, to: normalizedConfigFields[key] });
+      }
+    }
+
+    const configTags = config.tags ?? [];
+    const { ids: resolvedTagIds } = this.resolveTagNamesToIds(configTags, cache.tags);
+    const serverTags = server.tags ?? [];
+
+    const sortedConfigTagIds = [...resolvedTagIds].sort();
+    const sortedServerTags = [...serverTags].sort();
+
+    if (JSON.stringify(sortedConfigTagIds) !== JSON.stringify(sortedServerTags)) {
+      changes.push({ field: "tags", from: sortedServerTags, to: sortedConfigTagIds });
+    }
+
+    return changes;
+  }
+
+  protected findImplementationInSchema(schema: T[], implementation: string): T | undefined {
     return schema.find((s) => s.implementation?.toLowerCase() === implementation.toLowerCase());
   }
 
@@ -162,7 +233,7 @@ export abstract class BaseDownloadClientSync {
         };
   }
 
-  public validateDownloadClient(config: InputConfigDownloadClient, schema: DownloadClientResource[]): ValidationResult {
+  public validateDownloadClient(config: InputConfigDownloadClient, schema: T[]): ValidationResult {
     const zodValidation = this.validateDownloadClientConfig(config);
 
     if (!zodValidation.valid) {
@@ -207,10 +278,10 @@ export abstract class BaseDownloadClientSync {
     return { valid: errors.length === 0, errors, warnings };
   }
 
-  protected async getDownloadClientSchema(cache: ServerCache): Promise<DownloadClientResource[]> {
+  protected async getDownloadClientSchema(cache: ServerCache): Promise<T[]> {
     const cached = cache.getDownloadClientSchema();
     if (cached) {
-      return cached;
+      return cached as T[];
     }
 
     const schema = await this.getApi().getDownloadClientSchema();
@@ -219,10 +290,10 @@ export abstract class BaseDownloadClientSync {
   }
 
   public filterUnmanagedClients(
-    serverClients: DownloadClientResource[],
+    serverClients: T[],
     configClients: InputConfigDownloadClient[],
     deleteConfig: Exclude<MergedConfigInstance["download_clients"], undefined>["delete_unmanaged"],
-  ): DownloadClientResource[] {
+  ): T[] {
     const { enabled = false, ignore = [] } = deleteConfig ?? {};
 
     if (!enabled) {
@@ -243,7 +314,7 @@ export abstract class BaseDownloadClientSync {
 
   private async validateConfigClients(
     configClients: InputConfigDownloadClient[],
-    schema: DownloadClientResource[],
+    schema: T[],
   ): Promise<{
     validClients: InputConfigDownloadClient[];
     hasErrors: boolean;
@@ -351,8 +422,11 @@ export abstract class BaseDownloadClientSync {
     return created;
   }
 
-  private async updateClients(updates: DownloadClientDiff["update"], serverCache: ServerCache): Promise<DownloadClientDiff["update"]> {
-    const updated: DownloadClientDiff["update"] = [];
+  private async updateClients(
+    updates: DownloadClientDiff<T>["update"],
+    serverCache: ServerCache,
+  ): Promise<DownloadClientDiff<T>["update"]> {
+    const updated: DownloadClientDiff<T>["update"] = [];
 
     for (const item of updates) {
       const { config, server, partialUpdate } = item;
@@ -379,8 +453,8 @@ export abstract class BaseDownloadClientSync {
     return updated;
   }
 
-  private async deleteUnmanagedClients(unmanagedClients: DownloadClientResource[]): Promise<DownloadClientResource[]> {
-    const removed: DownloadClientResource[] = [];
+  private async deleteUnmanagedClients(unmanagedClients: T[]): Promise<T[]> {
+    const removed: T[] = [];
 
     for (const client of unmanagedClients) {
       try {

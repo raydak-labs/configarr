@@ -5,7 +5,7 @@ import { getClient } from "../clients/client";
 import { DiffEntry, FieldChange } from "../diffReport/diffReport.types";
 import { getEnvs } from "../env";
 import { logger } from "../logger";
-import type { Tag } from "../clients/capabilities";
+import type { Tag } from "../tags/tag.types";
 import { camelToSnake, snakeToCamel } from "../util";
 
 export type { Tag };

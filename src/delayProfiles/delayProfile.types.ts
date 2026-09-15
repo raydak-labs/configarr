@@ -5,19 +5,26 @@ export type DelayProfileProtocolItem = {
   delay?: number;
 };
 
-/** Mapping payload. Lidarr nightly accepts `items`; other *arrs use usenet/torrent fields. */
-export type DelayProfilePayload = {
+export type DelayProfileShared = {
   id?: number;
+  tags?: number[] | null;
+  order?: number;
+  bypassIfHighestQuality?: boolean;
+  bypassIfAboveCustomFormatScore?: boolean;
+  minimumCustomFormatScore?: number;
+  name?: string | null;
+};
+
+export type DelayProfileGenericResource = DelayProfileShared & {
   enableUsenet?: boolean;
   enableTorrent?: boolean;
   preferredProtocol?: string;
   usenetDelay?: number;
   torrentDelay?: number;
-  bypassIfHighestQuality?: boolean;
-  bypassIfAboveCustomFormatScore?: boolean;
-  minimumCustomFormatScore?: number;
-  order?: number;
-  tags?: number[] | null;
-  name?: string | null;
-  items?: DelayProfileProtocolItem[] | null;
 };
+
+export type DelayProfileLidarrResource = DelayProfileShared & { items: DelayProfileProtocolItem[] };
+
+export type DelayProfilePayload = DelayProfileGenericResource | DelayProfileLidarrResource;
+
+export type DelayProfileGenericArrType = "SONARR" | "RADARR" | "READARR" | "WHISPARR";

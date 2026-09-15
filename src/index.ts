@@ -16,14 +16,7 @@ import {
   loadServerCustomFormats,
   manageCf,
 } from "./customFormats/customFormats";
-import {
-  calculateDelayProfilesDiff,
-  createDelayProfileOnServer,
-  delayProfilesToDiffEntries,
-  deleteAdditionalDelayProfiles,
-  mapToServerDelayProfile,
-  updateDelayProfileOnServer,
-} from "./delayProfiles/delayProfiles";
+import { calculateDelayProfilesDiff, createDelayProfileSync, delayProfilesToDiffEntries } from "./delayProfiles/delayProfiles";
 import { syncDownloadClients } from "./downloadClients/downloadClientSyncer";
 import { syncProwlarrProviders } from "./prowlarr/prowlarrSyncer";
 import { downloadClientConfigDiffToDiffEntries, syncDownloadClientConfig } from "./downloadClientConfig/downloadClientConfigSyncer";
@@ -107,7 +100,7 @@ const pipeline = async (
     checkForConflictingCFs(mergedCFs, config, conflicts);
   }
 
-  const serverCFMapping = serverCache.cf.reduce((p, c) => {
+  const serverCFMapping = serverCache.customFormats.reduce((p, c) => {
     p.set(c.name!, c);
     return p;
   }, new Map<string, CustomFormatRequest>());
@@ -119,7 +112,7 @@ const pipeline = async (
   // serverCFs.push(...cfUpdateResult.createCFs);
   if (cfUpdateResult.createCFs.length > 0 || cfUpdateResult.updatedCFs.length > 0) {
     // refresh cfs
-    serverCache.cf = await loadServerCustomFormats(arrType);
+    serverCache.customFormats = await loadServerCustomFormats(arrType);
   }
 
   if (config.delete_unmanaged_custom_formats?.enabled) {
@@ -137,7 +130,7 @@ const pipeline = async (
       mm.set(e, true);
     });
 
-    const cfsToDelete = serverCache.cf.filter((e) => (e.name && mm.get(e.name)) !== true);
+    const cfsToDelete = serverCache.customFormats.filter((e) => (e.name && mm.get(e.name)) !== true);
 
     if (cfsToDelete.length > 0) {
       diffCollector.add(cfsToDelete.map((e) => ({ resourceType: "CustomFormat", name: e.name!, action: "delete" as const })));
@@ -193,7 +186,7 @@ const pipeline = async (
       mergedQDs.push(...config.quality_definition.qualities);
     }
 
-    const { changeMap, restData } = calculateQualityDefinitionDiff(arrType, serverCache.qd, mergedQDs);
+    const { changeMap, restData } = calculateQualityDefinitionDiff(arrType, serverCache.qualityDefinitions, mergedQDs);
 
     if (changeMap.size > 0) {
       diffCollector.add(qualityDefinitionsToDiffEntries(changeMap));
@@ -204,7 +197,7 @@ const pipeline = async (
         logger.info(`Diffs in quality definitions found ${changeMap.values()}`);
         await updateQualityDefinitionsOnServer(arrType, restData);
         // refresh QDs
-        serverCache.qd = await loadQualityDefinitionFromServer(arrType);
+        serverCache.qualityDefinitions = await loadQualityDefinitionFromServer(arrType);
         logger.info(`Updated QualityDefinitions`);
       }
     } else {
@@ -244,7 +237,7 @@ const pipeline = async (
   diffCollector.add(uiConfigDiffToDiffEntries(uiConfigResult));
 
   const serverQP = await loadQualityProfilesFromServer(arrType);
-  serverCache.qp = serverQP;
+  serverCache.qualityProfiles = serverQP;
 
   logger.info(`Server objects: QualityProfiles ${serverQP.length}`);
 
@@ -286,7 +279,7 @@ const pipeline = async (
   }
 
   if (config.delete_unmanaged_quality_profiles?.enabled) {
-    const unmanagedQPs = getUnmanagedQualityProfiles(serverCache.qp, config.quality_profiles);
+    const unmanagedQPs = getUnmanagedQualityProfiles(serverCache.qualityProfiles, config.quality_profiles);
 
     const ignoreSet = new Set(config.delete_unmanaged_quality_profiles.ignore ?? []);
 
@@ -332,10 +325,11 @@ const pipeline = async (
       if (getEnvs().DRY_RUN) {
         logger.info("DryRun: Would update DelayProfiles.");
       } else {
+        const delaySync = createDelayProfileSync(arrType);
+
         if (delayProfilesDiff.defaultProfileChanged && delayProfilesDiff.defaultProfile) {
           logger.info(`Updating default DelayProfile`);
-          const mappedDefaultDelayProfile = mapToServerDelayProfile(delayProfilesDiff.defaultProfile, serverCache.tags);
-          await updateDelayProfileOnServer(arrType, "1", mappedDefaultDelayProfile);
+          await delaySync.updateDefaultFromConfig(delayProfilesDiff.defaultProfile, serverCache.tags);
         }
 
         if (delayProfilesDiff.missingTags.length > 0) {
@@ -354,12 +348,7 @@ const pipeline = async (
         if (delayProfilesDiff.additionalProfilesChanged && delayProfilesDiff.additionalProfiles) {
           logger.info(`Updating additional DelayProfiles (deleting old ones and recreate all) ...`);
 
-          await deleteAdditionalDelayProfiles(arrType);
-
-          for (const profile of delayProfilesDiff.additionalProfiles) {
-            const mappedProfile = mapToServerDelayProfile(profile, serverCache.tags);
-            await createDelayProfileOnServer(arrType, mappedProfile);
-          }
+          await delaySync.recreateAdditionalFromConfig(delayProfilesDiff.additionalProfiles, serverCache.tags);
         }
 
         logger.info(`Successfully synched delay profiles.`);

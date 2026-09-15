@@ -9,6 +9,7 @@ import {
   SystemResource,
   TagResource,
   DownloadClientConfigResource,
+  DownloadClientResource as GeneratedDownloadClientResource,
   LanguageResource,
   MetadataProfileResource,
   QualityDefinitionResource,
@@ -17,7 +18,11 @@ import {
   UiConfigResource,
 } from "../__generated__/readarr/data-contracts";
 import { logger } from "../logger";
-import type { DownloadClientResource } from "../types/download-client.types";
+import type { CustomFormatRequest } from "../customFormats/customFormat.types";
+import type { DelayProfileGenericResource } from "../delayProfiles/delayProfile.types";
+import type { MediaDownloadClientResource } from "../downloadClients/downloadClient.types";
+import type { QualityDefinitionReadarrResource } from "../qualityDefinitions/qualityDefinition.types";
+import type { QualityProfileLidarrReadarrResource } from "../qualityProfiles/qualityProfile.types";
 import { logConnectionError, validateClientParams } from "./connection";
 import {
   CustomFormatsClient,
@@ -32,9 +37,9 @@ export class ReadarrClient
     SystemClient,
     TagsClient,
     DownloadClientsClient,
-    QualityProfilesClient<QualityProfileResource>,
-    CustomFormatsClient<CustomFormatResource>,
-    QualityDefinitionsClient<QualityDefinitionResource>
+    QualityProfilesClient<QualityProfileLidarrReadarrResource>,
+    CustomFormatsClient,
+    QualityDefinitionsClient<QualityDefinitionReadarrResource>
 {
   private api!: Api<unknown>;
 
@@ -64,8 +69,8 @@ export class ReadarrClient
     return this.api.v1QualitydefinitionList();
   }
 
-  async updateQualityDefinitions(definitions: QualityDefinitionResource[]) {
-    await this.api.v1QualitydefinitionUpdateUpdate(definitions);
+  async updateQualityDefinitions(definitions: QualityDefinitionReadarrResource[]) {
+    await this.api.v1QualitydefinitionUpdateUpdate(definitions as QualityDefinitionResource[]);
     return this.api.v1QualitydefinitionList();
   }
 
@@ -74,12 +79,12 @@ export class ReadarrClient
     return this.api.v1QualityprofileList();
   }
 
-  createQualityProfile(profile: QualityProfileResource) {
-    return this.api.v1QualityprofileCreate(profile);
+  createQualityProfile(profile: QualityProfileLidarrReadarrResource) {
+    return this.api.v1QualityprofileCreate(profile as QualityProfileResource);
   }
 
-  updateQualityProfile(id: string, profile: QualityProfileResource) {
-    return this.api.v1QualityprofileUpdate(id, profile);
+  updateQualityProfile(id: string, profile: QualityProfileLidarrReadarrResource) {
+    return this.api.v1QualityprofileUpdate(id, profile as QualityProfileResource);
   }
 
   deleteQualityProfile(id: string): Promise<void> {
@@ -91,12 +96,12 @@ export class ReadarrClient
     return this.api.v1CustomformatList();
   }
 
-  createCustomFormat(format: CustomFormatResource) {
-    return this.api.v1CustomformatCreate(format);
+  createCustomFormat(format: CustomFormatRequest) {
+    return this.api.v1CustomformatCreate(format as CustomFormatResource);
   }
 
-  updateCustomFormat(id: string, format: CustomFormatResource) {
-    return this.api.v1CustomformatUpdate(id, format);
+  updateCustomFormat(id: string, format: CustomFormatRequest) {
+    return this.api.v1CustomformatUpdate(id, format as CustomFormatResource);
   }
 
   deleteCustomFormat(id: string) {
@@ -165,12 +170,12 @@ export class ReadarrClient
     return this.api.v1DelayprofileList();
   }
 
-  async createDelayProfile(profile: DelayProfileResource): Promise<DelayProfileResource> {
-    return this.api.v1DelayprofileCreate(profile);
+  async createDelayProfile(profile: DelayProfileGenericResource): Promise<DelayProfileResource> {
+    return this.api.v1DelayprofileCreate(profile as DelayProfileResource);
   }
 
-  async updateDelayProfile(id: string, data: DelayProfileResource): Promise<DelayProfileResource> {
-    return this.api.v1DelayprofileUpdate(id, data);
+  async updateDelayProfile(id: string, data: DelayProfileGenericResource): Promise<DelayProfileResource> {
+    return this.api.v1DelayprofileUpdate(id, data as DelayProfileResource);
   }
 
   async deleteDelayProfile(id: string): Promise<void> {
@@ -186,29 +191,29 @@ export class ReadarrClient
   }
 
   // Download Clients
-  async getDownloadClientSchema(): Promise<DownloadClientResource[]> {
+  async getDownloadClientSchema(): Promise<MediaDownloadClientResource[]> {
     return this.api.v1DownloadclientSchemaList();
   }
 
-  async getDownloadClients(): Promise<DownloadClientResource[]> {
+  async getDownloadClients(): Promise<MediaDownloadClientResource[]> {
     return this.api.v1DownloadclientList();
   }
 
-  async createDownloadClient(client: DownloadClientResource): Promise<DownloadClientResource> {
-    return this.api.v1DownloadclientCreate(client);
+  async createDownloadClient(client: MediaDownloadClientResource): Promise<MediaDownloadClientResource> {
+    return this.api.v1DownloadclientCreate(client as GeneratedDownloadClientResource);
   }
 
   // Note: Readarr's v1 API expects string for update but number for delete
-  async updateDownloadClient(id: string, client: DownloadClientResource): Promise<DownloadClientResource> {
-    return this.api.v1DownloadclientUpdate(id, client);
+  async updateDownloadClient(id: string, client: MediaDownloadClientResource): Promise<MediaDownloadClientResource> {
+    return this.api.v1DownloadclientUpdate(id, client as GeneratedDownloadClientResource);
   }
 
   async deleteDownloadClient(id: string): Promise<void> {
     return this.api.v1DownloadclientDelete(+id);
   }
 
-  async testDownloadClient(client: DownloadClientResource): Promise<void> {
-    return this.api.v1DownloadclientTestCreate(client);
+  async testDownloadClient(client: MediaDownloadClientResource): Promise<void> {
+    return this.api.v1DownloadclientTestCreate(client as GeneratedDownloadClientResource);
   }
 
   // Download Client Configuration
