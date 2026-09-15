@@ -130,7 +130,7 @@ export async function syncSyncProfiles(section: InputConfigProwlarrInstance["syn
     }
   }
 
-  const deletedIds = new Set<number>();
+  const goneIds = new Set<number>();
 
   if (deleteConfig?.enabled) {
     const keep = new Set([...names, ...(deleteConfig.ignore ?? []).map((n) => n.toLowerCase())]);
@@ -141,6 +141,9 @@ export async function syncSyncProfiles(section: InputConfigProwlarrInstance["syn
 
       result.diffEntries.push({ resourceType: RESOURCE_TYPE, name, action: "delete" });
       result.removed++;
+      // Recorded before the dry-run branch: a dry run deletes nothing, but the profile is still
+      // gone by the time indexers sync in a real run, so it must not be offered to them here.
+      goneIds.add(profile.id);
 
       if (dryRun) {
         logger.info(`DryRun: Would delete unmanaged sync profile '${name}'.`);
@@ -148,7 +151,6 @@ export async function syncSyncProfiles(section: InputConfigProwlarrInstance["syn
       }
       try {
         await api.deleteAppProfile(profile.id.toString());
-        deletedIds.add(profile.id);
         logger.info(`Deleted unmanaged sync profile: '${name}'`);
       } catch (error: unknown) {
         throw fatal(`Failed to delete sync profile '${name}'`, error);
@@ -156,7 +158,7 @@ export async function syncSyncProfiles(section: InputConfigProwlarrInstance["syn
     }
   }
 
-  result.profiles = profiles.filter((p) => p.id == null || !deletedIds.has(p.id));
+  result.profiles = profiles.filter((p) => p.id == null || !goneIds.has(p.id));
   return result;
 }
 

@@ -147,6 +147,18 @@ describe("syncSyncProfiles", () => {
     expect(res.diffEntries.map((e) => e.action)).toEqual(["update", "create", "delete"]);
   });
 
+  it("leaves a profile it would delete out of the returned list in a dry run", async () => {
+    dryRun();
+    mockClient.getAppProfiles.mockResolvedValue([{ ...standard, id: 3, name: "Orphan" }, standard]);
+
+    const res = await syncSyncProfiles({ data: [{ name: "Standard" }], delete_unmanaged: { enabled: true } });
+
+    // Orphan is first in server order, so an indexer with no sync_profile would otherwise
+    // default to a profile the real run deletes before indexers sync.
+    expect(mockClient.deleteAppProfile).not.toHaveBeenCalled();
+    expect(res.profiles?.map((p) => p.name)).toEqual(["Standard"]);
+  });
+
   it("returns a dry-run created profile without an id", async () => {
     dryRun();
 
