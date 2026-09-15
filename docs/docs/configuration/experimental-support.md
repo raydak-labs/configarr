@@ -298,15 +298,17 @@ Prowlarr is an indexer manager, not a media manager, so it uses a dedicated `pro
 instead of the usual `*arr` instance shape. The following are managed:
 
 - **Tags** – ensure a set of tag labels exists (and optionally prune the rest)
+- **Sync Profiles** – the RSS/search rules indexers are bound to (`appprofile` in Prowlarr's API)
 - **Applications** – the Sonarr/Radarr/... sync targets Prowlarr pushes its indexers to
 - **Indexers** – created from a Prowlarr schema `definition` (e.g. `1337x`), matched by `name`
 - **Indexer Proxies** – FlareSolverr / HTTP / SOCKS4 / SOCKS5
 - **Download Clients** – reuses the same engine as the other `*arr` download clients
 - an optional **"sync indexers to apps"** trigger (`applications.sync_indexers`)
 
-Each managed section (`applications`, `indexers`, `indexer_proxies`, `download_clients`) supports a
-`delete_unmanaged: { enabled, ignore }` block. Resources are synced in dependency order: tags →
-indexer proxies → indexers → applications → download clients.
+Each managed section (`sync_profiles`, `applications`, `indexers`, `indexer_proxies`,
+`download_clients`) supports a `delete_unmanaged: { enabled, ignore }` block. Resources are synced in
+dependency order: tags → sync profiles → indexer proxies → indexers → applications → download
+clients, so an indexer can reference a sync profile created in the same run.
 
 :::warning Be careful with `delete_unmanaged` on Prowlarr
 
@@ -316,6 +318,8 @@ blast radius than on a media manager:
 - deleting an unmanaged **application** unlinks that Sonarr/Radarr/... instance from Prowlarr
 - deleting an unmanaged **indexer** removes it from every connected app on the next app sync
 - deleting an unmanaged **tag** silently untags every resource that used it
+- deleting an unmanaged **sync profile** fails the run while an indexer still uses it, and Prowlarr
+  needs at least one profile to exist
 
 It is disabled by default everywhere, which is the recommended setting. Only enable it per section
 once your config lists everything that should exist on the server, use `ignore` for entries you
@@ -323,11 +327,11 @@ manage by hand, and do a `DRY_RUN=true` run first to see exactly what would be r
 
 :::
 
-Not supported (out of scope for now): indexer definitions/proxies beyond CRUD, app sync profiles,
-notifications, DNS/host config.
+Not supported (out of scope for now): indexer definitions/proxies beyond CRUD, notifications,
+DNS/host config.
 
-Any failure while syncing tags, indexer proxies, indexers or applications (including the
-`sync_indexers` command) fails that Prowlarr instance and is honoured by `STOP_ON_ERROR`.
+Any failure while syncing tags, sync profiles, indexer proxies, indexers or applications (including
+the `sync_indexers` command) fails that Prowlarr instance and is honoured by `STOP_ON_ERROR`.
 
 Enable/disable all Prowlarr instances with the top-level `prowlarrEnabled` flag (defaults to enabled).
 
@@ -349,6 +353,18 @@ prowlarr:
       ignore:
         - keep-me
 
+    # Sync profiles ("Sync Profiles" in the UI). Props left out keep their value on the
+    # server, or take Prowlarr's own default when the profile is created.
+    sync_profiles:
+      data:
+        - name: Standard
+          enable_rss: true
+          enable_automatic_search: true
+          enable_interactive_search: true
+          minimum_seeders: 1
+      delete_unmanaged:
+        enabled: false
+
     # Indexer proxies (FlareSolverr, Http, Socks4, Socks5)
     indexer_proxies:
       data:
@@ -368,7 +384,7 @@ prowlarr:
         - name: 1337x
           definition: 1337x
           enable: true
-          app_profile: Standard # resolved to appProfileId; must exist in Prowlarr
+          sync_profile: Standard # must exist in Prowlarr or be listed under `sync_profiles`
           priority: 25
           fields:
             torrentBaseSettings.seedRatio: 1.0

@@ -43,11 +43,17 @@ radarr:
 #    api_key: !secret PROWLARR_API_KEY
 #    tags:
 #      - configarr
+#    sync_profiles:
+#      data:
+#        - name: Standard
+#          enable_rss: true
+#          minimum_seeders: 1
 #    indexers:
 #      data:
 #        - name: The Pirate Bay
 #          definition: The Pirate Bay
 #          enable: true
+#          sync_profile: Standard
 #    indexer_proxies:
 #      data:
 #        - name: flaresolverr
