@@ -1,22 +1,29 @@
-import {
-  MetadataProfileResource,
-  MonitorTypes,
-  NewItemMonitorTypes,
-  QualityProfileResource,
-  RootFolderResource,
-  TagResource,
-} from "../__generated__/lidarr/data-contracts";
+import { MonitorTypes, NewItemMonitorTypes, RootFolderResource, TagResource } from "../__generated__/lidarr/data-contracts";
 import { ServerCache } from "../cache";
 import { getClient } from "../clients/client";
 import { FieldChange } from "../diffReport/diffReport.types";
 import { InputConfigRootFolderLidarr } from "../types/config.types";
 import { compareObjectsCarr, toEnumOrThrow } from "../util";
 import { RootFolderDiff } from "./rootFolder.types";
-import { BaseRootFolderSync } from "./rootFolderBase";
+import { BaseRootFolderSync, nameIdMap } from "./rootFolderBase";
 
 export class LidarrRootFolderSync extends BaseRootFolderSync<InputConfigRootFolderLidarr> {
+  private profileIdMaps: { quality: Map<string, number>; metadata: Map<string, number> } | null = null;
+
   protected getApi() {
     return getClient("LIDARR");
+  }
+
+  private async getProfileIdMaps(serverCache: ServerCache) {
+    if (this.profileIdMaps) {
+      return this.profileIdMaps;
+    }
+
+    const quality =
+      serverCache.qualityProfiles.length > 0 ? nameIdMap(serverCache.qualityProfiles) : nameIdMap(await this.getApi().getQualityProfiles());
+    const metadata = nameIdMap(await this.getApi().getMetadataProfiles());
+    this.profileIdMaps = { quality, metadata };
+    return this.profileIdMaps;
   }
 
   public async resolveRootFolderConfig(config: InputConfigRootFolderLidarr, serverCache: ServerCache): Promise<RootFolderResource> {
@@ -24,26 +31,7 @@ export class LidarrRootFolderSync extends BaseRootFolderSync<InputConfigRootFold
       throw new Error(`Lidarr root folders must be objects with name, metadata_profile, and quality_profile. Got string: ${config}`);
     }
 
-    // Load quality profiles and metadata profiles for Lidarr
-    const [qualityProfiles, metadataProfiles] = await Promise.all([
-      this.getApi().getQualityProfiles(),
-      this.getApi().getMetadataProfiles(),
-    ]);
-
-    const qualityProfileMap = new Map<string, number>();
-    const metadataProfileMap = new Map<string, number>();
-
-    qualityProfiles.forEach((profile: QualityProfileResource) => {
-      if (profile.name && profile.id !== undefined) {
-        qualityProfileMap.set(profile.name, profile.id);
-      }
-    });
-
-    metadataProfiles.forEach((profile: MetadataProfileResource) => {
-      if (profile.id !== undefined && profile.name) {
-        metadataProfileMap.set(profile.name, profile.id);
-      }
-    });
+    const { quality: qualityProfileMap, metadata: metadataProfileMap } = await this.getProfileIdMaps(serverCache);
 
     const name = config.name;
     const metadataProfileId = config.metadata_profile ? metadataProfileMap.get(config.metadata_profile) : undefined;

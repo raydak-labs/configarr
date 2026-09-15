@@ -60,6 +60,44 @@ describe("LidarrRootFolderSync", () => {
       });
     });
 
+    it("fetches quality and metadata profiles once across resolves", async () => {
+      const sync = new LidarrRootFolderSync();
+      const config: InputConfigRootFolderLidarr = {
+        path: "/music",
+        name: "My Music",
+        metadata_profile: "Standard",
+        quality_profile: "Any",
+      };
+
+      await sync.resolveRootFolderConfig(config, serverCache);
+      await sync.resolveRootFolderConfig({ ...config, path: "/music2", name: "Other" }, serverCache);
+
+      expect(mockApi.getQualityProfiles).toHaveBeenCalledTimes(1);
+      expect(mockApi.getMetadataProfiles).toHaveBeenCalledTimes(1);
+    });
+
+    it("uses cached quality profiles instead of fetching", async () => {
+      serverCache.qualityProfiles = [
+        { id: 1, name: "Any" },
+        { id: 2, name: "Lossless" },
+      ];
+
+      const sync = new LidarrRootFolderSync();
+      const result = await sync.resolveRootFolderConfig(
+        {
+          path: "/music",
+          name: "My Music",
+          metadata_profile: "Standard",
+          quality_profile: "Any",
+        },
+        serverCache,
+      );
+
+      expect(mockApi.getQualityProfiles).not.toHaveBeenCalled();
+      expect(mockApi.getMetadataProfiles).toHaveBeenCalledTimes(1);
+      expect(result.defaultQualityProfileId).toBe(1);
+    });
+
     it("should resolve Lidarr config with optional monitor fields", async () => {
       serverCache.tags = [];
 

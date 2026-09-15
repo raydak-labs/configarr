@@ -60,6 +60,44 @@ describe("ReadarrRootFolderSync", () => {
       });
     });
 
+    it("fetches quality and metadata profiles once across resolves", async () => {
+      const sync = new ReadarrRootFolderSync();
+      const config: InputConfigRootFolderReadarr = {
+        path: "/books",
+        name: "My Books",
+        metadata_profile: "Standard",
+        quality_profile: "eBook",
+      };
+
+      await sync.resolveRootFolderConfig(config, serverCache);
+      await sync.resolveRootFolderConfig({ ...config, path: "/books2", name: "Other" }, serverCache);
+
+      expect(mockApi.getQualityProfiles).toHaveBeenCalledTimes(1);
+      expect(mockApi.getMetadataProfiles).toHaveBeenCalledTimes(1);
+    });
+
+    it("uses cached quality profiles instead of fetching", async () => {
+      serverCache.qualityProfiles = [
+        { id: 1, name: "eBook" },
+        { id: 2, name: "Audiobook" },
+      ];
+
+      const sync = new ReadarrRootFolderSync();
+      const result = await sync.resolveRootFolderConfig(
+        {
+          path: "/books",
+          name: "My Books",
+          metadata_profile: "Standard",
+          quality_profile: "eBook",
+        },
+        serverCache,
+      );
+
+      expect(mockApi.getQualityProfiles).not.toHaveBeenCalled();
+      expect(mockApi.getMetadataProfiles).toHaveBeenCalledTimes(1);
+      expect(result.defaultQualityProfileId).toBe(1);
+    });
+
     it("should resolve Readarr config with optional monitor fields", async () => {
       serverCache.tags = [];
 

@@ -6,6 +6,16 @@ import { logger } from "../logger";
 import { InputConfigRootFolder } from "../types/config.types";
 import { RootFolderDiff, RootFolderServerResource, RootFolderSyncResult } from "./rootFolder.types";
 
+export function nameIdMap(profiles: { name?: string | null; id?: number }[]): Map<string, number> {
+  const map = new Map<string, number>();
+  for (const profile of profiles) {
+    if (profile.name && profile.id !== undefined) {
+      map.set(profile.name, profile.id);
+    }
+  }
+  return map;
+}
+
 export function rootFolderDiffToDiffEntries(diff: RootFolderDiff): DiffEntry[] {
   const entries: DiffEntry[] = diff.missingOnServer.map((folder) => ({
     resourceType: "RootFolder",
