@@ -1,8 +1,10 @@
+import path from "node:path";
 import { DiffEntry, FieldChange } from "../diffReport/diffReport.types";
+import { getEnvs } from "../env";
 import { logger } from "../logger";
 import type { QualityDefinitionsClient } from "../clients/capabilities";
 import { TrashQualityDefinitionQuality } from "../types/trashguide.types";
-import { cloneWithJSON, roundToDecimal } from "../util";
+import { cloneWithJSON, loadJsonFile, roundToDecimal } from "../util";
 import { QualityDefinitionShared } from "./qualityDefinition.types";
 
 function diffPreferredSize(
@@ -21,6 +23,9 @@ export abstract class QualityDefinitionSync<T extends QualityDefinitionShared> {
   protected abstract getApi(): QualityDefinitionsClient<T>;
 
   loadFromServer() {
+    if (getEnvs().LOAD_LOCAL_SAMPLES) {
+      return loadJsonFile<QualityDefinitionShared[]>(path.resolve(__dirname, "../../tests/samples/qualityDefinition.json"));
+    }
     return this.getApi().getQualityDefinitions();
   }
 

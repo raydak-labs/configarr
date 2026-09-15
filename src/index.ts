@@ -27,13 +27,13 @@ import { logger, logHeading, logInstanceHeading } from "./logger";
 import { createMediaManagementSync } from "./mediaManagement/mediaManagement";
 import { mediamanagementDiffToDiffEntries, namingDiffToDiffEntries } from "./mediaManagement/mediaManagementBase";
 import { qualityDefinitionsToDiffEntries } from "./qualityDefinitions/qualityDefinitionBase";
-import { createQualityDefinitionSync, loadQualityDefinitionFromServer } from "./qualityDefinitions/qualityDefinitionSyncer";
+import { createQualityDefinitionSync } from "./qualityDefinitions/qualityDefinitionSyncer";
 import { DiffCollector } from "./diffReport/diffCollector";
 import { ConsoleDiffFormatter } from "./diffReport/formatters/consoleFormatter";
 import { writeJsonDiffReport } from "./diffReport/formatters/jsonFormatter";
 import { InstanceDiffReport } from "./diffReport/diffReport.types";
 import { checkForConflictingCFs, getUnmanagedQualityProfiles, qualityProfilesToDiffEntries } from "./qualityProfiles/qualityProfileBase";
-import { createQualityProfileSync, loadQualityProfilesFromServer } from "./qualityProfiles/qualityProfileSyncer";
+import { createQualityProfileSync } from "./qualityProfiles/qualityProfileSyncer";
 import { syncMetadataProfiles } from "./metadataProfiles/metadataProfileSyncer";
 import { cloneRecyclarrTemplateRepo } from "./recyclarr-importer";
 import { loadServerTags } from "./tags/tags";
@@ -63,7 +63,7 @@ const pipeline = async (
   logger.info(`System status: ${JSON.stringify(system)}`);
 
   const serverCFs = await loadServerCustomFormats(arrType);
-  const serverQD = getEnvs().LOAD_LOCAL_SAMPLES ? await loadQualityDefinitionFromServer(arrType) : await qdSync.loadFromServer();
+  const serverQD = await qdSync.loadFromServer();
   const languages = await getClient(arrType).getLanguages();
 
   const emptyQualityProfiles: QualityProfileShared[] = [];
@@ -222,7 +222,7 @@ const pipeline = async (
   const uiConfigResult = await syncUiConfig(arrType, config.ui_config);
   diffCollector.add(uiConfigDiffToDiffEntries(uiConfigResult));
 
-  const serverQP = getEnvs().LOAD_LOCAL_SAMPLES ? await loadQualityProfilesFromServer(arrType) : await qpSync.loadFromServer();
+  const serverQP = await qpSync.loadFromServer();
   serverCache.qualityProfiles = serverQP;
 
   logger.info(`Server objects: QualityProfiles ${serverQP.length}`);

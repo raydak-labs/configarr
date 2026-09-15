@@ -1,11 +1,13 @@
+import path from "node:path";
 import { ServerCache } from "../cache";
 import { DiffEntry, FieldChange } from "../diffReport/diffReport.types";
+import { getEnvs } from "../env";
 import { logger } from "../logger";
 import { CFProcessing } from "../customFormats/customFormat.types";
 import { MediaArrType } from "../types/common.types";
 import { ConfigQualityProfile, ConfigQualityProfileItem, MergedConfigInstance } from "../types/config.types";
 import type { TrashCFConflict } from "../types/trashguide.types";
-import { ANY_LANGUAGE_NAME, cloneWithJSON, zip } from "../util";
+import { ANY_LANGUAGE_NAME, cloneWithJSON, loadJsonFile, zip } from "../util";
 import { CustomFormatRef, FormatItem, QualityItem, QualityProfileLanguage, QualityProfileShared } from "./qualityProfile.types";
 import type { QualityDefinitionShared } from "../qualityDefinitions/qualityDefinition.types";
 
@@ -508,6 +510,9 @@ export abstract class BaseQualityProfileSync<T extends QualityProfileShared> {
   }
 
   loadFromServer() {
+    if (getEnvs().LOAD_LOCAL_SAMPLES) {
+      return loadJsonFile<QualityProfileShared[]>(path.resolve(__dirname, "../../tests/samples/quality_profiles.json"));
+    }
     return this.getApi().getQualityProfiles();
   }
 

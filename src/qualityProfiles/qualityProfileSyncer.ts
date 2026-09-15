@@ -1,10 +1,7 @@
-import path from "node:path";
-import { getEnvs } from "../env";
 import { logger } from "../logger";
 import { CFProcessing } from "../customFormats/customFormat.types";
 import { MediaArrType } from "../types/common.types";
 import { MergedConfigInstance } from "../types/config.types";
-import { loadJsonFile } from "../util";
 import { ServerCache } from "../cache";
 import { QualityProfileLidarrSync } from "./qualityProfileLidarr";
 import { QualityProfileRadarrSync } from "./qualityProfileRadarr";
@@ -38,9 +35,6 @@ export const calculateQualityProfilesDiff = async (
 };
 
 export const loadQualityProfilesFromServer = async (arrType: MediaArrType): Promise<QualityProfileShared[]> => {
-  if (getEnvs().LOAD_LOCAL_SAMPLES) {
-    return loadJsonFile(path.resolve(__dirname, `../../tests/samples/quality_profiles.json`));
-  }
   return createQualityProfileSync(arrType).loadFromServer();
 };
 

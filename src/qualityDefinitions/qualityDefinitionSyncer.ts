@@ -1,8 +1,5 @@
-import path from "node:path";
-import { getEnvs } from "../env";
 import { MediaArrType } from "../types/common.types";
 import { TrashQualityDefinitionQuality } from "../types/trashguide.types";
-import { loadJsonFile } from "../util";
 import { QualityDefinitionLidarrSync } from "./qualityDefinitionLidarr";
 import { QualityDefinitionRadarrSync } from "./qualityDefinitionRadarr";
 import { QualityDefinitionReadarrSync } from "./qualityDefinitionReadarr";
@@ -26,9 +23,6 @@ export function createQualityDefinitionSync(arrType: MediaArrType) {
 }
 
 export const loadQualityDefinitionFromServer = async (arrType: MediaArrType): Promise<QualityDefinitionShared[]> => {
-  if (getEnvs().LOAD_LOCAL_SAMPLES) {
-    return loadJsonFile(path.resolve(__dirname, "../../tests/samples/qualityDefinition.json"));
-  }
   return createQualityDefinitionSync(arrType).loadFromServer();
 };
 
