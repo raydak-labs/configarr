@@ -64,7 +64,7 @@ export class SonarrClient
   }
 
   async updateQualityDefinitions(definitions: QualityDefinitionResource[]) {
-    this.api.v3QualitydefinitionUpdateUpdate(definitions);
+    await this.api.v3QualitydefinitionUpdateUpdate(definitions);
     return this.api.v3QualitydefinitionList();
   }
 
