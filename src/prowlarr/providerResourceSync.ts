@@ -339,6 +339,11 @@ export abstract class ProviderResourceSync<
     }
 
     const payload: Record<string, unknown> = {
+      // An update starts from the server resource so top-level props configarr does not manage
+      // survive the round trip. Prowlarr's PUT replaces the whole resource, so anything left out
+      // is reset to its type default - which is how an indexer's `added` timestamp became
+      // 0001-01-01 and its `downloadClientId` was cleared (issue #528).
+      ...server,
       ...passthrough,
       name: config.name,
       fields: mergedFields,

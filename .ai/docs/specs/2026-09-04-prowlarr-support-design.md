@@ -96,6 +96,11 @@ real run would go on to retag.
 
 Names are capped at 100 characters and duplicate identity keys within a section are rejected.
 
+An update payload starts from the server resource, not the schema template. Prowlarr's PUT
+replaces the whole resource, so any top-level prop left out is reset to its type default. Building
+the payload from the template alone reset an indexer's `added` timestamp to 0001-01-01 and cleared
+its `downloadClientId` on every update (issue #528).
+
 ## Error model
 
 Failures in the core Prowlarr resources are fatal for the instance, matching how the media

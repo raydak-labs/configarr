@@ -110,6 +110,30 @@ describe("IndexerSync", () => {
     expect(payload.priority).toBe(40);
   });
 
+  it("preserves the added timestamp and download client on update (#528)", async () => {
+    mockClient.getIndexers.mockResolvedValue([
+      {
+        id: 3,
+        name: "1337x",
+        implementation: "Cardigann",
+        added: "2024-05-04T09:30:00Z",
+        downloadClientId: 4,
+        appProfileId: 1,
+        fields: [],
+        tags: [],
+        enable: true,
+        priority: 25,
+      },
+    ]);
+
+    await sync().sync([{ name: "1337x", definition: "1337x", priority: 50 }], undefined, cache());
+
+    const [, payload] = mockClient.updateIndexer.mock.calls[0]!;
+    expect(payload.priority).toBe(50);
+    expect(payload.added).toBe("2024-05-04T09:30:00Z");
+    expect(payload.downloadClientId).toBe(4);
+  });
+
   it("deletes unmanaged indexers when enabled", async () => {
     mockClient.getIndexers.mockResolvedValue([{ id: 9, name: "Stale", implementation: "Cardigann", fields: [], tags: [] }]);
     const out = await sync().sync([], { enabled: true }, cache());

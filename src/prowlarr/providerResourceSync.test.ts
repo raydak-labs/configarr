@@ -27,6 +27,7 @@ vi.mock("../clients/unified-client", () => ({
 interface ThingResource extends ProviderResource {
   mode?: string | null;
   extraFromTemplate?: string | null;
+  added?: string | null;
 }
 type ThingConfig = { name: string; type: string; mode?: string; fields?: Record<string, any>; tags?: (string | number)[] };
 
@@ -178,6 +179,25 @@ describe("ProviderResourceSync", () => {
       const [, payload] = mockClient.update.mock.calls[0]!;
       expect(payload.mode).toBe("new");
       expect(payload.fields).toEqual([{ name: "host", value: "kept-from-server" }]);
+    });
+
+    it("keeps server props configarr does not manage, so Prowlarr cannot reset them", async () => {
+      mockClient.getAll.mockResolvedValue([
+        { id: 5, name: "W", implementation: "Widget", added: "2024-03-01T12:00:00Z", fields: [], tags: [] },
+      ]);
+
+      await sync().sync([{ name: "W", type: "Widget", mode: "new" }], undefined, cache());
+
+      const [, payload] = mockClient.update.mock.calls[0]!;
+      expect(payload.added).toBe("2024-03-01T12:00:00Z");
+    });
+
+    it("does not invent server props on a create", async () => {
+      await sync().sync([{ name: "W", type: "Widget", fields: { host: "h" } }], undefined, cache());
+
+      const [payload] = mockClient.create.mock.calls[0]!;
+      expect(payload).not.toHaveProperty("added");
+      expect(payload).not.toHaveProperty("id");
     });
 
     it("uses the schema fields as the base when field overrides are present", async () => {
