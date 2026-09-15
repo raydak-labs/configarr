@@ -7,6 +7,17 @@ import { DownloadClientDiff, DownloadClientField, DownloadClientResource } from 
 import { snakeToCamel } from "../util";
 import { BaseDownloadClientSync } from "./downloadClientBase";
 
+const mediaRemoveFlags = (client: DownloadClientResource | undefined) => {
+  if (!client || !("removeCompletedDownloads" in client || "removeFailedDownloads" in client)) {
+    return { removeCompletedDownloads: undefined as boolean | undefined, removeFailedDownloads: undefined as boolean | undefined };
+  }
+  const media = client as { removeCompletedDownloads?: boolean; removeFailedDownloads?: boolean };
+  return {
+    removeCompletedDownloads: media.removeCompletedDownloads,
+    removeFailedDownloads: media.removeFailedDownloads,
+  };
+};
+
 export class GenericDownloadClientSync extends BaseDownloadClientSync {
   constructor(private arrType: ArrType) {
     super();
@@ -37,11 +48,16 @@ export class GenericDownloadClientSync extends BaseDownloadClientSync {
     if (config.priority !== undefined && config.priority !== server.priority) {
       changes.push({ field: "priority", from: server.priority, to: config.priority });
     }
-    if (config.remove_completed_downloads !== undefined && config.remove_completed_downloads !== server.removeCompletedDownloads) {
-      changes.push({ field: "removeCompletedDownloads", from: server.removeCompletedDownloads, to: config.remove_completed_downloads });
+    const serverRemove = mediaRemoveFlags(server);
+    if (config.remove_completed_downloads !== undefined && config.remove_completed_downloads !== serverRemove.removeCompletedDownloads) {
+      changes.push({
+        field: "removeCompletedDownloads",
+        from: serverRemove.removeCompletedDownloads,
+        to: config.remove_completed_downloads,
+      });
     }
-    if (config.remove_failed_downloads !== undefined && config.remove_failed_downloads !== server.removeFailedDownloads) {
-      changes.push({ field: "removeFailedDownloads", from: server.removeFailedDownloads, to: config.remove_failed_downloads });
+    if (config.remove_failed_downloads !== undefined && config.remove_failed_downloads !== serverRemove.removeFailedDownloads) {
+      changes.push({ field: "removeFailedDownloads", from: serverRemove.removeFailedDownloads, to: config.remove_failed_downloads });
     }
 
     // Compare fields (normalize to support snake_case)
@@ -213,12 +229,11 @@ export class GenericDownloadClientSync extends BaseDownloadClientSync {
       partialUpdate,
     );
 
+    const serverRemove = mediaRemoveFlags(serverClient);
     const payload: DownloadClientResource = {
       enable: config.enable ?? serverClient?.enable ?? true,
       protocol: template.protocol,
       priority: config.priority ?? serverClient?.priority ?? 1,
-      removeCompletedDownloads: config.remove_completed_downloads ?? serverClient?.removeCompletedDownloads ?? true,
-      removeFailedDownloads: config.remove_failed_downloads ?? serverClient?.removeFailedDownloads ?? true,
       name: config.name,
       fields: mergedFields,
       implementationName: template.implementationName,
@@ -228,13 +243,15 @@ export class GenericDownloadClientSync extends BaseDownloadClientSync {
       tags: tagIds,
     };
 
-    // Prowlarr SQLite requires Categories NOT NULL; media *arrs have no such field.
     if (this.arrType === "PROWLARR") {
       const serverCategories = (serverClient as { categories?: unknown } | undefined)?.categories;
       const templateCategories = (template as { categories?: unknown }).categories;
       return Object.assign({}, payload, { categories: serverCategories ?? templateCategories ?? [] });
     }
 
-    return payload;
+    return Object.assign({}, payload, {
+      removeCompletedDownloads: config.remove_completed_downloads ?? serverRemove.removeCompletedDownloads ?? true,
+      removeFailedDownloads: config.remove_failed_downloads ?? serverRemove.removeFailedDownloads ?? true,
+    });
   }
 }

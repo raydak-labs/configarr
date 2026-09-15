@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { MergedCustomFormatResource, MergedCustomFormatSpecificationSchema } from "./merged.types";
+import { CustomFormatRequest, CustomFormatSpecification } from "../customFormats/customFormat.types";
 import { ConfigQualityProfile, InputConfigArrInstance } from "./config.types";
 import { TrashCF, TrashCFSpF } from "./trashguide.types";
 
@@ -13,7 +13,9 @@ type RequireAtLeastOne<T> = {
 export type UserFriendlyField = {
   name?: string | null;
   value?: any;
-} & Pick<MergedCustomFormatSpecificationSchema, "negate" | "required">;
+  negate?: boolean;
+  required?: boolean;
+};
 
 /*
 Language values:
@@ -29,21 +31,21 @@ export type CustomFormatImportImplementation =
   | "ResolutionSpecification" // value number
   | "ReleaseGroupSpecification"; // value string
 
-export type TC1 = OmitTyped<MergedCustomFormatSpecificationSchema, "fields"> & {
+export type TC1 = OmitTyped<CustomFormatSpecification, "fields"> & {
   implementation: "ReleaseTitleSpecification" | "LanguageSpecification";
   fields?: RequireAtLeastOne<TrashCFSpF> | null;
 };
 
-export type TC2 = OmitTyped<MergedCustomFormatSpecificationSchema, "fields"> & {
+export type TC2 = OmitTyped<CustomFormatSpecification, "fields"> & {
   implementation: "SizeSpecification";
   fields?: RequireAtLeastOne<TrashCFSpF>;
 };
 
 export type TCM = TC1 | TC2;
 
-export type ImportCF = OmitTyped<MergedCustomFormatResource, "specifications"> & {
+export type ImportCF = OmitTyped<CustomFormatRequest, "specifications"> & {
   specifications?: TCM[] | null;
-} & Required<Pick<MergedCustomFormatResource, "name">>;
+} & Required<Pick<CustomFormatRequest, "name">>;
 
 export type ConfigarrCFMeta = {
   configarr_id: string;
@@ -60,7 +62,7 @@ export const ConfigarrCFSchema: z.ZodType<ConfigarrCF> = z
 
 type CFConfigGroup = {
   carrConfig: ConfigarrCF;
-  requestConfig: MergedCustomFormatResource;
+  requestConfig: CustomFormatRequest;
 };
 
 export type CFIDToConfigGroup = Map<string, CFConfigGroup>;

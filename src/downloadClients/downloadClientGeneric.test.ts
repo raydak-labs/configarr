@@ -495,7 +495,7 @@ describe("GenericDownloadClientSync – ARR type handling", () => {
 
       const payload = await sync.resolveConfig(config, cache);
       expect((payload as { categories?: unknown }).categories).toEqual([]);
-      expect(payload.removeCompletedDownloads).toBe(true);
+      expect(payload).not.toHaveProperty("removeCompletedDownloads");
     });
 
     test("PROWLARR create uses [] when schema omits categories", async () => {

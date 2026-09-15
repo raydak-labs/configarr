@@ -1,10 +1,10 @@
 import { describe, expect, test } from "vitest";
-import { MergedQualityDefinitionResource } from "./types/merged.types";
-import { calculateQualityDefinitionDiff, interpolateSize, qualityDefinitionsToDiffEntries } from "./quality-definitions";
-import { TrashQualityDefinition } from "./types/trashguide.types";
+import { QualityDefinitionPayload } from "./qualityDefinition.types";
+import { calculateQualityDefinitionDiff, interpolateSize, qualityDefinitionsToDiffEntries } from "./qualityDefinitions";
+import { TrashQualityDefinition } from "../types/trashguide.types";
 
 describe("QualityDefinitions", async () => {
-  const server: MergedQualityDefinitionResource[] = [
+  const server: QualityDefinitionPayload[] = [
     {
       quality: {
         id: 0,
@@ -49,13 +49,13 @@ describe("QualityDefinitions", async () => {
   };
 
   test("calculateQualityDefinitionDiff - expect restData to always contain all server QDs", async ({}) => {
-    const result = calculateQualityDefinitionDiff(server, client.qualities);
+    const result = calculateQualityDefinitionDiff("SONARR", server, client.qualities);
 
     expect(result.restData.length).toBe(2);
   });
 
   test("calculateQualityDefinitionDiff - no diff", async ({}) => {
-    const result = calculateQualityDefinitionDiff(server, client.qualities);
+    const result = calculateQualityDefinitionDiff("SONARR", server, client.qualities);
 
     expect(result.changeMap.size).toBe(0);
   });
@@ -64,7 +64,7 @@ describe("QualityDefinitions", async () => {
     const clone: TrashQualityDefinition = JSON.parse(JSON.stringify(client));
     clone.qualities[0]!.min = 3;
 
-    const result = calculateQualityDefinitionDiff(server, clone.qualities);
+    const result = calculateQualityDefinitionDiff("SONARR", server, clone.qualities);
 
     expect(result.changeMap.size).toBe(1);
   });
@@ -73,7 +73,7 @@ describe("QualityDefinitions", async () => {
     const clone: TrashQualityDefinition = JSON.parse(JSON.stringify(client));
     clone.qualities[0]!.max = 3;
 
-    const result = calculateQualityDefinitionDiff(server, clone.qualities);
+    const result = calculateQualityDefinitionDiff("SONARR", server, clone.qualities);
 
     expect(result.changeMap.size).toBe(1);
   });
@@ -82,7 +82,7 @@ describe("QualityDefinitions", async () => {
     const clone: TrashQualityDefinition = JSON.parse(JSON.stringify(client));
     clone.qualities[0]!.preferred = 3;
 
-    const result = calculateQualityDefinitionDiff(server, clone.qualities);
+    const result = calculateQualityDefinitionDiff("SONARR", server, clone.qualities);
 
     expect(result.changeMap.size).toBe(1);
   });
@@ -91,7 +91,7 @@ describe("QualityDefinitions", async () => {
     const clone: TrashQualityDefinition = JSON.parse(JSON.stringify(client));
     clone.qualities[0]!.quality = "New";
 
-    const result = calculateQualityDefinitionDiff(server, clone.qualities);
+    const result = calculateQualityDefinitionDiff("SONARR", server, clone.qualities);
 
     expect(result.changeMap.size).toBe(0);
     expect(result.restData.length).toBe(2);
@@ -101,7 +101,7 @@ describe("QualityDefinitions", async () => {
     const clone: TrashQualityDefinition = JSON.parse(JSON.stringify(client));
     clone.qualities[0]!.min = 3;
 
-    const result = calculateQualityDefinitionDiff(server, clone.qualities);
+    const result = calculateQualityDefinitionDiff("SONARR", server, clone.qualities);
 
     expect(result.changeMap.get("SDTV")).toEqual([{ field: "minSize", from: 2, to: 3 }]);
   });
@@ -114,6 +114,15 @@ describe("QualityDefinitions", async () => {
     expect(entries).toEqual([
       { resourceType: "QualityDefinition", name: "SDTV", action: "update", fieldChanges: [{ field: "minSize", from: 2, to: 3 }] },
     ]);
+  });
+
+  test("calculateQualityDefinitionDiff - skip preferredSize for READARR", async ({}) => {
+    const clone: TrashQualityDefinition = JSON.parse(JSON.stringify(client));
+    clone.qualities[0]!.preferred = 3;
+
+    const result = calculateQualityDefinitionDiff("READARR", server, clone.qualities);
+
+    expect(result.changeMap.size).toBe(0);
   });
 
   test("interpolateSize - expected values", async ({}) => {

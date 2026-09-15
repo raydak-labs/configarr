@@ -1,6 +1,6 @@
 import path from "path";
 import { describe, expect, test } from "vitest";
-import { MergedCustomFormatResource } from "./types/merged.types";
+import { CustomFormatRequest } from "./customFormats/customFormat.types";
 import { TrashCF, TrashCFSpF } from "./types/trashguide.types";
 import { cloneWithJSON, compareCustomFormats, compareObjectsCarr, loadJsonFile, mapImportCfToRequestCf, toCarrCF, zip } from "./util";
 
@@ -75,7 +75,7 @@ const exampleCFImplementations = {
 };
 
 describe("SizeSpecification", async () => {
-  const serverResponse: MergedCustomFormatResource = {
+  const serverResponse: CustomFormatRequest = {
     id: 103,
     name: "Size: Block More 40GB",
     includeCustomFormatWhenRenaming: false,
@@ -171,7 +171,7 @@ describe("SizeSpecification", async () => {
 
 describe("compareImportCFs - general", async () => {
   const filePath = path.resolve(__dirname, "../tests/samples/20240930_cf_exceptLanguage.json");
-  const serverResponse = loadJsonFile<MergedCustomFormatResource>(filePath);
+  const serverResponse = loadJsonFile<CustomFormatRequest>(filePath);
 
   const custom: TrashCF = {
     trash_id: "test123",

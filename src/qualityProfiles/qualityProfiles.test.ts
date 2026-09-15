@@ -1,14 +1,11 @@
 import path from "path";
 import { beforeEach, afterEach, describe, expect, test, vi } from "vitest";
-import * as uclient from "./clients/client";
-import * as log from "./logger";
-import {
-  MergedCustomFormatResource,
-  MergedQualityDefinitionResource,
-  MergedQualityProfileQualityItemResource,
-  MergedQualityProfileResource,
-} from "./types/merged.types";
-import { ServerCache } from "./cache";
+import * as uclient from "../clients/client";
+import * as log from "../logger";
+import { CustomFormatRequest } from "../customFormats/customFormat.types";
+import { QualityDefinitionPayload } from "../qualityDefinitions/qualityDefinition.types";
+import { QualityItem, QualityProfilePayload } from "./qualityProfile.types";
+import { ServerCache } from "../cache";
 import {
   calculateQualityProfilesDiff,
   checkForConflictingCFs,
@@ -21,23 +18,21 @@ import {
   mapQualities,
   mapQualityProfiles,
   qualityProfilesToDiffEntries,
-} from "./quality-profiles";
-import { CFProcessing } from "./types/common.types";
-import { ConfigQualityProfile, ConfigQualityProfileItem, MergedConfigInstance } from "./types/config.types";
-import { cloneWithJSON, loadJsonFile } from "./util";
+} from "./qualityProfiles";
+import { CFProcessing } from "../types/common.types";
+import { ConfigQualityProfile, ConfigQualityProfileItem, MergedConfigInstance } from "../types/config.types";
+import { cloneWithJSON, loadJsonFile } from "../util";
 
 describe("QualityProfiles", async () => {
-  const sampleQualityProfile = loadJsonFile<MergedQualityProfileResource>(
-    path.resolve(__dirname, `../tests/samples/single_quality_profile.json`),
+  const sampleQualityProfile = loadJsonFile<QualityProfilePayload>(
+    path.resolve(__dirname, `../../tests/samples/single_quality_profile.json`),
   );
 
-  const sampleQualityDefinitions = loadJsonFile<MergedQualityDefinitionResource[]>(
-    path.resolve(__dirname, `../tests/samples/qualityDefinition.json`),
+  const sampleQualityDefinitions = loadJsonFile<QualityDefinitionPayload[]>(
+    path.resolve(__dirname, `../../tests/samples/qualityDefinition.json`),
   );
 
-  const sampleCustomFormat = loadJsonFile<MergedCustomFormatResource>(
-    path.resolve(__dirname, `../tests/samples/single_custom_format.json`),
-  );
+  const sampleCustomFormat = loadJsonFile<CustomFormatRequest>(path.resolve(__dirname, `../../tests/samples/single_custom_format.json`));
 
   test("isOrderOfConfigQualitiesEqual - should match", async ({}) => {
     const fromConfig: ConfigQualityProfileItem[] = [
@@ -89,7 +84,7 @@ describe("QualityProfiles", async () => {
       { name: "HDTV-1080p" },
     ];
 
-    const resources: MergedQualityDefinitionResource[] = [
+    const resources: QualityDefinitionPayload[] = [
       { id: 1, title: "HDTV-1080p", weight: 2, quality: { id: 1, name: "HDTV-1080p" } },
       { id: 2, title: "WEBDL-1080p", weight: 2, quality: { id: 2, name: "WEBDL-1080p" } },
       { id: 3, title: "WEBRip-1080p", weight: 2, quality: { id: 3, name: "WEBRip-1080p" } },
@@ -124,7 +119,7 @@ describe("QualityProfiles", async () => {
       { name: "HDTV-1080p", enabled: false },
     ];
 
-    const resources: MergedQualityDefinitionResource[] = [
+    const resources: QualityDefinitionPayload[] = [
       { id: 1, title: "HDTV-1080p", weight: 2, quality: { id: 1, name: "HDTV-1080p" } },
       { id: 2, title: "WEBDL-1080p", weight: 2, quality: { id: 2, name: "WEBDL-1080p" } },
       { id: 3, title: "WEBRip-1080p", weight: 2, quality: { id: 3, name: "WEBRip-1080p" } },
@@ -158,7 +153,7 @@ describe("QualityProfiles", async () => {
       { name: "HDTV-1080p" },
     ];
 
-    const resources: MergedQualityDefinitionResource[] = [
+    const resources: QualityDefinitionPayload[] = [
       { id: 1, title: "HDTV-1080p", weight: 2, quality: { id: 1, name: "HDTV-1080p" } },
       { id: 2, title: "WEBDL-1080p", weight: 2, quality: { id: 2, name: "WEBDL-1080p" } },
       { id: 3, title: "WEBRip-1080p", weight: 2, quality: { id: 3, name: "WEBRip-1080p" } },
@@ -184,7 +179,7 @@ describe("QualityProfiles", async () => {
   test("mapQualities - ordering with nested qualities", async ({}) => {
     const fromConfig: ConfigQualityProfileItem[] = [{ name: "HD Group", qualities: ["HDTV-1080p", "WEBDL-1080p"] }];
 
-    const resources: MergedQualityDefinitionResource[] = [
+    const resources: QualityDefinitionPayload[] = [
       { id: 1, title: "HDTV-1080p", weight: 2, quality: { id: 1, name: "HDTV-1080p" } },
       { id: 2, title: "WEBDL-1080p", weight: 2, quality: { id: 2, name: "WEBDL-1080p" } },
     ];
@@ -213,7 +208,7 @@ describe("QualityProfiles", async () => {
       { name: "WEB 720p", qualities: ["WEBDL-720p", "WEBRip-720p"] },
     ];
 
-    const resources: MergedQualityDefinitionResource[] = [
+    const resources: QualityDefinitionPayload[] = [
       { id: 1, title: "HDTV-1080p", weight: 2, quality: { id: 1, name: "HDTV-1080p" } },
       { id: 2, title: "WEBDL-1080p", weight: 2, quality: { id: 2, name: "WEBDL-1080p" } },
       { id: 3, title: "WEBDL-720p", weight: 2, quality: { id: 3, name: "WEBDL-720p" } },
@@ -249,7 +244,7 @@ describe("QualityProfiles", async () => {
       { name: "HDTV-1080p" },
     ];
 
-    const resources: MergedQualityDefinitionResource[] = [
+    const resources: QualityDefinitionPayload[] = [
       { id: 1, title: "HDTV-1080p", weight: 2, quality: { id: 1, name: "HDTV-1080p" } },
       { id: 2, title: "WEBDL-1080p", weight: 2, quality: { id: 2, name: "WEBDL-1080p" } },
       { id: 3, title: "WEBRip-1080p", weight: 2, quality: { id: 3, name: "WEBRip-1080p" } },
@@ -285,9 +280,7 @@ describe("QualityProfiles", async () => {
 
     const fromConfig: ConfigQualityProfileItem[] = [{ name: "HDTV-1080p", enabled: false }];
 
-    const resources: MergedQualityDefinitionResource[] = [
-      { id: 1, title: "HDTV-1080p", weight: 2, quality: { id: 1, name: "HDTV-1080p" } },
-    ];
+    const resources: QualityDefinitionPayload[] = [{ id: 1, title: "HDTV-1080p", weight: 2, quality: { id: 1, name: "HDTV-1080p" } }];
 
     const profile: ConfigQualityProfile = {
       name: "hi",
@@ -314,9 +307,9 @@ describe("QualityProfiles", async () => {
     serverProfile.cutoff = 1;
     serverProfile.items = [{ allowed: false, items: [], quality: { id: 1, name: "HDTV-1080p" } }];
 
-    const serverQP: MergedQualityProfileResource[] = [serverProfile];
-    const serverQD: MergedQualityDefinitionResource[] = resources;
-    const serverCF: MergedCustomFormatResource[] = [cloneWithJSON(sampleCustomFormat)];
+    const serverQP: QualityProfilePayload[] = [serverProfile];
+    const serverQD: QualityDefinitionPayload[] = resources;
+    const serverCF: CustomFormatRequest[] = [cloneWithJSON(sampleCustomFormat)];
 
     const serverCache = new ServerCache(serverQD, serverQP, serverCF, []);
 
@@ -350,9 +343,7 @@ describe("QualityProfiles", async () => {
 
     const fromConfig: ConfigQualityProfileItem[] = [{ name: "HDTV-1080p", enabled: false }];
 
-    const resources: MergedQualityDefinitionResource[] = [
-      { id: 1, title: "HDTV-1080p", weight: 2, quality: { id: 1, name: "HDTV-1080p" } },
-    ];
+    const resources: QualityDefinitionPayload[] = [{ id: 1, title: "HDTV-1080p", weight: 2, quality: { id: 1, name: "HDTV-1080p" } }];
 
     const profile: ConfigQualityProfile = {
       name: "hi",
@@ -379,9 +370,9 @@ describe("QualityProfiles", async () => {
     serverProfile.cutoff = 1;
     serverProfile.items = [{ allowed: false, items: [], quality: { id: 1, name: "HDTV-1080p" } }];
 
-    const serverQP: MergedQualityProfileResource[] = [serverProfile];
-    const serverQD: MergedQualityDefinitionResource[] = resources;
-    const serverCF: MergedCustomFormatResource[] = [cloneWithJSON(sampleCustomFormat)];
+    const serverQP: QualityProfilePayload[] = [serverProfile];
+    const serverQD: QualityDefinitionPayload[] = resources;
+    const serverCF: CustomFormatRequest[] = [cloneWithJSON(sampleCustomFormat)];
 
     const serverCache = new ServerCache(serverQD, serverQP, serverCF, []);
 
@@ -400,9 +391,7 @@ describe("QualityProfiles", async () => {
 
     const fromConfig: ConfigQualityProfileItem[] = [{ name: "HDTV-1080p", enabled: false }];
 
-    const resources: MergedQualityDefinitionResource[] = [
-      { id: 1, title: "HDTV-1080p", weight: 2, quality: { id: 1, name: "HDTV-1080p" } },
-    ];
+    const resources: QualityDefinitionPayload[] = [{ id: 1, title: "HDTV-1080p", weight: 2, quality: { id: 1, name: "HDTV-1080p" } }];
 
     const profile: ConfigQualityProfile = {
       name: "hi",
@@ -431,9 +420,9 @@ describe("QualityProfiles", async () => {
     serverProfile.items = [{ allowed: false, items: [], quality: { id: 1, name: "HDTV-1080p" } }];
     serverProfile.language = { id: 1, name: "English" };
 
-    const serverQP: MergedQualityProfileResource[] = [serverProfile];
-    const serverQD: MergedQualityDefinitionResource[] = resources;
-    const serverCF: MergedCustomFormatResource[] = [cloneWithJSON(sampleCustomFormat)];
+    const serverQP: QualityProfilePayload[] = [serverProfile];
+    const serverQD: QualityDefinitionPayload[] = resources;
+    const serverCF: CustomFormatRequest[] = [cloneWithJSON(sampleCustomFormat)];
 
     const serverCache = new ServerCache(serverQD, serverQP, serverCF, [{ id: 0, name: "Any" }]);
 
@@ -448,9 +437,7 @@ describe("QualityProfiles", async () => {
 
     const fromConfig: ConfigQualityProfileItem[] = [{ name: "HDTV-1080p", enabled: false }];
 
-    const resources: MergedQualityDefinitionResource[] = [
-      { id: 1, title: "HDTV-1080p", weight: 2, quality: { id: 1, name: "HDTV-1080p" } },
-    ];
+    const resources: QualityDefinitionPayload[] = [{ id: 1, title: "HDTV-1080p", weight: 2, quality: { id: 1, name: "HDTV-1080p" } }];
 
     const profile: ConfigQualityProfile = {
       name: "hi",
@@ -479,9 +466,9 @@ describe("QualityProfiles", async () => {
     serverProfile.items = [{ allowed: false, items: [], quality: { id: 1, name: "HDTV-1080p" } }];
     serverProfile.language = { id: 1, name: "English" };
 
-    const serverQP: MergedQualityProfileResource[] = [serverProfile];
-    const serverQD: MergedQualityDefinitionResource[] = resources;
-    const serverCF: MergedCustomFormatResource[] = [cloneWithJSON(sampleCustomFormat)];
+    const serverQP: QualityProfilePayload[] = [serverProfile];
+    const serverQD: QualityDefinitionPayload[] = resources;
+    const serverCF: CustomFormatRequest[] = [cloneWithJSON(sampleCustomFormat)];
 
     const serverCache = new ServerCache(serverQD, serverQP, serverCF, [{ id: 0, name: "Any" }]);
 
@@ -495,9 +482,7 @@ describe("QualityProfiles", async () => {
 
     const fromConfig: ConfigQualityProfileItem[] = [{ name: "HDTV-1080p", enabled: false }];
 
-    const resources: MergedQualityDefinitionResource[] = [
-      { id: 1, title: "HDTV-1080p", weight: 2, quality: { id: 1, name: "HDTV-1080p" } },
-    ];
+    const resources: QualityDefinitionPayload[] = [{ id: 1, title: "HDTV-1080p", weight: 2, quality: { id: 1, name: "HDTV-1080p" } }];
 
     const profile: ConfigQualityProfile = {
       name: "hi",
@@ -526,9 +511,9 @@ describe("QualityProfiles", async () => {
     serverProfile.items = [{ allowed: false, items: [], quality: { id: 1, name: "HDTV-1080p" } }];
     serverProfile.language = { id: 1, name: "English" };
 
-    const serverQP: MergedQualityProfileResource[] = [serverProfile];
-    const serverQD: MergedQualityDefinitionResource[] = resources;
-    const serverCF: MergedCustomFormatResource[] = [cloneWithJSON(sampleCustomFormat)];
+    const serverQP: QualityProfilePayload[] = [serverProfile];
+    const serverQD: QualityDefinitionPayload[] = resources;
+    const serverCF: CustomFormatRequest[] = [cloneWithJSON(sampleCustomFormat)];
 
     // No "Any" language present on the server
     const serverCache = new ServerCache(serverQD, serverQP, serverCF, [{ id: 1, name: "English" }]);
@@ -547,9 +532,7 @@ describe("QualityProfiles", async () => {
 
     const fromConfig: ConfigQualityProfileItem[] = [{ name: "HDTV-1080p", enabled: false }];
 
-    const resources: MergedQualityDefinitionResource[] = [
-      { id: 1, title: "HDTV-1080p", weight: 2, quality: { id: 1, name: "HDTV-1080p" } },
-    ];
+    const resources: QualityDefinitionPayload[] = [{ id: 1, title: "HDTV-1080p", weight: 2, quality: { id: 1, name: "HDTV-1080p" } }];
 
     const profile: ConfigQualityProfile = {
       name: "hi",
@@ -578,9 +561,9 @@ describe("QualityProfiles", async () => {
     serverProfile.items = [{ allowed: false, items: [], quality: { id: 1, name: "HDTV-1080p" } }];
     serverProfile.language = { id: 0, name: "Any" };
 
-    const serverQP: MergedQualityProfileResource[] = [serverProfile];
-    const serverQD: MergedQualityDefinitionResource[] = resources;
-    const serverCF: MergedCustomFormatResource[] = [cloneWithJSON(sampleCustomFormat)];
+    const serverQP: QualityProfilePayload[] = [serverProfile];
+    const serverQD: QualityDefinitionPayload[] = resources;
+    const serverCF: CustomFormatRequest[] = [cloneWithJSON(sampleCustomFormat)];
 
     const serverCache = new ServerCache(serverQD, serverQP, serverCF, [{ id: 0, name: "Any" }]);
 
@@ -600,7 +583,7 @@ describe("QualityProfiles", async () => {
       { name: "WEB 1080p", qualities: ["WEBDL-1080p", "WEBRip-1080p"] },
     ];
 
-    const resources: MergedQualityDefinitionResource[] = [
+    const resources: QualityDefinitionPayload[] = [
       { id: 1, title: "WEBDL-720p", weight: 2, quality: { id: 1, name: "WEBDL-720p" } },
       { id: 2, title: "WEBRip-720p", weight: 2, quality: { id: 2, name: "WEBRip-720p" } },
       { id: 3, title: "Bluray-1080p", weight: 2, quality: { id: 3, name: "Bluray-1080p" } },
@@ -653,7 +636,7 @@ describe("QualityProfiles", async () => {
       { name: "WEB 1080p", qualities: ["WEBDL-1080p", "WEBRip-1080p"] },
     ];
 
-    const resources: MergedQualityDefinitionResource[] = [
+    const resources: QualityDefinitionPayload[] = [
       { id: 10, title: "Remux-2160p", weight: 2, quality: { id: 10, name: "Remux-2160p" } },
       { id: 11, title: "WEBDL-2160p", weight: 2, quality: { id: 11, name: "WEBDL-2160p" } },
       { id: 12, title: "WEBRip-2160p", weight: 2, quality: { id: 12, name: "WEBRip-2160p" } },
@@ -699,9 +682,7 @@ describe("QualityProfiles", async () => {
 
     const fromConfig: ConfigQualityProfileItem[] = [{ name: "HDTV-1080p" }];
 
-    const resources: MergedQualityDefinitionResource[] = [
-      { id: 10, title: "HDTV-1080p", weight: 2, quality: { id: 10, name: "HDTV-1080p" } },
-    ];
+    const resources: QualityDefinitionPayload[] = [{ id: 10, title: "HDTV-1080p", weight: 2, quality: { id: 10, name: "HDTV-1080p" } }];
 
     const profile: ConfigQualityProfile = {
       name: "Test Update - Disable Upgrade",
@@ -755,7 +736,7 @@ describe("QualityProfiles", async () => {
       { name: "WEB 1080p", qualities: ["WEBDL-1080p", "WEBRip-1080p"] },
     ];
 
-    const resources: MergedQualityDefinitionResource[] = [
+    const resources: QualityDefinitionPayload[] = [
       { id: 10, title: "Remux-2160p", weight: 2, quality: { id: 10, name: "Remux-2160p" } },
       { id: 11, title: "WEBDL-2160p", weight: 2, quality: { id: 11, name: "WEBDL-2160p" } },
       { id: 12, title: "WEBRip-2160p", weight: 2, quality: { id: 12, name: "WEBRip-2160p" } },
@@ -832,7 +813,7 @@ describe("QualityProfiles", async () => {
 
     const fromConfig: ConfigQualityProfileItem[] = [{ name: "Remux-2160p" }, { name: "Remux-1080p" }];
 
-    const resources: MergedQualityDefinitionResource[] = [
+    const resources: QualityDefinitionPayload[] = [
       { id: 10, title: "Remux-2160p", weight: 2, quality: { id: 10, name: "Remux-2160p" } },
       { id: 13, title: "Remux-1080p", weight: 2, quality: { id: 13, name: "Remux-1080p" } },
     ];
@@ -982,7 +963,7 @@ describe("QualityProfiles", async () => {
 
   describe("isOrderOfQualitiesEqual", async () => {
     test("should diff for grouped incorrect order", async ({}) => {
-      const arr1: MergedQualityProfileQualityItemResource[] = [
+      const arr1: QualityItem[] = [
         {
           allowed: true,
           id: 1000,
@@ -1052,7 +1033,7 @@ describe("QualityProfiles", async () => {
         },
       ];
 
-      const arr2: MergedQualityProfileQualityItemResource[] = [
+      const arr2: QualityItem[] = [
         {
           name: "Merged QPs",
           items: [
@@ -1126,7 +1107,7 @@ describe("QualityProfiles", async () => {
     });
 
     test("should diff for incorrect quality order", async ({}) => {
-      const arr1: MergedQualityProfileQualityItemResource[] = [
+      const arr1: QualityItem[] = [
         {
           allowed: true,
           quality: {
@@ -1147,7 +1128,7 @@ describe("QualityProfiles", async () => {
         },
       ];
 
-      const arr2: MergedQualityProfileQualityItemResource[] = [
+      const arr2: QualityItem[] = [
         {
           allowed: true,
           quality: {
@@ -1172,7 +1153,7 @@ describe("QualityProfiles", async () => {
     });
 
     test("should be equal 1", async ({}) => {
-      const arr1: MergedQualityProfileQualityItemResource[] = [
+      const arr1: QualityItem[] = [
         {
           allowed: true,
           quality: {
@@ -1184,7 +1165,7 @@ describe("QualityProfiles", async () => {
         },
       ];
 
-      const arr2: MergedQualityProfileQualityItemResource[] = [
+      const arr2: QualityItem[] = [
         {
           allowed: true,
           quality: {
@@ -1200,7 +1181,7 @@ describe("QualityProfiles", async () => {
     });
 
     test("should be equal 2", async ({}) => {
-      const arr1: MergedQualityProfileQualityItemResource[] = [
+      const arr1: QualityItem[] = [
         {
           allowed: true,
           id: 1000,
@@ -1220,7 +1201,7 @@ describe("QualityProfiles", async () => {
         },
       ];
 
-      const arr2: MergedQualityProfileQualityItemResource[] = [
+      const arr2: QualityItem[] = [
         {
           allowed: true,
           id: 1000,
@@ -1851,9 +1832,7 @@ describe("QualityProfiles", async () => {
 
     const fromConfig: ConfigQualityProfileItem[] = [{ name: "HDTV-1080p", enabled: false }];
 
-    const resources: MergedQualityDefinitionResource[] = [
-      { id: 1, title: "HDTV-1080p", weight: 2, quality: { id: 1, name: "HDTV-1080p" } },
-    ];
+    const resources: QualityDefinitionPayload[] = [{ id: 1, title: "HDTV-1080p", weight: 2, quality: { id: 1, name: "HDTV-1080p" } }];
 
     const profile: ConfigQualityProfile = {
       name: "hi",
@@ -1880,9 +1859,9 @@ describe("QualityProfiles", async () => {
     serverProfile.cutoff = 1;
     serverProfile.items = [{ allowed: false, items: [], quality: { id: 1, name: "HDTV-1080p" } }];
 
-    const serverQP: MergedQualityProfileResource[] = [serverProfile];
-    const serverQD: MergedQualityDefinitionResource[] = resources;
-    const serverCF: MergedCustomFormatResource[] = [cloneWithJSON(sampleCustomFormat)];
+    const serverQP: QualityProfilePayload[] = [serverProfile];
+    const serverQD: QualityDefinitionPayload[] = resources;
+    const serverCF: CustomFormatRequest[] = [cloneWithJSON(sampleCustomFormat)];
 
     const serverCache = new ServerCache(serverQD, serverQP, serverCF, []);
 
@@ -1893,8 +1872,8 @@ describe("QualityProfiles", async () => {
   });
 
   test("qualityProfilesToDiffEntries - builds create and update entries with field changes", () => {
-    const create = [{ name: "NewProfile" } as MergedQualityProfileResource];
-    const changedQPs = [{ name: "ExistingProfile" } as MergedQualityProfileResource];
+    const create = [{ name: "NewProfile" } as QualityProfilePayload];
+    const changedQPs = [{ name: "ExistingProfile" } as QualityProfilePayload];
     const changes = new Map([["ExistingProfile", [{ field: "minFormatScore", from: 0, to: 10 }]]]);
 
     const entries = qualityProfilesToDiffEntries(create, changedQPs, changes);
@@ -1908,5 +1887,72 @@ describe("QualityProfiles", async () => {
         fieldChanges: [{ field: "minFormatScore", from: 0, to: 10 }],
       },
     ]);
+  });
+
+  test("calculateQualityProfilesDiff - Lidarr create omits language and minUpgradeFormatScore", async () => {
+    const cfMap: CFProcessing = { carrIdMapping: new Map(), cfNameToCarrConfig: new Map() };
+    const resources: QualityDefinitionPayload[] = [{ id: 1, title: "FLAC", quality: { id: 1, name: "FLAC" } }];
+    const config: MergedConfigInstance = {
+      custom_formats: [],
+      quality_profiles: [
+        {
+          name: "Music",
+          min_format_score: 0,
+          qualities: [{ name: "FLAC" }],
+          quality_sort: "top",
+          language: "English",
+          upgrade: { allowed: true, until_quality: "FLAC", until_score: 100, min_format_score: 5 },
+          score_set: "default",
+        },
+      ],
+      customFormatDefinitions: [],
+      media_management: {},
+      media_naming: {},
+    };
+
+    const diff = await calculateQualityProfilesDiff("LIDARR", cfMap, config, new ServerCache(resources, [], [], []));
+    expect(diff.create).toHaveLength(1);
+    expect(diff.create[0]).not.toHaveProperty("language");
+    expect(diff.create[0]).not.toHaveProperty("minUpgradeFormatScore");
+  });
+
+  test("calculateQualityProfilesDiff - Lidarr does not dirty-diff language or minUpgradeFormatScore", async () => {
+    const cfMap: CFProcessing = { carrIdMapping: new Map(), cfNameToCarrConfig: new Map() };
+    const resources: QualityDefinitionPayload[] = [{ id: 1, title: "FLAC", quality: { id: 1, name: "FLAC" } }];
+    const serverProfile: QualityProfilePayload = {
+      name: "Music",
+      upgradeAllowed: true,
+      cutoff: 1,
+      cutoffFormatScore: 100,
+      minFormatScore: 0,
+      items: [{ allowed: true, items: [], quality: { id: 1, name: "FLAC" } }],
+      formatItems: [],
+    };
+    const config: MergedConfigInstance = {
+      custom_formats: [],
+      quality_profiles: [
+        {
+          name: "Music",
+          min_format_score: 0,
+          qualities: [{ name: "FLAC" }],
+          quality_sort: "top",
+          language: "English",
+          upgrade: { allowed: true, until_quality: "FLAC", until_score: 100, min_format_score: 5 },
+          score_set: "default",
+        },
+      ],
+      customFormatDefinitions: [],
+      media_management: {},
+      media_naming: {},
+    };
+
+    const diff = await calculateQualityProfilesDiff(
+      "LIDARR",
+      cfMap,
+      config,
+      new ServerCache(resources, [serverProfile], [], [{ id: 1, name: "English" }]),
+    );
+    expect(diff.changedQPs).toHaveLength(0);
+    expect(diff.noChanges).toEqual(["Music"]);
   });
 });

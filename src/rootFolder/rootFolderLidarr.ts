@@ -7,7 +7,6 @@ import {
   TagResource,
 } from "../__generated__/lidarr/data-contracts";
 import { ServerCache } from "../cache";
-import { LidarrClient } from "../clients/lidarr-client";
 import { getClient } from "../clients/client";
 import { FieldChange } from "../diffReport/diffReport.types";
 import { InputConfigRootFolderLidarr } from "../types/config.types";
@@ -16,10 +15,26 @@ import { RootFolderDiff } from "./rootFolder.types";
 import { BaseRootFolderSync } from "./rootFolderBase";
 
 export class LidarrRootFolderSync extends BaseRootFolderSync<InputConfigRootFolderLidarr> {
-  protected api: LidarrClient = getClient("LIDARR");
+  protected api = getClient("LIDARR");
 
   protected getArrType(): "LIDARR" {
     return "LIDARR";
+  }
+
+  protected getRootfolders() {
+    return this.api.getRootfolders();
+  }
+
+  protected addRootFolder(data: RootFolderResource) {
+    return this.api.addRootFolder(data);
+  }
+
+  protected updateRootFolder(id: string, data: RootFolderResource) {
+    return this.api.updateRootFolder(id, data);
+  }
+
+  protected deleteRootFolder(id: string) {
+    return this.api.deleteRootFolder(id);
   }
 
   public async resolveRootFolderConfig(config: InputConfigRootFolderLidarr, serverCache: ServerCache): Promise<RootFolderResource> {

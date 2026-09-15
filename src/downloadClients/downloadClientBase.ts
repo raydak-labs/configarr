@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { ServerCache } from "../cache";
+import type { DownloadClientsClient, Tag, TagsClient } from "../clients/capabilities";
 import { getClient } from "../clients/client";
-import type { DownloadClientsClient, TagsClient } from "../clients/capabilities";
 import { DiffEntry } from "../diffReport/diffReport.types";
 import { getEnvs } from "../env";
 import { logger } from "../logger";
@@ -12,7 +12,6 @@ import {
   DownloadClientField,
   DownloadClientResource,
   DownloadClientSyncResult,
-  TagLike,
   ValidationResult,
 } from "../types/download-client.types";
 import { camelToSnake, snakeToCamel } from "../util";
@@ -105,7 +104,7 @@ export abstract class BaseDownloadClientSync {
     return normalized;
   }
 
-  public resolveTagNamesToIds(tagNames: (string | number)[], serverTags: TagLike[]): { ids: number[]; missingTags: string[] } {
+  public resolveTagNamesToIds(tagNames: (string | number)[], serverTags: Tag[]): { ids: number[]; missingTags: string[] } {
     const ids: number[] = [];
     const missingTags: string[] = [];
 

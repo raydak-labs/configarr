@@ -8,13 +8,7 @@ import { getEnvs } from "../env";
 import { logger } from "../logger";
 import { MediaArrType } from "../types/common.types";
 import { InputConfigRootFolder } from "../types/config.types";
-import {
-  GenericRootFolderArrType,
-  RootFolderClient,
-  RootFolderDiff,
-  RootFolderServerResource,
-  RootFolderSyncResult,
-} from "./rootFolder.types";
+import { GenericRootFolderArrType, RootFolderDiff, RootFolderServerResource, RootFolderSyncResult } from "./rootFolder.types";
 
 export function rootFolderDiffToDiffEntries(diff: RootFolderDiff): DiffEntry[] {
   const entries: DiffEntry[] = diff.missingOnServer.map((folder) => ({
@@ -45,11 +39,14 @@ export function rootFolderDiffToDiffEntries(diff: RootFolderDiff): DiffEntry[] {
 
 // Base class for root folder synchronization
 export abstract class BaseRootFolderSync<TConfig extends InputConfigRootFolder = InputConfigRootFolder> {
-  protected api!: RootFolderClient;
   protected logger = logger;
 
   abstract calculateDiff(rootFolders: TConfig[], serverCache: ServerCache): Promise<RootFolderDiff<TConfig> | null>;
   public abstract resolveRootFolderConfig(config: TConfig, serverCache: ServerCache): Promise<RootFolderServerResource>;
+  protected abstract getRootfolders(): Promise<RootFolderServerResource[]>;
+  protected abstract addRootFolder(data: RootFolderServerResource): Promise<unknown>;
+  protected abstract updateRootFolder(id: string, data: RootFolderServerResource): Promise<unknown>;
+  protected abstract deleteRootFolder(id: string): Promise<unknown>;
 
   async syncRootFolders(rootFolders: TConfig[], serverCache: ServerCache): Promise<RootFolderSyncResult> {
     const diff = await this.calculateDiff(rootFolders, serverCache);
@@ -72,7 +69,7 @@ export abstract class BaseRootFolderSync<TConfig extends InputConfigRootFolder =
     // Remove folders not in config
     for (const folder of diff.notAvailableAnymore) {
       this.logger.info(`Deleting RootFolder not available anymore: ${folder.path}`);
-      await this.api.deleteRootFolder(`${folder.id}`);
+      await this.deleteRootFolder(`${folder.id}`);
       removed++;
     }
 
@@ -80,7 +77,7 @@ export abstract class BaseRootFolderSync<TConfig extends InputConfigRootFolder =
     for (const folder of diff.missingOnServer) {
       this.logger.info(`Adding RootFolder missing on server: ${typeof folder === "string" ? folder : folder.path}`);
       const resolvedConfig = await this.resolveRootFolderConfig(folder, serverCache);
-      await this.api.addRootFolder(resolvedConfig);
+      await this.addRootFolder(resolvedConfig);
       added++;
     }
 
@@ -88,7 +85,7 @@ export abstract class BaseRootFolderSync<TConfig extends InputConfigRootFolder =
     for (const { config, server } of diff.changed) {
       this.logger.info(`Updating RootFolder: ${typeof config === "string" ? config : config.path}`);
       const resolvedConfig = await this.resolveRootFolderConfig(config, serverCache);
-      await this.api.updateRootFolder(`${server.id}`, resolvedConfig);
+      await this.updateRootFolder(`${server.id}`, resolvedConfig);
       updated++;
     }
 
@@ -100,7 +97,7 @@ export abstract class BaseRootFolderSync<TConfig extends InputConfigRootFolder =
   }
 
   protected async loadRootFoldersFromServer(): Promise<RootFolderServerResource[]> {
-    return this.api.getRootfolders();
+    return this.getRootfolders();
   }
 
   protected abstract getArrType(): MediaArrType;
@@ -108,7 +105,7 @@ export abstract class BaseRootFolderSync<TConfig extends InputConfigRootFolder =
 
 // Generic sync for most arr types (Radarr, Sonarr, etc.)
 export class GenericRootFolderSync extends BaseRootFolderSync<InputConfigRootFolder> {
-  protected api: SonarrClient | RadarrClient | WhisparrClient;
+  private api: SonarrClient | RadarrClient | WhisparrClient;
 
   constructor(private arrType: GenericRootFolderArrType) {
     super();
@@ -117,6 +114,22 @@ export class GenericRootFolderSync extends BaseRootFolderSync<InputConfigRootFol
 
   protected getArrType(): GenericRootFolderArrType {
     return this.arrType;
+  }
+
+  protected getRootfolders() {
+    return this.api.getRootfolders();
+  }
+
+  protected addRootFolder(data: RootFolderServerResource) {
+    return this.api.addRootFolder(data);
+  }
+
+  protected updateRootFolder(id: string, data: RootFolderServerResource) {
+    return this.api.updateRootFolder(id, data);
+  }
+
+  protected deleteRootFolder(id: string) {
+    return this.api.deleteRootFolder(id);
   }
 
   public async resolveRootFolderConfig(config: InputConfigRootFolder, serverCache: ServerCache): Promise<RootFolderServerResource> {

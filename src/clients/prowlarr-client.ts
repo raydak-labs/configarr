@@ -4,6 +4,7 @@ import {
   ApplicationResource,
   AppProfileResource,
   CommandResource,
+  DownloadClientResource as ProwlarrDownloadClientResource,
   IndexerProxyResource,
   IndexerResource,
   TagResource,
@@ -111,27 +112,27 @@ export class ProwlarrClient implements SystemClient, TagsClient<TagResource>, Do
   }
 
   async getDownloadClientSchema(): Promise<DownloadClientResource[]> {
-    return this.api.v1DownloadclientSchemaList() as unknown as Promise<DownloadClientResource[]>;
+    return this.api.v1DownloadclientSchemaList();
   }
 
   async getDownloadClients(): Promise<DownloadClientResource[]> {
-    return this.api.v1DownloadclientList() as unknown as Promise<DownloadClientResource[]>;
+    return this.api.v1DownloadclientList();
   }
 
   async createDownloadClient(client: DownloadClientResource): Promise<DownloadClientResource> {
-    return this.api.v1DownloadclientCreate(client as any) as unknown as Promise<DownloadClientResource>;
+    return this.api.v1DownloadclientCreate(client as ProwlarrDownloadClientResource);
   }
 
   async updateDownloadClient(id: string, client: DownloadClientResource): Promise<DownloadClientResource> {
-    return this.api.v1DownloadclientUpdate(id, client as any) as unknown as Promise<DownloadClientResource>;
+    return this.api.v1DownloadclientUpdate(id, client as ProwlarrDownloadClientResource);
   }
 
   async deleteDownloadClient(id: string): Promise<void> {
     return this.api.v1DownloadclientDelete(+id);
   }
 
-  async testDownloadClient(client: DownloadClientResource): Promise<any> {
-    return this.api.v1DownloadclientTestCreate(client as any);
+  async testDownloadClient(client: DownloadClientResource): Promise<unknown> {
+    return this.api.v1DownloadclientTestCreate(client as ProwlarrDownloadClientResource);
   }
 
   async getTags() {

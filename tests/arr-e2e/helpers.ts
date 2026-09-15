@@ -7,7 +7,7 @@ import { RadarrClient } from "../../src/clients/radarr-client";
 import { ReadarrClient } from "../../src/clients/readarr-client";
 import { SonarrClient } from "../../src/clients/sonarr-client";
 import { WhisparrClient } from "../../src/clients/whisparr-client";
-import { MergedDelayProfileResource } from "../../src/types/merged.types";
+import { DelayProfilePayload } from "../../src/delayProfiles/delayProfile.types";
 
 export const DEFAULT_API_KEY = "e2etestapikey0123456789abcdef012";
 export const arrE2eEnabled = process.env.ARR_E2E === "1";
@@ -87,7 +87,7 @@ export const LEGACY_DELAY_PROFILE_RESET = {
   bypassIfHighestQuality: false,
 };
 
-export function defaultDelayProfile(profiles: MergedDelayProfileResource[]): MergedDelayProfileResource | undefined {
+export function defaultDelayProfile(profiles: DelayProfilePayload[]): DelayProfilePayload | undefined {
   return profiles.find((p) => !p.tags?.length) ?? profiles[0];
 }
 

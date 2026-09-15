@@ -21,6 +21,22 @@ export class ReadarrRootFolderSync extends BaseRootFolderSync<InputConfigRootFol
     return "READARR";
   }
 
+  protected getRootfolders() {
+    return this.api.getRootfolders();
+  }
+
+  protected addRootFolder(data: RootFolderResource) {
+    return this.api.addRootFolder(data);
+  }
+
+  protected updateRootFolder(id: string, data: RootFolderResource) {
+    return this.api.updateRootFolder(id, data);
+  }
+
+  protected deleteRootFolder(id: string) {
+    return this.api.deleteRootFolder(id);
+  }
+
   public async resolveRootFolderConfig(config: InputConfigRootFolderReadarr, serverCache: ServerCache): Promise<RootFolderResource> {
     if (typeof config === "string") {
       throw new Error(`Readarr root folders must be objects with name, metadata_profile, and quality_profile. Got string: ${config}`);

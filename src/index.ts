@@ -4,11 +4,18 @@ import { getBuildInfo, getEnvs, initEnvs } from "./env";
 initEnvs();
 
 import fs from "node:fs";
-import { CustomFormatLike, QualityProfileLike } from "./clients/capabilities";
+import { CustomFormatRequest } from "./customFormats/customFormat.types";
+import { QualityProfilePayload } from "./qualityProfiles/qualityProfile.types";
 import { ServerCache } from "./cache";
 import { configureApi, getClient, unsetApi } from "./clients/client";
 import { getConfig, mergeConfigsAndTemplates } from "./config";
-import { calculateCFsToManage, deleteCustomFormat, loadCustomFormatDefinitions, loadServerCustomFormats, manageCf } from "./custom-formats";
+import {
+  calculateCFsToManage,
+  deleteCustomFormat,
+  loadCustomFormatDefinitions,
+  loadServerCustomFormats,
+  manageCf,
+} from "./customFormats/customFormats";
 import {
   calculateDelayProfilesDiff,
   createDelayProfileOnServer,
@@ -16,7 +23,7 @@ import {
   deleteAdditionalDelayProfiles,
   mapToServerDelayProfile,
   updateDelayProfileOnServer,
-} from "./delay-profiles";
+} from "./delayProfiles/delayProfiles";
 import { syncDownloadClients } from "./downloadClients/downloadClientSyncer";
 import { syncProwlarrProviders } from "./prowlarr/prowlarrSyncer";
 import { downloadClientConfigDiffToDiffEntries, syncDownloadClientConfig } from "./downloadClientConfig/downloadClientConfigSyncer";
@@ -30,13 +37,13 @@ import {
   namingDiffToDiffEntries,
   updateMediamanagementOnServer,
   updateNamingOnServer,
-} from "./media-management";
+} from "./mediaManagement/mediaManagement";
 import {
   calculateQualityDefinitionDiff,
   loadQualityDefinitionFromServer,
   qualityDefinitionsToDiffEntries,
   updateQualityDefinitionsOnServer,
-} from "./quality-definitions";
+} from "./qualityDefinitions/qualityDefinitions";
 import { DiffCollector } from "./diffReport/diffCollector";
 import { ConsoleDiffFormatter } from "./diffReport/formatters/consoleFormatter";
 import { writeJsonDiffReport } from "./diffReport/formatters/jsonFormatter";
@@ -50,10 +57,10 @@ import {
   loadQualityProfilesFromServer,
   qualityProfilesToDiffEntries,
   updateQualityProfileOnServer,
-} from "./quality-profiles";
+} from "./qualityProfiles/qualityProfiles";
 import { syncMetadataProfiles } from "./metadataProfiles/metadataProfileSyncer";
 import { cloneRecyclarrTemplateRepo } from "./recyclarr-importer";
-import { loadServerTags } from "./tags";
+import { loadServerTags } from "./tags/tags";
 import { getTelemetryInstance, Telemetry } from "./telemetry";
 import { cloneTrashRepo, loadQualityDefinitionFromTrash, loadTrashCFConflicts, transformTrashQDs } from "./trash-guide";
 import { ArrType, MediaArrType } from "./types/common.types";
@@ -79,7 +86,7 @@ const pipeline = async (
   const serverQD = await loadQualityDefinitionFromServer(arrType);
   const languages = await getClient(arrType).getLanguages();
 
-  const serverCache = new ServerCache(serverQD, [], serverCFs, languages);
+  const serverCache = new ServerCache(serverQD, [] as QualityProfilePayload[], serverCFs, languages);
 
   logger.info(`Server objects: CustomFormats ${serverCFs.length}`);
 
@@ -103,7 +110,7 @@ const pipeline = async (
   const serverCFMapping = serverCache.cf.reduce((p, c) => {
     p.set(c.name!, c);
     return p;
-  }, new Map<string, CustomFormatLike>());
+  }, new Map<string, CustomFormatRequest>());
 
   const cfUpdateResult = await manageCf(arrType, mergedCFs, serverCFMapping);
   diffCollector.add(cfUpdateResult.diffEntries);
@@ -186,7 +193,7 @@ const pipeline = async (
       mergedQDs.push(...config.quality_definition.qualities);
     }
 
-    const { changeMap, restData } = calculateQualityDefinitionDiff(serverCache.qd, mergedQDs);
+    const { changeMap, restData } = calculateQualityDefinitionDiff(arrType, serverCache.qd, mergedQDs);
 
     if (changeMap.size > 0) {
       diffCollector.add(qualityDefinitionsToDiffEntries(changeMap));
@@ -279,11 +286,11 @@ const pipeline = async (
   }
 
   if (config.delete_unmanaged_quality_profiles?.enabled) {
-    const unmanagedQPs: QualityProfileLike[] = getUnmanagedQualityProfiles(serverCache.qp, config.quality_profiles);
+    const unmanagedQPs = getUnmanagedQualityProfiles(serverCache.qp, config.quality_profiles);
 
     const ignoreSet = new Set(config.delete_unmanaged_quality_profiles.ignore ?? []);
 
-    const qpsToDelete: QualityProfileLike[] = unmanagedQPs.filter((qp) => qp.name && !ignoreSet.has(qp.name));
+    const qpsToDelete = unmanagedQPs.filter((qp) => qp.name && !ignoreSet.has(qp.name));
 
     if (qpsToDelete.length > 0) {
       if (getEnvs().DRY_RUN) {

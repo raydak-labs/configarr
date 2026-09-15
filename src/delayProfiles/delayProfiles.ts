@@ -1,30 +1,50 @@
-import { DelayProfileLike, DelayProfileProtocolItem, DelayProfilesClient, TagLike } from "./clients/capabilities";
-import { getClient } from "./clients/client";
-import { DiffEntry, FieldChange } from "./diffReport/diffReport.types";
-import { logger } from "./logger";
-import { MediaArrType } from "./types/common.types";
-import { InputConfigDelayProfile } from "./types/config.types";
-
-const delayApi = (arrType: MediaArrType): DelayProfilesClient => getClient(arrType);
+import { asGenerated } from "../arr/cast";
+import { Tag } from "../clients/capabilities";
+import { getClient } from "../clients/client";
+import { DiffEntry, FieldChange } from "../diffReport/diffReport.types";
+import { logger } from "../logger";
+import { MediaArrType } from "../types/common.types";
+import { InputConfigDelayProfile } from "../types/config.types";
+import { DelayProfilePayload, DelayProfileProtocolItem } from "./delayProfile.types";
 
 export const deleteAdditionalDelayProfiles = async (arrType: MediaArrType) => {
-  const api = delayApi(arrType);
-
-  const serverData = await api.getDelayProfiles();
+  const serverData = await getClient(arrType).getDelayProfiles();
   const { additional: serverAdditional = [] } = splitServerDelayProfiles(serverData);
 
   for (const p of serverAdditional) {
-    await api.deleteDelayProfile(p.id + "");
+    await getClient(arrType).deleteDelayProfile(p.id + "");
     logger.info(`Deleted Delay Profile: '${p.id}'`);
   }
 };
 
-export const createDelayProfileOnServer = async (arrType: MediaArrType, profile: DelayProfileLike) => {
-  return delayApi(arrType).createDelayProfile(profile);
+export const createDelayProfileOnServer = async (arrType: MediaArrType, profile: DelayProfilePayload) => {
+  switch (arrType) {
+    case "SONARR":
+      return getClient("SONARR").createDelayProfile(asGenerated(profile));
+    case "RADARR":
+      return getClient("RADARR").createDelayProfile(asGenerated(profile));
+    case "LIDARR":
+      return getClient("LIDARR").createDelayProfile(asGenerated(profile));
+    case "READARR":
+      return getClient("READARR").createDelayProfile(asGenerated(profile));
+    case "WHISPARR":
+      return getClient("WHISPARR").createDelayProfile(asGenerated(profile));
+  }
 };
 
-export const updateDelayProfileOnServer = async (arrType: MediaArrType, id: string, profile: DelayProfileLike) => {
-  return delayApi(arrType).updateDelayProfile(id, profile);
+export const updateDelayProfileOnServer = async (arrType: MediaArrType, id: string, profile: DelayProfilePayload) => {
+  switch (arrType) {
+    case "SONARR":
+      return getClient("SONARR").updateDelayProfile(id, asGenerated(profile));
+    case "RADARR":
+      return getClient("RADARR").updateDelayProfile(id, asGenerated(profile));
+    case "LIDARR":
+      return getClient("LIDARR").updateDelayProfile(id, asGenerated(profile));
+    case "READARR":
+      return getClient("READARR").updateDelayProfile(id, asGenerated(profile));
+    case "WHISPARR":
+      return getClient("WHISPARR").updateDelayProfile(id, asGenerated(profile));
+  }
 };
 
 // Helper to flatten delay profiles (default + additional) to a single array
@@ -36,12 +56,12 @@ export function flattenDelayProfiles<T extends { tags?: number[] | null }>(delay
 }
 
 // Helper to split server delay profiles into default/additional
-export function splitServerDelayProfiles(serverProfiles: DelayProfileLike[]): {
-  default?: DelayProfileLike;
-  additional?: DelayProfileLike[];
+export function splitServerDelayProfiles(serverProfiles: DelayProfilePayload[]): {
+  default?: DelayProfilePayload;
+  additional?: DelayProfilePayload[];
 } {
-  let defaultProfile: DelayProfileLike | undefined = undefined;
-  const additional: DelayProfileLike[] = [];
+  let defaultProfile: DelayProfilePayload | undefined = undefined;
+  const additional: DelayProfilePayload[] = [];
   for (const p of serverProfiles) {
     if (!Array.isArray(p.tags) || p.tags.length === 0) {
       defaultProfile = p;
@@ -52,7 +72,7 @@ export function splitServerDelayProfiles(serverProfiles: DelayProfileLike[]): {
   return { default: defaultProfile, additional: additional.length > 0 ? additional : undefined };
 }
 
-export const mapToServerDelayProfile = (profile: InputConfigDelayProfile, serverTags: TagLike[]): DelayProfileLike => {
+export const mapToServerDelayProfile = (profile: InputConfigDelayProfile, serverTags: Tag[]): DelayProfilePayload => {
   const mappedTags = profile.tags?.map((tagName) => serverTags.find((t) => t.label === tagName)?.id).filter((t) => t !== undefined) || [];
   const shared = {
     bypassIfHighestQuality: profile.bypassIfHighestQuality,
@@ -98,7 +118,7 @@ export interface DelayProfilesDiff {
 export const calculateDelayProfilesDiff = async (
   arrType: MediaArrType,
   delayProfilesObj: { default?: InputConfigDelayProfile; additional?: InputConfigDelayProfile[] },
-  tags: TagLike[],
+  tags: Tag[],
 ): Promise<DelayProfilesDiff | null> => {
   const { default: configDefault, additional: configAdditional = [] } = delayProfilesObj;
 
@@ -107,8 +127,7 @@ export const calculateDelayProfilesDiff = async (
     return null;
   }
 
-  const api = delayApi(arrType);
-  const serverData = await api.getDelayProfiles();
+  const serverData = await getClient(arrType).getDelayProfiles();
   const { default: serverDefault, additional: serverAdditional = [] } = splitServerDelayProfiles(serverData);
 
   // Check default profile (no tag comparison for default)
@@ -172,7 +191,7 @@ type ComparisonKeys = keyof Pick<
   | "order"
 >;
 
-const getProfileTags = (profile: DelayProfileLike): number[] => {
+const getProfileTags = (profile: DelayProfilePayload): number[] => {
   return "tags" in profile && Array.isArray(profile.tags) ? profile.tags : [];
 };
 
@@ -184,11 +203,11 @@ const normalizeDelayProfileItems = (items: DelayProfileProtocolItem[] | null | u
     delay: item.delay,
   }));
 
-const areDelayProfileItemsEqual = (configItems: InputConfigDelayProfile["items"], serverItems: DelayProfileLike["items"]): boolean => {
+const areDelayProfileItemsEqual = (configItems: InputConfigDelayProfile["items"], serverItems: DelayProfilePayload["items"]): boolean => {
   return JSON.stringify(normalizeDelayProfileItems(configItems)) === JSON.stringify(normalizeDelayProfileItems(serverItems));
 };
 
-const compareProfileFields = (config: InputConfigDelayProfile, server: DelayProfileLike): FieldChange[] => {
+const compareProfileFields = (config: InputConfigDelayProfile, server: DelayProfilePayload): FieldChange[] => {
   const keys: ComparisonKeys[] = [
     "enableUsenet",
     "enableTorrent",
@@ -216,7 +235,10 @@ const compareProfileFields = (config: InputConfigDelayProfile, server: DelayProf
 };
 
 // Default profile: no tag comparison
-const compareDefaultProfile = (config: InputConfigDelayProfile, server: DelayProfileLike): { equal: boolean; changes: FieldChange[] } => {
+const compareDefaultProfile = (
+  config: InputConfigDelayProfile,
+  server: DelayProfilePayload,
+): { equal: boolean; changes: FieldChange[] } => {
   const changes = compareProfileFields(config, server);
   return { equal: changes.length === 0, changes };
 };
@@ -224,7 +246,7 @@ const compareDefaultProfile = (config: InputConfigDelayProfile, server: DelayPro
 // Additional profiles: includes tag comparison
 const compareAdditionalProfile = (
   config: InputConfigDelayProfile,
-  server: DelayProfileLike,
+  server: DelayProfilePayload,
   mappedTags: Array<number>,
 ): { equal: boolean; changes: FieldChange[] } => {
   const changes = compareProfileFields(config, server);

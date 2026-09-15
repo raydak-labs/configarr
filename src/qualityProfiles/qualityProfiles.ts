@@ -1,44 +1,49 @@
 import path from "node:path";
-import { ServerCache } from "./cache";
-import {
-  CustomFormatLike,
-  LanguageLike,
-  ProfileFormatItemLike,
-  QualityDefinitionLike,
-  QualityProfileItemLike,
-  QualityProfileLike,
-  QualityProfilesClient,
-} from "./clients/capabilities";
-import { getClient } from "./clients/client";
-import { DiffEntry, FieldChange } from "./diffReport/diffReport.types";
-import { getEnvs } from "./env";
-import { logger } from "./logger";
-import { ArrType, CFProcessing, MediaArrType } from "./types/common.types";
-import { ConfigQualityProfile, ConfigQualityProfileItem, MergedConfigInstance } from "./types/config.types";
-import type { TrashCFConflict } from "./types/trashguide.types";
-import { ANY_LANGUAGE_NAME, cloneWithJSON, loadJsonFile, notEmpty, zip } from "./util";
+import { asGenerated } from "../arr/cast";
+import { qualityProfileHasLanguage, qualityProfileHasMinUpgradeFormatScore } from "../arr/features";
+import { ServerCache } from "../cache";
+import { getClient } from "../clients/client";
+import { DiffEntry, FieldChange } from "../diffReport/diffReport.types";
+import { getEnvs } from "../env";
+import { logger } from "../logger";
+import { CFProcessing, MediaArrType } from "../types/common.types";
+import { ConfigQualityProfile, ConfigQualityProfileItem, MergedConfigInstance } from "../types/config.types";
+import type { TrashCFConflict } from "../types/trashguide.types";
+import { ANY_LANGUAGE_NAME, cloneWithJSON, loadJsonFile, notEmpty, zip } from "../util";
+import { CustomFormatRef, FormatItem, QualityItem, QualityProfileLanguage, QualityProfilePayload } from "./qualityProfile.types";
+import type { QualityDefinitionPayload } from "../qualityDefinitions/qualityDefinition.types";
+
+export type { QualityProfilePayload } from "./qualityProfile.types";
+
+const payloadForArr = (arrType: MediaArrType, profile: QualityProfilePayload): QualityProfilePayload => {
+  const next: QualityProfilePayload = { ...profile };
+  if (!qualityProfileHasMinUpgradeFormatScore(arrType)) {
+    delete next.minUpgradeFormatScore;
+  }
+  if (!qualityProfileHasLanguage(arrType)) {
+    delete next.language;
+  }
+  return next;
+};
 
 export const deleteAllQualityProfiles = async (arrType: MediaArrType) => {
-  const api: QualityProfilesClient = getClient(arrType);
-  const qualityProfilesOnServer = await api.getQualityProfiles();
+  const qualityProfilesOnServer = await getClient(arrType).getQualityProfiles();
 
   for (const qualityProfile of qualityProfilesOnServer) {
-    await api.deleteQualityProfile(qualityProfile.id + "");
+    await getClient(arrType).deleteQualityProfile(qualityProfile.id + "");
     logger.info(`Deleted QP: '${qualityProfile.name}'`);
   }
 };
 
-export const deleteQualityProfile = async (arrType: MediaArrType, qualityProfile: QualityProfileLike) => {
-  const api: QualityProfilesClient = getClient(arrType);
-
-  await api.deleteQualityProfile(qualityProfile.id + "");
+export const deleteQualityProfile = async (arrType: MediaArrType, qualityProfile: QualityProfilePayload) => {
+  await getClient(arrType).deleteQualityProfile(qualityProfile.id + "");
   logger.info(`Deleted QP: '${qualityProfile.name || qualityProfile.id}'`);
 };
 
 // merge CFs of templates and custom CFs into one mapping of QualityProfile -> CFs + Score
 export const mapQualityProfiles = ({ carrIdMapping }: CFProcessing, { custom_formats, quality_profiles }: MergedConfigInstance) => {
   // QualityProfile -> (CF Name -> Scoring)
-  const profileScores = new Map<string, Map<string, ProfileFormatItemLike>>();
+  const profileScores = new Map<string, Map<string, FormatItem>>();
 
   const defaultScoringMap = new Map(quality_profiles.map((obj) => [obj.name, obj]));
 
@@ -97,26 +102,47 @@ export const mapQualityProfiles = ({ carrIdMapping }: CFProcessing, { custom_for
   return profileScores;
 };
 
-export const loadQualityProfilesFromServer = async (arrType: MediaArrType): Promise<QualityProfileLike[]> => {
+export const loadQualityProfilesFromServer = async (arrType: MediaArrType): Promise<QualityProfilePayload[]> => {
   if (getEnvs().LOAD_LOCAL_SAMPLES) {
-    return loadJsonFile(path.resolve(__dirname, `../tests/samples/quality_profiles.json`));
+    return loadJsonFile(path.resolve(__dirname, `../../tests/samples/quality_profiles.json`));
   }
-  const api: QualityProfilesClient = getClient(arrType);
-  return api.getQualityProfiles();
+  return getClient(arrType).getQualityProfiles();
 };
 
-export const createQualityProfileOnServer = async (arrType: MediaArrType, profile: QualityProfileLike) => {
-  const api: QualityProfilesClient = getClient(arrType);
-  return api.createQualityProfile(profile);
+export const createQualityProfileOnServer = async (arrType: MediaArrType, profile: QualityProfilePayload) => {
+  const payload = payloadForArr(arrType, profile);
+  switch (arrType) {
+    case "SONARR":
+      return getClient("SONARR").createQualityProfile(asGenerated(payload));
+    case "RADARR":
+      return getClient("RADARR").createQualityProfile(asGenerated(payload));
+    case "LIDARR":
+      return getClient("LIDARR").createQualityProfile(asGenerated(payload));
+    case "READARR":
+      return getClient("READARR").createQualityProfile(asGenerated(payload));
+    case "WHISPARR":
+      return getClient("WHISPARR").createQualityProfile(asGenerated(payload));
+  }
 };
 
-export const updateQualityProfileOnServer = async (arrType: MediaArrType, id: string, profile: QualityProfileLike) => {
-  const api: QualityProfilesClient = getClient(arrType);
-  return api.updateQualityProfile(id, profile);
+export const updateQualityProfileOnServer = async (arrType: MediaArrType, id: string, profile: QualityProfilePayload) => {
+  const payload = payloadForArr(arrType, profile);
+  switch (arrType) {
+    case "SONARR":
+      return getClient("SONARR").updateQualityProfile(id, asGenerated(payload));
+    case "RADARR":
+      return getClient("RADARR").updateQualityProfile(id, asGenerated(payload));
+    case "LIDARR":
+      return getClient("LIDARR").updateQualityProfile(id, asGenerated(payload));
+    case "READARR":
+      return getClient("READARR").updateQualityProfile(id, asGenerated(payload));
+    case "WHISPARR":
+      return getClient("WHISPARR").updateQualityProfile(id, asGenerated(payload));
+  }
 };
 
 // TODO should we use clones or not?
-export const mapQualities = (qd_source: QualityDefinitionLike[], value_source: ConfigQualityProfile) => {
+export const mapQualities = (qd_source: QualityDefinitionPayload[], value_source: ConfigQualityProfile) => {
   const qd = cloneWithJSON(qd_source);
   const value = cloneWithJSON(value_source);
 
@@ -130,7 +156,7 @@ export const mapQualities = (qd_source: QualityDefinitionLike[], value_source: C
     }
   });
 
-  const allowedQualities = value.qualities.map<QualityProfileItemLike>((obj, i) => {
+  const allowedQualities = value.qualities.map<QualityItem>((obj, i) => {
     if (obj.qualities?.length && obj.qualities.length > 0) {
       return {
         allowed: obj.enabled ?? true,
@@ -138,10 +164,10 @@ export const mapQualities = (qd_source: QualityDefinitionLike[], value_source: C
         name: obj.name,
         items:
           obj.qualities
-            ?.map<QualityProfileItemLike>((obj2) => {
+            ?.map<QualityItem>((obj2) => {
               const qd = qdLookupWithTitle.get(obj2);
 
-              const returnObject: QualityProfileItemLike = {
+              const returnObject: QualityItem = {
                 quality: {
                   id: qd?.quality?.id,
                   name: obj2,
@@ -168,7 +194,7 @@ export const mapQualities = (qd_source: QualityDefinitionLike[], value_source: C
 
       qdMap.delete(serverQD.quality?.name);
 
-      const item: QualityProfileItemLike = {
+      const item: QualityItem = {
         allowed: obj.enabled ?? true,
         items: [],
         quality: {
@@ -179,7 +205,7 @@ export const mapQualities = (qd_source: QualityDefinitionLike[], value_source: C
     }
   });
 
-  const missingQualities: QualityProfileItemLike[] = [];
+  const missingQualities: QualityItem[] = [];
 
   for (const [key, value] of qdMap.entries()) {
     missingQualities.push({
@@ -207,7 +233,7 @@ export const mapQualities = (qd_source: QualityDefinitionLike[], value_source: C
   }
 };
 
-export const isOrderOfQualitiesEqual = (arr1: QualityProfileItemLike[], arr2: QualityProfileItemLike[]) => {
+export const isOrderOfQualitiesEqual = (arr1: QualityItem[], arr2: QualityItem[]) => {
   if (arr1.length !== arr2.length) {
     return false;
   }
@@ -274,7 +300,7 @@ export const isOrderOfConfigQualitiesEqual = (obj1: ConfigQualityProfileItem[], 
  * allowed quality in the mapped list. Throws when no allowed quality exists.
  */
 const getDisabledUpgradeCutoff = (
-  mappedQualities: QualityProfileItemLike[],
+  mappedQualities: QualityItem[],
   qualityToId: Map<string, number>,
   untilQuality: string | undefined,
   profileName: string,
@@ -306,13 +332,13 @@ const getDisabledUpgradeCutoff = (
 };
 
 export const calculateQualityProfilesDiff = async (
-  arrType: ArrType,
+  arrType: MediaArrType,
   cfMap: CFProcessing,
   config: MergedConfigInstance,
   serverCache: ServerCache,
 ): Promise<{
-  changedQPs: QualityProfileLike[];
-  create: QualityProfileLike[];
+  changedQPs: QualityProfilePayload[];
+  create: QualityProfilePayload[];
   noChanges: string[];
   changes: Map<string, FieldChange[]>;
 }> => {
@@ -323,8 +349,8 @@ export const calculateQualityProfilesDiff = async (
   const cfServerMap = new Map(serverCache.cf.map((obj) => [obj.name!, obj]));
   const languageMap = new Map(serverCache.languages.map((obj) => [obj.name!, obj]));
 
-  const createQPs: QualityProfileLike[] = [];
-  const changedQPs: QualityProfileLike[] = [];
+  const createQPs: QualityProfilePayload[] = [];
+  const changedQPs: QualityProfilePayload[] = [];
   const noChangedQPs: string[] = [];
 
   const changes = new Map<string, FieldChange[]>();
@@ -334,22 +360,24 @@ export const calculateQualityProfilesDiff = async (
     const scoringForQP = scoring.get(name);
     const mappedQualities = mapQualities(serverCache.qd, value);
 
-    let profileLanguage: LanguageLike | undefined;
+    let profileLanguage: QualityProfileLanguage | undefined;
 
-    if (value.language) {
-      profileLanguage = languageMap.get(value.language);
+    if (qualityProfileHasLanguage(arrType)) {
+      if (value.language) {
+        profileLanguage = languageMap.get(value.language);
 
-      if (profileLanguage == null) {
-        logger.warn(`Profile language '${value.language}' not found in server. Ignoring.`);
-        // profileLanguage = languageMap.get("Any");
+        if (profileLanguage == null) {
+          logger.warn(`Profile language '${value.language}' not found in server. Ignoring.`);
+        }
+      } else {
+        profileLanguage = languageMap.get(ANY_LANGUAGE_NAME);
+
+        if (profileLanguage == null) {
+          logger.warn(`Default language '${ANY_LANGUAGE_NAME}' not found in server. Ignoring.`);
+        }
       }
-    } else if (arrType === "RADARR") {
-      // Radarr quality profiles always carry a language; default unmanaged/omitted language to "Any"
-      profileLanguage = languageMap.get(ANY_LANGUAGE_NAME);
-
-      if (profileLanguage == null) {
-        logger.warn(`Default language '${ANY_LANGUAGE_NAME}' not found in server. Ignoring.`);
-      }
+    } else if (value.language) {
+      logger.warn(`QualityProfile '${name}': language is not supported for ${arrType}. Ignoring.`);
     }
 
     const resetScoreExceptions: Map<string, boolean> =
@@ -374,9 +402,9 @@ export const calculateQualityProfilesDiff = async (
         return p;
       }, new Map());
 
-      const cfs: Map<string, CustomFormatLike> = new Map(JSON.parse(JSON.stringify(Array.from(cfServerMap))));
+      const cfs: Map<string, CustomFormatRef> = new Map(JSON.parse(JSON.stringify(Array.from(cfServerMap))));
 
-      const customFormatsMapped = Array.from(cfs.values()).map<ProfileFormatItemLike>((e) => {
+      const customFormatsMapped = Array.from(cfs.values()).map<FormatItem>((e) => {
         let score = 0;
 
         if (scoringForQP) {
@@ -391,7 +419,7 @@ export const calculateQualityProfilesDiff = async (
         };
       });
 
-      let newP: QualityProfileLike = {
+      let newP: QualityProfilePayload = {
         name: value.name,
         items: mappedQualities,
         minFormatScore: value.min_format_score,
@@ -403,27 +431,30 @@ export const calculateQualityProfilesDiff = async (
           throw new Error(`QualityProfile '${name}': upgrade.until_quality is required when upgrade.allowed is true`);
         }
 
-        Object.assign<QualityProfileLike, QualityProfileLike | null | undefined>(newP, {
+        Object.assign<QualityProfilePayload, QualityProfilePayload | null | undefined>(newP, {
           cutoff: qualityToId.get(value.upgrade.until_quality),
           cutoffFormatScore: value.upgrade.until_score,
           upgradeAllowed: true,
-          minUpgradeFormatScore: value.upgrade.min_format_score ?? 1,
         });
+        if (qualityProfileHasMinUpgradeFormatScore(arrType)) {
+          newP.minUpgradeFormatScore = value.upgrade.min_format_score ?? 1;
+        }
       } else {
         const cutoffId = getDisabledUpgradeCutoff(mappedQualities, qualityToId, value.upgrade.until_quality, name);
 
-        Object.assign<QualityProfileLike, QualityProfileLike | null | undefined>(newP, {
+        Object.assign<QualityProfilePayload, QualityProfilePayload | null | undefined>(newP, {
           cutoff: cutoffId,
           cutoffFormatScore: 1,
-          minUpgradeFormatScore: 1,
           upgradeAllowed: false,
         });
+        if (qualityProfileHasMinUpgradeFormatScore(arrType)) {
+          newP.minUpgradeFormatScore = 1;
+        }
       }
 
-      Object.assign<QualityProfileLike, QualityProfileLike | null | undefined>(
-        newP,
-        profileLanguage && { language: profileLanguage }, // TODO split out. Not exists for sonarr
-      );
+      if (profileLanguage) {
+        newP.language = profileLanguage;
+      }
       const newProfile = newP;
       createQPs.push(newProfile);
       continue;
@@ -432,7 +463,7 @@ export const calculateQualityProfilesDiff = async (
     const fieldChanges: FieldChange[] = [];
     changes.set(serverMatch.name!, fieldChanges);
 
-    const updatedServerObject: QualityProfileLike = JSON.parse(JSON.stringify(serverMatch));
+    const updatedServerObject: QualityProfilePayload = JSON.parse(JSON.stringify(serverMatch));
 
     let diffExist = false;
 
@@ -501,8 +532,11 @@ export const calculateQualityProfilesDiff = async (
 
         const configMinUpgradeFormatScore = value.upgrade.min_format_score ?? 1;
 
-        // if not configured ignore
-        if (value.upgrade.min_format_score != null && serverMatch.minUpgradeFormatScore !== configMinUpgradeFormatScore) {
+        if (
+          qualityProfileHasMinUpgradeFormatScore(arrType) &&
+          value.upgrade.min_format_score != null &&
+          serverMatch.minUpgradeFormatScore !== configMinUpgradeFormatScore
+        ) {
           updatedServerObject.minUpgradeFormatScore = configMinUpgradeFormatScore;
           diffExist = true;
 
@@ -527,7 +561,7 @@ export const calculateQualityProfilesDiff = async (
           fieldChanges.push({ field: "cutoffFormatScore", from: serverMatch.cutoffFormatScore, to: 1 });
         }
 
-        if (serverMatch.minUpgradeFormatScore !== 1) {
+        if (qualityProfileHasMinUpgradeFormatScore(arrType) && serverMatch.minUpgradeFormatScore !== 1) {
           updatedServerObject.minUpgradeFormatScore = 1;
           diffExist = true;
           fieldChanges.push({ field: "minUpgradeFormatScore", from: serverMatch.minUpgradeFormatScore, to: 1 });
@@ -535,7 +569,7 @@ export const calculateQualityProfilesDiff = async (
       }
     }
 
-    if (profileLanguage != null && serverMatch.language?.name !== profileLanguage.name) {
+    if (qualityProfileHasLanguage(arrType) && profileLanguage != null && serverMatch.language?.name !== profileLanguage.name) {
       updatedServerObject.language = profileLanguage;
       diffExist = true;
       fieldChanges.push({ field: "language", from: serverMatch.language?.name, to: profileLanguage?.name });
@@ -547,7 +581,7 @@ export const calculateQualityProfilesDiff = async (
     let scoringDiff = false;
 
     if (scoringForQP != null) {
-      const newCFFormats: ProfileFormatItemLike[] = [];
+      const newCFFormats: FormatItem[] = [];
 
       for (const [scoreKey, scoreValue] of scoringForQP.entries()) {
         const serverCF = serverProfileCFMap.get(scoreKey);
@@ -573,7 +607,7 @@ export const calculateQualityProfilesDiff = async (
         }
       }
 
-      const missingCfs = Array.from(serverProfileCFMap.values()).reduce<ProfileFormatItemLike[]>((p, c) => {
+      const missingCfs = Array.from(serverProfileCFMap.values()).reduce<FormatItem[]>((p, c) => {
         const cfName = c.name!;
         const cfScore = c.score;
 
@@ -627,7 +661,7 @@ export const calculateQualityProfilesDiff = async (
     changes.set(unmanagedServerQp.name!, fieldChanges);
 
     if (scoringForQP != null) {
-      const newCFFormats: ProfileFormatItemLike[] = [];
+      const newCFFormats: FormatItem[] = [];
 
       for (const [scoreKey, scoreValue] of scoringForQP.entries()) {
         const serverCF = serverProfileCFMap.get(scoreKey);
@@ -675,8 +709,8 @@ export const calculateQualityProfilesDiff = async (
 };
 
 export function qualityProfilesToDiffEntries(
-  create: QualityProfileLike[],
-  changedQPs: QualityProfileLike[],
+  create: QualityProfilePayload[],
+  changedQPs: QualityProfilePayload[],
   changes: Map<string, FieldChange[]>,
 ): DiffEntry[] {
   const entries: DiffEntry[] = create.map((qp) => ({
@@ -716,7 +750,10 @@ export const filterInvalidQualityProfiles = (profiles: ConfigQualityProfile[]): 
   });
 };
 
-export const getUnmanagedQualityProfiles = (serverQP: QualityProfileLike[], configQp: ConfigQualityProfile[]): QualityProfileLike[] => {
+export const getUnmanagedQualityProfiles = (
+  serverQP: QualityProfilePayload[],
+  configQp: ConfigQualityProfile[],
+): QualityProfilePayload[] => {
   const managedProfileNames = new Set(configQp.map((profile) => profile.name));
 
   return serverQP.filter((profile) => profile.name && !managedProfileNames.has(profile.name));

@@ -7,7 +7,7 @@ import { NamingConfigResource as SonarrNamingConfigResource } from "./__generate
 import { getHelpers } from "./env";
 import { loadLocalRecyclarrTemplate } from "./local-importer";
 import { logger } from "./logger";
-import { filterInvalidQualityProfiles } from "./quality-profiles";
+import { filterInvalidQualityProfiles } from "./qualityProfiles/qualityProfiles";
 import { loadRecyclarrTemplates } from "./recyclarr-importer";
 import {
   loadAllQDsFromTrash,

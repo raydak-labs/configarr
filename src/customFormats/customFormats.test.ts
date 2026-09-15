@@ -1,16 +1,16 @@
 import fs from "node:fs";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import * as clientModule from "./clients/client";
-import * as config from "./config";
-import * as env from "./env";
-import { calculateCFsToManage, loadCustomFormatDefinitions, loadLocalCfs, manageCf, mergeCfSources } from "./custom-formats";
-import { loadTrashCFs } from "./trash-guide";
-import { CFIDToConfigGroup, CFProcessing, ConfigarrCF } from "./types/common.types";
-import { ConfigCustomFormatList } from "./types/config.types";
-import { MergedCustomFormatResource } from "./types/merged.types";
-import { TrashCF } from "./types/trashguide.types";
-import * as util from "./util";
-import { logger } from "./logger";
+import * as clientModule from "../clients/client";
+import * as config from "../config";
+import * as env from "../env";
+import { calculateCFsToManage, loadCustomFormatDefinitions, loadLocalCfs, manageCf, mergeCfSources } from "./customFormats";
+import { loadTrashCFs } from "../trash-guide";
+import { CFIDToConfigGroup, CFProcessing, ConfigarrCF } from "../types/common.types";
+import { ConfigCustomFormatList } from "../types/config.types";
+import { CustomFormatRequest } from "./customFormat.types";
+import { TrashCF } from "../types/trashguide.types";
+import * as util from "../util";
+import { logger } from "../logger";
 
 describe("CustomFormats", () => {
   let customCF: TrashCF;
@@ -161,7 +161,7 @@ describe("CustomFormats", () => {
         ["trash1", { carrConfig: { configarr_id: "trash1", name: "trash1" }, requestConfig: {} }],
       ]);
 
-      vi.mock("./trash-guide");
+      vi.mock("../trash-guide");
       vi.mocked(loadTrashCFs).mockResolvedValue(mockTrashCFs);
       vi.spyOn(config, "getConfig").mockReturnValue({ localCustomFormatsPath: undefined });
 
@@ -176,7 +176,7 @@ describe("CustomFormats", () => {
         ["trash1", { carrConfig: { configarr_id: "trash1", name: "trash1" }, requestConfig: {} }],
       ]);
 
-      vi.mock("./trash-guide");
+      vi.mock("../trash-guide");
       vi.mocked(loadTrashCFs).mockResolvedValue(mockTrashCFs);
       vi.spyOn(config, "getConfig").mockReturnValue({ localCustomFormatsPath: undefined });
 
@@ -191,7 +191,7 @@ describe("CustomFormats", () => {
         ["trash1", { carrConfig: { configarr_id: "trash1", name: "trash1" }, requestConfig: {} }],
       ]);
 
-      vi.mock("./trash-guide");
+      vi.mock("../trash-guide");
       vi.mocked(loadTrashCFs).mockResolvedValue(mockTrashCFs);
       vi.spyOn(config, "getConfig").mockReturnValue({ localCustomFormatsPath: undefined });
 
@@ -234,8 +234,8 @@ describe("CustomFormats", () => {
         cfNameToCarrConfig: new Map([[carrConfigB.name!, carrConfigB]]),
       };
 
-      const serverCf: MergedCustomFormatResource = { id: 1, name: "Dup", ...requestConfigB };
-      const serverCfs = new Map<string, MergedCustomFormatResource>([["Dup", serverCf]]);
+      const serverCf: CustomFormatRequest = { id: 1, name: "Dup", ...requestConfigB };
+      const serverCfs = new Map<string, CustomFormatRequest>([["Dup", serverCf]]);
 
       const updateCustomFormat = vi.fn();
       vi.spyOn(clientModule, "getClient").mockReturnValue({
@@ -278,8 +278,8 @@ describe("CustomFormats", () => {
         cfNameToCarrConfig: new Map([[carrConfigB.name!, carrConfigB]]),
       };
 
-      const serverCfStale: MergedCustomFormatResource = { id: 1, name: "Dup", ...requestConfigA };
-      const serverCfs = new Map<string, MergedCustomFormatResource>([["Dup", serverCfStale]]);
+      const serverCfStale: CustomFormatRequest = { id: 1, name: "Dup", ...requestConfigA };
+      const serverCfs = new Map<string, CustomFormatRequest>([["Dup", serverCfStale]]);
 
       const updateCustomFormat = vi.fn().mockResolvedValue({ id: 1, name: "Dup", ...requestConfigB });
       vi.spyOn(clientModule, "getClient").mockReturnValue({
@@ -308,7 +308,7 @@ describe("CustomFormats", () => {
         cfNameToCarrConfig: new Map([[carrConfig.name!, carrConfig]]),
       };
 
-      const serverCfs = new Map<string, MergedCustomFormatResource>();
+      const serverCfs = new Map<string, CustomFormatRequest>();
 
       vi.spyOn(clientModule, "getClient").mockReturnValue({
         createCustomFormat: vi.fn().mockResolvedValue({ id: 1, name: "NewCF", ...requestConfig }),
@@ -334,9 +334,9 @@ describe("CustomFormats", () => {
         cfNameToCarrConfig: new Map([[carrConfig.name!, carrConfig]]),
       };
 
-      const existingCf: MergedCustomFormatResource = JSON.parse(JSON.stringify({ id: 1, ...requestConfig }));
+      const existingCf: CustomFormatRequest = JSON.parse(JSON.stringify({ id: 1, ...requestConfig }));
       existingCf.specifications![0]!.negate = true;
-      const serverCfs = new Map<string, MergedCustomFormatResource>([["ChangedCF", existingCf]]);
+      const serverCfs = new Map<string, CustomFormatRequest>([["ChangedCF", existingCf]]);
 
       vi.spyOn(clientModule, "getClient").mockReturnValue({
         createCustomFormat: vi.fn(),

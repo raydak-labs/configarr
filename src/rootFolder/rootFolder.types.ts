@@ -6,13 +6,6 @@ export type RootFolderServerResource = {
   path?: string | null;
 };
 
-export interface RootFolderClient {
-  getRootfolders(): Promise<RootFolderServerResource[]>;
-  addRootFolder(data: RootFolderServerResource): Promise<unknown>;
-  updateRootFolder(id: string, data: RootFolderServerResource): Promise<unknown>;
-  deleteRootFolder(id: string): Promise<unknown>;
-}
-
 export type GenericRootFolderArrType = "SONARR" | "RADARR" | "WHISPARR";
 
 export interface RootFolderDiff<TConfig extends InputConfigRootFolder = InputConfigRootFolder> {

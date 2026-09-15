@@ -87,13 +87,20 @@ src/
 │   ├── radarr-client.ts
 │   ├── sonarr-client.ts
 │   └── ...
+├── qualityProfiles/       # Quality profile mapping + sync
+├── customFormats/         # Custom format mapping + sync
+├── qualityDefinitions/    # Quality definition mapping + sync
+├── delayProfiles/         # Delay profile mapping + sync
+├── mediaManagement/       # Naming + media management
+├── tags/                  # Tag loading
 ├── metadataProfiles/      # Metadata profiles sync (Lidarr/Readarr)
 │   ├── metadataProfileBase.ts
 │   ├── metadataProfileLidarr.ts
 │   ├── metadataProfileReadarr.ts
 │   └── metadataProfileSyncer.ts
 ├── rootFolder/            # Root folder sync
-├── types/                 # Type definitions
+├── arr/                   # Per-*arr feature flags (language, preferredSize, …)
+├── types/                 # Shared config / YAML types
 │   ├── config.types.ts    # Configuration types
 │   ├── common.types.ts    # Shared types
 │   └── ...
@@ -122,9 +129,11 @@ Callers use `getClient<T>(arrType)` (`src/clients/client.ts`). A literal arr typ
 
 Media clients implement small capabilities in `src/clients/capabilities.ts` (System, Tags, DownloadClients, QualityProfiles, CustomFormats, QualityDefinitions) plus their own methods. Prowlarr implements System + Tags + DownloadClients only — no media stubs.
 
-- **Pattern A** — fields or methods differ per arr: factory `switch` + literal `getClient("LIDARR")` (metadata, Lidarr/Readarr root folders).
+- **Pattern A** — fields or methods differ per arr: factory `switch` + literal `getClient("LIDARR")` (QP language / minUpgradeFormatScore, naming, delay writes, metadata, Lidarr/Readarr root folders).
 - **Pattern B** — same method set: capability + generic (`CustomFormatsClient<CF>`), or a `MediaArrType` union so Prowlarr is excluded.
 - **Pattern C** — Prowlarr-only (`src/prowlarr/providerResourceSync.ts`). Media managers do not get a Pattern C.
+
+Feature mapping payloads live next to the feature (`qualityProfiles/qualityProfile.types.ts`, `customFormats/customFormat.types.ts`, …). Do not introduce `Merged*` intersection types for client or cache returns.
 
 ### Configuration System
 

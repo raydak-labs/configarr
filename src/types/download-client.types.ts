@@ -25,6 +25,10 @@ import type {
   DownloadClientResource as WhisparrDownloadClientResource,
   TagResource as WhisparrTagResource,
 } from "../__generated__/whisparr/data-contracts";
+import type {
+  Field as ProwlarrDownloadClientField,
+  DownloadClientResource as ProwlarrDownloadClientResource,
+} from "../__generated__/prowlarr/data-contracts";
 
 /**
  * Canonical union of all generator-specific download client resources.
@@ -37,7 +41,8 @@ export type DownloadClientResource =
   | SonarrDownloadClientResource
   | LidarrDownloadClientResource
   | ReadarrDownloadClientResource
-  | WhisparrDownloadClientResource;
+  | WhisparrDownloadClientResource
+  | ProwlarrDownloadClientResource;
 
 /**
  * Canonical union of all generator-specific download client fields.
@@ -50,7 +55,8 @@ export type DownloadClientField =
   | SonarrDownloadClientField
   | LidarrDownloadClientField
   | ReadarrDownloadClientField
-  | WhisparrDownloadClientField;
+  | WhisparrDownloadClientField
+  | ProwlarrDownloadClientField;
 
 /**
  * Canonical union of all generator-specific tag resources used by
@@ -85,5 +91,3 @@ export interface DownloadClientSyncResult {
   removed: number;
   diffEntries: DiffEntry[];
 }
-
-export type TagLike = { id?: number; label?: string | null };

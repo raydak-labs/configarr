@@ -1,38 +1,50 @@
 import path from "node:path";
-import { QualityDefinitionLike, QualityDefinitionsClient } from "./clients/capabilities";
-import { getClient } from "./clients/client";
-import { getEnvs } from "./env";
-import { logger } from "./logger";
-import { MediaArrType } from "./types/common.types";
-import { TrashQualityDefinitionQuality } from "./types/trashguide.types";
-import { cloneWithJSON, loadJsonFile, roundToDecimal } from "./util";
-import { DiffEntry, FieldChange } from "./diffReport/diffReport.types";
+import { asGenerated } from "../arr/cast";
+import { qualityDefinitionHasPreferredSize } from "../arr/features";
+import { getClient } from "../clients/client";
+import { DiffEntry, FieldChange } from "../diffReport/diffReport.types";
+import { getEnvs } from "../env";
+import { logger } from "../logger";
+import { MediaArrType } from "../types/common.types";
+import { TrashQualityDefinitionQuality } from "../types/trashguide.types";
+import { cloneWithJSON, loadJsonFile, roundToDecimal } from "../util";
+import { QualityDefinitionPayload } from "./qualityDefinition.types";
 
-export const loadQualityDefinitionFromServer = async (arrType: MediaArrType): Promise<QualityDefinitionLike[]> => {
+export const loadQualityDefinitionFromServer = async (arrType: MediaArrType): Promise<QualityDefinitionPayload[]> => {
   if (getEnvs().LOAD_LOCAL_SAMPLES) {
-    return loadJsonFile(path.resolve(__dirname, "../tests/samples/qualityDefinition.json"));
+    return loadJsonFile(path.resolve(__dirname, "../../tests/samples/qualityDefinition.json"));
   }
   return await getClient(arrType).getQualityDefinitions();
 };
 
-export const updateQualityDefinitionsOnServer = async (arrType: MediaArrType, restData: QualityDefinitionLike[]) => {
-  const api: QualityDefinitionsClient = getClient(arrType);
-  return api.updateQualityDefinitions(restData);
+export const updateQualityDefinitionsOnServer = async (arrType: MediaArrType, restData: QualityDefinitionPayload[]) => {
+  switch (arrType) {
+    case "SONARR":
+      return getClient("SONARR").updateQualityDefinitions(asGenerated(restData));
+    case "RADARR":
+      return getClient("RADARR").updateQualityDefinitions(asGenerated(restData));
+    case "LIDARR":
+      return getClient("LIDARR").updateQualityDefinitions(asGenerated(restData));
+    case "READARR":
+      return getClient("READARR").updateQualityDefinitions(asGenerated(restData));
+    case "WHISPARR":
+      return getClient("WHISPARR").updateQualityDefinitions(asGenerated(restData));
+  }
 };
 
 export const calculateQualityDefinitionDiff = (
-  serverQDs: QualityDefinitionLike[],
-  // TODO: this does not has to include all QDs right?
+  arrType: MediaArrType,
+  serverQDs: QualityDefinitionPayload[],
   qualityDefinitions: TrashQualityDefinitionQuality[],
-  // TODO add config defined qualities
 ) => {
   const serverMap = serverQDs.reduce((p, c) => {
     p.set(c.quality!.name!, c);
     return p;
-  }, new Map<string, QualityDefinitionLike>());
+  }, new Map<string, QualityDefinitionPayload>());
 
   const changeMap = new Map<string, FieldChange[]>();
-  const restData: QualityDefinitionLike[] = [];
+  const restData: QualityDefinitionPayload[] = [];
+  const applyPreferredSize = qualityDefinitionHasPreferredSize(arrType);
 
   const missingServerQualities = new Map(serverMap);
 
@@ -67,7 +79,7 @@ export const calculateQualityDefinitionDiff = (
         newData.maxSize = clonedQuality.max;
       }
 
-      if (clonedQuality.preferred && serverQuality.preferredSize !== clonedQuality.preferred) {
+      if (applyPreferredSize && clonedQuality.preferred && serverQuality.preferredSize !== clonedQuality.preferred) {
         changes.push({ field: "preferredSize", from: serverQuality.preferredSize, to: clonedQuality.preferred });
         newData.preferredSize = clonedQuality.preferred;
       }
@@ -116,10 +128,8 @@ export function interpolateSize(min: number, max: number, pref: number, ratio: n
     throw new Error(`Unexpected ratio range. Should be between 0 <= ratio <= 1`);
   }
   if (ratio <= 0.5) {
-    // Interpolate between min and pref
     return roundToDecimal(min + (pref - min) * (ratio / 0.5), 1);
   } else {
-    // Interpolate between pref and max
     return roundToDecimal(pref + (max - pref) * ((ratio - 0.5) / 0.5), 1);
   }
 }

@@ -1,8 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, rmSync } from "node:fs";
 import path from "node:path";
 import simpleGit, { CheckRepoActions } from "simple-git";
-import { CustomFormatLike } from "./clients/capabilities";
-import { MergedCustomFormatResource } from "./types/merged.types";
+import { CustomFormatRequest } from "./customFormats/customFormat.types";
 import { getHelpers } from "./env";
 import { logger } from "./logger";
 import { ConfigarrCF, ImportCF, UserFriendlyField } from "./types/common.types";
@@ -67,7 +66,7 @@ export const toCarrCF = (input: TrashCF | ConfigarrCF): ConfigarrCF => {
   return trashToCarrCF(input);
 };
 
-export const mapImportCfToRequestCf = (cf: TrashCF | ConfigarrCF): MergedCustomFormatResource => {
+export const mapImportCfToRequestCf = (cf: TrashCF | ConfigarrCF): CustomFormatRequest => {
   let customId;
   let rest: ImportCF;
 
@@ -112,7 +111,10 @@ export const mapImportCfToRequestCf = (cf: TrashCF | ConfigarrCF): MergedCustomF
   return { ...rest, specifications: specs };
 };
 
-export function compareCustomFormats(serverObject: CustomFormatLike, localObject: CustomFormatLike): ReturnType<typeof compareObjectsCarr> {
+export function compareCustomFormats(
+  serverObject: CustomFormatRequest,
+  localObject: CustomFormatRequest,
+): ReturnType<typeof compareObjectsCarr> {
   return compareObjectsCarr(serverObject, localObject);
 }
 

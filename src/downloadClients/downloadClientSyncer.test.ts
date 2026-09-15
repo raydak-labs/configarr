@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import type { MergedTagResource } from "../types/merged.types";
+import type { Tag } from "../clients/capabilities";
 import type { DownloadClientResource, TagResource } from "../__generated__/radarr/data-contracts";
 import { DownloadProtocol } from "../__generated__/radarr/data-contracts";
 import { ServerCache } from "../cache";
@@ -352,7 +352,7 @@ describe("downloadClientSyncer – deletion logic", () => {
 });
 
 describe("downloadClientSyncer – equality & omission semantics", () => {
-  const makeCache = (tags: MergedTagResource[] = []) => new ServerCache([], [], [], []);
+  const makeCache = (tags: Tag[] = []) => new ServerCache([], [], [], []);
 
   test("isDownloadClientEqual treats omitted top-level fields as 'do not manage'", () => {
     const cache = makeCache();

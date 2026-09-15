@@ -1,17 +1,26 @@
-import { CustomFormatLike, LanguageLike, QualityDefinitionLike, QualityProfileLike, TagLike } from "./clients/capabilities";
 import { logger } from "./logger";
+import type { Tag } from "./clients/capabilities";
+import type { CustomFormatRequest } from "./customFormats/customFormat.types";
+import type { QualityDefinitionPayload } from "./qualityDefinitions/qualityDefinition.types";
+import type { QualityProfileLanguage, QualityProfilePayload } from "./qualityProfiles/qualityProfile.types";
 import type { DownloadClientResource } from "./types/download-client.types";
 
-export class ServerCache {
-  private cache: Record<string, any> = {};
-  private _qd: QualityDefinitionLike[];
-  private _qp: QualityProfileLike[];
-  private _cf: CustomFormatLike[];
-  private _tags: TagLike[] = [];
-  private _languages: LanguageLike[];
+export class ServerCache<
+  QD = QualityDefinitionPayload,
+  QP extends { name?: string | null } = QualityProfilePayload,
+  CF extends { name?: string | null } = CustomFormatRequest,
+  L extends { name?: string | null } = QualityProfileLanguage,
+  TTag extends Tag = Tag,
+> {
+  private cache: Record<string, unknown> = {};
+  private _qd: QD[];
+  private _qp: QP[];
+  private _cf: CF[];
+  private _tags: TTag[] = [];
+  private _languages: L[];
   private _downloadClientSchema: DownloadClientResource[] | null = null;
 
-  constructor(qd: QualityDefinitionLike[], qp: QualityProfileLike[], cf: CustomFormatLike[], languages: LanguageLike[]) {
+  constructor(qd: QD[], qp: QP[], cf: CF[], languages: L[]) {
     this._qd = qd;
     this._qp = qp;
     this._cf = cf;
@@ -19,7 +28,7 @@ export class ServerCache {
   }
 
   public get<T>(key: string): T | null {
-    return this.cache[key] ?? null;
+    return (this.cache[key] as T | undefined) ?? null;
   }
 
   public set<T>(key: string, value: T): void {
@@ -30,9 +39,8 @@ export class ServerCache {
     return this._qd;
   }
 
-  public set qd(newQd: QualityDefinitionLike[]) {
+  public set qd(newQd: QD[]) {
     if (newQd == null || newQd.length <= 0) {
-      // Empty should never happen
       logger.debug(`No QualityDefinition received from server.`);
       throw new Error("No QualityDefinitions received from server.");
     }
@@ -43,7 +51,7 @@ export class ServerCache {
     return this._qp;
   }
 
-  public set qp(newQp: QualityProfileLike[]) {
+  public set qp(newQp: QP[]) {
     if (newQp == null || newQp.length <= 0) {
       logger.debug(`No QualityProfiles received from server.`);
     }
@@ -54,7 +62,7 @@ export class ServerCache {
     return this._cf;
   }
 
-  public set cf(newCf: CustomFormatLike[]) {
+  public set cf(newCf: CF[]) {
     if (newCf == null || newCf.length <= 0) {
       logger.debug(`No CustomFormats received from server.`);
     }
@@ -65,9 +73,8 @@ export class ServerCache {
     return this._languages;
   }
 
-  public set languages(newLanguages: LanguageLike[]) {
+  public set languages(newLanguages: L[]) {
     if (newLanguages == null || newLanguages.length <= 0) {
-      // Empty should never happen
       logger.debug(`No Languages received from server.`);
       throw new Error("No Languages received from server.");
     }
@@ -77,7 +84,7 @@ export class ServerCache {
   public get tags() {
     return this._tags;
   }
-  public set tags(newTags: TagLike[]) {
+  public set tags(newTags: TTag[]) {
     if (newTags == null || newTags.length <= 0) {
       logger.debug(`No Tags received from server.`);
     }

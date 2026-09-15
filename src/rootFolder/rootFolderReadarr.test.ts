@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ReadarrRootFolderSync } from "./rootFolderReadarr";
+import { ReadarrClient } from "../clients/readarr-client";
 import { getClient } from "../clients/client";
 import { ServerCache } from "../cache";
 import { InputConfigRootFolderReadarr } from "../types/config.types";
@@ -20,7 +21,7 @@ describe("ReadarrRootFolderSync", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(getClient).mockReturnValue(mockApi as unknown as ReturnType<typeof getClient>);
+    vi.mocked(getClient).mockReturnValue(mockApi as unknown as ReadarrClient);
     serverCache = new ServerCache([], [], [], []);
     serverCache.tags = [];
     mockApi.getQualityProfiles.mockResolvedValue([

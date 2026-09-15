@@ -1,10 +1,10 @@
 import { describe, expect, test, vi } from "vitest";
-import { MergedDelayProfileResource } from "./types/merged.types";
+import { DelayProfilePayload } from "./delayProfile.types";
 
 // Hoist the mock to ensure it runs before imports
 const mockGetDelayProfiles = vi.hoisted(() => vi.fn());
 
-vi.mock("./clients/client", () => ({
+vi.mock("../clients/client", () => ({
   getClient: () => ({
     getDelayProfiles: mockGetDelayProfiles,
   }),
@@ -41,7 +41,7 @@ describe("DelayProfiles", () => {
     };
 
     // Simulate server data that matches the config
-    const serverProfiles: MergedDelayProfileResource[] = [
+    const serverProfiles: DelayProfilePayload[] = [
       {
         enableUsenet: true,
         enableTorrent: false,
@@ -71,7 +71,7 @@ describe("DelayProfiles", () => {
 
     mockGetDelayProfiles.mockResolvedValue(serverProfiles);
 
-    const { calculateDelayProfilesDiff } = await import("./delay-profiles");
+    const { calculateDelayProfilesDiff } = await import("./delayProfiles");
     const diff = await calculateDelayProfilesDiff("SONARR", configProfiles, [{ label: "test", id: 1 }]);
 
     expect(diff).toBeNull();
@@ -92,7 +92,7 @@ describe("DelayProfiles", () => {
     };
 
     // Simulate server data with different default profile
-    const serverProfiles: MergedDelayProfileResource[] = [
+    const serverProfiles: DelayProfilePayload[] = [
       {
         enableUsenet: true,
         enableTorrent: false,
@@ -109,7 +109,7 @@ describe("DelayProfiles", () => {
 
     mockGetDelayProfiles.mockResolvedValue(serverProfiles);
 
-    const { calculateDelayProfilesDiff } = await import("./delay-profiles");
+    const { calculateDelayProfilesDiff } = await import("./delayProfiles");
     const diff = await calculateDelayProfilesDiff("SONARR", configProfiles, []);
 
     expect(diff).not.toBeNull();
@@ -138,7 +138,7 @@ describe("DelayProfiles", () => {
       ],
     };
     // Simulate server data
-    const serverProfiles: MergedDelayProfileResource[] = [
+    const serverProfiles: DelayProfilePayload[] = [
       {
         enableUsenet: true,
         enableTorrent: false,
@@ -168,7 +168,7 @@ describe("DelayProfiles", () => {
 
     mockGetDelayProfiles.mockResolvedValue(serverProfiles);
 
-    const { calculateDelayProfilesDiff } = await import("./delay-profiles");
+    const { calculateDelayProfilesDiff } = await import("./delayProfiles");
     const diff = await calculateDelayProfilesDiff("SONARR", configProfiles, []);
 
     expect(diff).not.toBeNull();
@@ -197,7 +197,7 @@ describe("DelayProfiles", () => {
       ],
     };
     // Simulate server data
-    const serverProfiles: MergedDelayProfileResource[] = [
+    const serverProfiles: DelayProfilePayload[] = [
       {
         enableUsenet: true,
         enableTorrent: false,
@@ -227,7 +227,7 @@ describe("DelayProfiles", () => {
 
     mockGetDelayProfiles.mockResolvedValue(serverProfiles);
 
-    const { calculateDelayProfilesDiff } = await import("./delay-profiles");
+    const { calculateDelayProfilesDiff } = await import("./delayProfiles");
     const diff = await calculateDelayProfilesDiff("SONARR", configProfiles, []);
 
     expect(diff).not.toBeNull();
@@ -249,7 +249,7 @@ describe("DelayProfiles", () => {
       },
     };
 
-    const serverProfiles: MergedDelayProfileResource[] = [
+    const serverProfiles: DelayProfilePayload[] = [
       {
         id: 1,
         tags: [],
@@ -267,7 +267,7 @@ describe("DelayProfiles", () => {
 
     mockGetDelayProfiles.mockResolvedValue(serverProfiles);
 
-    const { calculateDelayProfilesDiff } = await import("./delay-profiles");
+    const { calculateDelayProfilesDiff } = await import("./delayProfiles");
     const diff = await calculateDelayProfilesDiff("SONARR", configProfiles, []);
 
     expect(diff?.defaultProfileChanged).toBe(true);
@@ -275,7 +275,7 @@ describe("DelayProfiles", () => {
   });
 
   test("delayProfilesToDiffEntries - builds a DiffEntry for the default profile", async () => {
-    const { delayProfilesToDiffEntries } = await import("./delay-profiles");
+    const { delayProfilesToDiffEntries } = await import("./delayProfiles");
 
     const diff = {
       defaultProfileChanged: true,
@@ -295,7 +295,7 @@ describe("DelayProfiles", () => {
   });
 
   test("mapToServerDelayProfile - items-only payload omits legacy protocol fields", async () => {
-    const { mapToServerDelayProfile } = await import("./delay-profiles");
+    const { mapToServerDelayProfile } = await import("./delayProfiles");
     const mapped = mapToServerDelayProfile(
       {
         items: [
@@ -327,7 +327,7 @@ describe("DelayProfiles", () => {
   });
 
   test("InputConfigDelayProfileSchema - accepts Items alias", async () => {
-    const { InputConfigDelayProfileSchema } = await import("./types/config.types");
+    const { InputConfigDelayProfileSchema } = await import("../types/config.types");
     const parsed = InputConfigDelayProfileSchema.parse({
       Items: [{ name: "Usenet", protocol: "UsenetDownloadProtocol", allowed: true, delay: 2 }],
       bypassIfHighestQuality: true,

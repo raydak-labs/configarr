@@ -5,9 +5,9 @@
  *   ARR_E2E=1 pnpm test:e2e:arr
  */
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
-import { mapToServerDelayProfile } from "../../src/delay-profiles";
+import { mapToServerDelayProfile } from "../../src/delayProfiles/delayProfiles";
 import { InputConfigDelayProfileSchema } from "../../src/types/config.types";
-import { MergedDelayProfileResource } from "../../src/types/merged.types";
+import { DelayProfilePayload } from "../../src/delayProfiles/delayProfile.types";
 import {
   ARR_TARGETS,
   LEGACY_DELAY_PROFILE,
@@ -53,7 +53,7 @@ describe.runIf(arrE2eEnabled)("arr delay profiles (live)", () => {
 
         await client.updateDelayProfile("1", payload);
 
-        const profiles = (await client.getDelayProfiles()) as MergedDelayProfileResource[];
+        const profiles = (await client.getDelayProfiles()) as DelayProfilePayload[];
         const def = defaultDelayProfile(profiles);
         expect(def).toBeDefined();
         expect(def!.usenetDelay).toBe(7);
@@ -109,7 +109,7 @@ describe.runIf(arrE2eEnabled)("arr delay profiles (live)", () => {
 
       await client.updateDelayProfile("1", payload);
 
-      const profiles = (await client.getDelayProfiles()) as MergedDelayProfileResource[];
+      const profiles = (await client.getDelayProfiles()) as DelayProfilePayload[];
       const def = defaultDelayProfile(profiles);
       expect(def).toBeDefined();
       expect(def!.items).toEqual([

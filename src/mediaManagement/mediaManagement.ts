@@ -1,28 +1,47 @@
-import { MediaManagementClient, NamingClient, NamingLike, MediaManagementLike } from "./clients/capabilities";
-import { getClient } from "./clients/client";
-import { DiffEntry, FieldChange } from "./diffReport/diffReport.types";
-import { logger } from "./logger";
-import { MediaArrType } from "./types/common.types";
-import { MediaManagementType, MediaNamingApiType } from "./types/config.types";
-import { compareMediamanagement, compareNaming } from "./util";
-
-const namingApi = (arrType: MediaArrType): NamingClient => getClient(arrType);
-const mediaManagementApi = (arrType: MediaArrType): MediaManagementClient => getClient(arrType);
+import { asGenerated } from "../arr/cast";
+import { getClient } from "../clients/client";
+import { DiffEntry, FieldChange } from "../diffReport/diffReport.types";
+import { logger } from "../logger";
+import { MediaArrType } from "../types/common.types";
+import { MediaManagementType, MediaNamingApiType } from "../types/config.types";
+import { compareMediamanagement, compareNaming } from "../util";
 
 const loadNamingFromServer = async (arrType: MediaArrType) => {
-  return namingApi(arrType).getNaming();
+  return getClient(arrType).getNaming();
 };
 
 const loadMediamanagementConfigFromServer = async (arrType: MediaArrType) => {
-  return mediaManagementApi(arrType).getMediamanagement();
+  return getClient(arrType).getMediamanagement();
 };
 
-export const updateNamingOnServer = async (arrType: MediaArrType, id: string, data: NamingLike) => {
-  return namingApi(arrType).updateNaming(id, data);
+export const updateNamingOnServer = async (arrType: MediaArrType, id: string, data: unknown) => {
+  switch (arrType) {
+    case "SONARR":
+      return getClient("SONARR").updateNaming(id, asGenerated(data));
+    case "RADARR":
+      return getClient("RADARR").updateNaming(id, asGenerated(data));
+    case "LIDARR":
+      return getClient("LIDARR").updateNaming(id, asGenerated(data));
+    case "READARR":
+      return getClient("READARR").updateNaming(id, asGenerated(data));
+    case "WHISPARR":
+      return getClient("WHISPARR").updateNaming(id, asGenerated(data));
+  }
 };
 
-export const updateMediamanagementOnServer = async (arrType: MediaArrType, id: string, data: MediaManagementLike) => {
-  return mediaManagementApi(arrType).updateMediamanagement(id, data);
+export const updateMediamanagementOnServer = async (arrType: MediaArrType, id: string, data: unknown) => {
+  switch (arrType) {
+    case "SONARR":
+      return getClient("SONARR").updateMediamanagement(id, asGenerated(data));
+    case "RADARR":
+      return getClient("RADARR").updateMediamanagement(id, asGenerated(data));
+    case "LIDARR":
+      return getClient("LIDARR").updateMediamanagement(id, asGenerated(data));
+    case "READARR":
+      return getClient("READARR").updateMediamanagement(id, asGenerated(data));
+    case "WHISPARR":
+      return getClient("WHISPARR").updateMediamanagement(id, asGenerated(data));
+  }
 };
 
 export const calculateNamingDiff = async (arrType: MediaArrType, mediaNaming?: MediaNamingApiType) => {

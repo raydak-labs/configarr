@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { LidarrRootFolderSync } from "./rootFolderLidarr";
 import { ServerCache } from "../cache";
 import { InputConfigRootFolderLidarr } from "../types/config.types";
+import { LidarrClient } from "../clients/lidarr-client";
 import { getClient } from "../clients/client";
 
 vi.mock("../clients/client", () => ({
@@ -20,7 +21,7 @@ describe("LidarrRootFolderSync", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(getClient).mockReturnValue(mockApi as unknown as ReturnType<typeof getClient>);
+    vi.mocked(getClient).mockReturnValue(mockApi as unknown as LidarrClient);
     serverCache = new ServerCache([], [], [], []);
     serverCache.tags = [];
     mockApi.getQualityProfiles.mockResolvedValue([
