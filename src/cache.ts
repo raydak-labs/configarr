@@ -3,16 +3,13 @@ import type { CustomFormatRequest } from "./customFormats/customFormat.types";
 import type { QualityDefinitionShared } from "./qualityDefinitions/qualityDefinition.types";
 import type { QualityProfileLanguage, QualityProfileShared } from "./qualityProfiles/qualityProfile.types";
 import type { Tag } from "./tags/tag.types";
-import type { DownloadClientShared } from "./downloadClients/downloadClient.types";
 
 export class ServerCache {
-  private cache: Record<string, unknown> = {};
   private _qualityDefinitions: QualityDefinitionShared[];
   private _qualityProfiles: QualityProfileShared[];
   private _customFormats: CustomFormatRequest[];
   private _tags: Tag[] = [];
   private _languages: QualityProfileLanguage[];
-  private _downloadClientSchema: DownloadClientShared[] | null = null;
 
   constructor(
     qualityDefinitions: QualityDefinitionShared[],
@@ -24,14 +21,6 @@ export class ServerCache {
     this._qualityProfiles = qualityProfiles;
     this._customFormats = customFormats;
     this._languages = languages;
-  }
-
-  public get<T>(key: string): T | null {
-    return (this.cache[key] as T | undefined) ?? null;
-  }
-
-  public set<T>(key: string, value: T): void {
-    this.cache[key] = value;
   }
 
   public get qualityDefinitions() {
@@ -88,13 +77,5 @@ export class ServerCache {
       logger.debug(`No Tags received from server.`);
     }
     this._tags = newTags;
-  }
-
-  public getDownloadClientSchema(): DownloadClientShared[] | null {
-    return this._downloadClientSchema;
-  }
-
-  public setDownloadClientSchema(schema: DownloadClientShared[]): void {
-    this._downloadClientSchema = schema;
   }
 }
