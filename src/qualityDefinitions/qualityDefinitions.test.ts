@@ -1,16 +1,15 @@
 import { describe, expect, test } from "vitest";
-import { QualityDefinitionPayload } from "./qualityDefinition.types";
+import { QualityDefinitionShared } from "./qualityDefinition.types";
 import { interpolateSize, qualityDefinitionsToDiffEntries } from "./qualityDefinitionBase";
 import { calculateQualityDefinitionDiff } from "./qualityDefinitionSyncer";
 import { TrashQualityDefinition } from "../types/trashguide.types";
 
 describe("QualityDefinitions", async () => {
-  const server: QualityDefinitionPayload[] = [
+  const server: QualityDefinitionShared[] = [
     {
       quality: {
         id: 0,
         name: "Unknown",
-        source: "unknown",
         resolution: 0,
       },
       title: "Unknown",
@@ -24,7 +23,6 @@ describe("QualityDefinitions", async () => {
       quality: {
         id: 1,
         name: "SDTV",
-        source: "television",
         resolution: 480,
       },
       title: "SDTV",

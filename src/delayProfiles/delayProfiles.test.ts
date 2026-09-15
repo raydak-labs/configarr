@@ -1,5 +1,13 @@
 import { describe, expect, test, vi } from "vitest";
-import { DelayProfilePayload } from "./delayProfile.types";
+import { DelayProfileShared } from "./delayProfile.types";
+
+type StandardDelayProfile = DelayProfileShared & {
+  enableUsenet?: boolean;
+  enableTorrent?: boolean;
+  preferredProtocol?: string;
+  usenetDelay?: number;
+  torrentDelay?: number;
+};
 
 // Hoist the mock to ensure it runs before imports
 const mockGetDelayProfiles = vi.hoisted(() => vi.fn());
@@ -41,7 +49,7 @@ describe("DelayProfiles", () => {
     };
 
     // Simulate server data that matches the config
-    const serverProfiles: DelayProfilePayload[] = [
+    const serverProfiles: StandardDelayProfile[] = [
       {
         enableUsenet: true,
         enableTorrent: false,
@@ -92,7 +100,7 @@ describe("DelayProfiles", () => {
     };
 
     // Simulate server data with different default profile
-    const serverProfiles: DelayProfilePayload[] = [
+    const serverProfiles: StandardDelayProfile[] = [
       {
         enableUsenet: true,
         enableTorrent: false,
@@ -138,7 +146,7 @@ describe("DelayProfiles", () => {
       ],
     };
     // Simulate server data
-    const serverProfiles: DelayProfilePayload[] = [
+    const serverProfiles: StandardDelayProfile[] = [
       {
         enableUsenet: true,
         enableTorrent: false,
@@ -197,7 +205,7 @@ describe("DelayProfiles", () => {
       ],
     };
     // Simulate server data
-    const serverProfiles: DelayProfilePayload[] = [
+    const serverProfiles: StandardDelayProfile[] = [
       {
         enableUsenet: true,
         enableTorrent: false,
@@ -249,7 +257,7 @@ describe("DelayProfiles", () => {
       },
     };
 
-    const serverProfiles: DelayProfilePayload[] = [
+    const serverProfiles: StandardDelayProfile[] = [
       {
         id: 1,
         tags: [],

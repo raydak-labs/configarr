@@ -1,4 +1,5 @@
 import { getClient } from "../clients/client";
+import type { QualityProfileResource } from "../__generated__/sonarr/data-contracts";
 import { FieldChange } from "../diffReport/diffReport.types";
 import {
   attachMinUpgradeOnCreate,
@@ -6,9 +7,13 @@ import {
   diffMinUpgradeOnUpdate,
   warnUnsupportedQualityProfileLanguage,
 } from "./qualityProfileBase";
-import { QualityProfileLanguage, QualityProfileSonarrResource } from "./qualityProfile.types";
+import { QualityProfileLanguage, QualityProfileShared } from "./qualityProfile.types";
 
-export class QualityProfileSonarrSync extends BaseQualityProfileSync<QualityProfileSonarrResource> {
+export class QualityProfileSonarrSync extends BaseQualityProfileSync<QualityProfileResource> {
+  protected getApi() {
+    return getClient("SONARR");
+  }
+
   protected resolveLanguage(
     profileName: string,
     configLanguage: string | undefined,
@@ -18,44 +23,28 @@ export class QualityProfileSonarrSync extends BaseQualityProfileSync<QualityProf
     return undefined;
   }
 
-  protected attachLanguageOnCreate(_profile: QualityProfileSonarrResource, _language: QualityProfileLanguage | undefined): void {}
+  protected attachLanguageOnCreate(_profile: QualityProfileShared, _language: QualityProfileLanguage | undefined): void {}
 
   protected diffLanguageOnUpdate(
-    _updated: QualityProfileSonarrResource,
-    _serverMatch: QualityProfileSonarrResource,
+    _updated: QualityProfileShared,
+    _serverMatch: QualityProfileShared,
     _language: QualityProfileLanguage | undefined,
     _fieldChanges: FieldChange[],
   ): boolean {
     return false;
   }
 
-  protected attachMinUpgradeOnCreate(profile: QualityProfileSonarrResource, minUpgradeFormatScore: number): void {
+  protected attachMinUpgradeOnCreate(profile: QualityProfileShared, minUpgradeFormatScore: number): void {
     attachMinUpgradeOnCreate(profile, minUpgradeFormatScore);
   }
 
   protected diffMinUpgradeOnUpdate(
-    updated: QualityProfileSonarrResource,
-    serverMatch: QualityProfileSonarrResource,
+    updated: QualityProfileShared,
+    serverMatch: QualityProfileShared,
     upgradeAllowed: boolean,
     configMinUpgrade: number | undefined,
     fieldChanges: FieldChange[],
   ): boolean {
     return diffMinUpgradeOnUpdate(updated, serverMatch, upgradeAllowed, configMinUpgrade, fieldChanges);
-  }
-
-  createOnServer(profile: QualityProfileSonarrResource) {
-    return getClient("SONARR").createQualityProfile(profile);
-  }
-
-  updateOnServer(id: string, profile: QualityProfileSonarrResource) {
-    return getClient("SONARR").updateQualityProfile(id, profile);
-  }
-
-  loadFromServer() {
-    return getClient("SONARR").getQualityProfiles();
-  }
-
-  deleteOnServer(qualityProfile: QualityProfileSonarrResource) {
-    return getClient("SONARR").deleteQualityProfile(qualityProfile.id + "");
   }
 }

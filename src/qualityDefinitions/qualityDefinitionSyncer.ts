@@ -3,38 +3,39 @@ import { getEnvs } from "../env";
 import { MediaArrType } from "../types/common.types";
 import { TrashQualityDefinitionQuality } from "../types/trashguide.types";
 import { loadJsonFile } from "../util";
-import { QualityDefinitionGenericSync } from "./qualityDefinitionGeneric";
+import { QualityDefinitionLidarrSync } from "./qualityDefinitionLidarr";
+import { QualityDefinitionRadarrSync } from "./qualityDefinitionRadarr";
 import { QualityDefinitionReadarrSync } from "./qualityDefinitionReadarr";
-import { QualityDefinitionPayload, QualityDefinitionPreferredResource } from "./qualityDefinition.types";
+import { QualityDefinitionSonarrSync } from "./qualityDefinitionSonarr";
+import { QualityDefinitionWhisparrSync } from "./qualityDefinitionWhisparr";
+import { QualityDefinitionShared } from "./qualityDefinition.types";
 
-export function createQualityDefinitionSync(arrType: MediaArrType): QualityDefinitionGenericSync | QualityDefinitionReadarrSync {
-  if (arrType === "READARR") {
-    return new QualityDefinitionReadarrSync();
+export function createQualityDefinitionSync(arrType: MediaArrType) {
+  switch (arrType) {
+    case "SONARR":
+      return new QualityDefinitionSonarrSync();
+    case "RADARR":
+      return new QualityDefinitionRadarrSync();
+    case "LIDARR":
+      return new QualityDefinitionLidarrSync();
+    case "WHISPARR":
+      return new QualityDefinitionWhisparrSync();
+    case "READARR":
+      return new QualityDefinitionReadarrSync();
   }
-  return new QualityDefinitionGenericSync(arrType);
 }
 
-export const loadQualityDefinitionFromServer = async (arrType: MediaArrType): Promise<QualityDefinitionPayload[]> => {
+export const loadQualityDefinitionFromServer = async (arrType: MediaArrType): Promise<QualityDefinitionShared[]> => {
   if (getEnvs().LOAD_LOCAL_SAMPLES) {
     return loadJsonFile(path.resolve(__dirname, "../../tests/samples/qualityDefinition.json"));
   }
   return createQualityDefinitionSync(arrType).loadFromServer();
 };
 
-export const updateQualityDefinitionsOnServer = async (arrType: MediaArrType, restData: QualityDefinitionPayload[]) => {
-  if (arrType === "READARR") {
-    return new QualityDefinitionReadarrSync().updateOnServer(restData);
-  }
-  return new QualityDefinitionGenericSync(arrType).updateOnServer(restData as QualityDefinitionPreferredResource[]);
-};
-
 export const calculateQualityDefinitionDiff = (
   arrType: MediaArrType,
-  serverQDs: QualityDefinitionPayload[],
+  serverQDs: QualityDefinitionShared[],
   qualityDefinitions: TrashQualityDefinitionQuality[],
 ) => {
-  if (arrType === "READARR") {
-    return new QualityDefinitionReadarrSync().calculateDiff(serverQDs, qualityDefinitions);
-  }
-  return new QualityDefinitionGenericSync(arrType).calculateDiff(serverQDs as QualityDefinitionPreferredResource[], qualityDefinitions);
+  return createQualityDefinitionSync(arrType).calculateDiff(serverQDs, qualityDefinitions);
 };

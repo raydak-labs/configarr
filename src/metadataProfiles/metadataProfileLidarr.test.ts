@@ -52,8 +52,8 @@ describe("LidarrMetadataProfileSync", () => {
         name: "Test Profile",
         id: undefined,
         primaryAlbumTypes: [
-          { albumType: "Album", allowed: true },
-          { albumType: "EP", allowed: true },
+          { albumType: { name: "Album" }, allowed: true },
+          { albumType: { name: "EP" }, allowed: true },
         ],
       });
     });
@@ -102,8 +102,8 @@ describe("LidarrMetadataProfileSync", () => {
         name: "Test Profile",
         id: undefined,
         secondaryAlbumTypes: [
-          { albumType: "Compilation", allowed: true },
-          { albumType: "Live", allowed: true },
+          { albumType: { name: "Compilation" }, allowed: true },
+          { albumType: { name: "Live" }, allowed: true },
         ],
       });
     });
@@ -121,8 +121,8 @@ describe("LidarrMetadataProfileSync", () => {
         name: "Test Profile",
         id: undefined,
         releaseStatuses: [
-          { releaseStatus: "Official", allowed: true },
-          { releaseStatus: "Promotion", allowed: true },
+          { releaseStatus: { name: "Official" }, allowed: true },
+          { releaseStatus: { name: "Promotion" }, allowed: true },
         ],
       });
     });

@@ -7,13 +7,7 @@ import { getEnvs } from "../env";
 import { logger } from "../logger";
 import { ArrType } from "../types/common.types";
 import { InputConfigDownloadClient, MergedConfigInstance } from "../types/config.types";
-import {
-  DownloadClientDiff,
-  DownloadClientField,
-  DownloadClientShared,
-  DownloadClientSyncResult,
-  ValidationResult,
-} from "./downloadClient.types";
+import { DownloadClientDiff, DownloadClientShared, DownloadClientSyncResult, ValidationResult } from "./downloadClient.types";
 import { camelToSnake, snakeToCamel } from "../util";
 
 // Constants
@@ -65,6 +59,7 @@ export function downloadClientDiffToDiffEntries<T extends DownloadClientShared>(
 
 export abstract class BaseDownloadClientSync<T extends DownloadClientShared> {
   protected readonly logger = logger;
+  private schema: T[] | null = null;
 
   protected abstract getApi(): DownloadClientsClient<T> & TagsClient;
 
@@ -167,7 +162,7 @@ export abstract class BaseDownloadClientSync<T extends DownloadClientShared> {
     }
 
     const serverFieldNames = new Set(
-      serverFields.map((f: DownloadClientField) => f.name).filter((name): name is string => typeof name === "string" && name.length > 0),
+      serverFields.map((f) => f.name).filter((name): name is string => typeof name === "string" && name.length > 0),
     );
 
     for (const key of Object.keys(normalizedConfigFields)) {
@@ -199,13 +194,13 @@ export abstract class BaseDownloadClientSync<T extends DownloadClientShared> {
     return schema.find((s) => s.implementation?.toLowerCase() === implementation.toLowerCase());
   }
 
-  protected mergeFieldsWithSchema(
-    schemaFields: DownloadClientField[],
+  protected mergeFieldsWithSchema<F extends { name?: string | null; value?: unknown }>(
+    schemaFields: F[],
     configFields: Record<string, unknown>,
     arrType: ArrType,
-    serverFields: DownloadClientField[] | null | undefined,
+    serverFields: F[] | null | undefined,
     partialUpdate = false,
-  ): DownloadClientField[] {
+  ): F[] {
     const normalizedFields = this.normalizeConfigFields(configFields, arrType);
     const baseFields = partialUpdate && serverFields ? serverFields : schemaFields;
 
@@ -278,15 +273,17 @@ export abstract class BaseDownloadClientSync<T extends DownloadClientShared> {
     return { valid: errors.length === 0, errors, warnings };
   }
 
-  protected async getDownloadClientSchema(cache: ServerCache): Promise<T[]> {
-    const cached = cache.getDownloadClientSchema();
-    if (cached) {
-      return cached as T[];
+  public setDownloadClientSchema(schema: T[]): void {
+    this.schema = schema;
+  }
+
+  protected async getDownloadClientSchema(_cache: ServerCache): Promise<T[]> {
+    if (this.schema) {
+      return this.schema;
     }
 
-    const schema = await this.getApi().getDownloadClientSchema();
-    cache.setDownloadClientSchema(schema);
-    return schema;
+    this.schema = await this.getApi().getDownloadClientSchema();
+    return this.schema;
   }
 
   public filterUnmanagedClients(

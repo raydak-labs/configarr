@@ -10,31 +10,13 @@ import { ServerCache } from "../cache";
 import { getClient } from "../clients/client";
 import { FieldChange } from "../diffReport/diffReport.types";
 import { InputConfigRootFolderLidarr } from "../types/config.types";
-import { compareObjectsCarr } from "../util";
+import { compareObjectsCarr, toEnumOrThrow } from "../util";
 import { RootFolderDiff } from "./rootFolder.types";
 import { BaseRootFolderSync } from "./rootFolderBase";
 
 export class LidarrRootFolderSync extends BaseRootFolderSync<InputConfigRootFolderLidarr> {
-  protected api = getClient("LIDARR");
-
-  protected getArrType(): "LIDARR" {
-    return "LIDARR";
-  }
-
-  protected getRootfolders() {
-    return this.api.getRootfolders();
-  }
-
-  protected addRootFolder(data: RootFolderResource) {
-    return this.api.addRootFolder(data);
-  }
-
-  protected updateRootFolder(id: string, data: RootFolderResource) {
-    return this.api.updateRootFolder(id, data);
-  }
-
-  protected deleteRootFolder(id: string) {
-    return this.api.deleteRootFolder(id);
+  protected getApi() {
+    return getClient("LIDARR");
   }
 
   public async resolveRootFolderConfig(config: InputConfigRootFolderLidarr, serverCache: ServerCache): Promise<RootFolderResource> {
@@ -43,7 +25,10 @@ export class LidarrRootFolderSync extends BaseRootFolderSync<InputConfigRootFold
     }
 
     // Load quality profiles and metadata profiles for Lidarr
-    const [qualityProfiles, metadataProfiles] = await Promise.all([this.api.getQualityProfiles(), this.api.getMetadataProfiles()]);
+    const [qualityProfiles, metadataProfiles] = await Promise.all([
+      this.getApi().getQualityProfiles(),
+      this.getApi().getMetadataProfiles(),
+    ]);
 
     const qualityProfileMap = new Map<string, number>();
     const metadataProfileMap = new Map<string, number>();
@@ -82,7 +67,7 @@ export class LidarrRootFolderSync extends BaseRootFolderSync<InputConfigRootFold
               return existingTag.id;
             } else {
               // Tag doesn't exist, create it
-              const newTag = await this.api.createTag({ label: tagName });
+              const newTag = await this.getApi().createTag({ label: tagName });
               newTags.push(newTag);
               this.logger.info(`Created new tag '${tagName}' with ID ${newTag.id}`);
               return newTag.id!;
@@ -105,11 +90,11 @@ export class LidarrRootFolderSync extends BaseRootFolderSync<InputConfigRootFold
     };
 
     if (config.monitor) {
-      result.defaultMonitorOption = config.monitor as MonitorTypes;
+      result.defaultMonitorOption = toEnumOrThrow(MonitorTypes, config.monitor, "Lidarr monitor");
     }
 
     if (config.monitor_new_album) {
-      result.defaultNewItemMonitorOption = config.monitor_new_album as NewItemMonitorTypes;
+      result.defaultNewItemMonitorOption = toEnumOrThrow(NewItemMonitorTypes, config.monitor_new_album, "Lidarr monitor_new_album");
     }
 
     return result;
@@ -130,24 +115,14 @@ export class LidarrRootFolderSync extends BaseRootFolderSync<InputConfigRootFold
       defaultTags: resolvedConfig.defaultTags,
     };
 
-    // For Lidarr, we know the server folder has the Lidarr-specific fields
-    const lidarrServerFolder = serverFolder as RootFolderResource & {
-      name?: string;
-      defaultMetadataProfileId?: number;
-      defaultQualityProfileId?: number;
-      defaultMonitorOption?: string;
-      defaultNewItemMonitorOption?: string;
-      defaultTags?: number[];
-    };
-
     const serverFields = {
-      name: lidarrServerFolder.name,
-      path: lidarrServerFolder.path,
-      defaultMetadataProfileId: lidarrServerFolder.defaultMetadataProfileId,
-      defaultQualityProfileId: lidarrServerFolder.defaultQualityProfileId,
-      defaultMonitorOption: lidarrServerFolder.defaultMonitorOption,
-      defaultNewItemMonitorOption: lidarrServerFolder.defaultNewItemMonitorOption,
-      defaultTags: lidarrServerFolder.defaultTags,
+      name: serverFolder.name,
+      path: serverFolder.path,
+      defaultMetadataProfileId: serverFolder.defaultMetadataProfileId,
+      defaultQualityProfileId: serverFolder.defaultQualityProfileId,
+      defaultMonitorOption: serverFolder.defaultMonitorOption,
+      defaultNewItemMonitorOption: serverFolder.defaultNewItemMonitorOption,
+      defaultTags: serverFolder.defaultTags,
     };
 
     return compareObjectsCarr(serverFields, configFields);

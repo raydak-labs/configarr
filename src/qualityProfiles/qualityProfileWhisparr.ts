@@ -1,4 +1,5 @@
 import { getClient } from "../clients/client";
+import type { QualityProfileResource } from "../__generated__/whisparr/data-contracts";
 import { FieldChange } from "../diffReport/diffReport.types";
 import {
   attachLanguageOnCreate,
@@ -8,9 +9,13 @@ import {
   diffMinUpgradeOnUpdate,
   resolveQualityProfileLanguage,
 } from "./qualityProfileBase";
-import { QualityProfileLanguage, QualityProfileWhisparrResource } from "./qualityProfile.types";
+import { QualityProfileLanguage, QualityProfileShared } from "./qualityProfile.types";
 
-export class QualityProfileWhisparrSync extends BaseQualityProfileSync<QualityProfileWhisparrResource> {
+export class QualityProfileWhisparrSync extends BaseQualityProfileSync<QualityProfileResource> {
+  protected getApi() {
+    return getClient("WHISPARR");
+  }
+
   protected resolveLanguage(
     _profileName: string,
     configLanguage: string | undefined,
@@ -19,46 +24,30 @@ export class QualityProfileWhisparrSync extends BaseQualityProfileSync<QualityPr
     return resolveQualityProfileLanguage(configLanguage, languageMap);
   }
 
-  protected attachLanguageOnCreate(profile: QualityProfileWhisparrResource, language: QualityProfileLanguage | undefined): void {
+  protected attachLanguageOnCreate(profile: QualityProfileShared, language: QualityProfileLanguage | undefined): void {
     attachLanguageOnCreate(profile, language);
   }
 
   protected diffLanguageOnUpdate(
-    updated: QualityProfileWhisparrResource,
-    serverMatch: QualityProfileWhisparrResource,
+    updated: QualityProfileShared,
+    serverMatch: QualityProfileShared,
     language: QualityProfileLanguage | undefined,
     fieldChanges: FieldChange[],
   ): boolean {
     return diffLanguageOnUpdate(updated, serverMatch, language, fieldChanges);
   }
 
-  protected attachMinUpgradeOnCreate(profile: QualityProfileWhisparrResource, minUpgradeFormatScore: number): void {
+  protected attachMinUpgradeOnCreate(profile: QualityProfileShared, minUpgradeFormatScore: number): void {
     attachMinUpgradeOnCreate(profile, minUpgradeFormatScore);
   }
 
   protected diffMinUpgradeOnUpdate(
-    updated: QualityProfileWhisparrResource,
-    serverMatch: QualityProfileWhisparrResource,
+    updated: QualityProfileShared,
+    serverMatch: QualityProfileShared,
     upgradeAllowed: boolean,
     configMinUpgrade: number | undefined,
     fieldChanges: FieldChange[],
   ): boolean {
     return diffMinUpgradeOnUpdate(updated, serverMatch, upgradeAllowed, configMinUpgrade, fieldChanges);
-  }
-
-  createOnServer(profile: QualityProfileWhisparrResource) {
-    return getClient("WHISPARR").createQualityProfile(profile);
-  }
-
-  updateOnServer(id: string, profile: QualityProfileWhisparrResource) {
-    return getClient("WHISPARR").updateQualityProfile(id, profile);
-  }
-
-  loadFromServer() {
-    return getClient("WHISPARR").getQualityProfiles();
-  }
-
-  deleteOnServer(qualityProfile: QualityProfileWhisparrResource) {
-    return getClient("WHISPARR").deleteQualityProfile(qualityProfile.id + "");
   }
 }

@@ -7,7 +7,8 @@
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
 import { mapToServerDelayProfile } from "../../src/delayProfiles/delayProfileSyncer";
 import { InputConfigDelayProfileSchema } from "../../src/types/config.types";
-import { DelayProfileLidarrResource, DelayProfilePayload } from "../../src/delayProfiles/delayProfile.types";
+import { LidarrDelayProfile } from "../../src/delayProfiles/delayProfileLidarr";
+import { DelayProfileShared } from "../../src/delayProfiles/delayProfile.types";
 import type { MediaArrType } from "../../src/types/common.types";
 import {
   ARR_TARGETS,
@@ -54,7 +55,7 @@ describe.runIf(arrE2eEnabled)("arr delay profiles (live)", () => {
 
         await client.updateDelayProfile("1", payload);
 
-        const profiles = (await client.getDelayProfiles()) as DelayProfilePayload[];
+        const profiles = (await client.getDelayProfiles()) as DelayProfileShared[];
         const def = defaultDelayProfile(profiles);
         expect(def).toBeDefined();
         expect(def).toMatchObject({
@@ -112,7 +113,7 @@ describe.runIf(arrE2eEnabled)("arr delay profiles (live)", () => {
 
       await client.updateDelayProfile("1", payload);
 
-      const profiles = (await client.getDelayProfiles()) as DelayProfileLidarrResource[];
+      const profiles = (await client.getDelayProfiles()) as LidarrDelayProfile[];
       const def = defaultDelayProfile(profiles);
       expect(def).toBeDefined();
       const items = def && "items" in def ? def.items : undefined;

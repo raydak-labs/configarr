@@ -4,13 +4,12 @@ import {
   ApplicationResource,
   AppProfileResource,
   CommandResource,
-  DownloadClientResource as GeneratedDownloadClientResource,
+  DownloadClientResource,
   IndexerProxyResource,
   IndexerResource,
   TagResource,
 } from "../__generated__/prowlarr/data-contracts";
 import { logger } from "../logger";
-import type { ProwlarrDownloadClientResource } from "../downloadClients/downloadClient.types";
 import { logConnectionError, validateClientParams } from "./connection";
 import { DownloadClientsClient, SystemClient, TagsClient } from "./capabilities";
 
@@ -18,7 +17,7 @@ import { DownloadClientsClient, SystemClient, TagsClient } from "./capabilities"
  * Prowlarr is an indexer manager, not a media manager. It implements System, Tags,
  * and DownloadClients plus Prowlarr-only application, indexer, and proxy APIs.
  */
-export class ProwlarrClient implements SystemClient, TagsClient<TagResource>, DownloadClientsClient<ProwlarrDownloadClientResource> {
+export class ProwlarrClient implements SystemClient, TagsClient<TagResource>, DownloadClientsClient<DownloadClientResource> {
   private api!: Api<unknown>;
 
   constructor(baseUrl: string, apiKey: string) {
@@ -111,28 +110,28 @@ export class ProwlarrClient implements SystemClient, TagsClient<TagResource>, Do
     return this.api.v1IndexerproxyDelete(+id);
   }
 
-  async getDownloadClientSchema(): Promise<ProwlarrDownloadClientResource[]> {
+  async getDownloadClientSchema(): Promise<DownloadClientResource[]> {
     return this.api.v1DownloadclientSchemaList();
   }
 
-  async getDownloadClients(): Promise<ProwlarrDownloadClientResource[]> {
+  async getDownloadClients(): Promise<DownloadClientResource[]> {
     return this.api.v1DownloadclientList();
   }
 
-  async createDownloadClient(client: ProwlarrDownloadClientResource): Promise<ProwlarrDownloadClientResource> {
-    return this.api.v1DownloadclientCreate(client as GeneratedDownloadClientResource);
+  async createDownloadClient(client: DownloadClientResource): Promise<DownloadClientResource> {
+    return this.api.v1DownloadclientCreate(client);
   }
 
-  async updateDownloadClient(id: string, client: ProwlarrDownloadClientResource): Promise<ProwlarrDownloadClientResource> {
-    return this.api.v1DownloadclientUpdate(id, client as GeneratedDownloadClientResource);
+  async updateDownloadClient(id: string, client: DownloadClientResource): Promise<DownloadClientResource> {
+    return this.api.v1DownloadclientUpdate(id, client);
   }
 
   async deleteDownloadClient(id: string): Promise<void> {
     return this.api.v1DownloadclientDelete(+id);
   }
 
-  async testDownloadClient(client: ProwlarrDownloadClientResource): Promise<unknown> {
-    return this.api.v1DownloadclientTestCreate(client as GeneratedDownloadClientResource);
+  async testDownloadClient(client: DownloadClientResource): Promise<unknown> {
+    return this.api.v1DownloadclientTestCreate(client);
   }
 
   async getTags() {

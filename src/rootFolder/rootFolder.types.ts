@@ -6,8 +6,6 @@ export type RootFolderServerResource = {
   path?: string | null;
 };
 
-export type GenericRootFolderArrType = "SONARR" | "RADARR" | "WHISPARR";
-
 export interface RootFolderDiff<TConfig extends InputConfigRootFolder = InputConfigRootFolder> {
   missingOnServer: TConfig[];
   notAvailableAnymore: RootFolderServerResource[];

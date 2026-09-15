@@ -1,7 +1,7 @@
 export type QualityItem = {
   id?: number;
   name?: string | null;
-  quality?: { id?: number; name?: string | null; resolution?: number; source?: string } | null;
+  quality?: { id?: number; name?: string | null; resolution?: number };
   items?: QualityItem[] | null;
   allowed?: boolean;
 };
@@ -21,25 +21,6 @@ export type QualityProfileShared = {
   minFormatScore?: number;
   cutoffFormatScore?: number;
   formatItems?: FormatItem[] | null;
-};
-
-export type QualityProfileSonarrResource = QualityProfileShared & {
   minUpgradeFormatScore?: number;
+  language?: QualityProfileLanguage;
 };
-
-export type QualityProfileWithLanguage = QualityProfileShared & {
-  minUpgradeFormatScore?: number;
-  language?: QualityProfileLanguage | null;
-};
-
-export type QualityProfileRadarrResource = QualityProfileWithLanguage;
-export type QualityProfileWhisparrResource = QualityProfileWithLanguage;
-export type QualityProfileLidarrResource = QualityProfileShared;
-export type QualityProfileReadarrResource = QualityProfileShared;
-
-export type QualityProfilePayload =
-  | QualityProfileSonarrResource
-  | QualityProfileRadarrResource
-  | QualityProfileWhisparrResource
-  | QualityProfileLidarrResource
-  | QualityProfileReadarrResource;

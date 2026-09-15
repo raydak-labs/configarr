@@ -1,8 +1,60 @@
 import { DiffEntry, FieldChange } from "../diffReport/diffReport.types";
 import { logger } from "../logger";
+import type { QualityDefinitionsClient } from "../clients/capabilities";
 import { TrashQualityDefinitionQuality } from "../types/trashguide.types";
 import { cloneWithJSON, roundToDecimal } from "../util";
 import { QualityDefinitionShared } from "./qualityDefinition.types";
+
+function diffPreferredSize(
+  clonedQuality: TrashQualityDefinitionQuality,
+  serverQuality: QualityDefinitionShared,
+  newData: QualityDefinitionShared,
+  changes: FieldChange[],
+) {
+  if (clonedQuality.preferred && serverQuality.preferredSize !== clonedQuality.preferred) {
+    changes.push({ field: "preferredSize", from: serverQuality.preferredSize, to: clonedQuality.preferred });
+    newData.preferredSize = clonedQuality.preferred;
+  }
+}
+
+export abstract class QualityDefinitionSync<T extends QualityDefinitionShared> {
+  protected abstract getApi(): QualityDefinitionsClient<T>;
+
+  loadFromServer() {
+    return this.getApi().getQualityDefinitions();
+  }
+
+  updateOnServer(restData: T[]) {
+    return this.getApi().updateQualityDefinitions(restData);
+  }
+
+  protected diffPreferredSize(
+    _clonedQuality: TrashQualityDefinitionQuality,
+    _serverQuality: T,
+    _newData: T,
+    _changes: FieldChange[],
+  ): void {}
+
+  calculateDiff(serverQDs: T[], qualityDefinitions: TrashQualityDefinitionQuality[]) {
+    return calculateQualityDefinitionDiffCore(serverQDs, qualityDefinitions, (cloned, server, next, changes) =>
+      this.diffPreferredSize(cloned, server, next, changes),
+    );
+  }
+
+  async persist(serverQDs: T[], qualityDefinitions: TrashQualityDefinitionQuality[], write: boolean) {
+    const { changeMap, restData } = this.calculateDiff(serverQDs, qualityDefinitions);
+    if (changeMap.size > 0 && write) {
+      await this.updateOnServer(restData);
+    }
+    return { changeMap, restData };
+  }
+}
+
+export abstract class QualityDefinitionPreferredSync<T extends QualityDefinitionShared> extends QualityDefinitionSync<T> {
+  protected diffPreferredSize(clonedQuality: TrashQualityDefinitionQuality, serverQuality: T, newData: T, changes: FieldChange[]): void {
+    diffPreferredSize(clonedQuality, serverQuality, newData, changes);
+  }
+}
 
 export function interpolateSize(min: number, max: number, pref: number, ratio: number): number {
   if (ratio < 0 || ratio > 1) {

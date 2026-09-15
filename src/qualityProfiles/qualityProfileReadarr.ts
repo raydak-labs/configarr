@@ -1,9 +1,14 @@
 import { getClient } from "../clients/client";
+import type { QualityProfileResource } from "../__generated__/readarr/data-contracts";
 import { FieldChange } from "../diffReport/diffReport.types";
 import { BaseQualityProfileSync, warnUnsupportedQualityProfileLanguage } from "./qualityProfileBase";
-import { QualityProfileLanguage, QualityProfileReadarrResource } from "./qualityProfile.types";
+import { QualityProfileLanguage, QualityProfileShared } from "./qualityProfile.types";
 
-export class QualityProfileReadarrSync extends BaseQualityProfileSync<QualityProfileReadarrResource> {
+export class QualityProfileReadarrSync extends BaseQualityProfileSync<QualityProfileResource> {
+  protected getApi() {
+    return getClient("READARR");
+  }
+
   protected resolveLanguage(
     profileName: string,
     configLanguage: string | undefined,
@@ -13,42 +18,26 @@ export class QualityProfileReadarrSync extends BaseQualityProfileSync<QualityPro
     return undefined;
   }
 
-  protected attachLanguageOnCreate(_profile: QualityProfileReadarrResource, _language: QualityProfileLanguage | undefined): void {}
+  protected attachLanguageOnCreate(_profile: QualityProfileShared, _language: QualityProfileLanguage | undefined): void {}
 
   protected diffLanguageOnUpdate(
-    _updated: QualityProfileReadarrResource,
-    _serverMatch: QualityProfileReadarrResource,
+    _updated: QualityProfileShared,
+    _serverMatch: QualityProfileShared,
     _language: QualityProfileLanguage | undefined,
     _fieldChanges: FieldChange[],
   ): boolean {
     return false;
   }
 
-  protected attachMinUpgradeOnCreate(_profile: QualityProfileReadarrResource, _minUpgradeFormatScore: number): void {}
+  protected attachMinUpgradeOnCreate(_profile: QualityProfileShared, _minUpgradeFormatScore: number): void {}
 
   protected diffMinUpgradeOnUpdate(
-    _updated: QualityProfileReadarrResource,
-    _serverMatch: QualityProfileReadarrResource,
+    _updated: QualityProfileShared,
+    _serverMatch: QualityProfileShared,
     _upgradeAllowed: boolean,
     _configMinUpgrade: number | undefined,
     _fieldChanges: FieldChange[],
   ): boolean {
     return false;
-  }
-
-  createOnServer(profile: QualityProfileReadarrResource) {
-    return getClient("READARR").createQualityProfile(profile);
-  }
-
-  updateOnServer(id: string, profile: QualityProfileReadarrResource) {
-    return getClient("READARR").updateQualityProfile(id, profile);
-  }
-
-  loadFromServer() {
-    return getClient("READARR").getQualityProfiles();
-  }
-
-  deleteOnServer(qualityProfile: QualityProfileReadarrResource) {
-    return getClient("READARR").deleteQualityProfile(qualityProfile.id + "");
   }
 }

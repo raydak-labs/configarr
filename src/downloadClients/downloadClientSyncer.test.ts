@@ -1,12 +1,12 @@
 import { describe, expect, test } from "vitest";
 import type { Tag } from "../tags/tag.types";
 import { DownloadProtocol } from "../__generated__/radarr/data-contracts";
+import type { DownloadClientResource } from "../__generated__/radarr/data-contracts";
 import { ServerCache } from "../cache";
 import type { InputConfigDownloadClient } from "../types/config.types";
-import { MediaDownloadClientResource } from "./downloadClient.types";
-import { MediaDownloadClientSync } from "./downloadClientMedia";
+import { createDownloadClientSync } from "./downloadClientSyncer";
 
-const getTestSync = () => new MediaDownloadClientSync("RADARR");
+const getTestSync = () => createDownloadClientSync("RADARR");
 
 describe("downloadClientSyncer – tag resolution", () => {
   test("resolves tag names to IDs (case-insensitive)", () => {
@@ -135,7 +135,7 @@ describe("downloadClientSyncer – field normalization", () => {
 });
 
 describe("downloadClientSyncer – validation", () => {
-  const mockSchema: MediaDownloadClientResource[] = [
+  const mockSchema: DownloadClientResource[] = [
     {
       id: 0,
       name: "qBittorrent",
@@ -268,7 +268,7 @@ describe("downloadClientSyncer – validation", () => {
 
 describe("downloadClientSyncer – deletion logic", () => {
   test("filterUnmanagedClients uses composite key of name + implementation", () => {
-    const serverClients: MediaDownloadClientResource[] = [
+    const serverClients: DownloadClientResource[] = [
       {
         id: 1,
         enable: true,
@@ -322,7 +322,7 @@ describe("downloadClientSyncer – deletion logic", () => {
   });
 
   test("filterUnmanagedClients respects delete_unmanaged=false", () => {
-    const serverClients: MediaDownloadClientResource[] = [
+    const serverClients: DownloadClientResource[] = [
       {
         id: 1,
         enable: true,
@@ -352,7 +352,7 @@ describe("downloadClientSyncer – equality & omission semantics", () => {
   test("isDownloadClientEqual treats omitted top-level fields as 'do not manage'", () => {
     const cache = makeCache();
 
-    const server: MediaDownloadClientResource = {
+    const server: DownloadClientResource = {
       id: 1,
       enable: false,
       protocol: DownloadProtocol.Torrent,
@@ -381,7 +381,7 @@ describe("downloadClientSyncer – equality & omission semantics", () => {
   test("isDownloadClientEqual detects explicit differences when fields are set", () => {
     const cache = makeCache();
 
-    const server: MediaDownloadClientResource = {
+    const server: DownloadClientResource = {
       id: 1,
       enable: true,
       protocol: DownloadProtocol.Torrent,

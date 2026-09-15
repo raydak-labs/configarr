@@ -6,17 +6,10 @@ import { MediaArrType } from "../types/common.types";
 import { ConfigQualityProfile, ConfigQualityProfileItem, MergedConfigInstance } from "../types/config.types";
 import type { TrashCFConflict } from "../types/trashguide.types";
 import { ANY_LANGUAGE_NAME, cloneWithJSON, zip } from "../util";
-import {
-  CustomFormatRef,
-  FormatItem,
-  QualityItem,
-  QualityProfileLanguage,
-  QualityProfilePayload,
-  QualityProfileShared,
-} from "./qualityProfile.types";
-import type { QualityDefinitionPayload } from "../qualityDefinitions/qualityDefinition.types";
+import { CustomFormatRef, FormatItem, QualityItem, QualityProfileLanguage, QualityProfileShared } from "./qualityProfile.types";
+import type { QualityDefinitionShared } from "../qualityDefinitions/qualityDefinition.types";
 
-export type QualityProfileDiffResult<T extends QualityProfileShared = QualityProfilePayload> = {
+export type QualityProfileDiffResult<T extends QualityProfileShared = QualityProfileShared> = {
   changedQPs: T[];
   create: T[];
   noChanges: string[];
@@ -24,7 +17,7 @@ export type QualityProfileDiffResult<T extends QualityProfileShared = QualityPro
 };
 
 type MinUpgradeProfile = { minUpgradeFormatScore?: number };
-type LanguageProfile = { language?: QualityProfileLanguage | null };
+type LanguageProfile = { language?: QualityProfileLanguage };
 
 export const warnUnsupportedQualityProfileLanguage = (
   profileName: string,
@@ -179,7 +172,7 @@ export const mapQualityProfiles = ({ carrIdMapping }: CFProcessing, { custom_for
 };
 
 // TODO should we use clones or not?
-export const mapQualities = (qd_source: QualityDefinitionPayload[], value_source: ConfigQualityProfile) => {
+export const mapQualities = (qd_source: QualityDefinitionShared[], value_source: ConfigQualityProfile) => {
   const qd = cloneWithJSON(qd_source);
   const value = cloneWithJSON(value_source);
 
@@ -209,7 +202,6 @@ export const mapQualities = (qd_source: QualityDefinitionPayload[], value_source
                   id: qd?.quality?.id,
                   name: obj2,
                   resolution: qd?.quality?.resolution,
-                  source: qd?.quality?.source,
                 },
                 allowed: obj.enabled ?? true,
                 items: [],
@@ -235,7 +227,9 @@ export const mapQualities = (qd_source: QualityDefinitionPayload[], value_source
         allowed: obj.enabled ?? true,
         items: [],
         quality: {
-          ...serverQD?.quality,
+          id: serverQD?.quality?.id,
+          name: serverQD?.quality?.name,
+          resolution: serverQD?.quality?.resolution,
         },
       };
       return item;
@@ -253,7 +247,6 @@ export const mapQualities = (qd_source: QualityDefinitionPayload[], value_source
         id: value.quality?.id,
         name: key,
         resolution: value.quality?.resolution,
-        source: value?.quality?.source,
       },
     });
   }
@@ -474,35 +467,53 @@ export const checkForConflictingCFs = (
 export abstract class BaseQualityProfileSync<T extends QualityProfileShared> {
   protected readonly logger = logger;
 
+  protected abstract getApi(): {
+    getQualityProfiles(): Promise<T[]>;
+    createQualityProfile(profile: QualityProfileShared): Promise<T>;
+    updateQualityProfile(id: string, profile: QualityProfileShared): Promise<T>;
+    deleteQualityProfile(id: string): Promise<void>;
+  };
+
   protected abstract resolveLanguage(
     profileName: string,
     configLanguage: string | undefined,
     languageMap: Map<string, QualityProfileLanguage>,
   ): QualityProfileLanguage | undefined;
 
-  protected abstract attachLanguageOnCreate(profile: T, language: QualityProfileLanguage | undefined): void;
+  protected abstract attachLanguageOnCreate(profile: QualityProfileShared, language: QualityProfileLanguage | undefined): void;
 
   protected abstract diffLanguageOnUpdate(
-    updated: T,
-    serverMatch: T,
+    updated: QualityProfileShared,
+    serverMatch: QualityProfileShared,
     language: QualityProfileLanguage | undefined,
     fieldChanges: FieldChange[],
   ): boolean;
 
-  protected abstract attachMinUpgradeOnCreate(profile: T, minUpgradeFormatScore: number): void;
+  protected abstract attachMinUpgradeOnCreate(profile: QualityProfileShared, minUpgradeFormatScore: number): void;
 
   protected abstract diffMinUpgradeOnUpdate(
-    updated: T,
-    serverMatch: T,
+    updated: QualityProfileShared,
+    serverMatch: QualityProfileShared,
     upgradeAllowed: boolean,
     configMinUpgrade: number | undefined,
     fieldChanges: FieldChange[],
   ): boolean;
 
-  abstract createOnServer(profile: T): Promise<T>;
-  abstract updateOnServer(id: string, profile: T): Promise<T>;
-  abstract loadFromServer(): Promise<T[]>;
-  abstract deleteOnServer(qualityProfile: T): Promise<void>;
+  createOnServer(profile: QualityProfileShared) {
+    return this.getApi().createQualityProfile(profile);
+  }
+
+  updateOnServer(id: string, profile: QualityProfileShared) {
+    return this.getApi().updateQualityProfile(id, profile);
+  }
+
+  loadFromServer() {
+    return this.getApi().getQualityProfiles();
+  }
+
+  deleteOnServer(qualityProfile: QualityProfileShared) {
+    return this.getApi().deleteQualityProfile(qualityProfile.id + "");
+  }
 
   async deleteAll(): Promise<void> {
     const qualityProfilesOnServer = await this.loadFromServer();
@@ -513,21 +524,47 @@ export abstract class BaseQualityProfileSync<T extends QualityProfileShared> {
     }
   }
 
+  async persist(diff: QualityProfileDiffResult, write: boolean): Promise<void> {
+    if (!write) {
+      return;
+    }
+
+    for (const element of diff.create) {
+      try {
+        const newProfile = await this.createOnServer(element);
+        this.logger.info(`Created QualityProfile: ${newProfile.name}`);
+      } catch (error: unknown) {
+        this.logger.error(`Failed creating QualityProfile (${element.name})`);
+        throw error;
+      }
+    }
+
+    for (const element of diff.changedQPs) {
+      try {
+        const newProfile = await this.updateOnServer("" + element.id, element);
+        this.logger.info(`Updated QualityProfile: ${newProfile.name}`);
+      } catch (error: unknown) {
+        this.logger.error(`Failed updating QualityProfile (${element.name})`);
+        throw error;
+      }
+    }
+  }
+
   async calculateQualityProfilesDiff(
     cfMap: CFProcessing,
     config: MergedConfigInstance,
     serverCache: ServerCache,
-  ): Promise<QualityProfileDiffResult<T>> {
+  ): Promise<QualityProfileDiffResult> {
     // TODO maybe improve?
     const scoring = mapQualityProfiles(cfMap, config);
     const qpMerged = new Map(config.quality_profiles.map((obj) => [obj.name, obj]));
-    const serverQualityProfiles = serverCache.qualityProfiles as T[];
+    const serverQualityProfiles = serverCache.qualityProfiles;
     const qpServerMap = new Map(serverQualityProfiles.map((obj) => [obj.name!, obj]));
     const cfServerMap = new Map(serverCache.customFormats.map((obj) => [obj.name!, obj]));
     const languageMap = new Map(serverCache.languages.map((obj) => [obj.name!, obj]));
 
-    const createQPs: T[] = [];
-    const changedQPs: T[] = [];
+    const createQPs: QualityProfileShared[] = [];
+    const changedQPs: QualityProfileShared[] = [];
     const noChangedQPs: string[] = [];
 
     const changes = new Map<string, FieldChange[]>();
@@ -578,45 +615,40 @@ export abstract class BaseQualityProfileSync<T extends QualityProfileShared> {
           };
         });
 
-        let newP = {
+        const newP: QualityProfileShared = {
           name: value.name,
           items: mappedQualities,
           minFormatScore: value.min_format_score,
           formatItems: customFormatsMapped,
-        } as T;
+        };
 
         if (value.upgrade.allowed) {
           if (value.upgrade.until_quality == null) {
             throw new Error(`QualityProfile '${name}': upgrade.until_quality is required when upgrade.allowed is true`);
           }
 
-          Object.assign(newP, {
-            cutoff: qualityToId.get(value.upgrade.until_quality),
-            cutoffFormatScore: value.upgrade.until_score,
-            upgradeAllowed: true,
-          });
+          newP.cutoff = qualityToId.get(value.upgrade.until_quality);
+          newP.cutoffFormatScore = value.upgrade.until_score;
+          newP.upgradeAllowed = true;
           this.attachMinUpgradeOnCreate(newP, value.upgrade.min_format_score ?? 1);
         } else {
           const cutoffId = getDisabledUpgradeCutoff(mappedQualities, qualityToId, value.upgrade.until_quality, name);
 
-          Object.assign(newP, {
-            cutoff: cutoffId,
-            cutoffFormatScore: 1,
-            upgradeAllowed: false,
-          });
+          newP.cutoff = cutoffId;
+          newP.cutoffFormatScore = 1;
+          newP.upgradeAllowed = false;
           this.attachMinUpgradeOnCreate(newP, 1);
         }
 
         this.attachLanguageOnCreate(newP, profileLanguage);
-        const newProfile = newP;
-        createQPs.push(newProfile);
+        createQPs.push(newP);
         continue;
       }
 
       const fieldChanges: FieldChange[] = [];
       changes.set(serverMatch.name!, fieldChanges);
 
-      const updatedServerObject: T = JSON.parse(JSON.stringify(serverMatch));
+      const updatedServerObject = cloneWithJSON(serverMatch);
 
       let diffExist = false;
 

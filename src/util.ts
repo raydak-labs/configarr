@@ -418,6 +418,15 @@ export function isInConstArray<T extends readonly unknown[]>(array: T, value: un
   return array.includes(value as T[number]);
 }
 
+export function toEnumOrThrow<T extends Record<string, string>>(enumObj: T, value: string, label: string): T[keyof T] {
+  const members = Object.values(enumObj);
+  const match = members.find((member) => member === value);
+  if (match === undefined) {
+    throw new Error(`Unknown ${label} value '${value}'. Expected: ${members.join(", ")}`);
+  }
+  return match as T[keyof T];
+}
+
 /**
  * Convert snake_case string to camelCase
  * @param str - The snake_case string to convert

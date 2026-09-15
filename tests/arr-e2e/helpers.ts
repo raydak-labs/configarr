@@ -7,7 +7,7 @@ import { RadarrClient } from "../../src/clients/radarr-client";
 import { ReadarrClient } from "../../src/clients/readarr-client";
 import { SonarrClient } from "../../src/clients/sonarr-client";
 import { WhisparrClient } from "../../src/clients/whisparr-client";
-import { DelayProfilePayload } from "../../src/delayProfiles/delayProfile.types";
+import { DelayProfileShared } from "../../src/delayProfiles/delayProfile.types";
 import type { MediaArrType } from "../../src/types/common.types";
 
 export const DEFAULT_API_KEY = "e2etestapikey0123456789abcdef012";
@@ -86,7 +86,7 @@ export const LEGACY_DELAY_PROFILE_RESET = {
   bypassIfHighestQuality: false,
 };
 
-export function defaultDelayProfile<T extends DelayProfilePayload>(profiles: T[]): T | undefined {
+export function defaultDelayProfile<T extends DelayProfileShared>(profiles: T[]): T | undefined {
   return profiles.find((p) => !p.tags?.length) ?? profiles[0];
 }
 

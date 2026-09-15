@@ -1,22 +1,22 @@
 import { logger } from "./logger";
 import type { CustomFormatRequest } from "./customFormats/customFormat.types";
-import type { QualityDefinitionPayload } from "./qualityDefinitions/qualityDefinition.types";
-import type { QualityProfileLanguage, QualityProfilePayload } from "./qualityProfiles/qualityProfile.types";
+import type { QualityDefinitionShared } from "./qualityDefinitions/qualityDefinition.types";
+import type { QualityProfileLanguage, QualityProfileShared } from "./qualityProfiles/qualityProfile.types";
 import type { Tag } from "./tags/tag.types";
-import type { MediaDownloadClientResource, ProwlarrDownloadClientResource } from "./downloadClients/downloadClient.types";
+import type { DownloadClientShared } from "./downloadClients/downloadClient.types";
 
 export class ServerCache {
   private cache: Record<string, unknown> = {};
-  private _qualityDefinitions: QualityDefinitionPayload[];
-  private _qualityProfiles: QualityProfilePayload[];
+  private _qualityDefinitions: QualityDefinitionShared[];
+  private _qualityProfiles: QualityProfileShared[];
   private _customFormats: CustomFormatRequest[];
   private _tags: Tag[] = [];
   private _languages: QualityProfileLanguage[];
-  private _downloadClientSchema: (MediaDownloadClientResource | ProwlarrDownloadClientResource)[] | null = null;
+  private _downloadClientSchema: DownloadClientShared[] | null = null;
 
   constructor(
-    qualityDefinitions: QualityDefinitionPayload[],
-    qualityProfiles: QualityProfilePayload[],
+    qualityDefinitions: QualityDefinitionShared[],
+    qualityProfiles: QualityProfileShared[],
     customFormats: CustomFormatRequest[],
     languages: QualityProfileLanguage[],
   ) {
@@ -38,7 +38,7 @@ export class ServerCache {
     return this._qualityDefinitions;
   }
 
-  public set qualityDefinitions(newQd: QualityDefinitionPayload[]) {
+  public set qualityDefinitions(newQd: QualityDefinitionShared[]) {
     if (newQd == null || newQd.length <= 0) {
       logger.debug(`No QualityDefinition received from server.`);
       throw new Error("No QualityDefinitions received from server.");
@@ -50,7 +50,7 @@ export class ServerCache {
     return this._qualityProfiles;
   }
 
-  public set qualityProfiles(newQp: QualityProfilePayload[]) {
+  public set qualityProfiles(newQp: QualityProfileShared[]) {
     if (newQp == null || newQp.length <= 0) {
       logger.debug(`No QualityProfiles received from server.`);
     }
@@ -90,11 +90,11 @@ export class ServerCache {
     this._tags = newTags;
   }
 
-  public getDownloadClientSchema(): (MediaDownloadClientResource | ProwlarrDownloadClientResource)[] | null {
+  public getDownloadClientSchema(): DownloadClientShared[] | null {
     return this._downloadClientSchema;
   }
 
-  public setDownloadClientSchema(schema: (MediaDownloadClientResource | ProwlarrDownloadClientResource)[]): void {
+  public setDownloadClientSchema(schema: DownloadClientShared[]): void {
     this._downloadClientSchema = schema;
   }
 }

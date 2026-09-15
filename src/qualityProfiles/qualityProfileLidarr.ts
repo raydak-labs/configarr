@@ -1,9 +1,14 @@
 import { getClient } from "../clients/client";
+import type { QualityProfileResource } from "../__generated__/lidarr/data-contracts";
 import { FieldChange } from "../diffReport/diffReport.types";
 import { BaseQualityProfileSync, warnUnsupportedQualityProfileLanguage } from "./qualityProfileBase";
-import { QualityProfileLanguage, QualityProfileLidarrResource } from "./qualityProfile.types";
+import { QualityProfileLanguage, QualityProfileShared } from "./qualityProfile.types";
 
-export class QualityProfileLidarrSync extends BaseQualityProfileSync<QualityProfileLidarrResource> {
+export class QualityProfileLidarrSync extends BaseQualityProfileSync<QualityProfileResource> {
+  protected getApi() {
+    return getClient("LIDARR");
+  }
+
   protected resolveLanguage(
     profileName: string,
     configLanguage: string | undefined,
@@ -13,42 +18,26 @@ export class QualityProfileLidarrSync extends BaseQualityProfileSync<QualityProf
     return undefined;
   }
 
-  protected attachLanguageOnCreate(_profile: QualityProfileLidarrResource, _language: QualityProfileLanguage | undefined): void {}
+  protected attachLanguageOnCreate(_profile: QualityProfileShared, _language: QualityProfileLanguage | undefined): void {}
 
   protected diffLanguageOnUpdate(
-    _updated: QualityProfileLidarrResource,
-    _serverMatch: QualityProfileLidarrResource,
+    _updated: QualityProfileShared,
+    _serverMatch: QualityProfileShared,
     _language: QualityProfileLanguage | undefined,
     _fieldChanges: FieldChange[],
   ): boolean {
     return false;
   }
 
-  protected attachMinUpgradeOnCreate(_profile: QualityProfileLidarrResource, _minUpgradeFormatScore: number): void {}
+  protected attachMinUpgradeOnCreate(_profile: QualityProfileShared, _minUpgradeFormatScore: number): void {}
 
   protected diffMinUpgradeOnUpdate(
-    _updated: QualityProfileLidarrResource,
-    _serverMatch: QualityProfileLidarrResource,
+    _updated: QualityProfileShared,
+    _serverMatch: QualityProfileShared,
     _upgradeAllowed: boolean,
     _configMinUpgrade: number | undefined,
     _fieldChanges: FieldChange[],
   ): boolean {
     return false;
-  }
-
-  createOnServer(profile: QualityProfileLidarrResource) {
-    return getClient("LIDARR").createQualityProfile(profile);
-  }
-
-  updateOnServer(id: string, profile: QualityProfileLidarrResource) {
-    return getClient("LIDARR").updateQualityProfile(id, profile);
-  }
-
-  loadFromServer() {
-    return getClient("LIDARR").getQualityProfiles();
-  }
-
-  deleteOnServer(qualityProfile: QualityProfileLidarrResource) {
-    return getClient("LIDARR").deleteQualityProfile(qualityProfile.id + "");
   }
 }

@@ -14,17 +14,3 @@ export type DelayProfileShared = {
   minimumCustomFormatScore?: number;
   name?: string | null;
 };
-
-export type DelayProfileGenericResource = DelayProfileShared & {
-  enableUsenet?: boolean;
-  enableTorrent?: boolean;
-  preferredProtocol?: string;
-  usenetDelay?: number;
-  torrentDelay?: number;
-};
-
-export type DelayProfileLidarrResource = DelayProfileShared & { items: DelayProfileProtocolItem[] };
-
-export type DelayProfilePayload = DelayProfileGenericResource | DelayProfileLidarrResource;
-
-export type DelayProfileGenericArrType = "SONARR" | "RADARR" | "READARR" | "WHISPARR";

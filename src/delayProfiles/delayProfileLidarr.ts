@@ -1,34 +1,50 @@
 import { Tag } from "../tags/tag.types";
 import { getClient } from "../clients/client";
-import { logger } from "../logger";
+import { FieldChange } from "../diffReport/diffReport.types";
 import { InputConfigDelayProfile } from "../types/config.types";
-import {
-  calculateDelayProfilesDiffFor,
-  compareLidarrDelayProfileFields,
-  delayProfileSharedFields,
-  mapDelayProfileTags,
-  splitServerDelayProfiles,
-} from "./delayProfileBase";
-import { DelayProfileLidarrResource } from "./delayProfile.types";
+import { DelayProfileResource } from "../__generated__/lidarr/data-contracts";
+import { DelayProfileProtocolItem } from "./delayProfile.types";
+import { areDelayProfileItemsEqual, BaseDelayProfileSync, delayProfileSharedFields, mapDelayProfileTags } from "./delayProfileBase";
 
-export class DelayProfileLidarrSync {
-  loadFromServer() {
-    return getClient("LIDARR").getDelayProfiles();
+export type LidarrDelayProfile = DelayProfileResource & { items: DelayProfileProtocolItem[] };
+
+function hasLidarrItems(profile: DelayProfileResource): profile is LidarrDelayProfile {
+  return "items" in profile && Array.isArray((profile as LidarrDelayProfile).items);
+}
+
+const LIDARR_COMPARE_KEYS = ["bypassIfHighestQuality", "bypassIfAboveCustomFormatScore", "minimumCustomFormatScore", "order"] as const;
+
+function compareLidarrDelayProfileFields(config: InputConfigDelayProfile, server: LidarrDelayProfile): FieldChange[] {
+  const changes: FieldChange[] = [];
+  for (const key of LIDARR_COMPARE_KEYS) {
+    if (config[key] !== undefined && config[key] !== server[key]) {
+      changes.push({ field: key, from: server[key], to: config[key] });
+    }
   }
 
-  createOnServer(profile: DelayProfileLidarrResource) {
-    return getClient("LIDARR").createDelayProfile(profile);
+  if (config.items !== undefined && !areDelayProfileItemsEqual(config.items, server.items)) {
+    changes.push({ field: "items", from: server.items ?? [], to: config.items });
   }
 
-  updateOnServer(id: string, profile: DelayProfileLidarrResource) {
-    return getClient("LIDARR").updateDelayProfile(id, profile);
+  return changes;
+}
+
+export class DelayProfileLidarrSync extends BaseDelayProfileSync<LidarrDelayProfile> {
+  protected getApi() {
+    return getClient("LIDARR");
   }
 
-  deleteOnServer(id: string) {
-    return getClient("LIDARR").deleteDelayProfile(id);
+  async loadFromServer(): Promise<LidarrDelayProfile[]> {
+    const profiles = await this.getApi().getDelayProfiles();
+    return profiles.map((profile) => {
+      if (hasLidarrItems(profile)) {
+        return { ...profile, items: profile.items };
+      }
+      return { ...profile, items: [] };
+    });
   }
 
-  mapToServer(profile: InputConfigDelayProfile, serverTags: Tag[]): DelayProfileLidarrResource {
+  mapToServer(profile: InputConfigDelayProfile, serverTags: Tag[]): LidarrDelayProfile {
     return {
       ...delayProfileSharedFields(profile, mapDelayProfileTags(profile, serverTags)),
       items: (profile.items ?? []).map((item) => ({
@@ -40,33 +56,7 @@ export class DelayProfileLidarrSync {
     };
   }
 
-  async calculateDiff(delayProfilesObj: { default?: InputConfigDelayProfile; additional?: InputConfigDelayProfile[] }, tags: Tag[]) {
-    const serverData = await this.loadFromServer();
-    return calculateDelayProfilesDiffFor(delayProfilesObj, tags, serverData, compareLidarrDelayProfileFields);
-  }
-
-  async deleteAdditional() {
-    const serverData = await this.loadFromServer();
-    const { additional: serverAdditional = [] } = splitServerDelayProfiles(serverData);
-
-    for (const p of serverAdditional) {
-      await this.deleteOnServer(p.id + "");
-      logger.info(`Deleted Delay Profile: '${p.id}'`);
-    }
-  }
-
-  async updateDefaultFromConfig(profile: InputConfigDelayProfile, tags: Tag[]) {
-    await this.updateOnServer("1", this.mapToServer(profile, tags));
-  }
-
-  async createFromConfig(profile: InputConfigDelayProfile, tags: Tag[]) {
-    return this.createOnServer(this.mapToServer(profile, tags));
-  }
-
-  async recreateAdditionalFromConfig(profiles: InputConfigDelayProfile[], tags: Tag[]) {
-    await this.deleteAdditional();
-    for (const profile of profiles) {
-      await this.createOnServer(this.mapToServer(profile, tags));
-    }
+  protected compareFields(config: InputConfigDelayProfile, server: LidarrDelayProfile) {
+    return compareLidarrDelayProfileFields(config, server);
   }
 }

@@ -3,7 +3,7 @@ import { ServerCache } from "../cache";
 import { getClient } from "../clients/client";
 import { logger } from "../logger";
 import type { InputConfigDownloadClient } from "../types/config.types";
-import { ProwlarrDownloadClientResource } from "./downloadClient.types";
+import type { DownloadClientResource } from "../__generated__/prowlarr/data-contracts";
 import { ProwlarrDownloadClientSync } from "./downloadClientProwlarr";
 
 vi.mock("../clients/client", () => ({
@@ -17,7 +17,7 @@ vi.mock("../clients/client", () => ({
   })),
 }));
 
-const qbitSchema = (extra: Record<string, unknown> = {}): ProwlarrDownloadClientResource =>
+const qbitSchema = (extra: Record<string, unknown> = {}): DownloadClientResource =>
   ({
     implementation: "QBittorrent",
     implementationName: "qBittorrent",
@@ -26,7 +26,7 @@ const qbitSchema = (extra: Record<string, unknown> = {}): ProwlarrDownloadClient
     configContract: "QBittorrentSettings",
     infoLink: "",
     ...extra,
-  }) as ProwlarrDownloadClientResource;
+  }) as DownloadClientResource;
 
 describe("ProwlarrDownloadClientSync", () => {
   beforeEach(() => {
@@ -44,7 +44,7 @@ describe("ProwlarrDownloadClientSync", () => {
     test("PROWLARR create uses schema categories (default [])", async () => {
       const sync = new ProwlarrDownloadClientSync();
       const cache = new ServerCache([], [], [], []);
-      cache.setDownloadClientSchema([qbitSchema({ categories: [] })]);
+      sync.setDownloadClientSchema([qbitSchema({ categories: [] })]);
 
       const payload = await sync.resolveConfig(config, cache);
       expect(payload.categories).toEqual([]);
@@ -55,7 +55,7 @@ describe("ProwlarrDownloadClientSync", () => {
     test("PROWLARR create uses [] when schema omits categories", async () => {
       const sync = new ProwlarrDownloadClientSync();
       const cache = new ServerCache([], [], [], []);
-      cache.setDownloadClientSchema([qbitSchema()]);
+      sync.setDownloadClientSchema([qbitSchema()]);
 
       const payload = await sync.resolveConfig(config, cache);
       expect(payload.categories).toEqual([]);
@@ -65,7 +65,7 @@ describe("ProwlarrDownloadClientSync", () => {
     test("PROWLARR update keeps server categories", async () => {
       const sync = new ProwlarrDownloadClientSync();
       const cache = new ServerCache([], [], [], []);
-      cache.setDownloadClientSchema([qbitSchema({ categories: [] })]);
+      sync.setDownloadClientSchema([qbitSchema({ categories: [] })]);
       const server = qbitSchema({
         id: 1,
         name: "qBittorrent",

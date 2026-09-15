@@ -1,4 +1,4 @@
-import { MetadataProfileResource, PrimaryAlbumType, ReleaseStatus, SecondaryAlbumType } from "../__generated__/lidarr/data-contracts";
+import { MetadataProfileResource } from "../__generated__/lidarr/data-contracts";
 import { ServerCache } from "../cache";
 import { LidarrClient } from "../clients/lidarr-client";
 import { getClient } from "../clients/client";
@@ -100,19 +100,19 @@ export class LidarrMetadataProfileSync extends BaseMetadataProfileSync<MetadataP
         const enabledTypes = new Set(lidarrConfig.primary_types);
         result.primaryAlbumTypes = existingProfile.primaryAlbumTypes.map((serverItem) => ({
           ...serverItem,
-          allowed: enabledTypes.has(serverItem.albumType?.name as string),
+          allowed: enabledTypes.has(serverItem.albumType?.name ?? ""),
         }));
       } else if (schemaTemplate?.primaryAlbumTypes) {
         // Creating new - use schema template with ALL types, enable only config types
         const enabledTypes = new Set(lidarrConfig.primary_types);
         result.primaryAlbumTypes = schemaTemplate.primaryAlbumTypes.map((serverItem) => ({
           ...serverItem,
-          allowed: enabledTypes.has(serverItem.albumType?.name as string),
+          allowed: enabledTypes.has(serverItem.albumType?.name ?? ""),
         }));
       } else {
         // No schema available - use simple structure (might fail)
         result.primaryAlbumTypes = lidarrConfig.primary_types.map((typeName) => ({
-          albumType: typeName as PrimaryAlbumType,
+          albumType: { name: typeName },
           allowed: true,
         }));
       }
@@ -124,18 +124,18 @@ export class LidarrMetadataProfileSync extends BaseMetadataProfileSync<MetadataP
         const enabledTypes = new Set(lidarrConfig.secondary_types);
         result.secondaryAlbumTypes = existingProfile.secondaryAlbumTypes.map((serverItem) => ({
           ...serverItem,
-          allowed: enabledTypes.has(serverItem.albumType?.name as string),
+          allowed: enabledTypes.has(serverItem.albumType?.name ?? ""),
         }));
       } else if (schemaTemplate?.secondaryAlbumTypes) {
         // Creating new - use schema template with ALL types
         const enabledTypes = new Set(lidarrConfig.secondary_types);
         result.secondaryAlbumTypes = schemaTemplate.secondaryAlbumTypes.map((serverItem) => ({
           ...serverItem,
-          allowed: enabledTypes.has(serverItem.albumType?.name as string),
+          allowed: enabledTypes.has(serverItem.albumType?.name ?? ""),
         }));
       } else {
         result.secondaryAlbumTypes = lidarrConfig.secondary_types.map((typeName) => ({
-          albumType: typeName as SecondaryAlbumType,
+          albumType: { name: typeName },
           allowed: true,
         }));
       }
@@ -147,18 +147,18 @@ export class LidarrMetadataProfileSync extends BaseMetadataProfileSync<MetadataP
         const enabledStatuses = new Set(lidarrConfig.release_statuses);
         result.releaseStatuses = existingProfile.releaseStatuses.map((serverItem) => ({
           ...serverItem,
-          allowed: enabledStatuses.has(serverItem.releaseStatus?.name as string),
+          allowed: enabledStatuses.has(serverItem.releaseStatus?.name ?? ""),
         }));
       } else if (schemaTemplate?.releaseStatuses) {
         // Creating new - use schema template with ALL statuses
         const enabledStatuses = new Set(lidarrConfig.release_statuses);
         result.releaseStatuses = schemaTemplate.releaseStatuses.map((serverItem) => ({
           ...serverItem,
-          allowed: enabledStatuses.has(serverItem.releaseStatus?.name as string),
+          allowed: enabledStatuses.has(serverItem.releaseStatus?.name ?? ""),
         }));
       } else {
         result.releaseStatuses = lidarrConfig.release_statuses.map((statusName) => ({
-          releaseStatus: statusName as ReleaseStatus,
+          releaseStatus: { name: statusName },
           allowed: true,
         }));
       }
@@ -299,15 +299,15 @@ export class LidarrMetadataProfileSync extends BaseMetadataProfileSync<MetadataP
         const simpleResolvedConfig: MetadataProfileResource = {
           name: lidarrConfig.name,
           primaryAlbumTypes: lidarrConfig.primary_types?.map((typeName) => ({
-            albumType: typeName as PrimaryAlbumType,
+            albumType: { name: typeName },
             allowed: true,
           })),
           secondaryAlbumTypes: lidarrConfig.secondary_types?.map((typeName) => ({
-            albumType: typeName as SecondaryAlbumType,
+            albumType: { name: typeName },
             allowed: true,
           })),
           releaseStatuses: lidarrConfig.release_statuses?.map((statusName) => ({
-            releaseStatus: statusName as ReleaseStatus,
+            releaseStatus: { name: statusName },
             allowed: true,
           })),
         };

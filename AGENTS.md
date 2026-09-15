@@ -128,14 +128,19 @@ Callers use `getClient<T>(arrType)` (`src/clients/client.ts`). A literal arr typ
 
 Media clients implement small capabilities in `src/clients/capabilities.ts` (System, Tags, DownloadClients, QualityProfiles, CustomFormats, QualityDefinitions) plus their own methods. Prowlarr implements System + Tags + DownloadClients only — no media stubs.
 
-- **Pattern A** — fields or methods differ per arr: factory `switch` with **one case per arr** + literal `getClient("LIDARR")`. One class file per *arr (`qualityProfileLidarr.ts`). Shared _behavior_ lives on the base as unnamed helpers (`attachMinUpgradeOnCreate`). Do not mash products into filenames or type names (`qualityProfileLidarrReadarr.ts`, `QualityProfileRadarrWhisparrResource`).
-  - `*Generic.ts` is allowed when 3+ arrs are identical: Generic = default implementation, not a product list. Do not put *arr names in that filename.
-- **Pattern B** — same method set **and** same field set (custom formats, tags): one module. Capability generic (`CustomFormatsClient<CF>`). Do not split into 5 handlers.
+- **Pattern A** — fields or methods differ per arr: factory `switch` with **one case per arr** + literal `getClient("LIDARR")`. One class file per *arr (`qualityProfileLidarr.ts`). Shared _behavior_ lives on the base as unnamed helpers (`attachMinUpgradeOnCreate`, `PathRootFolderSync`). Do not mash products into filenames or type names (`qualityProfileLidarrReadarr.ts`, `QualityProfileRadarrWhisparrResource`).
+  - Do not put per-arr classes in a `*Generic.ts` file. If 3+ arrs share behavior (path-only root folders, media naming persist), put that behavior on the typed base and keep one thin class file per arr. Pass-through CRUD belongs on the base via `getApi()` plus a capability generic (`DelayProfilesClient<T>`, `QualityDefinitionsClient<T>`) — same as download clients. YAML string → generated string enum uses `toEnumOrThrow(Enum, value, label)` with that arr’s enum object (`getClient("RADARR")` still binds the arr). A variable `arrType` cannot carry five distinct enums. Shared lifecycle lives on the typed base (`BaseDelayProfileSync`, `QualityDefinitionPreferredSync`, `BaseMediaManagementSync`).
+- Pipeline: **one** `createXSync(arrType)` per feature per instance run. Load, diff, persist, and delete all go through that object (`persist` / `persistNaming` on the instance). Do not `new` a second handler to write. Test helpers that wrap `createXSync` are fine; `index.ts` must not call them for persist.
+- **Pattern B** — same method set **and** same field set (custom formats, tags): one module. Capability generic (`CustomFormatsClient<CF>`). The request type must be assignable to each arr’s generated resource so the client passes it to swagger as-is. Do not split into 5 handlers.
 - **Pattern C** — Prowlarr-only (`src/prowlarr/providerResourceSync.ts`). Media managers do not get a Pattern C.
+
+Client methods take that arr’s generated resource from `__generated__/<arr>/data-contracts` (same type the handler in that arr’s class file uses). YAML/TRaSH strings become generated enums in that arr’s mapper (`toEnumOrThrow(DownloadProtocol, value, "preferredProtocol")`, or `toDownloadProtocol` when undefined should default). OpenAPI gaps are an intersection in that arr file only (`DelayProfileResource & { items: ... }` in `delayProfileLidarr.ts`).
+
+Shared `src/<feature>/*.types.ts` holds YAML, TRaSH, and diff types — not product payloads (`ProwlarrDownloadClientResource`). Prowlarr uses `__generated__/prowlarr` `DownloadClientResource` in `downloadClientProwlarr.ts` / `prowlarr-client.ts`.
 
 Import the real module (`qualityProfileBase.ts`, `qualityProfileSyncer.ts`). Do not add barrels that only re-export.
 
-Feature mapping payloads live next to the feature (`qualityProfiles/qualityProfile.types.ts`, `customFormats/customFormat.types.ts`, …). Do not introduce `Merged*` intersection types for client or cache returns.
+Do not introduce `Merged*` intersection types for client or cache returns. Do not assert mapping types onto generated resources (`as QualityProfileResource`); if it is not assignable, fix the mapper or the class’s type.
 
 ### Configuration System
 

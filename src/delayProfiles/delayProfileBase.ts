@@ -2,12 +2,9 @@ import { Tag } from "../tags/tag.types";
 import { DiffEntry, FieldChange } from "../diffReport/diffReport.types";
 import { logger } from "../logger";
 import { InputConfigDelayProfile } from "../types/config.types";
-import {
-  DelayProfileGenericResource,
-  DelayProfileLidarrResource,
-  DelayProfileShared,
-  DelayProfileProtocolItem,
-} from "./delayProfile.types";
+import type { DelayProfilesClient, DelayProfilesWriter } from "../clients/capabilities";
+import { toEnumOrThrow } from "../util";
+import { DelayProfileShared, DelayProfileProtocolItem } from "./delayProfile.types";
 
 export interface DelayProfilesDiff {
   defaultProfileChanged: boolean;
@@ -58,12 +55,19 @@ export function delayProfileSharedFields(profile: InputConfigDelayProfile, mappe
   };
 }
 
-type SharedComparisonKeys = keyof Pick<
-  InputConfigDelayProfile,
-  "bypassIfHighestQuality" | "bypassIfAboveCustomFormatScore" | "minimumCustomFormatScore" | "order"
->;
+type GenericDelayProfileFields = {
+  preferredProtocol?: string;
+  enableUsenet?: boolean;
+  enableTorrent?: boolean;
+  usenetDelay?: number;
+  torrentDelay?: number;
+  bypassIfHighestQuality?: boolean;
+  bypassIfAboveCustomFormatScore?: boolean;
+  minimumCustomFormatScore?: number;
+  order?: number;
+};
 
-type GenericComparisonKeys = SharedComparisonKeys | "enableUsenet" | "enableTorrent" | "preferredProtocol" | "usenetDelay" | "torrentDelay";
+type GenericComparisonKeys = keyof GenericDelayProfileFields;
 
 const GENERIC_COMPARE_KEYS: GenericComparisonKeys[] = [
   "enableUsenet",
@@ -77,7 +81,7 @@ const GENERIC_COMPARE_KEYS: GenericComparisonKeys[] = [
   "order",
 ];
 
-export function compareGenericDelayProfileFields(config: InputConfigDelayProfile, server: DelayProfileGenericResource): FieldChange[] {
+export function compareGenericDelayProfileFields(config: InputConfigDelayProfile, server: GenericDelayProfileFields): FieldChange[] {
   const changes: FieldChange[] = [];
   for (const key of GENERIC_COMPARE_KEYS) {
     if (config[key] !== undefined && config[key] !== server[key]) {
@@ -100,28 +104,6 @@ export function areDelayProfileItemsEqual(
   serverItems: DelayProfileProtocolItem[] | null | undefined,
 ): boolean {
   return JSON.stringify(normalizeDelayProfileItems(configItems)) === JSON.stringify(normalizeDelayProfileItems(serverItems));
-}
-
-const LIDARR_COMPARE_KEYS: SharedComparisonKeys[] = [
-  "bypassIfHighestQuality",
-  "bypassIfAboveCustomFormatScore",
-  "minimumCustomFormatScore",
-  "order",
-];
-
-export function compareLidarrDelayProfileFields(config: InputConfigDelayProfile, server: DelayProfileLidarrResource): FieldChange[] {
-  const changes: FieldChange[] = [];
-  for (const key of LIDARR_COMPARE_KEYS) {
-    if (config[key] !== undefined && config[key] !== server[key]) {
-      changes.push({ field: key, from: server[key], to: config[key] });
-    }
-  }
-
-  if (config.items !== undefined && !areDelayProfileItemsEqual(config.items, server.items)) {
-    changes.push({ field: "items", from: server.items ?? [], to: config.items });
-  }
-
-  return changes;
 }
 
 export function areTagsEqual(tags1: number[], tags2: number[]): boolean {
@@ -197,6 +179,84 @@ export async function calculateDelayProfilesDiffFor<T extends DelayProfileShared
     defaultProfileFieldChanges: defaultComparison.changes,
     additionalProfilesFieldChanges,
   };
+}
+
+type StandardDownloadProtocolEnum = {
+  readonly Usenet: "usenet";
+  readonly Torrent: "torrent";
+  readonly Unknown: "unknown";
+};
+
+export function toDownloadProtocol<E extends StandardDownloadProtocolEnum>(protocol: E, value: string | undefined): E[keyof E] {
+  return toEnumOrThrow(protocol, value ?? protocol.Usenet, "preferredProtocol");
+}
+
+export function mapStandardDelayProfile<P>(profile: InputConfigDelayProfile, serverTags: Tag[], preferredProtocol: P) {
+  return {
+    ...delayProfileSharedFields(profile, mapDelayProfileTags(profile, serverTags)),
+    enableUsenet: profile.enableUsenet,
+    enableTorrent: profile.enableTorrent,
+    preferredProtocol,
+    usenetDelay: profile.usenetDelay,
+    torrentDelay: profile.torrentDelay,
+  };
+}
+
+export abstract class BaseDelayProfileSync<T extends DelayProfileShared> {
+  protected abstract getApi(): DelayProfilesWriter<T>;
+  abstract loadFromServer(): Promise<T[]>;
+  abstract mapToServer(profile: InputConfigDelayProfile, serverTags: Tag[]): T;
+  protected abstract compareFields(config: InputConfigDelayProfile, server: T): FieldChange[];
+
+  createOnServer(profile: T) {
+    return this.getApi().createDelayProfile(profile);
+  }
+
+  updateOnServer(id: string, profile: T) {
+    return this.getApi().updateDelayProfile(id, profile);
+  }
+
+  deleteOnServer(id: string) {
+    return this.getApi().deleteDelayProfile(id);
+  }
+
+  async calculateDiff(delayProfilesObj: { default?: InputConfigDelayProfile; additional?: InputConfigDelayProfile[] }, tags: Tag[]) {
+    const serverData = await this.loadFromServer();
+    return calculateDelayProfilesDiffFor(delayProfilesObj, tags, serverData, (config, server) => this.compareFields(config, server));
+  }
+
+  async deleteAdditional() {
+    const serverData = await this.loadFromServer();
+    const { additional: serverAdditional = [] } = splitServerDelayProfiles(serverData);
+
+    for (const p of serverAdditional) {
+      await this.deleteOnServer(p.id + "");
+      logger.info(`Deleted Delay Profile: '${p.id}'`);
+    }
+  }
+
+  async updateDefaultFromConfig(profile: InputConfigDelayProfile, tags: Tag[]) {
+    await this.updateOnServer("1", this.mapToServer(profile, tags));
+  }
+
+  async createFromConfig(profile: InputConfigDelayProfile, tags: Tag[]) {
+    return this.createOnServer(this.mapToServer(profile, tags));
+  }
+
+  async recreateAdditionalFromConfig(profiles: InputConfigDelayProfile[], tags: Tag[]) {
+    await this.deleteAdditional();
+    for (const profile of profiles) {
+      await this.createOnServer(this.mapToServer(profile, tags));
+    }
+  }
+}
+
+export abstract class StandardDelayProfileSync<T extends DelayProfileShared> extends BaseDelayProfileSync<T> {
+  protected abstract getApi(): DelayProfilesClient<T>;
+
+  loadFromServer() {
+    return this.getApi().getDelayProfiles();
+  }
 }
 
 export function delayProfilesToDiffEntries(diff: DelayProfilesDiff): DiffEntry[] {

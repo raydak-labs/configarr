@@ -1,24 +1,25 @@
 import type { DownloadClientsClient, TagsClient } from "../clients/capabilities";
 import { getClient } from "../clients/client";
+import type { DownloadClientResource } from "../__generated__/prowlarr/data-contracts";
 import { ServerCache } from "../cache";
 import { FieldChange } from "../diffReport/diffReport.types";
 import { logger } from "../logger";
 import { InputConfigDownloadClient } from "../types/config.types";
-import { DownloadClientDiff, ProwlarrDownloadClientResource } from "./downloadClient.types";
+import { DownloadClientDiff } from "./downloadClient.types";
 import { BaseDownloadClientSync } from "./downloadClientBase";
 
-export class ProwlarrDownloadClientSync extends BaseDownloadClientSync<ProwlarrDownloadClientResource> {
+export class ProwlarrDownloadClientSync extends BaseDownloadClientSync<DownloadClientResource> {
   protected getArrType(): "PROWLARR" {
     return "PROWLARR";
   }
 
-  protected getApi(): DownloadClientsClient<ProwlarrDownloadClientResource> & TagsClient {
+  protected getApi(): DownloadClientsClient<DownloadClientResource> & TagsClient {
     return getClient("PROWLARR");
   }
 
   public isDownloadClientEqual = (
     config: InputConfigDownloadClient,
-    server: ProwlarrDownloadClientResource,
+    server: DownloadClientResource,
     cache: ServerCache,
     updatePassword: boolean = false,
   ): { equal: boolean; changes: FieldChange[] } => {
@@ -46,13 +47,13 @@ export class ProwlarrDownloadClientSync extends BaseDownloadClientSync<ProwlarrD
 
   async calculateDiff(
     configClients: InputConfigDownloadClient[],
-    serverClients: ProwlarrDownloadClientResource[],
+    serverClients: DownloadClientResource[],
     cache: ServerCache,
     updatePassword: boolean = false,
-  ): Promise<DownloadClientDiff<ProwlarrDownloadClientResource>> {
+  ): Promise<DownloadClientDiff<DownloadClientResource>> {
     const create: InputConfigDownloadClient[] = [];
-    const update: DownloadClientDiff<ProwlarrDownloadClientResource>["update"] = [];
-    const unchanged: { config: InputConfigDownloadClient; server: ProwlarrDownloadClientResource }[] = [];
+    const update: DownloadClientDiff<DownloadClientResource>["update"] = [];
+    const unchanged: { config: InputConfigDownloadClient; server: DownloadClientResource }[] = [];
 
     for (const config of configClients) {
       const serverClient = serverClients.find(
@@ -81,9 +82,9 @@ export class ProwlarrDownloadClientSync extends BaseDownloadClientSync<ProwlarrD
   async resolveConfig(
     config: InputConfigDownloadClient,
     cache: ServerCache,
-    serverClient?: ProwlarrDownloadClientResource,
+    serverClient?: DownloadClientResource,
     partialUpdate: boolean = false,
-  ): Promise<ProwlarrDownloadClientResource> {
+  ): Promise<DownloadClientResource> {
     const schema = await this.getDownloadClientSchema(cache);
     const template = this.findImplementationInSchema(schema, config.type);
 
@@ -114,6 +115,7 @@ export class ProwlarrDownloadClientSync extends BaseDownloadClientSync<ProwlarrD
     );
 
     return {
+      ...template,
       enable: config.enable ?? serverClient?.enable ?? true,
       protocol: template.protocol,
       priority: config.priority ?? serverClient?.priority ?? 1,

@@ -40,16 +40,6 @@ export type MediaDownloadClientResource = DownloadClientShared & {
   removeFailedDownloads?: boolean;
 };
 
-export type ProwlarrDownloadClientCategory = {
-  clientCategory?: string | null;
-  categories?: number[] | null;
-};
-
-export type ProwlarrDownloadClientResource = DownloadClientShared & {
-  categories?: ProwlarrDownloadClientCategory[] | null;
-  supportsCategories?: boolean;
-};
-
 export interface ValidationResult {
   valid: boolean;
   errors: string[];

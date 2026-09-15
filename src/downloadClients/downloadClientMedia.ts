@@ -1,6 +1,5 @@
 import { ServerCache } from "../cache";
 import type { DownloadClientsClient, TagsClient } from "../clients/capabilities";
-import { getClient } from "../clients/client";
 import { FieldChange } from "../diffReport/diffReport.types";
 import { logger } from "../logger";
 import { MediaArrType } from "../types/common.types";
@@ -8,22 +7,14 @@ import { InputConfigDownloadClient } from "../types/config.types";
 import { DownloadClientDiff, MediaDownloadClientResource } from "./downloadClient.types";
 import { BaseDownloadClientSync } from "./downloadClientBase";
 
-export class MediaDownloadClientSync extends BaseDownloadClientSync<MediaDownloadClientResource> {
-  constructor(private arrType: MediaArrType) {
-    super();
-  }
+export abstract class MediaDownloadClientSync<T extends MediaDownloadClientResource> extends BaseDownloadClientSync<T> {
+  protected abstract getArrType(): MediaArrType;
 
-  protected getArrType(): MediaArrType {
-    return this.arrType;
-  }
-
-  protected getApi(): DownloadClientsClient<MediaDownloadClientResource> & TagsClient {
-    return getClient(this.arrType);
-  }
+  protected abstract getApi(): DownloadClientsClient<T> & TagsClient;
 
   public isDownloadClientEqual = (
     config: InputConfigDownloadClient,
-    server: MediaDownloadClientResource,
+    server: T,
     cache: ServerCache,
     updatePassword: boolean = false,
   ): { equal: boolean; changes: FieldChange[] } => {
@@ -69,13 +60,13 @@ export class MediaDownloadClientSync extends BaseDownloadClientSync<MediaDownloa
 
   async calculateDiff(
     configClients: InputConfigDownloadClient[],
-    serverClients: MediaDownloadClientResource[],
+    serverClients: T[],
     cache: ServerCache,
     updatePassword: boolean = false,
-  ): Promise<DownloadClientDiff<MediaDownloadClientResource>> {
+  ): Promise<DownloadClientDiff<T>> {
     const create: InputConfigDownloadClient[] = [];
-    const update: DownloadClientDiff<MediaDownloadClientResource>["update"] = [];
-    const unchanged: { config: InputConfigDownloadClient; server: MediaDownloadClientResource }[] = [];
+    const update: DownloadClientDiff<T>["update"] = [];
+    const unchanged: { config: InputConfigDownloadClient; server: T }[] = [];
 
     for (const config of configClients) {
       const serverClient = serverClients.find(
@@ -101,12 +92,7 @@ export class MediaDownloadClientSync extends BaseDownloadClientSync<MediaDownloa
     return { create, update, unchanged, deleted };
   }
 
-  async resolveConfig(
-    config: InputConfigDownloadClient,
-    cache: ServerCache,
-    serverClient?: MediaDownloadClientResource,
-    partialUpdate: boolean = false,
-  ): Promise<MediaDownloadClientResource> {
+  async resolveConfig(config: InputConfigDownloadClient, cache: ServerCache, serverClient?: T, partialUpdate: boolean = false): Promise<T> {
     const schema = await this.getDownloadClientSchema(cache);
     const template = this.findImplementationInSchema(schema, config.type);
 
@@ -131,12 +117,13 @@ export class MediaDownloadClientSync extends BaseDownloadClientSync<MediaDownloa
     const mergedFields = this.mergeFieldsWithSchema(
       template.fields || [],
       config.fields || {},
-      this.arrType,
+      this.getArrType(),
       serverClient?.fields ?? undefined,
       partialUpdate,
     );
 
-    return {
+    const payload = {
+      ...template,
       enable: config.enable ?? serverClient?.enable ?? true,
       protocol: template.protocol,
       priority: config.priority ?? serverClient?.priority ?? 1,
@@ -150,5 +137,7 @@ export class MediaDownloadClientSync extends BaseDownloadClientSync<MediaDownloa
       removeCompletedDownloads: config.remove_completed_downloads ?? serverClient?.removeCompletedDownloads ?? true,
       removeFailedDownloads: config.remove_failed_downloads ?? serverClient?.removeFailedDownloads ?? true,
     };
+    Reflect.deleteProperty(payload, "categories");
+    return payload;
   }
 }

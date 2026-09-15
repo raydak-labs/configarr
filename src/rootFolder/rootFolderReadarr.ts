@@ -10,31 +10,13 @@ import { ServerCache } from "../cache";
 import { getClient } from "../clients/client";
 import { FieldChange } from "../diffReport/diffReport.types";
 import { InputConfigRootFolderReadarr } from "../types/config.types";
-import { compareObjectsCarr } from "../util";
+import { compareObjectsCarr, toEnumOrThrow } from "../util";
 import { RootFolderDiff } from "./rootFolder.types";
 import { BaseRootFolderSync } from "./rootFolderBase";
 
 export class ReadarrRootFolderSync extends BaseRootFolderSync<InputConfigRootFolderReadarr> {
-  protected api = getClient("READARR");
-
-  protected getArrType(): "READARR" {
-    return "READARR";
-  }
-
-  protected getRootfolders() {
-    return this.api.getRootfolders();
-  }
-
-  protected addRootFolder(data: RootFolderResource) {
-    return this.api.addRootFolder(data);
-  }
-
-  protected updateRootFolder(id: string, data: RootFolderResource) {
-    return this.api.updateRootFolder(id, data);
-  }
-
-  protected deleteRootFolder(id: string) {
-    return this.api.deleteRootFolder(id);
+  protected getApi() {
+    return getClient("READARR");
   }
 
   public async resolveRootFolderConfig(config: InputConfigRootFolderReadarr, serverCache: ServerCache): Promise<RootFolderResource> {
@@ -43,7 +25,10 @@ export class ReadarrRootFolderSync extends BaseRootFolderSync<InputConfigRootFol
     }
 
     // Load quality profiles and metadata profiles for Readarr
-    const [qualityProfiles, metadataProfiles] = await Promise.all([this.api.getQualityProfiles(), this.api.getMetadataProfiles()]);
+    const [qualityProfiles, metadataProfiles] = await Promise.all([
+      this.getApi().getQualityProfiles(),
+      this.getApi().getMetadataProfiles(),
+    ]);
 
     const qualityProfileMap = new Map<string, number>();
     const metadataProfileMap = new Map<string, number>();
@@ -82,7 +67,7 @@ export class ReadarrRootFolderSync extends BaseRootFolderSync<InputConfigRootFol
               return existingTag.id;
             } else {
               // Tag doesn't exist, create it
-              const newTag = await this.api.createTag({ label: tagName });
+              const newTag = await this.getApi().createTag({ label: tagName });
               newTags.push(newTag);
               this.logger.info(`Created new tag '${tagName}' with ID ${newTag.id}`);
               return newTag.id!;
@@ -105,11 +90,11 @@ export class ReadarrRootFolderSync extends BaseRootFolderSync<InputConfigRootFol
     };
 
     if (config.monitor) {
-      result.defaultMonitorOption = config.monitor as MonitorTypes;
+      result.defaultMonitorOption = toEnumOrThrow(MonitorTypes, config.monitor, "Readarr monitor");
     }
 
     if (config.monitor_new_items) {
-      result.defaultNewItemMonitorOption = config.monitor_new_items as NewItemMonitorTypes;
+      result.defaultNewItemMonitorOption = toEnumOrThrow(NewItemMonitorTypes, config.monitor_new_items, "Readarr monitor_new_items");
     }
 
     // Calibre integration fields (Readarr-specific)

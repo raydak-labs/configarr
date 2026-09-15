@@ -3,8 +3,8 @@ import { beforeEach, afterEach, describe, expect, test, vi } from "vitest";
 import * as uclient from "../clients/client";
 import * as log from "../logger";
 import { CustomFormatRequest } from "../customFormats/customFormat.types";
-import { QualityDefinitionPayload } from "../qualityDefinitions/qualityDefinition.types";
-import { QualityItem, QualityProfilePayload, QualityProfileRadarrResource } from "./qualityProfile.types";
+import { QualityDefinitionShared } from "../qualityDefinitions/qualityDefinition.types";
+import { QualityItem, QualityProfileShared } from "./qualityProfile.types";
 import { ServerCache } from "../cache";
 import {
   checkForConflictingCFs,
@@ -26,11 +26,11 @@ import { ConfigQualityProfile, ConfigQualityProfileItem, MergedConfigInstance } 
 import { cloneWithJSON, loadJsonFile } from "../util";
 
 describe("QualityProfiles", async () => {
-  const sampleQualityProfile = loadJsonFile<QualityProfileRadarrResource>(
+  const sampleQualityProfile = loadJsonFile<QualityProfileShared>(
     path.resolve(__dirname, `../../tests/samples/single_quality_profile.json`),
   );
 
-  const sampleQualityDefinitions = loadJsonFile<QualityDefinitionPayload[]>(
+  const sampleQualityDefinitions = loadJsonFile<QualityDefinitionShared[]>(
     path.resolve(__dirname, `../../tests/samples/qualityDefinition.json`),
   );
 
@@ -86,7 +86,7 @@ describe("QualityProfiles", async () => {
       { name: "HDTV-1080p" },
     ];
 
-    const resources: QualityDefinitionPayload[] = [
+    const resources: QualityDefinitionShared[] = [
       { id: 1, title: "HDTV-1080p", weight: 2, quality: { id: 1, name: "HDTV-1080p" } },
       { id: 2, title: "WEBDL-1080p", weight: 2, quality: { id: 2, name: "WEBDL-1080p" } },
       { id: 3, title: "WEBRip-1080p", weight: 2, quality: { id: 3, name: "WEBRip-1080p" } },
@@ -121,7 +121,7 @@ describe("QualityProfiles", async () => {
       { name: "HDTV-1080p", enabled: false },
     ];
 
-    const resources: QualityDefinitionPayload[] = [
+    const resources: QualityDefinitionShared[] = [
       { id: 1, title: "HDTV-1080p", weight: 2, quality: { id: 1, name: "HDTV-1080p" } },
       { id: 2, title: "WEBDL-1080p", weight: 2, quality: { id: 2, name: "WEBDL-1080p" } },
       { id: 3, title: "WEBRip-1080p", weight: 2, quality: { id: 3, name: "WEBRip-1080p" } },
@@ -155,7 +155,7 @@ describe("QualityProfiles", async () => {
       { name: "HDTV-1080p" },
     ];
 
-    const resources: QualityDefinitionPayload[] = [
+    const resources: QualityDefinitionShared[] = [
       { id: 1, title: "HDTV-1080p", weight: 2, quality: { id: 1, name: "HDTV-1080p" } },
       { id: 2, title: "WEBDL-1080p", weight: 2, quality: { id: 2, name: "WEBDL-1080p" } },
       { id: 3, title: "WEBRip-1080p", weight: 2, quality: { id: 3, name: "WEBRip-1080p" } },
@@ -181,7 +181,7 @@ describe("QualityProfiles", async () => {
   test("mapQualities - ordering with nested qualities", async ({}) => {
     const fromConfig: ConfigQualityProfileItem[] = [{ name: "HD Group", qualities: ["HDTV-1080p", "WEBDL-1080p"] }];
 
-    const resources: QualityDefinitionPayload[] = [
+    const resources: QualityDefinitionShared[] = [
       { id: 1, title: "HDTV-1080p", weight: 2, quality: { id: 1, name: "HDTV-1080p" } },
       { id: 2, title: "WEBDL-1080p", weight: 2, quality: { id: 2, name: "WEBDL-1080p" } },
     ];
@@ -210,7 +210,7 @@ describe("QualityProfiles", async () => {
       { name: "WEB 720p", qualities: ["WEBDL-720p", "WEBRip-720p"] },
     ];
 
-    const resources: QualityDefinitionPayload[] = [
+    const resources: QualityDefinitionShared[] = [
       { id: 1, title: "HDTV-1080p", weight: 2, quality: { id: 1, name: "HDTV-1080p" } },
       { id: 2, title: "WEBDL-1080p", weight: 2, quality: { id: 2, name: "WEBDL-1080p" } },
       { id: 3, title: "WEBDL-720p", weight: 2, quality: { id: 3, name: "WEBDL-720p" } },
@@ -246,7 +246,7 @@ describe("QualityProfiles", async () => {
       { name: "HDTV-1080p" },
     ];
 
-    const resources: QualityDefinitionPayload[] = [
+    const resources: QualityDefinitionShared[] = [
       { id: 1, title: "HDTV-1080p", weight: 2, quality: { id: 1, name: "HDTV-1080p" } },
       { id: 2, title: "WEBDL-1080p", weight: 2, quality: { id: 2, name: "WEBDL-1080p" } },
       { id: 3, title: "WEBRip-1080p", weight: 2, quality: { id: 3, name: "WEBRip-1080p" } },
@@ -282,7 +282,7 @@ describe("QualityProfiles", async () => {
 
     const fromConfig: ConfigQualityProfileItem[] = [{ name: "HDTV-1080p", enabled: false }];
 
-    const resources: QualityDefinitionPayload[] = [{ id: 1, title: "HDTV-1080p", weight: 2, quality: { id: 1, name: "HDTV-1080p" } }];
+    const resources: QualityDefinitionShared[] = [{ id: 1, title: "HDTV-1080p", weight: 2, quality: { id: 1, name: "HDTV-1080p" } }];
 
     const profile: ConfigQualityProfile = {
       name: "hi",
@@ -309,8 +309,8 @@ describe("QualityProfiles", async () => {
     serverProfile.cutoff = 1;
     serverProfile.items = [{ allowed: false, items: [], quality: { id: 1, name: "HDTV-1080p" } }];
 
-    const serverQP: QualityProfilePayload[] = [serverProfile];
-    const serverQD: QualityDefinitionPayload[] = resources;
+    const serverQP: QualityProfileShared[] = [serverProfile];
+    const serverQD: QualityDefinitionShared[] = resources;
     const serverCF: CustomFormatRequest[] = [cloneWithJSON(sampleCustomFormat)];
 
     const serverCache = new ServerCache(serverQD, serverQP, serverCF, []);
@@ -345,7 +345,7 @@ describe("QualityProfiles", async () => {
 
     const fromConfig: ConfigQualityProfileItem[] = [{ name: "HDTV-1080p", enabled: false }];
 
-    const resources: QualityDefinitionPayload[] = [{ id: 1, title: "HDTV-1080p", weight: 2, quality: { id: 1, name: "HDTV-1080p" } }];
+    const resources: QualityDefinitionShared[] = [{ id: 1, title: "HDTV-1080p", weight: 2, quality: { id: 1, name: "HDTV-1080p" } }];
 
     const profile: ConfigQualityProfile = {
       name: "hi",
@@ -372,8 +372,8 @@ describe("QualityProfiles", async () => {
     serverProfile.cutoff = 1;
     serverProfile.items = [{ allowed: false, items: [], quality: { id: 1, name: "HDTV-1080p" } }];
 
-    const serverQP: QualityProfilePayload[] = [serverProfile];
-    const serverQD: QualityDefinitionPayload[] = resources;
+    const serverQP: QualityProfileShared[] = [serverProfile];
+    const serverQD: QualityDefinitionShared[] = resources;
     const serverCF: CustomFormatRequest[] = [cloneWithJSON(sampleCustomFormat)];
 
     const serverCache = new ServerCache(serverQD, serverQP, serverCF, []);
@@ -393,7 +393,7 @@ describe("QualityProfiles", async () => {
 
     const fromConfig: ConfigQualityProfileItem[] = [{ name: "HDTV-1080p", enabled: false }];
 
-    const resources: QualityDefinitionPayload[] = [{ id: 1, title: "HDTV-1080p", weight: 2, quality: { id: 1, name: "HDTV-1080p" } }];
+    const resources: QualityDefinitionShared[] = [{ id: 1, title: "HDTV-1080p", weight: 2, quality: { id: 1, name: "HDTV-1080p" } }];
 
     const profile: ConfigQualityProfile = {
       name: "hi",
@@ -422,8 +422,8 @@ describe("QualityProfiles", async () => {
     serverProfile.items = [{ allowed: false, items: [], quality: { id: 1, name: "HDTV-1080p" } }];
     serverProfile.language = { id: 1, name: "English" };
 
-    const serverQP: QualityProfilePayload[] = [serverProfile];
-    const serverQD: QualityDefinitionPayload[] = resources;
+    const serverQP: QualityProfileShared[] = [serverProfile];
+    const serverQD: QualityDefinitionShared[] = resources;
     const serverCF: CustomFormatRequest[] = [cloneWithJSON(sampleCustomFormat)];
 
     const serverCache = new ServerCache(serverQD, serverQP, serverCF, [{ id: 0, name: "Any" }]);
@@ -439,7 +439,7 @@ describe("QualityProfiles", async () => {
 
     const fromConfig: ConfigQualityProfileItem[] = [{ name: "HDTV-1080p", enabled: false }];
 
-    const resources: QualityDefinitionPayload[] = [{ id: 1, title: "HDTV-1080p", weight: 2, quality: { id: 1, name: "HDTV-1080p" } }];
+    const resources: QualityDefinitionShared[] = [{ id: 1, title: "HDTV-1080p", weight: 2, quality: { id: 1, name: "HDTV-1080p" } }];
 
     const profile: ConfigQualityProfile = {
       name: "hi",
@@ -468,15 +468,15 @@ describe("QualityProfiles", async () => {
     serverProfile.items = [{ allowed: false, items: [], quality: { id: 1, name: "HDTV-1080p" } }];
     serverProfile.language = { id: 1, name: "English" };
 
-    const serverQP: QualityProfilePayload[] = [serverProfile];
-    const serverQD: QualityDefinitionPayload[] = resources;
+    const serverQP: QualityProfileShared[] = [serverProfile];
+    const serverQD: QualityDefinitionShared[] = resources;
     const serverCF: CustomFormatRequest[] = [cloneWithJSON(sampleCustomFormat)];
 
     const serverCache = new ServerCache(serverQD, serverQP, serverCF, [{ id: 0, name: "Any" }]);
 
     const diff = await calculateQualityProfilesDiff("RADARR", cfMap, config, serverCache);
     expect(diff.changedQPs.length).toBe(1);
-    expect((diff.changedQPs[0] as QualityProfileRadarrResource).language).toEqual({ id: 0, name: "Any" });
+    expect((diff.changedQPs[0] as QualityProfileShared).language).toEqual({ id: 0, name: "Any" });
   });
 
   test("calculateQualityProfilesDiff - should warn when default Any language is missing from server (radarr)", async ({}) => {
@@ -484,7 +484,7 @@ describe("QualityProfiles", async () => {
 
     const fromConfig: ConfigQualityProfileItem[] = [{ name: "HDTV-1080p", enabled: false }];
 
-    const resources: QualityDefinitionPayload[] = [{ id: 1, title: "HDTV-1080p", weight: 2, quality: { id: 1, name: "HDTV-1080p" } }];
+    const resources: QualityDefinitionShared[] = [{ id: 1, title: "HDTV-1080p", weight: 2, quality: { id: 1, name: "HDTV-1080p" } }];
 
     const profile: ConfigQualityProfile = {
       name: "hi",
@@ -513,8 +513,8 @@ describe("QualityProfiles", async () => {
     serverProfile.items = [{ allowed: false, items: [], quality: { id: 1, name: "HDTV-1080p" } }];
     serverProfile.language = { id: 1, name: "English" };
 
-    const serverQP: QualityProfilePayload[] = [serverProfile];
-    const serverQD: QualityDefinitionPayload[] = resources;
+    const serverQP: QualityProfileShared[] = [serverProfile];
+    const serverQD: QualityDefinitionShared[] = resources;
     const serverCF: CustomFormatRequest[] = [cloneWithJSON(sampleCustomFormat)];
 
     // No "Any" language present on the server
@@ -534,7 +534,7 @@ describe("QualityProfiles", async () => {
 
     const fromConfig: ConfigQualityProfileItem[] = [{ name: "HDTV-1080p", enabled: false }];
 
-    const resources: QualityDefinitionPayload[] = [{ id: 1, title: "HDTV-1080p", weight: 2, quality: { id: 1, name: "HDTV-1080p" } }];
+    const resources: QualityDefinitionShared[] = [{ id: 1, title: "HDTV-1080p", weight: 2, quality: { id: 1, name: "HDTV-1080p" } }];
 
     const profile: ConfigQualityProfile = {
       name: "hi",
@@ -563,8 +563,8 @@ describe("QualityProfiles", async () => {
     serverProfile.items = [{ allowed: false, items: [], quality: { id: 1, name: "HDTV-1080p" } }];
     serverProfile.language = { id: 0, name: "Any" };
 
-    const serverQP: QualityProfilePayload[] = [serverProfile];
-    const serverQD: QualityDefinitionPayload[] = resources;
+    const serverQP: QualityProfileShared[] = [serverProfile];
+    const serverQD: QualityDefinitionShared[] = resources;
     const serverCF: CustomFormatRequest[] = [cloneWithJSON(sampleCustomFormat)];
 
     const serverCache = new ServerCache(serverQD, serverQP, serverCF, [{ id: 0, name: "Any" }]);
@@ -585,7 +585,7 @@ describe("QualityProfiles", async () => {
       { name: "WEB 1080p", qualities: ["WEBDL-1080p", "WEBRip-1080p"] },
     ];
 
-    const resources: QualityDefinitionPayload[] = [
+    const resources: QualityDefinitionShared[] = [
       { id: 1, title: "WEBDL-720p", weight: 2, quality: { id: 1, name: "WEBDL-720p" } },
       { id: 2, title: "WEBRip-720p", weight: 2, quality: { id: 2, name: "WEBRip-720p" } },
       { id: 3, title: "Bluray-1080p", weight: 2, quality: { id: 3, name: "Bluray-1080p" } },
@@ -638,7 +638,7 @@ describe("QualityProfiles", async () => {
       { name: "WEB 1080p", qualities: ["WEBDL-1080p", "WEBRip-1080p"] },
     ];
 
-    const resources: QualityDefinitionPayload[] = [
+    const resources: QualityDefinitionShared[] = [
       { id: 10, title: "Remux-2160p", weight: 2, quality: { id: 10, name: "Remux-2160p" } },
       { id: 11, title: "WEBDL-2160p", weight: 2, quality: { id: 11, name: "WEBDL-2160p" } },
       { id: 12, title: "WEBRip-2160p", weight: 2, quality: { id: 12, name: "WEBRip-2160p" } },
@@ -684,7 +684,7 @@ describe("QualityProfiles", async () => {
 
     const fromConfig: ConfigQualityProfileItem[] = [{ name: "HDTV-1080p" }];
 
-    const resources: QualityDefinitionPayload[] = [{ id: 10, title: "HDTV-1080p", weight: 2, quality: { id: 10, name: "HDTV-1080p" } }];
+    const resources: QualityDefinitionShared[] = [{ id: 10, title: "HDTV-1080p", weight: 2, quality: { id: 10, name: "HDTV-1080p" } }];
 
     const profile: ConfigQualityProfile = {
       name: "Test Update - Disable Upgrade",
@@ -738,7 +738,7 @@ describe("QualityProfiles", async () => {
       { name: "WEB 1080p", qualities: ["WEBDL-1080p", "WEBRip-1080p"] },
     ];
 
-    const resources: QualityDefinitionPayload[] = [
+    const resources: QualityDefinitionShared[] = [
       { id: 10, title: "Remux-2160p", weight: 2, quality: { id: 10, name: "Remux-2160p" } },
       { id: 11, title: "WEBDL-2160p", weight: 2, quality: { id: 11, name: "WEBDL-2160p" } },
       { id: 12, title: "WEBRip-2160p", weight: 2, quality: { id: 12, name: "WEBRip-2160p" } },
@@ -815,7 +815,7 @@ describe("QualityProfiles", async () => {
 
     const fromConfig: ConfigQualityProfileItem[] = [{ name: "Remux-2160p" }, { name: "Remux-1080p" }];
 
-    const resources: QualityDefinitionPayload[] = [
+    const resources: QualityDefinitionShared[] = [
       { id: 10, title: "Remux-2160p", weight: 2, quality: { id: 10, name: "Remux-2160p" } },
       { id: 13, title: "Remux-1080p", weight: 2, quality: { id: 13, name: "Remux-1080p" } },
     ];
@@ -976,7 +976,6 @@ describe("QualityProfiles", async () => {
                 id: 14,
                 name: "WEBRip-720p",
                 resolution: 720,
-                source: "webrip",
               },
               allowed: true,
               items: [],
@@ -986,7 +985,6 @@ describe("QualityProfiles", async () => {
                 id: 5,
                 name: "WEBDL-720p",
                 resolution: 720,
-                source: "webdl",
               },
               allowed: true,
               items: [],
@@ -996,7 +994,6 @@ describe("QualityProfiles", async () => {
                 id: 6,
                 name: "Bluray-720p",
                 resolution: 720,
-                source: "bluray",
               },
               allowed: true,
               items: [],
@@ -1006,7 +1003,6 @@ describe("QualityProfiles", async () => {
                 id: 3,
                 name: "WEBDL-1080p",
                 resolution: 1080,
-                source: "webdl",
               },
               allowed: true,
               items: [],
@@ -1016,7 +1012,6 @@ describe("QualityProfiles", async () => {
                 id: 15,
                 name: "WEBRip-1080p",
                 resolution: 1080,
-                source: "webrip",
               },
               allowed: true,
               items: [],
@@ -1026,7 +1021,6 @@ describe("QualityProfiles", async () => {
                 id: 7,
                 name: "Bluray-1080p",
                 resolution: 1080,
-                source: "bluray",
               },
               allowed: true,
               items: [],
@@ -1043,7 +1037,6 @@ describe("QualityProfiles", async () => {
               quality: {
                 id: 7,
                 name: "Bluray-1080p",
-                source: "bluray",
                 resolution: 1080,
               },
               items: [],
@@ -1053,7 +1046,6 @@ describe("QualityProfiles", async () => {
               quality: {
                 id: 15,
                 name: "WEBRip-1080p",
-                source: "webrip",
                 resolution: 1080,
               },
               items: [],
@@ -1063,7 +1055,6 @@ describe("QualityProfiles", async () => {
               quality: {
                 id: 3,
                 name: "WEBDL-1080p",
-                source: "webdl",
                 resolution: 1080,
               },
               items: [],
@@ -1073,7 +1064,6 @@ describe("QualityProfiles", async () => {
               quality: {
                 id: 6,
                 name: "Bluray-720p",
-                source: "bluray",
                 resolution: 720,
               },
               items: [],
@@ -1083,7 +1073,6 @@ describe("QualityProfiles", async () => {
               quality: {
                 id: 5,
                 name: "WEBDL-720p",
-                source: "webdl",
                 resolution: 720,
               },
               items: [],
@@ -1093,7 +1082,6 @@ describe("QualityProfiles", async () => {
               quality: {
                 id: 14,
                 name: "WEBRip-720p",
-                source: "webrip",
                 resolution: 720,
               },
               items: [],
@@ -1116,7 +1104,6 @@ describe("QualityProfiles", async () => {
             id: 14,
             name: "WEBRip-720p",
             resolution: 720,
-            source: "webrip",
           },
         },
         {
@@ -1125,7 +1112,6 @@ describe("QualityProfiles", async () => {
             id: 15,
             name: "WEBRip-1080p",
             resolution: 1080,
-            source: "webrip",
           },
         },
       ];
@@ -1137,7 +1123,6 @@ describe("QualityProfiles", async () => {
             id: 15,
             name: "WEBRip-1080p",
             resolution: 1080,
-            source: "webrip",
           },
         },
         {
@@ -1146,7 +1131,6 @@ describe("QualityProfiles", async () => {
             id: 14,
             name: "WEBRip-720p",
             resolution: 720,
-            source: "webrip",
           },
         },
       ];
@@ -1162,7 +1146,6 @@ describe("QualityProfiles", async () => {
             id: 14,
             name: "WEBRip-720p",
             resolution: 720,
-            source: "webrip",
           },
         },
       ];
@@ -1174,7 +1157,6 @@ describe("QualityProfiles", async () => {
             id: 14,
             name: "WEBRip-720p",
             resolution: 720,
-            source: "webrip",
           },
         },
       ];
@@ -1194,7 +1176,6 @@ describe("QualityProfiles", async () => {
                 id: 14,
                 name: "WEBRip-720p",
                 resolution: 720,
-                source: "webrip",
               },
               allowed: true,
               items: [],
@@ -1214,7 +1195,6 @@ describe("QualityProfiles", async () => {
                 id: 14,
                 name: "WEBRip-720p",
                 resolution: 720,
-                source: "webrip",
               },
               allowed: true,
               items: [],
@@ -1834,7 +1814,7 @@ describe("QualityProfiles", async () => {
 
     const fromConfig: ConfigQualityProfileItem[] = [{ name: "HDTV-1080p", enabled: false }];
 
-    const resources: QualityDefinitionPayload[] = [{ id: 1, title: "HDTV-1080p", weight: 2, quality: { id: 1, name: "HDTV-1080p" } }];
+    const resources: QualityDefinitionShared[] = [{ id: 1, title: "HDTV-1080p", weight: 2, quality: { id: 1, name: "HDTV-1080p" } }];
 
     const profile: ConfigQualityProfile = {
       name: "hi",
@@ -1861,8 +1841,8 @@ describe("QualityProfiles", async () => {
     serverProfile.cutoff = 1;
     serverProfile.items = [{ allowed: false, items: [], quality: { id: 1, name: "HDTV-1080p" } }];
 
-    const serverQP: QualityProfilePayload[] = [serverProfile];
-    const serverQD: QualityDefinitionPayload[] = resources;
+    const serverQP: QualityProfileShared[] = [serverProfile];
+    const serverQD: QualityDefinitionShared[] = resources;
     const serverCF: CustomFormatRequest[] = [cloneWithJSON(sampleCustomFormat)];
 
     const serverCache = new ServerCache(serverQD, serverQP, serverCF, []);
@@ -1874,8 +1854,8 @@ describe("QualityProfiles", async () => {
   });
 
   test("qualityProfilesToDiffEntries - builds create and update entries with field changes", () => {
-    const create = [{ name: "NewProfile" } as QualityProfilePayload];
-    const changedQPs = [{ name: "ExistingProfile" } as QualityProfilePayload];
+    const create = [{ name: "NewProfile" } as QualityProfileShared];
+    const changedQPs = [{ name: "ExistingProfile" } as QualityProfileShared];
     const changes = new Map([["ExistingProfile", [{ field: "minFormatScore", from: 0, to: 10 }]]]);
 
     const entries = qualityProfilesToDiffEntries(create, changedQPs, changes);
@@ -1893,7 +1873,7 @@ describe("QualityProfiles", async () => {
 
   test("calculateQualityProfilesDiff - Lidarr create omits language and minUpgradeFormatScore", async () => {
     const cfMap: CFProcessing = { carrIdMapping: new Map(), cfNameToCarrConfig: new Map() };
-    const resources: QualityDefinitionPayload[] = [{ id: 1, title: "FLAC", quality: { id: 1, name: "FLAC" } }];
+    const resources: QualityDefinitionShared[] = [{ id: 1, title: "FLAC", quality: { id: 1, name: "FLAC" } }];
     const config: MergedConfigInstance = {
       custom_formats: [],
       quality_profiles: [
@@ -1920,8 +1900,8 @@ describe("QualityProfiles", async () => {
 
   test("calculateQualityProfilesDiff - Lidarr does not dirty-diff language or minUpgradeFormatScore", async () => {
     const cfMap: CFProcessing = { carrIdMapping: new Map(), cfNameToCarrConfig: new Map() };
-    const resources: QualityDefinitionPayload[] = [{ id: 1, title: "FLAC", quality: { id: 1, name: "FLAC" } }];
-    const serverProfile: QualityProfilePayload = {
+    const resources: QualityDefinitionShared[] = [{ id: 1, title: "FLAC", quality: { id: 1, name: "FLAC" } }];
+    const serverProfile: QualityProfileShared = {
       name: "Music",
       upgradeAllowed: true,
       cutoff: 1,

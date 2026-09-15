@@ -1,4 +1,5 @@
 import { getClient } from "../clients/client";
+import type { QualityProfileResource } from "../__generated__/radarr/data-contracts";
 import { FieldChange } from "../diffReport/diffReport.types";
 import {
   attachLanguageOnCreate,
@@ -8,9 +9,13 @@ import {
   diffMinUpgradeOnUpdate,
   resolveQualityProfileLanguage,
 } from "./qualityProfileBase";
-import { QualityProfileLanguage, QualityProfileRadarrResource } from "./qualityProfile.types";
+import { QualityProfileLanguage, QualityProfileShared } from "./qualityProfile.types";
 
-export class QualityProfileRadarrSync extends BaseQualityProfileSync<QualityProfileRadarrResource> {
+export class QualityProfileRadarrSync extends BaseQualityProfileSync<QualityProfileResource> {
+  protected getApi() {
+    return getClient("RADARR");
+  }
+
   protected resolveLanguage(
     _profileName: string,
     configLanguage: string | undefined,
@@ -19,46 +24,30 @@ export class QualityProfileRadarrSync extends BaseQualityProfileSync<QualityProf
     return resolveQualityProfileLanguage(configLanguage, languageMap);
   }
 
-  protected attachLanguageOnCreate(profile: QualityProfileRadarrResource, language: QualityProfileLanguage | undefined): void {
+  protected attachLanguageOnCreate(profile: QualityProfileShared, language: QualityProfileLanguage | undefined): void {
     attachLanguageOnCreate(profile, language);
   }
 
   protected diffLanguageOnUpdate(
-    updated: QualityProfileRadarrResource,
-    serverMatch: QualityProfileRadarrResource,
+    updated: QualityProfileShared,
+    serverMatch: QualityProfileShared,
     language: QualityProfileLanguage | undefined,
     fieldChanges: FieldChange[],
   ): boolean {
     return diffLanguageOnUpdate(updated, serverMatch, language, fieldChanges);
   }
 
-  protected attachMinUpgradeOnCreate(profile: QualityProfileRadarrResource, minUpgradeFormatScore: number): void {
+  protected attachMinUpgradeOnCreate(profile: QualityProfileShared, minUpgradeFormatScore: number): void {
     attachMinUpgradeOnCreate(profile, minUpgradeFormatScore);
   }
 
   protected diffMinUpgradeOnUpdate(
-    updated: QualityProfileRadarrResource,
-    serverMatch: QualityProfileRadarrResource,
+    updated: QualityProfileShared,
+    serverMatch: QualityProfileShared,
     upgradeAllowed: boolean,
     configMinUpgrade: number | undefined,
     fieldChanges: FieldChange[],
   ): boolean {
     return diffMinUpgradeOnUpdate(updated, serverMatch, upgradeAllowed, configMinUpgrade, fieldChanges);
-  }
-
-  createOnServer(profile: QualityProfileRadarrResource) {
-    return getClient("RADARR").createQualityProfile(profile);
-  }
-
-  updateOnServer(id: string, profile: QualityProfileRadarrResource) {
-    return getClient("RADARR").updateQualityProfile(id, profile);
-  }
-
-  loadFromServer() {
-    return getClient("RADARR").getQualityProfiles();
-  }
-
-  deleteOnServer(qualityProfile: QualityProfileRadarrResource) {
-    return getClient("RADARR").deleteQualityProfile(qualityProfile.id + "");
   }
 }

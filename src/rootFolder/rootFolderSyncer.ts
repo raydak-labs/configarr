@@ -2,9 +2,12 @@ import { ServerCache } from "../cache";
 import { MediaArrType } from "../types/common.types";
 import { InputConfigRootFolder } from "../types/config.types";
 import { RootFolderSyncResult } from "./rootFolder.types";
-import { BaseRootFolderSync, GenericRootFolderSync } from "./rootFolderBase";
+import { BaseRootFolderSync } from "./rootFolderBase";
 import { LidarrRootFolderSync } from "./rootFolderLidarr";
+import { RadarrRootFolderSync } from "./rootFolderRadarr";
 import { ReadarrRootFolderSync } from "./rootFolderReadarr";
+import { SonarrRootFolderSync } from "./rootFolderSonarr";
+import { WhisparrRootFolderSync } from "./rootFolderWhisparr";
 
 export function createRootFolderSync(arrType: MediaArrType): BaseRootFolderSync {
   switch (arrType) {
@@ -12,8 +15,12 @@ export function createRootFolderSync(arrType: MediaArrType): BaseRootFolderSync 
       return new LidarrRootFolderSync();
     case "READARR":
       return new ReadarrRootFolderSync();
-    default:
-      return new GenericRootFolderSync(arrType);
+    case "SONARR":
+      return new SonarrRootFolderSync();
+    case "RADARR":
+      return new RadarrRootFolderSync();
+    case "WHISPARR":
+      return new WhisparrRootFolderSync();
   }
 }
 

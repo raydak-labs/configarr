@@ -1,14 +1,25 @@
 import { Tag } from "../tags/tag.types";
 import { MediaArrType } from "../types/common.types";
 import { InputConfigDelayProfile } from "../types/config.types";
-import { DelayProfileGenericSync } from "./delayProfileGeneric";
 import { DelayProfileLidarrSync } from "./delayProfileLidarr";
+import { DelayProfileRadarrSync } from "./delayProfileRadarr";
+import { DelayProfileReadarrSync } from "./delayProfileReadarr";
+import { DelayProfileSonarrSync } from "./delayProfileSonarr";
+import { DelayProfileWhisparrSync } from "./delayProfileWhisparr";
 
-export function createDelayProfileSync(arrType: MediaArrType): DelayProfileGenericSync | DelayProfileLidarrSync {
-  if (arrType === "LIDARR") {
-    return new DelayProfileLidarrSync();
+export function createDelayProfileSync(arrType: MediaArrType) {
+  switch (arrType) {
+    case "LIDARR":
+      return new DelayProfileLidarrSync();
+    case "SONARR":
+      return new DelayProfileSonarrSync();
+    case "RADARR":
+      return new DelayProfileRadarrSync();
+    case "READARR":
+      return new DelayProfileReadarrSync();
+    case "WHISPARR":
+      return new DelayProfileWhisparrSync();
   }
-  return new DelayProfileGenericSync(arrType);
 }
 
 export const deleteAdditionalDelayProfiles = async (arrType: MediaArrType) => {

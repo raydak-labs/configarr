@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { GenericRootFolderSync } from "./rootFolderBase";
+import { RadarrRootFolderSync } from "./rootFolderRadarr";
 import { getClient } from "../clients/client";
 import { ServerCache } from "../cache";
 
@@ -7,7 +7,7 @@ vi.mock("../clients/client", () => ({
   getClient: vi.fn(),
 }));
 
-describe("GenericRootFolderSync", () => {
+describe("PathRootFolderSync", () => {
   const mockApi = {
     getRootfolders: vi.fn(),
   };
@@ -24,7 +24,7 @@ describe("GenericRootFolderSync", () => {
     it("should handle string root folders", async () => {
       mockApi.getRootfolders.mockResolvedValue(["/existing"]);
 
-      const sync = new GenericRootFolderSync("RADARR");
+      const sync = new RadarrRootFolderSync();
       const result = await sync.calculateDiff(["/existing", "/new"], serverCache);
 
       expect(result).toEqual({
@@ -37,7 +37,7 @@ describe("GenericRootFolderSync", () => {
     it("should detect root folders not available anymore", async () => {
       mockApi.getRootfolders.mockResolvedValue(["/old-folder"]);
 
-      const sync = new GenericRootFolderSync("RADARR");
+      const sync = new RadarrRootFolderSync();
       const result = await sync.calculateDiff(["/new-folder"], serverCache);
 
       expect(result).toEqual({
@@ -50,7 +50,7 @@ describe("GenericRootFolderSync", () => {
     it("should handle mixed string and object root folders", async () => {
       mockApi.getRootfolders.mockResolvedValue(["/string-folder", "/object-folder"]);
 
-      const sync = new GenericRootFolderSync("RADARR");
+      const sync = new RadarrRootFolderSync();
       const result = await sync.calculateDiff(
         [
           "/string-folder",
@@ -70,7 +70,7 @@ describe("GenericRootFolderSync", () => {
     it("should handle empty config", async () => {
       mockApi.getRootfolders.mockResolvedValue(["/server-folder"]);
 
-      const sync = new GenericRootFolderSync("RADARR");
+      const sync = new RadarrRootFolderSync();
       const result = await sync.calculateDiff([], serverCache);
 
       expect(result).toEqual({
@@ -83,7 +83,7 @@ describe("GenericRootFolderSync", () => {
     it("should handle null/undefined config", async () => {
       mockApi.getRootfolders.mockResolvedValue([]);
 
-      const sync = new GenericRootFolderSync("RADARR");
+      const sync = new RadarrRootFolderSync();
       const result = await sync.calculateDiff(null as any, serverCache);
 
       expect(result).toBeNull();
@@ -92,7 +92,7 @@ describe("GenericRootFolderSync", () => {
 
   describe("resolveRootFolderConfig", () => {
     it("should handle string config for non-Lidarr", async () => {
-      const sync = new GenericRootFolderSync("RADARR");
+      const sync = new RadarrRootFolderSync();
       const result = await sync.resolveRootFolderConfig("/path/to/folder", serverCache);
       expect(result).toEqual({ path: "/path/to/folder" });
     });

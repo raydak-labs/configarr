@@ -1,5 +1,4 @@
 import type { CustomFormatRequest } from "../customFormats/customFormat.types";
-import type { MediaDownloadClientResource } from "../downloadClients/downloadClient.types";
 import type { Tag } from "../tags/tag.types";
 
 export type { Tag };
@@ -14,7 +13,9 @@ export interface TagsClient<T extends Tag = Tag> {
   createTag(tag: T): Promise<T>;
 }
 
-export interface DownloadClientsClient<DownloadClient = MediaDownloadClientResource> {
+export interface DownloadClientsClient<
+  DownloadClient extends { id?: number; name?: string | null } = { id?: number; name?: string | null; implementation?: string | null },
+> {
   getDownloadClientSchema(): Promise<DownloadClient[]>;
   getDownloadClients(): Promise<DownloadClient[]>;
   createDownloadClient(client: DownloadClient): Promise<DownloadClient>;
@@ -40,4 +41,28 @@ export interface CustomFormatsClient<CustomFormat extends { id?: number; name?: 
 export interface QualityDefinitionsClient<QualityDefinition extends { id?: number }> {
   getQualityDefinitions(): Promise<QualityDefinition[]>;
   updateQualityDefinitions(definitions: QualityDefinition[]): Promise<QualityDefinition[]>;
+}
+
+export interface DelayProfilesWriter<DelayProfile> {
+  createDelayProfile(profile: DelayProfile): Promise<unknown>;
+  updateDelayProfile(id: string, profile: DelayProfile): Promise<unknown>;
+  deleteDelayProfile(id: string): Promise<void>;
+}
+
+export interface DelayProfilesClient<DelayProfile> extends DelayProfilesWriter<DelayProfile> {
+  getDelayProfiles(): Promise<DelayProfile[]>;
+}
+
+export interface RootFoldersClient<RootFolder extends { id?: number; path?: string | null } = { id?: number; path?: string | null }> {
+  getRootfolders(): Promise<RootFolder[]>;
+  addRootFolder(data: RootFolder): Promise<unknown>;
+  updateRootFolder(id: string, data: RootFolder): Promise<unknown>;
+  deleteRootFolder(id: string): Promise<unknown>;
+}
+
+export interface MediaManagementClient<Naming extends { id?: number }, Management extends { id?: number }> {
+  getNaming(): Promise<Naming>;
+  updateNaming(id: string, data: Naming): Promise<unknown>;
+  getMediamanagement(): Promise<Management>;
+  updateMediamanagement(id: string, data: Management): Promise<unknown>;
 }

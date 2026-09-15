@@ -5,7 +5,7 @@ initEnvs();
 
 import fs from "node:fs";
 import { CustomFormatRequest } from "./customFormats/customFormat.types";
-import { QualityProfilePayload } from "./qualityProfiles/qualityProfile.types";
+import { QualityProfileShared } from "./qualityProfiles/qualityProfile.types";
 import { ServerCache } from "./cache";
 import { configureApi, getClient, unsetApi } from "./clients/client";
 import { getConfig, mergeConfigsAndTemplates } from "./config";
@@ -17,39 +17,23 @@ import {
   manageCf,
 } from "./customFormats/customFormats";
 import { delayProfilesToDiffEntries } from "./delayProfiles/delayProfileBase";
-import { calculateDelayProfilesDiff, createDelayProfileSync } from "./delayProfiles/delayProfileSyncer";
+import { createDelayProfileSync } from "./delayProfiles/delayProfileSyncer";
 import { syncDownloadClients } from "./downloadClients/downloadClientSyncer";
 import { syncProwlarrProviders } from "./prowlarr/prowlarrSyncer";
 import { downloadClientConfigDiffToDiffEntries, syncDownloadClientConfig } from "./downloadClientConfig/downloadClientConfigSyncer";
 import { syncRemotePaths } from "./remotePaths/remotePathSyncer";
 import { syncUiConfig, uiConfigDiffToDiffEntries } from "./uiConfigs/uiConfigSyncer";
 import { logger, logHeading, logInstanceHeading } from "./logger";
-import {
-  calculateMediamanagementDiff,
-  calculateNamingDiff,
-  mediamanagementDiffToDiffEntries,
-  namingDiffToDiffEntries,
-  updateMediamanagementOnServer,
-  updateNamingOnServer,
-} from "./mediaManagement/mediaManagement";
+import { createMediaManagementSync } from "./mediaManagement/mediaManagement";
+import { mediamanagementDiffToDiffEntries, namingDiffToDiffEntries } from "./mediaManagement/mediaManagementBase";
 import { qualityDefinitionsToDiffEntries } from "./qualityDefinitions/qualityDefinitionBase";
-import {
-  calculateQualityDefinitionDiff,
-  loadQualityDefinitionFromServer,
-  updateQualityDefinitionsOnServer,
-} from "./qualityDefinitions/qualityDefinitionSyncer";
+import { createQualityDefinitionSync, loadQualityDefinitionFromServer } from "./qualityDefinitions/qualityDefinitionSyncer";
 import { DiffCollector } from "./diffReport/diffCollector";
 import { ConsoleDiffFormatter } from "./diffReport/formatters/consoleFormatter";
 import { writeJsonDiffReport } from "./diffReport/formatters/jsonFormatter";
 import { InstanceDiffReport } from "./diffReport/diffReport.types";
 import { checkForConflictingCFs, getUnmanagedQualityProfiles, qualityProfilesToDiffEntries } from "./qualityProfiles/qualityProfileBase";
-import {
-  calculateQualityProfilesDiff,
-  createQualityProfileOnServer,
-  deleteQualityProfile,
-  loadQualityProfilesFromServer,
-  updateQualityProfileOnServer,
-} from "./qualityProfiles/qualityProfileSyncer";
+import { createQualityProfileSync, loadQualityProfilesFromServer } from "./qualityProfiles/qualityProfileSyncer";
 import { syncMetadataProfiles } from "./metadataProfiles/metadataProfileSyncer";
 import { cloneRecyclarrTemplateRepo } from "./recyclarr-importer";
 import { loadServerTags } from "./tags/tags";
@@ -70,15 +54,20 @@ const pipeline = async (
 ): Promise<InstanceDiffReport> => {
   const api = getClient(arrType);
   const diffCollector = new DiffCollector();
+  const qdSync = createQualityDefinitionSync(arrType);
+  const mmSync = createMediaManagementSync(arrType);
+  const qpSync = createQualityProfileSync(arrType);
+  const delaySync = createDelayProfileSync(arrType);
 
   const system = await api.getSystemStatus();
   logger.info(`System status: ${JSON.stringify(system)}`);
 
   const serverCFs = await loadServerCustomFormats(arrType);
-  const serverQD = await loadQualityDefinitionFromServer(arrType);
+  const serverQD = getEnvs().LOAD_LOCAL_SAMPLES ? await loadQualityDefinitionFromServer(arrType) : await qdSync.loadFromServer();
   const languages = await getClient(arrType).getLanguages();
 
-  const serverCache = new ServerCache(serverQD, [] as QualityProfilePayload[], serverCFs, languages);
+  const emptyQualityProfiles: QualityProfileShared[] = [];
+  const serverCache = new ServerCache(serverQD, emptyQualityProfiles, serverCFs, languages);
 
   logger.info(`Server objects: CustomFormats ${serverCFs.length}`);
 
@@ -185,18 +174,17 @@ const pipeline = async (
       mergedQDs.push(...config.quality_definition.qualities);
     }
 
-    const { changeMap, restData } = calculateQualityDefinitionDiff(arrType, serverCache.qualityDefinitions, mergedQDs);
+    const writeQd = !getEnvs().DRY_RUN;
+    const { changeMap } = await qdSync.persist(serverCache.qualityDefinitions, mergedQDs, writeQd);
 
     if (changeMap.size > 0) {
       diffCollector.add(qualityDefinitionsToDiffEntries(changeMap));
 
-      if (getEnvs().DRY_RUN) {
+      if (!writeQd) {
         logger.info("DryRun: Would update QualityDefinitions.");
       } else {
         logger.info(`Diffs in quality definitions found ${changeMap.values()}`);
-        await updateQualityDefinitionsOnServer(arrType, restData);
-        // refresh QDs
-        serverCache.qualityDefinitions = await loadQualityDefinitionFromServer(arrType);
+        serverCache.qualityDefinitions = await qdSync.loadFromServer();
         logger.info(`Updated QualityDefinitions`);
       }
     } else {
@@ -206,28 +194,27 @@ const pipeline = async (
     logger.debug(`No QualityDefinition configured.`);
   }
 
-  const namingDiff = await calculateNamingDiff(arrType, config.media_naming_api);
+  const write = !getEnvs().DRY_RUN;
+  const namingDiff = await mmSync.persistNaming(config.media_naming_api, write);
 
   if (namingDiff) {
     diffCollector.add(namingDiffToDiffEntries(namingDiff));
 
-    if (getEnvs().DRY_RUN) {
+    if (!write) {
       logger.info("DryRun: Would update MediaNaming.");
     } else {
-      await updateNamingOnServer(arrType, namingDiff.updatedData.id! + "", namingDiff.updatedData);
       logger.info(`Updated MediaNaming`);
     }
   }
 
-  const managementDiff = await calculateMediamanagementDiff(arrType, config.media_management);
+  const managementDiff = await mmSync.persistMediamanagement(config.media_management, write);
 
   if (managementDiff) {
     diffCollector.add(mediamanagementDiffToDiffEntries(managementDiff));
 
-    if (getEnvs().DRY_RUN) {
+    if (!write) {
       logger.info("DryRun: Would update MediaManagement.");
     } else {
-      await updateMediamanagementOnServer(arrType, managementDiff.updatedData.id! + "", managementDiff.updatedData);
       logger.info(`Updated MediaManagement`);
     }
   }
@@ -235,13 +222,13 @@ const pipeline = async (
   const uiConfigResult = await syncUiConfig(arrType, config.ui_config);
   diffCollector.add(uiConfigDiffToDiffEntries(uiConfigResult));
 
-  const serverQP = await loadQualityProfilesFromServer(arrType);
+  const serverQP = getEnvs().LOAD_LOCAL_SAMPLES ? await loadQualityProfilesFromServer(arrType) : await qpSync.loadFromServer();
   serverCache.qualityProfiles = serverQP;
 
   logger.info(`Server objects: QualityProfiles ${serverQP.length}`);
 
   // calculate diff from server <-> what we want to be there
-  const { changedQPs, create, noChanges, changes: qpChanges } = await calculateQualityProfilesDiff(arrType, mergedCFs, config, serverCache);
+  const { changedQPs, create, noChanges, changes: qpChanges } = await qpSync.calculateQualityProfilesDiff(mergedCFs, config, serverCache);
 
   diffCollector.add(qualityProfilesToDiffEntries(create, changedQPs, qpChanges));
 
@@ -253,29 +240,11 @@ const pipeline = async (
 
   logger.info(`QualityProfiles: Create: ${create.length}, Update: ${changedQPs.length}, Unchanged: ${noChanges.length}`);
 
-  if (!getEnvs().DRY_RUN) {
-    for (const element of create) {
-      try {
-        const newProfile = await createQualityProfileOnServer(arrType, element);
-        logger.info(`Created QualityProfile: ${newProfile.name}`);
-      } catch (error: any) {
-        logger.error(`Failed creating QualityProfile (${element.name})`);
-        throw error;
-      }
-    }
-
-    for (const element of changedQPs) {
-      try {
-        const newProfile = await updateQualityProfileOnServer(arrType, "" + element.id, element);
-        logger.info(`Updated QualityProfile: ${newProfile.name}`);
-      } catch (error: any) {
-        logger.error(`Failed updating QualityProfile (${element.name})`);
-        throw error;
-      }
-    }
-  } else if (create.length > 0 || changedQPs.length > 0) {
+  const writeQualityProfiles = !getEnvs().DRY_RUN;
+  if (!writeQualityProfiles && (create.length > 0 || changedQPs.length > 0)) {
     logger.info("DryRun: Would create/update QualityProfiles.");
   }
+  await qpSync.persist({ create, changedQPs, noChanges, changes: qpChanges }, writeQualityProfiles);
 
   if (config.delete_unmanaged_quality_profiles?.enabled) {
     const unmanagedQPs = getUnmanagedQualityProfiles(serverCache.qualityProfiles, config.quality_profiles);
@@ -294,7 +263,8 @@ const pipeline = async (
           "This QualityProfile will be deleted:",
         );
         for (const element of qpsToDelete) {
-          await deleteQualityProfile(arrType, element);
+          await qpSync.deleteOnServer(element);
+          logger.info(`Deleted QP: '${element.name || element.id}'`);
         }
       }
     }
@@ -314,7 +284,7 @@ const pipeline = async (
   ) {
     logger.debug(`Config 'delay_profiles' not specified. Ignoring.`);
   } else {
-    const delayProfilesDiff = await calculateDelayProfilesDiff(arrType, config.delay_profiles, serverCache.tags);
+    const delayProfilesDiff = await delaySync.calculateDiff(config.delay_profiles, serverCache.tags);
 
     if (delayProfilesDiff) {
       diffCollector.add(delayProfilesToDiffEntries(delayProfilesDiff));
@@ -324,8 +294,6 @@ const pipeline = async (
       if (getEnvs().DRY_RUN) {
         logger.info("DryRun: Would update DelayProfiles.");
       } else {
-        const delaySync = createDelayProfileSync(arrType);
-
         if (delayProfilesDiff.defaultProfileChanged && delayProfilesDiff.defaultProfile) {
           logger.info(`Updating default DelayProfile`);
           await delaySync.updateDefaultFromConfig(delayProfilesDiff.defaultProfile, serverCache.tags);
