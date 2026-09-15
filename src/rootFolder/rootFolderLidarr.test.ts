@@ -282,5 +282,28 @@ describe("LidarrRootFolderSync", () => {
       expect(result?.changed).toHaveLength(1);
       expect(result?.changed[0]?.fieldChanges).toContainEqual({ field: "name", from: "old-name", to: "new-name" });
     });
+
+    it("does not treat omitted monitor as a change against the server default", async () => {
+      mockApi.getRootfolders.mockResolvedValue([
+        {
+          path: "/music",
+          id: 1,
+          name: "My Music",
+          defaultMetadataProfileId: 10,
+          defaultQualityProfileId: 1,
+          defaultMonitorOption: "all",
+          defaultNewItemMonitorOption: "all",
+          defaultTags: [],
+        },
+      ]);
+
+      const sync = new LidarrRootFolderSync();
+      const result = await sync.calculateDiff(
+        [{ path: "/music", name: "My Music", metadata_profile: "Standard", quality_profile: "Any" }],
+        serverCache,
+      );
+
+      expect(result).toBeNull();
+    });
   });
 });

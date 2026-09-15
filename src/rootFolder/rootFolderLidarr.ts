@@ -5,7 +5,7 @@ import { FieldChange } from "../diffReport/diffReport.types";
 import { InputConfigRootFolderLidarr } from "../types/config.types";
 import { compareObjectsCarr, toEnumOrThrow } from "../util";
 import { RootFolderDiff } from "./rootFolder.types";
-import { BaseRootFolderSync, nameIdMap } from "./rootFolderBase";
+import { BaseRootFolderSync, definedFields, nameIdMap } from "./rootFolderBase";
 
 export class LidarrRootFolderSync extends BaseRootFolderSync<InputConfigRootFolderLidarr> {
   private profileIdMaps: { quality: Map<string, number>; metadata: Map<string, number> } | null = null;
@@ -113,7 +113,7 @@ export class LidarrRootFolderSync extends BaseRootFolderSync<InputConfigRootFold
       defaultTags: serverFolder.defaultTags,
     };
 
-    return compareObjectsCarr(serverFields, configFields);
+    return compareObjectsCarr(serverFields, definedFields(configFields));
   }
 
   async calculateDiff(

@@ -52,7 +52,7 @@ function calculateDiff(configs: InputConfigRemotePath[], serverMappings: RemoteP
     const serverMapping = serverMap.get(key);
     if (!serverMapping) {
       toCreate.push(config);
-    } else if (serverMapping.localPath !== config.local_path) {
+    } else if (normalizePath(serverMapping.localPath ?? "") !== normalizePath(config.local_path)) {
       if (serverMapping.id) {
         toUpdate.push({ id: serverMapping.id, config, server: serverMapping });
       }

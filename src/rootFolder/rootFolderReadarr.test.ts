@@ -295,5 +295,31 @@ describe("ReadarrRootFolderSync", () => {
       expect(result?.changed[0]?.server).toEqual({ path: "/server-folder", id: 1, name: "Server Folder" });
       expect(result?.changed[0]?.fieldChanges.length).toBeGreaterThan(0);
     });
+
+    it("does not treat omitted calibre/monitor fields as changes against server defaults", async () => {
+      mockApi.getRootfolders.mockResolvedValue([
+        {
+          path: "/books",
+          id: 1,
+          name: "App",
+          defaultMetadataProfileId: 10,
+          defaultQualityProfileId: 1,
+          defaultMonitorOption: "all",
+          defaultNewItemMonitorOption: "all",
+          defaultTags: [],
+          isCalibreLibrary: false,
+          port: 0,
+          useSsl: false,
+        },
+      ]);
+
+      const sync = new ReadarrRootFolderSync();
+      const result = await sync.calculateDiff(
+        [{ path: "/books", name: "App", metadata_profile: "Standard", quality_profile: "eBook" }],
+        serverCache,
+      );
+
+      expect(result).toBeNull();
+    });
   });
 });

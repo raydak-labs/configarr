@@ -5,7 +5,7 @@ import { FieldChange } from "../diffReport/diffReport.types";
 import { InputConfigRootFolderReadarr } from "../types/config.types";
 import { compareObjectsCarr, toEnumOrThrow } from "../util";
 import { RootFolderDiff } from "./rootFolder.types";
-import { BaseRootFolderSync, nameIdMap } from "./rootFolderBase";
+import { BaseRootFolderSync, definedFields, nameIdMap } from "./rootFolderBase";
 
 export class ReadarrRootFolderSync extends BaseRootFolderSync<InputConfigRootFolderReadarr> {
   private profileIdMaps: { quality: Map<string, number>; metadata: Map<string, number> } | null = null;
@@ -148,7 +148,7 @@ export class ReadarrRootFolderSync extends BaseRootFolderSync<InputConfigRootFol
       useSsl: serverFolder.useSsl,
     };
 
-    return compareObjectsCarr(serverFields, configFields);
+    return compareObjectsCarr(serverFields, definedFields(configFields));
   }
 
   async calculateDiff(

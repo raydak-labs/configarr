@@ -151,6 +151,24 @@ describe("remotePathSyncer", () => {
       expect(mockRadarrClient.createRemotePathMapping).not.toHaveBeenCalled();
     });
 
+    it("should treat local_path trailing slashes as unchanged", async () => {
+      mockRadarrClient.getRemotePathMappings.mockResolvedValue([
+        { id: 1, host: "transmission", remotePath: "/downloads/tv", localPath: "/downloads/1/" },
+      ]);
+
+      const result = await syncRemotePaths("SONARR", {
+        custom_formats: [],
+        quality_profiles: [],
+        download_clients: {
+          remote_paths: [{ host: "transmission", remote_path: "/downloads/tv", local_path: "/downloads/1" }],
+        },
+      } as any);
+
+      expect(result.unchanged).toBe(1);
+      expect(result.updated).toBe(0);
+      expect(mockRadarrClient.updateRemotePathMapping).not.toHaveBeenCalled();
+    });
+
     it("should delete all mappings when delete_unmanaged_remote_paths is true with empty array", async () => {
       const serverMappings: RemotePathMappingResource[] = [
         { id: 1, host: "transmission", remotePath: "/downloads", localPath: "/data/downloads" },

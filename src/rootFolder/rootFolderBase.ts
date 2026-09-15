@@ -16,6 +16,11 @@ export function nameIdMap(profiles: { name?: string | null; id?: number }[]): Ma
   return map;
 }
 
+/** Drop undefined so compareObjectsCarr does not treat omitted YAML fields as "set to undefined". */
+export function definedFields<T extends Record<string, unknown>>(obj: T): Partial<T> {
+  return Object.fromEntries(Object.entries(obj).filter(([, value]) => value !== undefined)) as Partial<T>;
+}
+
 export function rootFolderDiffToDiffEntries(diff: RootFolderDiff): DiffEntry[] {
   const entries: DiffEntry[] = diff.missingOnServer.map((folder) => ({
     resourceType: "RootFolder",

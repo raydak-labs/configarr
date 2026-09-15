@@ -1,0 +1,30 @@
+# Shared by every media *arr in this example: MM, naming, delay profiles.
+# download_clients / ui_config / root_folders stay in config.yml (template include does not merge those).
+media_management:
+  recycleBin: "/tmp"
+
+media_naming_api:
+  replaceIllegalCharacters: true
+
+delay_profiles:
+  default:
+    enableUsenet: true
+    enableTorrent: false
+    preferredProtocol: usenet
+    usenetDelay: 10
+    torrentDelay: 0
+    bypassIfHighestQuality: false
+    bypassIfAboveCustomFormatScore: false
+    minimumCustomFormatScore: 0
+  additional:
+    - enableUsenet: true
+      enableTorrent: false
+      preferredProtocol: usenet
+      usenetDelay: 10
+      torrentDelay: 0
+      bypassIfHighestQuality: false
+      bypassIfAboveCustomFormatScore: false
+      minimumCustomFormatScore: 0
+      order: 1
+      tags:
+        - delayprofiletest

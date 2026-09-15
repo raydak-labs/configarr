@@ -9,6 +9,8 @@ services:
       - TZ=Etc/UTC
     volumes:
       - sonarr:/config
+      - sonarr-download1:/downloads/1
+      - sonarr-download2:/downloads/2
       - ${PWD}/sonarr.xml:/config/config.xml:rw
     ports:
       - 6500:8989
@@ -45,7 +47,10 @@ services:
       - TZ=Etc/UTC
     volumes:
       - whisparr:/config
+      - whisparr-download1:/downloads/1
+      - whisparr-download2:/downloads/2
       - ${PWD}/whisparr.xml:/config/config.xml:rw
+    entrypoint: ["/bin/sh", "-c", "mkdir -p /config/library && exec /init"]
     restart: unless-stopped
 
   # experimental
@@ -59,6 +64,8 @@ services:
       - TZ=Etc/UTC
     volumes:
       - readarr:/config
+      - readarr-download1:/downloads/1
+      - readarr-download2:/downloads/2
       - ${PWD}/readarr.xml:/config/config.xml:rw
     ports:
       - 6503:8787
@@ -75,6 +82,8 @@ services:
       - TZ=Etc/UTC
     volumes:
       - lidarr:/config
+      - lidarr-download1:/downloads/1
+      - lidarr-download2:/downloads/2
       - ${PWD}/lidarr.xml:/config/config.xml:rw
     ports:
       - 6504:8686
@@ -116,5 +125,13 @@ volumes:
   readarr:
   lidarr:
   prowlarr:
+  sonarr-download1:
+  sonarr-download2:
   radarr-download1:
   radarr-download2:
+  whisparr-download1:
+  whisparr-download2:
+  readarr-download1:
+  readarr-download2:
+  lidarr-download1:
+  lidarr-download2:
