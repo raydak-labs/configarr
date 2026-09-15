@@ -26,6 +26,7 @@ import {
   QualityProfilesClient,
   SystemClient,
   TagsClient,
+  MetadataProfilesClient,
 } from "./capabilities";
 export class ReadarrClient
   implements
@@ -34,7 +35,8 @@ export class ReadarrClient
     DownloadClientsClient<DownloadClientResource>,
     QualityProfilesClient<QualityProfileResource>,
     CustomFormatsClient,
-    QualityDefinitionsClient<QualityDefinitionResource>
+    QualityDefinitionsClient<QualityDefinitionResource>,
+    MetadataProfilesClient<MetadataProfileResource>
 {
   private api!: Api<unknown>;
 

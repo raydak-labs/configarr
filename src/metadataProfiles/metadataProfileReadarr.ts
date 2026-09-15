@@ -1,6 +1,5 @@
 import { MetadataProfileResource } from "../__generated__/readarr/data-contracts";
 import { ServerCache } from "../cache";
-import { ReadarrClient } from "../clients/readarr-client";
 import { getClient } from "../clients/client";
 import { InputConfigReadarrMetadataProfile, InputConfigMetadataProfile } from "../types/config.types";
 import { compareObjectsCarr } from "../util";
@@ -9,22 +8,12 @@ import { MetadataProfileDiff } from "./metadataProfile.types";
 import { BaseMetadataProfileSync } from "./metadataProfileBase";
 
 export class ReadarrMetadataProfileSync extends BaseMetadataProfileSync<MetadataProfileResource> {
-  protected api: ReadarrClient = getClient("READARR");
+  protected getApi() {
+    return getClient("READARR");
+  }
 
   protected getArrType(): "READARR" {
     return "READARR";
-  }
-
-  protected createMetadataProfile(resolvedConfig: MetadataProfileResource): Promise<MetadataProfileResource> {
-    return this.api.createMetadataProfile(resolvedConfig);
-  }
-
-  protected updateMetadataProfile(id: string, resolvedConfig: MetadataProfileResource): Promise<MetadataProfileResource> {
-    return this.api.updateMetadataProfile(id, resolvedConfig);
-  }
-
-  protected deleteProfile(id: string): Promise<void> {
-    return this.api.deleteMetadataProfile(id);
   }
 
   private normalizeReadarrAllowedLanguages(value: string | string[] | null | undefined): string | null {
@@ -66,10 +55,6 @@ export class ReadarrMetadataProfileSync extends BaseMetadataProfileSync<Metadata
     }
 
     return unique.join(",");
-  }
-
-  protected async loadFromServer(): Promise<MetadataProfileResource[]> {
-    return await this.api.getMetadataProfiles();
   }
 
   public async resolveConfig(config: InputConfigMetadataProfile, serverCache: ServerCache): Promise<MetadataProfileResource> {

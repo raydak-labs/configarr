@@ -1,6 +1,5 @@
 import { ServerCache } from "../cache";
-import { LidarrClient } from "../clients/lidarr-client";
-import { ReadarrClient } from "../clients/readarr-client";
+import type { MetadataProfilesClient } from "../clients/capabilities";
 import { getEnvs } from "../env";
 import { logger } from "../logger";
 import { ArrType } from "../types/common.types";
@@ -23,20 +22,34 @@ export function metadataProfileDiffToDiffEntries(diff: MetadataProfileDiff): Dif
 }
 
 // Base class for metadata profile synchronization
-export abstract class BaseMetadataProfileSync<T extends BaseMetadataProfileResource = any> {
-  protected abstract api: LidarrClient | ReadarrClient;
+export abstract class BaseMetadataProfileSync<T extends BaseMetadataProfileResource = BaseMetadataProfileResource> {
+  protected abstract getApi(): MetadataProfilesClient<T>;
   protected logger = logger;
+  protected loadedFromServer: T[] | null = null;
 
-  protected abstract loadFromServer(): Promise<T[]>;
   protected abstract getArrType(): ArrType;
-
-  protected abstract createMetadataProfile(resolvedConfig: T): Promise<T>;
-  protected abstract updateMetadataProfile(id: string, resolvedConfig: T): Promise<T>;
-  protected abstract deleteProfile(id: string): Promise<void>;
 
   abstract calculateDiff(profiles: InputConfigMetadataProfile[], serverCache: ServerCache): Promise<MetadataProfileDiff<T> | null>;
 
   public abstract resolveConfig(config: InputConfigMetadataProfile, serverCache: ServerCache): Promise<T>;
+
+  protected async loadFromServer(): Promise<T[]> {
+    const profiles = await this.getApi().getMetadataProfiles();
+    this.loadedFromServer = profiles;
+    return profiles;
+  }
+
+  protected createMetadataProfile(resolvedConfig: T) {
+    return this.getApi().createMetadataProfile(resolvedConfig);
+  }
+
+  protected updateMetadataProfile(id: string, resolvedConfig: T) {
+    return this.getApi().updateMetadataProfile(id, resolvedConfig);
+  }
+
+  protected deleteProfile(id: string) {
+    return this.getApi().deleteMetadataProfile(id);
+  }
 
   /**
    * Sync metadata profiles - handles add/update and optional deletion
@@ -125,29 +138,27 @@ export abstract class BaseMetadataProfileSync<T extends BaseMetadataProfileResou
     }
 
     const ignoreList = deleteConfig.ignore ?? [];
-    const serverProfiles = await this.loadFromServer();
+    const serverProfiles = this.loadedFromServer ?? (await this.loadFromServer());
     const managedNames = new Set(managedProfiles.map((p) => p.name));
     const ignoreSet = new Set(ignoreList);
 
     // Always ignore the built-in 'None' metadata profile by default (e.g. Readarr, Lidarr).
     ignoreSet.add("None");
 
-    const toDelete = serverProfiles.filter((p: any) => p.name && !managedNames.has(p.name) && !ignoreSet.has(p.name));
+    const toDelete = serverProfiles.filter((p) => p.name && !managedNames.has(p.name) && !ignoreSet.has(p.name));
 
     if (toDelete.length === 0) {
       return { removed: 0, diffEntries: [] };
     }
 
-    const diffEntries: DiffEntry[] = toDelete.map((p: any) => ({
+    const diffEntries: DiffEntry[] = toDelete.map((p) => ({
       resourceType: "MetadataProfile",
-      name: p.name,
+      name: p.name!,
       action: "delete" as const,
     }));
 
     if (getEnvs().DRY_RUN) {
-      this.logger.info(
-        `DryRun: Would delete ${toDelete.length} unmanaged MetadataProfiles: ${toDelete.map((p: any) => p.name).join(", ")}`,
-      );
+      this.logger.info(`DryRun: Would delete ${toDelete.length} unmanaged MetadataProfiles: ${toDelete.map((p) => p.name).join(", ")}`);
       return { removed: toDelete.length, diffEntries };
     }
 

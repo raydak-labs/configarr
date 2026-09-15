@@ -10,7 +10,7 @@ export interface BaseMetadataProfileResource {
 
 // Shared types for metadata profile operations
 // Generic type T represents the specific MetadataProfileResource type (Lidarr, Readarr, etc.)
-export interface MetadataProfileDiff<T extends BaseMetadataProfileResource = any> {
+export interface MetadataProfileDiff<T extends BaseMetadataProfileResource = BaseMetadataProfileResource> {
   missingOnServer: InputConfigMetadataProfile[];
   changed: Array<{ config: InputConfigMetadataProfile; server: T; fieldChanges: FieldChange[] }>;
   noChanges: T[];

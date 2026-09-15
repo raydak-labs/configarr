@@ -1,6 +1,5 @@
 import { MetadataProfileResource } from "../__generated__/lidarr/data-contracts";
 import { ServerCache } from "../cache";
-import { LidarrClient } from "../clients/lidarr-client";
 import { getClient } from "../clients/client";
 import { InputConfigLidarrMetadataProfile, InputConfigMetadataProfile } from "../types/config.types";
 import { FieldChange } from "../diffReport/diffReport.types";
@@ -8,26 +7,12 @@ import { MetadataProfileDiff } from "./metadataProfile.types";
 import { BaseMetadataProfileSync } from "./metadataProfileBase";
 
 export class LidarrMetadataProfileSync extends BaseMetadataProfileSync<MetadataProfileResource> {
-  protected api: LidarrClient = getClient("LIDARR");
+  protected getApi() {
+    return getClient("LIDARR");
+  }
 
   protected getArrType(): "LIDARR" {
     return "LIDARR";
-  }
-
-  protected createMetadataProfile(resolvedConfig: MetadataProfileResource): Promise<MetadataProfileResource> {
-    return this.api.createMetadataProfile(resolvedConfig);
-  }
-
-  protected updateMetadataProfile(id: string, resolvedConfig: MetadataProfileResource): Promise<MetadataProfileResource> {
-    return this.api.updateMetadataProfile(id, resolvedConfig);
-  }
-
-  protected deleteProfile(id: string): Promise<void> {
-    return this.api.deleteMetadataProfile(id);
-  }
-
-  protected async loadFromServer(): Promise<MetadataProfileResource[]> {
-    return await this.api.getMetadataProfiles();
   }
 
   private validateProfile(config: InputConfigLidarrMetadataProfile): void {
@@ -85,7 +70,7 @@ export class LidarrMetadataProfileSync extends BaseMetadataProfileSync<MetadataP
     let schemaTemplate: MetadataProfileResource | undefined;
     if (!existingProfile) {
       try {
-        schemaTemplate = await this.api.getMetadataProfileSchema!();
+        schemaTemplate = await getClient("LIDARR").getMetadataProfileSchema();
         this.logger.debug(`Fetched schema for new profile '${lidarrConfig.name}'`);
       } catch (error) {
         this.logger.warn(`Failed to fetch schema for new profile, will try simple structure: ${error}`);

@@ -66,3 +66,10 @@ export interface MediaManagementClient<Naming extends { id?: number }, Managemen
   getMediamanagement(): Promise<Management>;
   updateMediamanagement(id: string, data: Management): Promise<unknown>;
 }
+
+export interface MetadataProfilesClient<T extends { id?: number; name?: string | null }> {
+  getMetadataProfiles(): Promise<T[]>;
+  createMetadataProfile(profile: T): Promise<T>;
+  updateMetadataProfile(id: string, profile: T): Promise<T>;
+  deleteMetadataProfile(id: string): Promise<void>;
+}
