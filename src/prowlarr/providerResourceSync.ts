@@ -261,11 +261,13 @@ export abstract class ProviderResourceSync<
     // Omitted `tags` means "do not manage" - only diff when the user set it explicitly,
     // otherwise an update would wipe tags added on the server.
     if (config.tags !== undefined) {
-      const { ids: resolvedTagIds } = this.resolveTagNamesToIds(config.tags, serverTags);
-      const sortedConfigTagIds = [...resolvedTagIds].sort();
+      const { ids, missingTags } = this.resolveTagNamesToIds(config.tags, serverTags);
+      // A tag with no id yet is one a dry run would create. Listing it by name keeps the report
+      // honest; dropping it would show an unchanged resource that a real run would retag.
+      const desiredTags = [...[...ids].sort(), ...missingTags];
       const sortedServerTags = [...(server.tags ?? [])].sort();
-      if (JSON.stringify(sortedConfigTagIds) !== JSON.stringify(sortedServerTags)) {
-        changes.push({ field: "tags", from: sortedServerTags, to: sortedConfigTagIds });
+      if (JSON.stringify(desiredTags) !== JSON.stringify(sortedServerTags)) {
+        changes.push({ field: "tags", from: sortedServerTags, to: desiredTags });
       }
     }
 
@@ -365,7 +367,13 @@ export abstract class ProviderResourceSync<
     }
     if (allMissingTags.size === 0) return;
 
-    this.logger.info(`Creating missing tags for ${this.label}s: ${Array.from(allMissingTags).join(", ")}`);
+    const names = Array.from(allMissingTags);
+    if (getEnvs().DRY_RUN) {
+      this.logger.info(`DryRun: Would create missing tags for ${this.label}s: ${names.join(", ")}`);
+      return;
+    }
+
+    this.logger.info(`Creating missing tags for ${this.label}s: ${names.join(", ")}`);
     for (const tagName of allMissingTags) {
       try {
         const newTag = await this.apiClient.createTag({ label: tagName });

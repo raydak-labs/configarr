@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ServerCache } from "../cache";
+import { getEnvs } from "../env";
 import { ExtraProp, ProviderResource, ProviderResourceSync } from "./providerResourceSync";
 
 vi.mock("../env", async (importOriginal) => {
@@ -104,6 +105,8 @@ describe("ProviderResourceSync", () => {
     mockClient.update.mockImplementation(async (_id: string, p: ThingResource) => p);
     mockClient.remove.mockResolvedValue(undefined);
     mockClient.createTag.mockImplementation(async (t: { label: string }) => ({ id: 42, label: t.label }));
+    // mockReturnValue survives clearAllMocks, so the dry-run tests would leak into the rest.
+    vi.mocked(getEnvs).mockReturnValue({ DRY_RUN: false, LOG_LEVEL: "silent", CONFIGARR_VERSION: "test" } as any);
   });
   afterEach(() => vi.clearAllMocks());
 
@@ -277,9 +280,10 @@ describe("ProviderResourceSync", () => {
   });
 
   describe("dry run", () => {
+    const dryRun = () => vi.mocked(getEnvs).mockReturnValue({ DRY_RUN: true, LOG_LEVEL: "silent", CONFIGARR_VERSION: "test" } as any);
+
     it("reports the diff without calling the API", async () => {
-      const { getEnvs } = await import("../env");
-      vi.mocked(getEnvs).mockReturnValue({ DRY_RUN: true, LOG_LEVEL: "silent", CONFIGARR_VERSION: "test" } as any);
+      dryRun();
       mockClient.getAll.mockResolvedValue([{ id: 3, name: "Stale", implementation: "Widget", fields: [], tags: [] }]);
 
       const out = await sync().sync([{ name: "W", type: "Widget", fields: { host: "h" } }], { enabled: true }, cache());
@@ -290,6 +294,36 @@ describe("ProviderResourceSync", () => {
       expect(out.diffEntries).toEqual([
         { resourceType: "Thing", name: "W", action: "create" },
         { resourceType: "Thing", name: "Stale", action: "delete" },
+      ]);
+    });
+
+    it("does not create missing tags", async () => {
+      dryRun();
+
+      await sync().sync([{ name: "W", type: "Widget", tags: ["brand-new"] }], undefined, cache());
+
+      expect(mockClient.createTag).not.toHaveBeenCalled();
+    });
+
+    it("names a tag it would create instead of reporting the resource as unchanged", async () => {
+      dryRun();
+      mockClient.getAll.mockResolvedValue([{ id: 3, name: "W", implementation: "Widget", fields: [], tags: [7] }]);
+
+      const out = await sync().sync(
+        [{ name: "W", type: "Widget", tags: ["existing", "brand-new"] }],
+        undefined,
+        cache([{ id: 7, label: "existing" }]),
+      );
+
+      expect(mockClient.createTag).not.toHaveBeenCalled();
+      expect(mockClient.update).not.toHaveBeenCalled();
+      expect(out.diffEntries).toEqual([
+        {
+          resourceType: "Thing",
+          name: "W",
+          action: "update",
+          fieldChanges: [{ field: "tags", from: [7], to: [7, "brand-new"] }],
+        },
       ]);
     });
   });

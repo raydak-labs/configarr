@@ -89,6 +89,11 @@ In a dry run, a profile that would be created has no id yet. An indexer referenc
 to undefined, which drops `appProfileId` from that indexer's comparison rather than inventing an
 id and reporting a change that is not real.
 
+Tags work the same way. A dry run creates none, so a config tag that is not on the server has no
+id to compare, and the provider diff lists it by name alongside the ids it did resolve
+(`tags: [7] -> [7, "new-tag"]`). Dropping it instead would report an unchanged resource that a
+real run would go on to retag.
+
 Names are capped at 100 characters and duplicate identity keys within a section are rejected.
 
 ## Error model
