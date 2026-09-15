@@ -1,18 +1,18 @@
-import { MergedQualityProfileResource, MergedTagResource } from "./types/merged.types";
-import { CustomFormatLike, LanguageLike, QualityDefinitionLike } from "./clients/capabilities";
+import { MergedTagResource } from "./types/merged.types";
+import { CustomFormatLike, LanguageLike, QualityDefinitionLike, QualityProfileLike } from "./clients/capabilities";
 import { logger } from "./logger";
 import type { DownloadClientResource } from "./types/download-client.types";
 
 export class ServerCache {
   private cache: Record<string, any> = {};
   private _qd: QualityDefinitionLike[];
-  private _qp: MergedQualityProfileResource[];
+  private _qp: QualityProfileLike[];
   private _cf: CustomFormatLike[];
   private _tags: MergedTagResource[] = [];
   private _languages: LanguageLike[];
   private _downloadClientSchema: DownloadClientResource[] | null = null;
 
-  constructor(qd: QualityDefinitionLike[], qp: MergedQualityProfileResource[], cf: CustomFormatLike[], languages: LanguageLike[]) {
+  constructor(qd: QualityDefinitionLike[], qp: QualityProfileLike[], cf: CustomFormatLike[], languages: LanguageLike[]) {
     this._qd = qd;
     this._qp = qp;
     this._cf = cf;
@@ -44,7 +44,7 @@ export class ServerCache {
     return this._qp;
   }
 
-  public set qp(newQp: MergedQualityProfileResource[]) {
+  public set qp(newQp: QualityProfileLike[]) {
     if (newQp == null || newQp.length <= 0) {
       logger.debug(`No QualityProfiles received from server.`);
     }

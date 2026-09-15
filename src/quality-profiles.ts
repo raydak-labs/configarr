@@ -1,12 +1,14 @@
 import path from "node:path";
-import {
-  MergedProfileFormatItemResource,
-  MergedQualityDefinitionResource,
-  MergedQualityProfileQualityItemResource,
-  MergedQualityProfileResource,
-} from "./types/merged.types";
 import { ServerCache } from "./cache";
-import { CustomFormatLike, LanguageLike, QualityDefinitionLike } from "./clients/capabilities";
+import {
+  CustomFormatLike,
+  LanguageLike,
+  ProfileFormatItemLike,
+  QualityDefinitionLike,
+  QualityProfileItemLike,
+  QualityProfileLike,
+  QualityProfilesClient,
+} from "./clients/capabilities";
 import { getClient } from "./clients/client";
 import { DiffEntry, FieldChange } from "./diffReport/diffReport.types";
 import { getEnvs } from "./env";
@@ -17,7 +19,7 @@ import type { TrashCFConflict } from "./types/trashguide.types";
 import { ANY_LANGUAGE_NAME, cloneWithJSON, loadJsonFile, notEmpty, zip } from "./util";
 
 export const deleteAllQualityProfiles = async (arrType: MediaArrType) => {
-  const api = getClient(arrType);
+  const api: QualityProfilesClient = getClient(arrType);
   const qualityProfilesOnServer = await api.getQualityProfiles();
 
   for (const qualityProfile of qualityProfilesOnServer) {
@@ -26,8 +28,8 @@ export const deleteAllQualityProfiles = async (arrType: MediaArrType) => {
   }
 };
 
-export const deleteQualityProfile = async (arrType: MediaArrType, qualityProfile: MergedQualityProfileResource) => {
-  const api = getClient(arrType);
+export const deleteQualityProfile = async (arrType: MediaArrType, qualityProfile: QualityProfileLike) => {
+  const api: QualityProfilesClient = getClient(arrType);
 
   await api.deleteQualityProfile(qualityProfile.id + "");
   logger.info(`Deleted QP: '${qualityProfile.name || qualityProfile.id}'`);
@@ -36,7 +38,7 @@ export const deleteQualityProfile = async (arrType: MediaArrType, qualityProfile
 // merge CFs of templates and custom CFs into one mapping of QualityProfile -> CFs + Score
 export const mapQualityProfiles = ({ carrIdMapping }: CFProcessing, { custom_formats, quality_profiles }: MergedConfigInstance) => {
   // QualityProfile -> (CF Name -> Scoring)
-  const profileScores = new Map<string, Map<string, MergedProfileFormatItemResource>>();
+  const profileScores = new Map<string, Map<string, ProfileFormatItemLike>>();
 
   const defaultScoringMap = new Map(quality_profiles.map((obj) => [obj.name, obj]));
 
@@ -95,15 +97,22 @@ export const mapQualityProfiles = ({ carrIdMapping }: CFProcessing, { custom_for
   return profileScores;
 };
 
-export const loadQualityProfilesFromServer = async (arrType: MediaArrType): Promise<MergedQualityProfileResource[]> => {
+export const loadQualityProfilesFromServer = async (arrType: MediaArrType): Promise<QualityProfileLike[]> => {
   if (getEnvs().LOAD_LOCAL_SAMPLES) {
     return loadJsonFile(path.resolve(__dirname, `../tests/samples/quality_profiles.json`));
   }
-  const api = getClient(arrType);
+  const api: QualityProfilesClient = getClient(arrType);
+  return api.getQualityProfiles();
+};
 
-  const qualityProfiles = await api.getQualityProfiles();
-  // TODO type hack
-  return qualityProfiles as MergedQualityDefinitionResource[];
+export const createQualityProfileOnServer = async (arrType: MediaArrType, profile: QualityProfileLike) => {
+  const api: QualityProfilesClient = getClient(arrType);
+  return api.createQualityProfile(profile);
+};
+
+export const updateQualityProfileOnServer = async (arrType: MediaArrType, id: string, profile: QualityProfileLike) => {
+  const api: QualityProfilesClient = getClient(arrType);
+  return api.updateQualityProfile(id, profile);
 };
 
 // TODO should we use clones or not?
@@ -121,7 +130,7 @@ export const mapQualities = (qd_source: QualityDefinitionLike[], value_source: C
     }
   });
 
-  const allowedQualities = value.qualities.map<MergedQualityProfileQualityItemResource>((obj, i) => {
+  const allowedQualities = value.qualities.map<QualityProfileItemLike>((obj, i) => {
     if (obj.qualities?.length && obj.qualities.length > 0) {
       return {
         allowed: obj.enabled ?? true,
@@ -129,10 +138,10 @@ export const mapQualities = (qd_source: QualityDefinitionLike[], value_source: C
         name: obj.name,
         items:
           obj.qualities
-            ?.map<MergedQualityProfileQualityItemResource>((obj2) => {
+            ?.map<QualityProfileItemLike>((obj2) => {
               const qd = qdLookupWithTitle.get(obj2);
 
-              const returnObject: MergedQualityProfileQualityItemResource = {
+              const returnObject: QualityProfileItemLike = {
                 quality: {
                   id: qd?.quality?.id,
                   name: obj2,
@@ -159,7 +168,7 @@ export const mapQualities = (qd_source: QualityDefinitionLike[], value_source: C
 
       qdMap.delete(serverQD.quality?.name);
 
-      const item: MergedQualityProfileQualityItemResource = {
+      const item: QualityProfileItemLike = {
         allowed: obj.enabled ?? true,
         items: [],
         quality: {
@@ -170,7 +179,7 @@ export const mapQualities = (qd_source: QualityDefinitionLike[], value_source: C
     }
   });
 
-  const missingQualities: MergedQualityProfileQualityItemResource[] = [];
+  const missingQualities: QualityProfileItemLike[] = [];
 
   for (const [key, value] of qdMap.entries()) {
     missingQualities.push({
@@ -198,10 +207,7 @@ export const mapQualities = (qd_source: QualityDefinitionLike[], value_source: C
   }
 };
 
-export const isOrderOfQualitiesEqual = (
-  arr1: MergedQualityProfileQualityItemResource[],
-  arr2: MergedQualityProfileQualityItemResource[],
-) => {
+export const isOrderOfQualitiesEqual = (arr1: QualityProfileItemLike[], arr2: QualityProfileItemLike[]) => {
   if (arr1.length !== arr2.length) {
     return false;
   }
@@ -268,7 +274,7 @@ export const isOrderOfConfigQualitiesEqual = (obj1: ConfigQualityProfileItem[], 
  * allowed quality in the mapped list. Throws when no allowed quality exists.
  */
 const getDisabledUpgradeCutoff = (
-  mappedQualities: MergedQualityProfileQualityItemResource[],
+  mappedQualities: QualityProfileItemLike[],
   qualityToId: Map<string, number>,
   untilQuality: string | undefined,
   profileName: string,
@@ -305,8 +311,8 @@ export const calculateQualityProfilesDiff = async (
   config: MergedConfigInstance,
   serverCache: ServerCache,
 ): Promise<{
-  changedQPs: MergedQualityProfileResource[];
-  create: MergedQualityProfileResource[];
+  changedQPs: QualityProfileLike[];
+  create: QualityProfileLike[];
   noChanges: string[];
   changes: Map<string, FieldChange[]>;
 }> => {
@@ -317,8 +323,8 @@ export const calculateQualityProfilesDiff = async (
   const cfServerMap = new Map(serverCache.cf.map((obj) => [obj.name!, obj]));
   const languageMap = new Map(serverCache.languages.map((obj) => [obj.name!, obj]));
 
-  const createQPs: MergedQualityProfileResource[] = [];
-  const changedQPs: MergedQualityProfileResource[] = [];
+  const createQPs: QualityProfileLike[] = [];
+  const changedQPs: QualityProfileLike[] = [];
   const noChangedQPs: string[] = [];
 
   const changes = new Map<string, FieldChange[]>();
@@ -370,7 +376,7 @@ export const calculateQualityProfilesDiff = async (
 
       const cfs: Map<string, CustomFormatLike> = new Map(JSON.parse(JSON.stringify(Array.from(cfServerMap))));
 
-      const customFormatsMapped = Array.from(cfs.values()).map<MergedProfileFormatItemResource>((e) => {
+      const customFormatsMapped = Array.from(cfs.values()).map<ProfileFormatItemLike>((e) => {
         let score = 0;
 
         if (scoringForQP) {
@@ -385,7 +391,7 @@ export const calculateQualityProfilesDiff = async (
         };
       });
 
-      let newP: MergedQualityProfileResource = {
+      let newP: QualityProfileLike = {
         name: value.name,
         items: mappedQualities,
         minFormatScore: value.min_format_score,
@@ -397,7 +403,7 @@ export const calculateQualityProfilesDiff = async (
           throw new Error(`QualityProfile '${name}': upgrade.until_quality is required when upgrade.allowed is true`);
         }
 
-        Object.assign<MergedQualityProfileResource, MergedQualityProfileResource | null | undefined>(newP, {
+        Object.assign<QualityProfileLike, QualityProfileLike | null | undefined>(newP, {
           cutoff: qualityToId.get(value.upgrade.until_quality),
           cutoffFormatScore: value.upgrade.until_score,
           upgradeAllowed: true,
@@ -406,7 +412,7 @@ export const calculateQualityProfilesDiff = async (
       } else {
         const cutoffId = getDisabledUpgradeCutoff(mappedQualities, qualityToId, value.upgrade.until_quality, name);
 
-        Object.assign<MergedQualityProfileResource, MergedQualityProfileResource | null | undefined>(newP, {
+        Object.assign<QualityProfileLike, QualityProfileLike | null | undefined>(newP, {
           cutoff: cutoffId,
           cutoffFormatScore: 1,
           minUpgradeFormatScore: 1,
@@ -414,7 +420,7 @@ export const calculateQualityProfilesDiff = async (
         });
       }
 
-      Object.assign<MergedQualityProfileResource, MergedQualityProfileResource | null | undefined>(
+      Object.assign<QualityProfileLike, QualityProfileLike | null | undefined>(
         newP,
         profileLanguage && { language: profileLanguage }, // TODO split out. Not exists for sonarr
       );
@@ -426,7 +432,7 @@ export const calculateQualityProfilesDiff = async (
     const fieldChanges: FieldChange[] = [];
     changes.set(serverMatch.name!, fieldChanges);
 
-    const updatedServerObject: MergedQualityProfileResource = JSON.parse(JSON.stringify(serverMatch));
+    const updatedServerObject: QualityProfileLike = JSON.parse(JSON.stringify(serverMatch));
 
     let diffExist = false;
 
@@ -541,7 +547,7 @@ export const calculateQualityProfilesDiff = async (
     let scoringDiff = false;
 
     if (scoringForQP != null) {
-      const newCFFormats: MergedProfileFormatItemResource[] = [];
+      const newCFFormats: ProfileFormatItemLike[] = [];
 
       for (const [scoreKey, scoreValue] of scoringForQP.entries()) {
         const serverCF = serverProfileCFMap.get(scoreKey);
@@ -567,7 +573,7 @@ export const calculateQualityProfilesDiff = async (
         }
       }
 
-      const missingCfs = Array.from(serverProfileCFMap.values()).reduce<MergedProfileFormatItemResource[]>((p, c) => {
+      const missingCfs = Array.from(serverProfileCFMap.values()).reduce<ProfileFormatItemLike[]>((p, c) => {
         const cfName = c.name!;
         const cfScore = c.score;
 
@@ -621,7 +627,7 @@ export const calculateQualityProfilesDiff = async (
     changes.set(unmanagedServerQp.name!, fieldChanges);
 
     if (scoringForQP != null) {
-      const newCFFormats: MergedProfileFormatItemResource[] = [];
+      const newCFFormats: ProfileFormatItemLike[] = [];
 
       for (const [scoreKey, scoreValue] of scoringForQP.entries()) {
         const serverCF = serverProfileCFMap.get(scoreKey);
@@ -669,8 +675,8 @@ export const calculateQualityProfilesDiff = async (
 };
 
 export function qualityProfilesToDiffEntries(
-  create: MergedQualityProfileResource[],
-  changedQPs: MergedQualityProfileResource[],
+  create: QualityProfileLike[],
+  changedQPs: QualityProfileLike[],
   changes: Map<string, FieldChange[]>,
 ): DiffEntry[] {
   const entries: DiffEntry[] = create.map((qp) => ({
@@ -710,10 +716,7 @@ export const filterInvalidQualityProfiles = (profiles: ConfigQualityProfile[]): 
   });
 };
 
-export const getUnmanagedQualityProfiles = (
-  serverQP: MergedQualityProfileResource[],
-  configQp: ConfigQualityProfile[],
-): MergedQualityProfileResource[] => {
+export const getUnmanagedQualityProfiles = (serverQP: QualityProfileLike[], configQp: ConfigQualityProfile[]): QualityProfileLike[] => {
   const managedProfileNames = new Set(configQp.map((profile) => profile.name));
 
   return serverQP.filter((profile) => profile.name && !managedProfileNames.has(profile.name));

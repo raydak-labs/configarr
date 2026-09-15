@@ -28,12 +28,6 @@ import {
   TagsClient,
 } from "./capabilities";
 
-export type SonarrQualityProfileResource = {
-  id?: number;
-  name?: string;
-  // Add other common properties that all quality profiles share
-};
-
 export class SonarrClient
   implements
     IArrClient<QualityProfileResource, QualityDefinitionResource, CustomFormatResource, LanguageResource>,
@@ -82,11 +76,11 @@ export class SonarrClient
     return this.api.v3QualityprofileList();
   }
 
-  createQualityProfile(profile: SonarrQualityProfileResource) {
+  createQualityProfile(profile: QualityProfileResource) {
     return this.api.v3QualityprofileCreate(profile);
   }
 
-  updateQualityProfile(id: string, profile: SonarrQualityProfileResource) {
+  updateQualityProfile(id: string, profile: QualityProfileResource) {
     return this.api.v3QualityprofileUpdate(id, profile);
   }
 

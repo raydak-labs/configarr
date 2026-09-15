@@ -24,9 +24,37 @@ export interface DownloadClientsClient {
   testDownloadClient(client: DownloadClientResource): Promise<unknown>;
 }
 
+export interface QualityProfileItemLike {
+  id?: number;
+  name?: string | null;
+  quality?: {
+    id?: number;
+    name?: string | null;
+    resolution?: number;
+    source?: string;
+  } | null;
+  items?: QualityProfileItemLike[] | null;
+  allowed?: boolean;
+}
+
+export interface ProfileFormatItemLike {
+  id?: number;
+  format?: number;
+  name?: string | null;
+  score?: number;
+}
+
 export interface QualityProfileLike {
   id?: number;
   name?: string | null;
+  upgradeAllowed?: boolean;
+  cutoff?: number;
+  items?: QualityProfileItemLike[] | null;
+  minFormatScore?: number;
+  cutoffFormatScore?: number;
+  minUpgradeFormatScore?: number;
+  formatItems?: ProfileFormatItemLike[] | null;
+  language?: LanguageLike | null;
 }
 
 export interface QualityProfilesClient<QP extends QualityProfileLike = QualityProfileLike> {

@@ -4,8 +4,7 @@ import { getBuildInfo, getEnvs, initEnvs } from "./env";
 initEnvs();
 
 import fs from "node:fs";
-import { MergedQualityProfileResource } from "./types/merged.types";
-import { CustomFormatLike } from "./clients/capabilities";
+import { CustomFormatLike, QualityProfileLike } from "./clients/capabilities";
 import { ServerCache } from "./cache";
 import { configureApi, getClient, IArrClient, unsetApi } from "./clients/client";
 import { getConfig, mergeConfigsAndTemplates } from "./config";
@@ -45,10 +44,12 @@ import { InstanceDiffReport } from "./diffReport/diffReport.types";
 import {
   calculateQualityProfilesDiff,
   checkForConflictingCFs,
+  createQualityProfileOnServer,
   deleteQualityProfile,
   getUnmanagedQualityProfiles,
   loadQualityProfilesFromServer,
   qualityProfilesToDiffEntries,
+  updateQualityProfileOnServer,
 } from "./quality-profiles";
 import { syncMetadataProfiles } from "./metadataProfiles/metadataProfileSyncer";
 import { cloneRecyclarrTemplateRepo } from "./recyclarr-importer";
@@ -257,7 +258,7 @@ const pipeline = async (
   if (!getEnvs().DRY_RUN) {
     for (const element of create) {
       try {
-        const newProfile = await api.createQualityProfile(element);
+        const newProfile = await createQualityProfileOnServer(arrType, element);
         logger.info(`Created QualityProfile: ${newProfile.name}`);
       } catch (error: any) {
         logger.error(`Failed creating QualityProfile (${element.name})`);
@@ -267,7 +268,7 @@ const pipeline = async (
 
     for (const element of changedQPs) {
       try {
-        const newProfile = await api.updateQualityProfile("" + element.id, element);
+        const newProfile = await updateQualityProfileOnServer(arrType, "" + element.id, element);
         logger.info(`Updated QualityProfile: ${newProfile.name}`);
       } catch (error: any) {
         logger.error(`Failed updating QualityProfile (${element.name})`);
@@ -279,11 +280,11 @@ const pipeline = async (
   }
 
   if (config.delete_unmanaged_quality_profiles?.enabled) {
-    const unmanagedQPs: MergedQualityProfileResource[] = getUnmanagedQualityProfiles(serverCache.qp, config.quality_profiles);
+    const unmanagedQPs: QualityProfileLike[] = getUnmanagedQualityProfiles(serverCache.qp, config.quality_profiles);
 
     const ignoreSet = new Set(config.delete_unmanaged_quality_profiles.ignore ?? []);
 
-    const qpsToDelete: MergedQualityProfileResource[] = unmanagedQPs.filter((qp) => qp.name && !ignoreSet.has(qp.name));
+    const qpsToDelete: QualityProfileLike[] = unmanagedQPs.filter((qp) => qp.name && !ignoreSet.has(qp.name));
 
     if (qpsToDelete.length > 0) {
       if (getEnvs().DRY_RUN) {
