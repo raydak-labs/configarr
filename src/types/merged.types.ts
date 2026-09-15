@@ -2,25 +2,19 @@ import {
   QualityDefinitionResource as QDRRadarr,
   CustomFormatResource as RadarrCustomFormatResource,
   CustomFormatSpecificationSchema as RadarrCustomFormatSpecificationSchema,
-  ProfileFormatItemResource as RadarrProfileFormatItemResource,
   QualityProfileQualityItemResource as RadarrQualityProfileQualityItemResource,
   QualityProfileResource as RadarrQualityProfileResource,
-  RootFolderResource as RadarrRootFolderResource,
   TagResource as RadarrTagResource,
 } from "../__generated__/radarr/data-contracts";
 import {
   QualityDefinitionResource as QDRSonarr,
   CustomFormatResource as SonarrCustomFormatResource,
   CustomFormatSpecificationSchema as SonarrCustomFormatSpecificationSchema,
-  ProfileFormatItemResource as SonarrProfileFormatItemResource,
   QualityProfileQualityItemResource as SonarrQualityProfileQualityItemResource,
   QualityProfileResource as SonarrQualityProfileResource,
-  RootFolderResource as SonarrRootFolderResource,
 } from "../__generated__/sonarr/data-contracts";
 
-// Those types are only to make the API client unified usable.
-// Sonarr and Radarr slightly differ in API fields and therefore at the moment we can ignore those changes.
-// If someday we need specific fields per *arr instance then we have to split the API usage and modify every module.
+// Mapping/TRaSH helpers still share Sonarr∩Radarr intersections. Client and cache return types do not use these.
 
 type QDRMerged = QDRSonarr & QDRRadarr;
 type QDRPickedSource = OmitTyped<NonNullable<QDRMerged["quality"]>, "source">;
@@ -34,7 +28,6 @@ type OmittedQuality = OmitTyped<QDRMerged, "quality">;
 
 export type MergedQualityDefinitionResource = OmittedQuality & Partial<CustomQualitySource<QDRPickedSource>>;
 export type MergedCustomFormatResource = SonarrCustomFormatResource & RadarrCustomFormatResource;
-export type MergedProfileFormatItemResource = SonarrProfileFormatItemResource & RadarrProfileFormatItemResource;
 
 type QPQIRMerged = SonarrQualityProfileQualityItemResource & RadarrQualityProfileQualityItemResource;
 type QPQIRPickedSource = OmitTyped<NonNullable<QPQIRMerged["quality"]>, "source">;
@@ -57,7 +50,6 @@ export type MergedQualityProfileResource = OmitTyped<QPRMerged, "items"> &
   >;
 
 export type MergedCustomFormatSpecificationSchema = RadarrCustomFormatSpecificationSchema & SonarrCustomFormatSpecificationSchema;
-export type MergedRootFolderResource = SonarrRootFolderResource & RadarrRootFolderResource;
 /** Lidarr nightly delay-profile protocol rows (openapi still stale; extend manually). */
 export type MergedDelayProfileProtocolItem = {
   name?: string | null;

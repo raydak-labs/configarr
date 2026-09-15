@@ -19,7 +19,6 @@ import {
 import { logger } from "../logger";
 import type { DownloadClientResource } from "../types/download-client.types";
 import { logConnectionError, validateClientParams } from "./connection";
-import { IArrClient } from "./client";
 import {
   CustomFormatsClient,
   DownloadClientsClient,
@@ -28,10 +27,8 @@ import {
   SystemClient,
   TagsClient,
 } from "./capabilities";
-
 export class LidarrClient
   implements
-    IArrClient<QualityProfileResource, QualityDefinitionResource, CustomFormatResource, LanguageResource>,
     SystemClient,
     TagsClient,
     DownloadClientsClient,

@@ -19,7 +19,6 @@ import { logger } from "../logger";
 import type { DownloadClientResource } from "../types/download-client.types";
 import { ANY_LANGUAGE_NAME, cloneWithJSON } from "../util";
 import { logConnectionError, validateClientParams } from "./connection";
-import { IArrClient } from "./client";
 import {
   CustomFormatsClient,
   DownloadClientsClient,
@@ -40,7 +39,6 @@ declare module "../__generated__/whisparr/data-contracts" {
 
 export class WhisparrClient
   implements
-    IArrClient<QualityProfileResource, QualityDefinitionResource, CustomFormatResource, LanguageResource>,
     SystemClient,
     TagsClient,
     DownloadClientsClient,

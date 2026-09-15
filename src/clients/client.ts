@@ -1,8 +1,5 @@
-import { MergedCustomFormatResource, MergedQualityDefinitionResource, MergedQualityProfileResource } from "../types/merged.types";
 import { logger } from "../logger";
 import { ArrType } from "../types/common.types";
-import type { DownloadClientResource } from "../types/download-client.types";
-import type { LanguageLike, TagLike } from "./capabilities";
 import { LidarrClient } from "./lidarr-client";
 import { ProwlarrClient } from "./prowlarr-client";
 import { RadarrClient } from "./radarr-client";
@@ -78,67 +75,3 @@ export const configureApi = async <T extends ArrType>(type: T, baseUrl: string, 
   configured = { type, api } as ConfiguredClient;
   return api as ArrTypeToClient[T];
 };
-
-export type ArrClientCustomFormat = {
-  id?: number;
-};
-
-export type ArrClientQualityDefinition = {
-  id?: number;
-};
-
-export type ArrClientQualityProfile = {
-  id?: number;
-  name?: string | null;
-};
-
-export interface IArrClient<
-  QP extends ArrClientQualityProfile = MergedQualityProfileResource,
-  QD extends ArrClientQualityDefinition = MergedQualityDefinitionResource,
-  CF extends ArrClientCustomFormat = MergedCustomFormatResource,
-  L extends LanguageLike = LanguageLike,
-> {
-  getQualityDefinitions(): Promise<QD[]>;
-  updateQualityDefinitions(definitions: QD[]): Promise<QD[]>;
-
-  getQualityProfiles(): Promise<QP[]>;
-  createQualityProfile(profile: QP): Promise<QP>;
-  updateQualityProfile(id: string, profile: QP): Promise<QP>;
-  deleteQualityProfile(id: string): Promise<void>;
-
-  getCustomFormats(): Promise<CF[]>;
-  createCustomFormat(format: CF): Promise<CF>;
-  updateCustomFormat(id: string, format: CF): Promise<CF>;
-  deleteCustomFormat(id: string): Promise<void>;
-
-  getNaming(): Promise<unknown>;
-  updateNaming(id: string, data: unknown): Promise<unknown>;
-
-  getMediamanagement(): Promise<unknown>;
-  updateMediamanagement(id: string, data: unknown): Promise<unknown>;
-
-  getRootfolders(): Promise<unknown>;
-  addRootFolder(data: unknown): Promise<unknown>;
-  updateRootFolder(id: string, data: unknown): Promise<unknown>;
-  deleteRootFolder(id: string): Promise<unknown>;
-
-  getLanguages(): Promise<L[]>;
-
-  getDelayProfiles(): Promise<unknown>;
-  createDelayProfile(profile: unknown): Promise<unknown>;
-  updateDelayProfile(id: string, data: unknown): Promise<unknown>;
-  deleteDelayProfile(id: string): Promise<unknown>;
-
-  getTags(): Promise<TagLike[]>;
-  createTag(tag: TagLike): Promise<TagLike>;
-
-  getDownloadClientSchema(): Promise<DownloadClientResource[]>;
-  getDownloadClients(): Promise<DownloadClientResource[]>;
-  createDownloadClient(client: DownloadClientResource): Promise<DownloadClientResource>;
-  updateDownloadClient(id: string, client: DownloadClientResource): Promise<DownloadClientResource>;
-  deleteDownloadClient(id: string): Promise<void>;
-  testDownloadClient(client: DownloadClientResource): Promise<unknown>;
-
-  getSystemStatus(): Promise<unknown>;
-  testConnection(): Promise<boolean>;
-}

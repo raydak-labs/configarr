@@ -1,5 +1,4 @@
-import { MergedTagResource } from "./types/merged.types";
-import { CustomFormatLike, LanguageLike, QualityDefinitionLike, QualityProfileLike } from "./clients/capabilities";
+import { CustomFormatLike, LanguageLike, QualityDefinitionLike, QualityProfileLike, TagLike } from "./clients/capabilities";
 import { logger } from "./logger";
 import type { DownloadClientResource } from "./types/download-client.types";
 
@@ -8,7 +7,7 @@ export class ServerCache {
   private _qd: QualityDefinitionLike[];
   private _qp: QualityProfileLike[];
   private _cf: CustomFormatLike[];
-  private _tags: MergedTagResource[] = [];
+  private _tags: TagLike[] = [];
   private _languages: LanguageLike[];
   private _downloadClientSchema: DownloadClientResource[] | null = null;
 
@@ -78,7 +77,7 @@ export class ServerCache {
   public get tags() {
     return this._tags;
   }
-  public set tags(newTags: MergedTagResource[]) {
+  public set tags(newTags: TagLike[]) {
     if (newTags == null || newTags.length <= 0) {
       logger.debug(`No Tags received from server.`);
     }

@@ -6,7 +6,7 @@ initEnvs();
 import fs from "node:fs";
 import { CustomFormatLike, QualityProfileLike } from "./clients/capabilities";
 import { ServerCache } from "./cache";
-import { configureApi, getClient, IArrClient, unsetApi } from "./clients/client";
+import { configureApi, getClient, unsetApi } from "./clients/client";
 import { getConfig, mergeConfigsAndTemplates } from "./config";
 import { calculateCFsToManage, deleteCustomFormat, loadCustomFormatDefinitions, loadServerCustomFormats, manageCf } from "./custom-formats";
 import {
@@ -69,8 +69,7 @@ const pipeline = async (
   arrType: MediaArrType,
   instanceName: string,
 ): Promise<InstanceDiffReport> => {
-  // Merged* payloads remain until QP/QD/naming modules migrate; then this is getClient(arrType).
-  const api: IArrClient = getClient(arrType);
+  const api = getClient(arrType);
   const diffCollector = new DiffCollector();
 
   const system = await api.getSystemStatus();
