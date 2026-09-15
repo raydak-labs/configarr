@@ -5,7 +5,7 @@
  *   ARR_E2E=1 pnpm test:e2e:arr
  */
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
-import { mapToServerDelayProfile } from "../../src/delayProfiles/delayProfiles";
+import { mapToServerDelayProfile } from "../../src/delayProfiles/delayProfileSyncer";
 import { InputConfigDelayProfileSchema } from "../../src/types/config.types";
 import { DelayProfileLidarrResource, DelayProfilePayload } from "../../src/delayProfiles/delayProfile.types";
 import type { MediaArrType } from "../../src/types/common.types";

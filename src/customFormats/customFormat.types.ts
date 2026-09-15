@@ -1,10 +1,6 @@
 import { z } from "zod";
 import type { TrashCF, TrashCFSpF } from "../types/trashguide.types";
 
-type RequireAtLeastOne<T> = {
-  [K in keyof T]-?: Required<Pick<T, K>> & Partial<Pick<T, Exclude<keyof T, K>>>;
-}[keyof T];
-
 export type CustomFormatSpecification = {
   id?: number;
   name?: string | null;

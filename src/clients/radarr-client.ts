@@ -21,7 +21,7 @@ import type { CustomFormatRequest } from "../customFormats/customFormat.types";
 import type { DelayProfileGenericResource } from "../delayProfiles/delayProfile.types";
 import type { MediaDownloadClientResource } from "../downloadClients/downloadClient.types";
 import type { QualityDefinitionPreferredResource } from "../qualityDefinitions/qualityDefinition.types";
-import type { QualityProfileRadarrWhisparrResource } from "../qualityProfiles/qualityProfile.types";
+import type { QualityProfileRadarrResource } from "../qualityProfiles/qualityProfile.types";
 import { ANY_LANGUAGE_NAME, cloneWithJSON } from "../util";
 import { logConnectionError, validateClientParams } from "./connection";
 import {
@@ -37,7 +37,7 @@ export class RadarrClient
     SystemClient,
     TagsClient,
     DownloadClientsClient,
-    QualityProfilesClient<QualityProfileRadarrWhisparrResource>,
+    QualityProfilesClient<QualityProfileRadarrResource>,
     CustomFormatsClient,
     QualityDefinitionsClient<QualityDefinitionPreferredResource>
 {
@@ -77,11 +77,11 @@ export class RadarrClient
   }
 
   // Quality Profiles
-  getQualityProfiles(): Promise<QualityProfileRadarrWhisparrResource[]> {
+  getQualityProfiles(): Promise<QualityProfileRadarrResource[]> {
     return this.api.v3QualityprofileList();
   }
 
-  async createQualityProfile(profile: QualityProfileRadarrWhisparrResource): Promise<QualityProfileRadarrWhisparrResource> {
+  async createQualityProfile(profile: QualityProfileRadarrResource): Promise<QualityProfileRadarrResource> {
     const cloned = cloneWithJSON(profile);
 
     if (this.languageMap.size <= 0) {
@@ -96,7 +96,7 @@ export class RadarrClient
     return this.api.v3QualityprofileCreate(cloned as QualityProfileResource);
   }
 
-  updateQualityProfile(id: string, profile: QualityProfileRadarrWhisparrResource): Promise<QualityProfileRadarrWhisparrResource> {
+  updateQualityProfile(id: string, profile: QualityProfileRadarrResource): Promise<QualityProfileRadarrResource> {
     return this.api.v3QualityprofileUpdate(id, profile as QualityProfileResource);
   }
 

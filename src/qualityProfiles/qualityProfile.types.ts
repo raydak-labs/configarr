@@ -27,12 +27,19 @@ export type QualityProfileSonarrResource = QualityProfileShared & {
   minUpgradeFormatScore?: number;
 };
 
-export type QualityProfileRadarrWhisparrResource = QualityProfileShared & {
+export type QualityProfileWithLanguage = QualityProfileShared & {
   minUpgradeFormatScore?: number;
   language?: QualityProfileLanguage | null;
 };
 
-export type QualityProfileLidarrReadarrResource = QualityProfileShared;
+export type QualityProfileRadarrResource = QualityProfileWithLanguage;
+export type QualityProfileWhisparrResource = QualityProfileWithLanguage;
+export type QualityProfileLidarrResource = QualityProfileShared;
+export type QualityProfileReadarrResource = QualityProfileShared;
 
 export type QualityProfilePayload =
-  QualityProfileSonarrResource | QualityProfileRadarrWhisparrResource | QualityProfileLidarrReadarrResource;
+  | QualityProfileSonarrResource
+  | QualityProfileRadarrResource
+  | QualityProfileWhisparrResource
+  | QualityProfileLidarrResource
+  | QualityProfileReadarrResource;

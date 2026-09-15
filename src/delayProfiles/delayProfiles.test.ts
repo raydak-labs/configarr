@@ -71,7 +71,7 @@ describe("DelayProfiles", () => {
 
     mockGetDelayProfiles.mockResolvedValue(serverProfiles);
 
-    const { calculateDelayProfilesDiff } = await import("./delayProfiles");
+    const { calculateDelayProfilesDiff } = await import("./delayProfileSyncer");
     const diff = await calculateDelayProfilesDiff("SONARR", configProfiles, [{ label: "test", id: 1 }]);
 
     expect(diff).toBeNull();
@@ -109,7 +109,7 @@ describe("DelayProfiles", () => {
 
     mockGetDelayProfiles.mockResolvedValue(serverProfiles);
 
-    const { calculateDelayProfilesDiff } = await import("./delayProfiles");
+    const { calculateDelayProfilesDiff } = await import("./delayProfileSyncer");
     const diff = await calculateDelayProfilesDiff("SONARR", configProfiles, []);
 
     expect(diff).not.toBeNull();
@@ -168,7 +168,7 @@ describe("DelayProfiles", () => {
 
     mockGetDelayProfiles.mockResolvedValue(serverProfiles);
 
-    const { calculateDelayProfilesDiff } = await import("./delayProfiles");
+    const { calculateDelayProfilesDiff } = await import("./delayProfileSyncer");
     const diff = await calculateDelayProfilesDiff("SONARR", configProfiles, []);
 
     expect(diff).not.toBeNull();
@@ -227,7 +227,7 @@ describe("DelayProfiles", () => {
 
     mockGetDelayProfiles.mockResolvedValue(serverProfiles);
 
-    const { calculateDelayProfilesDiff } = await import("./delayProfiles");
+    const { calculateDelayProfilesDiff } = await import("./delayProfileSyncer");
     const diff = await calculateDelayProfilesDiff("SONARR", configProfiles, []);
 
     expect(diff).not.toBeNull();
@@ -267,7 +267,7 @@ describe("DelayProfiles", () => {
 
     mockGetDelayProfiles.mockResolvedValue(serverProfiles);
 
-    const { calculateDelayProfilesDiff } = await import("./delayProfiles");
+    const { calculateDelayProfilesDiff } = await import("./delayProfileSyncer");
     const diff = await calculateDelayProfilesDiff("SONARR", configProfiles, []);
 
     expect(diff?.defaultProfileChanged).toBe(true);
@@ -275,7 +275,7 @@ describe("DelayProfiles", () => {
   });
 
   test("delayProfilesToDiffEntries - builds a DiffEntry for the default profile", async () => {
-    const { delayProfilesToDiffEntries } = await import("./delayProfiles");
+    const { delayProfilesToDiffEntries } = await import("./delayProfileBase");
 
     const diff = {
       defaultProfileChanged: true,
@@ -295,7 +295,7 @@ describe("DelayProfiles", () => {
   });
 
   test("mapToServerDelayProfile - items-only payload omits legacy protocol fields", async () => {
-    const { mapToServerDelayProfile } = await import("./delayProfiles");
+    const { mapToServerDelayProfile } = await import("./delayProfileSyncer");
     const mapped = mapToServerDelayProfile(
       "LIDARR",
       {

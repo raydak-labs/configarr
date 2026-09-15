@@ -16,7 +16,8 @@ import {
   loadServerCustomFormats,
   manageCf,
 } from "./customFormats/customFormats";
-import { calculateDelayProfilesDiff, createDelayProfileSync, delayProfilesToDiffEntries } from "./delayProfiles/delayProfiles";
+import { delayProfilesToDiffEntries } from "./delayProfiles/delayProfileBase";
+import { calculateDelayProfilesDiff, createDelayProfileSync } from "./delayProfiles/delayProfileSyncer";
 import { syncDownloadClients } from "./downloadClients/downloadClientSyncer";
 import { syncProwlarrProviders } from "./prowlarr/prowlarrSyncer";
 import { downloadClientConfigDiffToDiffEntries, syncDownloadClientConfig } from "./downloadClientConfig/downloadClientConfigSyncer";
@@ -31,26 +32,24 @@ import {
   updateMediamanagementOnServer,
   updateNamingOnServer,
 } from "./mediaManagement/mediaManagement";
+import { qualityDefinitionsToDiffEntries } from "./qualityDefinitions/qualityDefinitionBase";
 import {
   calculateQualityDefinitionDiff,
   loadQualityDefinitionFromServer,
-  qualityDefinitionsToDiffEntries,
   updateQualityDefinitionsOnServer,
-} from "./qualityDefinitions/qualityDefinitions";
+} from "./qualityDefinitions/qualityDefinitionSyncer";
 import { DiffCollector } from "./diffReport/diffCollector";
 import { ConsoleDiffFormatter } from "./diffReport/formatters/consoleFormatter";
 import { writeJsonDiffReport } from "./diffReport/formatters/jsonFormatter";
 import { InstanceDiffReport } from "./diffReport/diffReport.types";
+import { checkForConflictingCFs, getUnmanagedQualityProfiles, qualityProfilesToDiffEntries } from "./qualityProfiles/qualityProfileBase";
 import {
   calculateQualityProfilesDiff,
-  checkForConflictingCFs,
   createQualityProfileOnServer,
   deleteQualityProfile,
-  getUnmanagedQualityProfiles,
   loadQualityProfilesFromServer,
-  qualityProfilesToDiffEntries,
   updateQualityProfileOnServer,
-} from "./qualityProfiles/qualityProfiles";
+} from "./qualityProfiles/qualityProfileSyncer";
 import { syncMetadataProfiles } from "./metadataProfiles/metadataProfileSyncer";
 import { cloneRecyclarrTemplateRepo } from "./recyclarr-importer";
 import { loadServerTags } from "./tags/tags";

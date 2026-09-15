@@ -5,7 +5,7 @@ import { CFProcessing } from "../customFormats/customFormat.types";
 import { MediaArrType } from "../types/common.types";
 import { ConfigQualityProfile, ConfigQualityProfileItem, MergedConfigInstance } from "../types/config.types";
 import type { TrashCFConflict } from "../types/trashguide.types";
-import { cloneWithJSON, zip } from "../util";
+import { ANY_LANGUAGE_NAME, cloneWithJSON, zip } from "../util";
 import {
   CustomFormatRef,
   FormatItem,
@@ -24,6 +24,7 @@ export type QualityProfileDiffResult<T extends QualityProfileShared = QualityPro
 };
 
 type MinUpgradeProfile = { minUpgradeFormatScore?: number };
+type LanguageProfile = { language?: QualityProfileLanguage | null };
 
 export const warnUnsupportedQualityProfileLanguage = (
   profileName: string,
@@ -33,6 +34,50 @@ export const warnUnsupportedQualityProfileLanguage = (
   if (configLanguage) {
     logger.warn(`QualityProfile '${profileName}': language is not supported for ${arrType}. Ignoring.`);
   }
+};
+
+export const resolveQualityProfileLanguage = (
+  configLanguage: string | undefined,
+  languageMap: Map<string, QualityProfileLanguage>,
+): QualityProfileLanguage | undefined => {
+  if (configLanguage) {
+    const profileLanguage = languageMap.get(configLanguage);
+
+    if (profileLanguage == null) {
+      logger.warn(`Profile language '${configLanguage}' not found in server. Ignoring.`);
+    }
+
+    return profileLanguage;
+  }
+
+  const profileLanguage = languageMap.get(ANY_LANGUAGE_NAME);
+
+  if (profileLanguage == null) {
+    logger.warn(`Default language '${ANY_LANGUAGE_NAME}' not found in server. Ignoring.`);
+  }
+
+  return profileLanguage;
+};
+
+export const attachLanguageOnCreate = (profile: LanguageProfile, language: QualityProfileLanguage | undefined): void => {
+  if (language) {
+    profile.language = language;
+  }
+};
+
+export const diffLanguageOnUpdate = (
+  updated: LanguageProfile,
+  serverMatch: LanguageProfile,
+  language: QualityProfileLanguage | undefined,
+  fieldChanges: FieldChange[],
+): boolean => {
+  if (language != null && serverMatch.language?.name !== language.name) {
+    updated.language = language;
+    fieldChanges.push({ field: "language", from: serverMatch.language?.name, to: language.name });
+    return true;
+  }
+
+  return false;
 };
 
 export const attachMinUpgradeOnCreate = (profile: MinUpgradeProfile, minUpgradeFormatScore: number): void => {

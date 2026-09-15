@@ -7,9 +7,11 @@ import { MediaArrType } from "../types/common.types";
 import { MergedConfigInstance } from "../types/config.types";
 import { loadJsonFile } from "../util";
 import { BaseQualityProfileSync } from "./qualityProfileBase";
-import { QualityProfileLidarrReadarrSync } from "./qualityProfileLidarrReadarr";
-import { QualityProfileRadarrWhisparrSync } from "./qualityProfileRadarrWhisparr";
+import { QualityProfileLidarrSync } from "./qualityProfileLidarr";
+import { QualityProfileRadarrSync } from "./qualityProfileRadarr";
+import { QualityProfileReadarrSync } from "./qualityProfileReadarr";
 import { QualityProfileSonarrSync } from "./qualityProfileSonarr";
+import { QualityProfileWhisparrSync } from "./qualityProfileWhisparr";
 import { QualityProfilePayload } from "./qualityProfile.types";
 
 export function createQualityProfileSync(arrType: MediaArrType) {
@@ -17,11 +19,13 @@ export function createQualityProfileSync(arrType: MediaArrType) {
     case "SONARR":
       return new QualityProfileSonarrSync();
     case "RADARR":
+      return new QualityProfileRadarrSync();
     case "WHISPARR":
-      return new QualityProfileRadarrWhisparrSync(arrType);
+      return new QualityProfileWhisparrSync();
     case "LIDARR":
+      return new QualityProfileLidarrSync();
     case "READARR":
-      return new QualityProfileLidarrReadarrSync(arrType);
+      return new QualityProfileReadarrSync();
   }
 }
 

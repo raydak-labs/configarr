@@ -1,8 +1,19 @@
 import { DiffEntry, FieldChange } from "../diffReport/diffReport.types";
 import { logger } from "../logger";
 import { TrashQualityDefinitionQuality } from "../types/trashguide.types";
-import { cloneWithJSON } from "../util";
+import { cloneWithJSON, roundToDecimal } from "../util";
 import { QualityDefinitionShared } from "./qualityDefinition.types";
+
+export function interpolateSize(min: number, max: number, pref: number, ratio: number): number {
+  if (ratio < 0 || ratio > 1) {
+    throw new Error(`Unexpected ratio range. Should be between 0 <= ratio <= 1`);
+  }
+  if (ratio <= 0.5) {
+    return roundToDecimal(min + (pref - min) * (ratio / 0.5), 1);
+  } else {
+    return roundToDecimal(pref + (max - pref) * ((ratio - 0.5) / 0.5), 1);
+  }
+}
 
 export function calculateQualityDefinitionDiffCore<T extends QualityDefinitionShared>(
   serverQDs: T[],

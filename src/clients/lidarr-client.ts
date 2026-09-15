@@ -22,7 +22,7 @@ import type { CustomFormatRequest } from "../customFormats/customFormat.types";
 import type { DelayProfileLidarrResource } from "../delayProfiles/delayProfile.types";
 import type { MediaDownloadClientResource } from "../downloadClients/downloadClient.types";
 import type { QualityDefinitionPreferredResource } from "../qualityDefinitions/qualityDefinition.types";
-import type { QualityProfileLidarrReadarrResource } from "../qualityProfiles/qualityProfile.types";
+import type { QualityProfileLidarrResource } from "../qualityProfiles/qualityProfile.types";
 import { logConnectionError, validateClientParams } from "./connection";
 import {
   CustomFormatsClient,
@@ -37,7 +37,7 @@ export class LidarrClient
     SystemClient,
     TagsClient,
     DownloadClientsClient,
-    QualityProfilesClient<QualityProfileLidarrReadarrResource>,
+    QualityProfilesClient<QualityProfileLidarrResource>,
     CustomFormatsClient,
     QualityDefinitionsClient<QualityDefinitionPreferredResource>
 {
@@ -79,11 +79,11 @@ export class LidarrClient
     return this.api.v1QualityprofileList();
   }
 
-  createQualityProfile(profile: QualityProfileLidarrReadarrResource) {
+  createQualityProfile(profile: QualityProfileLidarrResource) {
     return this.api.v1QualityprofileCreate(profile as QualityProfileResource);
   }
 
-  updateQualityProfile(id: string, profile: QualityProfileLidarrReadarrResource) {
+  updateQualityProfile(id: string, profile: QualityProfileLidarrResource) {
     return this.api.v1QualityprofileUpdate(id, profile as QualityProfileResource);
   }
 

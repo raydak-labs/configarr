@@ -128,9 +128,12 @@ Callers use `getClient<T>(arrType)` (`src/clients/client.ts`). A literal arr typ
 
 Media clients implement small capabilities in `src/clients/capabilities.ts` (System, Tags, DownloadClients, QualityProfiles, CustomFormats, QualityDefinitions) plus their own methods. Prowlarr implements System + Tags + DownloadClients only — no media stubs.
 
-- **Pattern A** — fields or methods differ per arr: factory `switch` + literal `getClient("LIDARR")` (QP language / minUpgradeFormatScore, naming, delay writes, metadata, Lidarr/Readarr root folders).
-- **Pattern B** — same method set: capability + generic (`CustomFormatsClient<CF>`), or a `MediaArrType` union so Prowlarr is excluded.
+- **Pattern A** — fields or methods differ per arr: factory `switch` with **one case per arr** + literal `getClient("LIDARR")`. One class file per *arr (`qualityProfileLidarr.ts`). Shared _behavior_ lives on the base as unnamed helpers (`attachMinUpgradeOnCreate`). Do not mash products into filenames or type names (`qualityProfileLidarrReadarr.ts`, `QualityProfileRadarrWhisparrResource`).
+  - `*Generic.ts` is allowed when 3+ arrs are identical: Generic = default implementation, not a product list. Do not put *arr names in that filename.
+- **Pattern B** — same method set **and** same field set (custom formats, tags): one module. Capability generic (`CustomFormatsClient<CF>`). Do not split into 5 handlers.
 - **Pattern C** — Prowlarr-only (`src/prowlarr/providerResourceSync.ts`). Media managers do not get a Pattern C.
+
+Import the real module (`qualityProfileBase.ts`, `qualityProfileSyncer.ts`). Do not add barrels that only re-export.
 
 Feature mapping payloads live next to the feature (`qualityProfiles/qualityProfile.types.ts`, `customFormats/customFormat.types.ts`, …). Do not introduce `Merged*` intersection types for client or cache returns.
 

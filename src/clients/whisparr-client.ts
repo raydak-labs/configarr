@@ -21,7 +21,7 @@ import type { CustomFormatRequest } from "../customFormats/customFormat.types";
 import type { DelayProfileGenericResource } from "../delayProfiles/delayProfile.types";
 import type { MediaDownloadClientResource } from "../downloadClients/downloadClient.types";
 import type { QualityDefinitionPreferredResource } from "../qualityDefinitions/qualityDefinition.types";
-import type { QualityProfileRadarrWhisparrResource } from "../qualityProfiles/qualityProfile.types";
+import type { QualityProfileWhisparrResource } from "../qualityProfiles/qualityProfile.types";
 import { ANY_LANGUAGE_NAME, cloneWithJSON } from "../util";
 import { logConnectionError, validateClientParams } from "./connection";
 import {
@@ -47,7 +47,7 @@ export class WhisparrClient
     SystemClient,
     TagsClient,
     DownloadClientsClient,
-    QualityProfilesClient<QualityProfileRadarrWhisparrResource>,
+    QualityProfilesClient<QualityProfileWhisparrResource>,
     CustomFormatsClient,
     QualityDefinitionsClient<QualityDefinitionPreferredResource>
 {
@@ -90,7 +90,7 @@ export class WhisparrClient
     return this.api.v3QualityprofileList();
   }
 
-  async createQualityProfile(profile: QualityProfileRadarrWhisparrResource): Promise<QualityProfileRadarrWhisparrResource> {
+  async createQualityProfile(profile: QualityProfileWhisparrResource): Promise<QualityProfileWhisparrResource> {
     const cloned = cloneWithJSON(profile);
 
     if (this.languageMap.size <= 0) {
@@ -105,7 +105,7 @@ export class WhisparrClient
     return this.api.v3QualityprofileCreate(cloned as QualityProfileResource);
   }
 
-  updateQualityProfile(id: string, profile: QualityProfileRadarrWhisparrResource) {
+  updateQualityProfile(id: string, profile: QualityProfileWhisparrResource) {
     return this.api.v3QualityprofileUpdate(id, profile as QualityProfileResource);
   }
 
