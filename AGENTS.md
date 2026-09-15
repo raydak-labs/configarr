@@ -80,8 +80,10 @@ Use dated filenames (e.g. `2026-07-06-feature-name-design.md`). Cross-reference 
 ```
 src/
 ├── __generated__/         # Auto-generated API clients (don't modify)
-├── clients/               # API client abstractions
-│   ├── unified-client.ts  # Unified interface for all *arr types
+├── clients/               # Per-*arr API clients
+│   ├── client.ts          # configureApi / getClient / unsetApi / ArrTypeToClient
+│   ├── connection.ts      # connection helpers
+│   ├── capabilities.ts    # small shared capability interfaces
 │   ├── radarr-client.ts
 │   ├── sonarr-client.ts
 │   └── ...
@@ -114,13 +116,15 @@ The project supports multiple \*arr applications with varying feature support:
   generic base (`src/prowlarr/providerResourceSync.ts`); see `src/prowlarr/` and
   `src/clients/prowlarr-client.ts`.
 
-### Unified Client Pattern
+### Typed per-*arr clients
 
-All \*arr clients implement `IArrClient` interface:
+Callers use `getClient<T>(arrType)` (`src/clients/client.ts`). A literal arr type returns that concrete class (`getClient("SONARR")` → `SonarrClient`). A variable `ArrType` / `MediaArrType` returns a union.
 
-- Provides consistent API across different \*arr types
-- Optional methods for features not supported by all types (e.g., `getMetadataProfiles?()`)
-- Type-safe with generics for quality profiles, custom formats, etc.
+Media clients implement small capabilities in `src/clients/capabilities.ts` (System, Tags, DownloadClients, QualityProfiles, CustomFormats, QualityDefinitions) plus their own methods. Prowlarr implements System + Tags + DownloadClients only — no media stubs.
+
+- **Pattern A** — fields or methods differ per arr: factory `switch` + literal `getClient("LIDARR")` (metadata, Lidarr/Readarr root folders).
+- **Pattern B** — same method set: capability + generic (`CustomFormatsClient<CF>`), or a `MediaArrType` union so Prowlarr is excluded.
+- **Pattern C** — Prowlarr-only (`src/prowlarr/providerResourceSync.ts`). Media managers do not get a Pattern C.
 
 ### Configuration System
 
@@ -149,7 +153,7 @@ Each feature (quality profiles, custom formats, metadata profiles, root folders)
 
 ### Adding Support for New \*arr Feature
 
-1. Check if unified client needs new optional methods
+1. Add methods on the concrete *arr clients that support the feature. Shared method sets go in `src/clients/capabilities.ts`.
 2. Create feature directory (e.g., `featureName/`)
 3. Implement base class with abstract methods
 4. Create type-specific implementations

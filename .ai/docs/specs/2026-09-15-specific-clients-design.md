@@ -1,6 +1,6 @@
 # Specific *arr clients (no UnifiedClient)
 
-Status: decided (2026-09-15). Implementation plan: [`.ai/docs/plans/2026-09-15-unified-client-removal.md`](../plans/2026-09-15-unified-client-removal.md).
+Status: implemented (2026-09-15). Implementation plan: [`.ai/docs/plans/2026-09-15-unified-client-removal.md`](../plans/2026-09-15-unified-client-removal.md).
 
 Goal: callers use the concrete client (`SonarrClient`, `LidarrClient`, …) with proper generics. `UnifiedClient` is a type-erasing facade; delete it.
 
