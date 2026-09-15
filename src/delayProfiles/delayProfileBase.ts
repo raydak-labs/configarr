@@ -12,6 +12,7 @@ export interface DelayProfilesDiff {
   missingTags: string[];
   defaultProfile?: InputConfigDelayProfile;
   additionalProfiles?: InputConfigDelayProfile[];
+  defaultProfileId?: string;
   defaultProfileFieldChanges: FieldChange[];
   additionalProfilesFieldChanges: FieldChange[][];
 }
@@ -179,6 +180,7 @@ export async function calculateDelayProfilesDiffFor<T extends DelayProfileShared
     missingTags,
     defaultProfile: configDefault,
     additionalProfiles: configAdditional,
+    defaultProfileId: serverDefault?.id != null ? String(serverDefault.id) : undefined,
     defaultProfileFieldChanges: defaultComparison.changes,
     additionalProfilesFieldChanges,
   };
@@ -238,8 +240,8 @@ export abstract class BaseDelayProfileSync<T extends DelayProfileShared> {
     }
   }
 
-  async updateDefaultFromConfig(profile: InputConfigDelayProfile, tags: Tag[]) {
-    await this.updateOnServer("1", this.mapToServer(profile, tags));
+  async updateDefaultFromConfig(profile: InputConfigDelayProfile, tags: Tag[], id: string) {
+    await this.updateOnServer(id, this.mapToServer(profile, tags));
   }
 
   async createFromConfig(profile: InputConfigDelayProfile, tags: Tag[]) {

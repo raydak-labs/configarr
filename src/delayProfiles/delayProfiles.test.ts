@@ -102,6 +102,7 @@ describe("DelayProfiles", () => {
     // Simulate server data with different default profile
     const serverProfiles: StandardDelayProfile[] = [
       {
+        id: 7,
         enableUsenet: true,
         enableTorrent: false,
         preferredProtocol: "usenet" as any,
@@ -122,6 +123,7 @@ describe("DelayProfiles", () => {
 
     expect(diff).not.toBeNull();
     expect(diff?.defaultProfileChanged).toBe(true);
+    expect(diff?.defaultProfileId).toBe("7");
     expect(diff?.additionalProfilesChanged).toBe(false);
     expect(diff?.defaultProfile).toBeDefined();
     expect(diff?.additionalProfiles).toHaveLength(0);

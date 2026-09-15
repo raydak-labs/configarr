@@ -295,8 +295,11 @@ const pipeline = async (
         logger.info("DryRun: Would update DelayProfiles.");
       } else {
         if (delayProfilesDiff.defaultProfileChanged && delayProfilesDiff.defaultProfile) {
+          if (delayProfilesDiff.defaultProfileId == null) {
+            throw new Error("Default delay profile id missing from server; cannot update.");
+          }
           logger.info(`Updating default DelayProfile`);
-          await delaySync.updateDefaultFromConfig(delayProfilesDiff.defaultProfile, serverCache.tags);
+          await delaySync.updateDefaultFromConfig(delayProfilesDiff.defaultProfile, serverCache.tags, delayProfilesDiff.defaultProfileId);
         }
 
         if (delayProfilesDiff.missingTags.length > 0) {

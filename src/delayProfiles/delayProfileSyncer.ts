@@ -30,8 +30,8 @@ export const createDelayProfileOnServer = async (arrType: MediaArrType, profile:
   return createDelayProfileSync(arrType).createFromConfig(profile, tags);
 };
 
-export const updateDelayProfileOnServer = async (arrType: MediaArrType, profile: InputConfigDelayProfile, tags: Tag[]) => {
-  await createDelayProfileSync(arrType).updateDefaultFromConfig(profile, tags);
+export const updateDelayProfileOnServer = async (arrType: MediaArrType, profile: InputConfigDelayProfile, tags: Tag[], id: string) => {
+  await createDelayProfileSync(arrType).updateDefaultFromConfig(profile, tags, id);
 };
 
 export const calculateDelayProfilesDiff = async (
