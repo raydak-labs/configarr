@@ -67,7 +67,6 @@ export class RadarrClient
 
   async updateQualityDefinitions(definitions: QualityDefinitionResource[]) {
     await this.api.v3QualitydefinitionUpdateUpdate(definitions);
-    this.api.v3LanguageList();
     return this.getQualityDefinitions();
   }
 

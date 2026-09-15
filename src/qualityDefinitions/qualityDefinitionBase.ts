@@ -44,7 +44,8 @@ export abstract class QualityDefinitionSync<T extends QualityDefinitionShared> {
   async persist(serverQDs: T[], qualityDefinitions: TrashQualityDefinitionQuality[], write: boolean) {
     const { changeMap, restData } = this.calculateDiff(serverQDs, qualityDefinitions);
     if (changeMap.size > 0 && write) {
-      await this.updateOnServer(restData);
+      const updated = await this.updateOnServer(restData);
+      return { changeMap, restData: updated };
     }
     return { changeMap, restData };
   }

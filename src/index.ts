@@ -175,7 +175,7 @@ const pipeline = async (
     }
 
     const writeQd = !getEnvs().DRY_RUN;
-    const { changeMap } = await qdSync.persist(serverCache.qualityDefinitions, mergedQDs, writeQd);
+    const { changeMap, restData } = await qdSync.persist(serverCache.qualityDefinitions, mergedQDs, writeQd);
 
     if (changeMap.size > 0) {
       diffCollector.add(qualityDefinitionsToDiffEntries(changeMap));
@@ -184,7 +184,7 @@ const pipeline = async (
         logger.info("DryRun: Would update QualityDefinitions.");
       } else {
         logger.info(`Diffs in quality definitions found ${changeMap.values()}`);
-        serverCache.qualityDefinitions = await qdSync.loadFromServer();
+        serverCache.qualityDefinitions = restData;
         logger.info(`Updated QualityDefinitions`);
       }
     } else {
