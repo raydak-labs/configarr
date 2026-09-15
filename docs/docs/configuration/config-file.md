@@ -997,8 +997,8 @@ For more details, check the \*Arr-specific API documentation under the `RemotePa
 
 Prowlarr uses a dedicated top-level `prowlarr:` block (see
 [Experimental support › Prowlarr](/docs/configuration/experimental-support#prowlarr-v1)).
-Under each instance it can manage `tags`, `indexer_proxies`, `indexers`, `applications` and
-`download_clients` (synced in that order). Each list section takes an optional
+Under each instance it can manage `tags`, `sync_profiles`, `indexer_proxies`, `indexers`,
+`applications` and `download_clients` (synced in that order). Each list section takes an optional
 `delete_unmanaged: { enabled, ignore }`.
 
 `applications` manages the apps Prowlarr syncs its indexers to:
@@ -1033,11 +1033,38 @@ prowlarr:
 - Secrets shown by the server as `********` are left untouched unless you change them
 - `sync_indexers: true` triggers Prowlarr's global `ApplicationIndexerSync` command once per run
 
+`sync_profiles` manages the profiles Prowlarr shows under Settings › Apps › Sync Profiles (its API
+calls them app profiles). Each entry takes a `name` plus the optional `enable_rss`,
+`enable_automatic_search`, `enable_interactive_search` and `minimum_seeders`:
+
+```yaml title="config.yml"
+prowlarr:
+  main:
+    base_url: http://prowlarr:9696
+    api_key: !secret PROWLARR_API_KEY
+
+    sync_profiles:
+      data:
+        - name: Standard
+          enable_rss: true
+          enable_automatic_search: true
+          enable_interactive_search: true
+          minimum_seeders: 1
+      delete_unmanaged:
+        enabled: false
+```
+
+- Profiles are matched by `name`, case-insensitively
+- A prop you leave out keeps its current value on the server, or takes Prowlarr's own default when
+  the profile is created
+- Profiles are synced before indexers, so an indexer can reference one created in the same run
+
 `indexers` entries are based on a schema `definition` (the Prowlarr `definitionName`, e.g. `1337x`)
-and matched to the server by display `name`. Extra keys: `enable`, `priority`, `app_profile`
-(resolved to an app-profile id; the name must exist in Prowlarr, otherwise the sync fails).
-On a new indexer without `app_profile` the first profile on the server is used; on an update the
-existing profile is kept. `indexer_proxies` are matched by
+and matched to the server by display `name`. Extra keys: `enable`, `priority`, `sync_profile`
+(the name must exist in Prowlarr or be listed under `sync_profiles`, otherwise the sync fails).
+On a new indexer without `sync_profile` the first profile on the server is used; on an update the
+existing profile is kept. `app_profile` is the original name for this key and still works.
+`indexer_proxies` are matched by
 `name` + `type` (implementation: `FlareSolverr`, `Http`, `Socks4`, `Socks5`).
 
 `tags` is a plain list of labels to ensure exist; `delete_unmanaged_tags: { enabled, ignore }`

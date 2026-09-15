@@ -427,6 +427,17 @@ prowlarr:
     delete_unmanaged_tags:
       enabled: false
 
+    # Sync profiles ("Sync Profiles" in the UI); indexers reference one by name
+    sync_profiles:
+      data:
+        - name: configarr
+          enable_rss: true
+          enable_automatic_search: true
+          enable_interactive_search: true
+          minimum_seeders: 1
+      delete_unmanaged:
+        enabled: false
+
     # Indexer proxies (FlareSolverr / Http / Socks4 / Socks5)
     indexer_proxies:
       data:
@@ -446,6 +457,7 @@ prowlarr:
           definition: The Pirate Bay
           enable: true
           priority: 25
+          sync_profile: configarr
           tags:
             - configarr
       delete_unmanaged:
