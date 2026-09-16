@@ -1,6 +1,11 @@
 import { logger } from "../logger";
 import { ArrType } from "../types/common.types";
 
+/** Skip *arr connection tests when the resource is disabled. Configarr syncs configuration; it does not run live downloads. */
+export function forceSaveIfDisabled(enable?: boolean | null): { forceSave: boolean } {
+  return { forceSave: enable === false };
+}
+
 export const validateClientParams = (url: string, apiKey: string, arrType: ArrType) => {
   const arrLabel = arrType.toLowerCase();
 

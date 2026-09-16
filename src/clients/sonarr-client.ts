@@ -17,7 +17,7 @@ import {
 } from "../__generated__/sonarr/data-contracts";
 import { logger } from "../logger";
 import type { CustomFormatRequest } from "../customFormats/customFormat.types";
-import { logConnectionError, validateClientParams } from "./connection";
+import { forceSaveIfDisabled, logConnectionError, validateClientParams } from "./connection";
 import {
   CustomFormatsClient,
   DownloadClientsClient,
@@ -177,11 +177,11 @@ export class SonarrClient
   }
 
   async createDownloadClient(client: DownloadClientResource): Promise<DownloadClientResource> {
-    return this.api.v3DownloadclientCreate(client);
+    return this.api.v3DownloadclientCreate(client, forceSaveIfDisabled(client.enable));
   }
 
   async updateDownloadClient(id: string, client: DownloadClientResource): Promise<DownloadClientResource> {
-    return this.api.v3DownloadclientUpdate(+id, client);
+    return this.api.v3DownloadclientUpdate(+id, client, forceSaveIfDisabled(client.enable));
   }
 
   async deleteDownloadClient(id: string): Promise<void> {

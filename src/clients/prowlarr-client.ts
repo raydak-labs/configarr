@@ -10,7 +10,7 @@ import {
   TagResource,
 } from "../__generated__/prowlarr/data-contracts";
 import { logger } from "../logger";
-import { logConnectionError, validateClientParams } from "./connection";
+import { forceSaveIfDisabled, logConnectionError, validateClientParams } from "./connection";
 import { DownloadClientsClient, SystemClient, TagsClient } from "./capabilities";
 
 /**
@@ -75,11 +75,11 @@ export class ProwlarrClient implements SystemClient, TagsClient<TagResource>, Do
   }
 
   async createIndexer(indexer: IndexerResource): Promise<IndexerResource> {
-    return this.api.v1IndexerCreate(indexer);
+    return this.api.v1IndexerCreate(indexer, forceSaveIfDisabled(indexer.enable));
   }
 
   async updateIndexer(id: string, indexer: IndexerResource): Promise<IndexerResource> {
-    return this.api.v1IndexerUpdate(id, indexer);
+    return this.api.v1IndexerUpdate(id, indexer, forceSaveIfDisabled(indexer.enable));
   }
 
   async deleteIndexer(id: string): Promise<void> {
@@ -131,11 +131,11 @@ export class ProwlarrClient implements SystemClient, TagsClient<TagResource>, Do
   }
 
   async createDownloadClient(client: DownloadClientResource): Promise<DownloadClientResource> {
-    return this.api.v1DownloadclientCreate(client);
+    return this.api.v1DownloadclientCreate(client, forceSaveIfDisabled(client.enable));
   }
 
   async updateDownloadClient(id: string, client: DownloadClientResource): Promise<DownloadClientResource> {
-    return this.api.v1DownloadclientUpdate(id, client);
+    return this.api.v1DownloadclientUpdate(id, client, forceSaveIfDisabled(client.enable));
   }
 
   async deleteDownloadClient(id: string): Promise<void> {
