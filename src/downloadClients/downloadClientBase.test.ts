@@ -1,4 +1,4 @@
-import { describe, expect, test, beforeEach } from "vitest";
+import { describe, expect, test, beforeEach, vi } from "vitest";
 import { BaseDownloadClientSync } from "./downloadClientBase";
 import type { InputConfigDownloadClient } from "../types/config.types";
 import type { ServerCache } from "../cache";
@@ -73,6 +73,61 @@ class MockDownloadClientSync extends BaseDownloadClientSync<MediaDownloadClientR
     throw new Error("Not implemented in test");
   }
 }
+
+describe("BaseDownloadClientSync – sync accounting", () => {
+  const api = {
+    getDownloadClientSchema: vi.fn(async () => [
+      {
+        implementation: "TorrentBlackhole",
+        implementationName: "Torrent Blackhole",
+        configContract: "TorrentBlackholeSettings",
+        fields: [{ name: "watchFolder", value: "" }],
+      },
+    ]),
+    getDownloadClients: vi.fn(async () => []),
+    getTags: vi.fn(async () => []),
+    createTag: vi.fn(),
+  };
+
+  class SyncingMock extends MockDownloadClientSync {
+    protected override getApi(): DownloadClientsClient<MediaDownloadClientResource> & TagsClient {
+      return api as unknown as DownloadClientsClient<MediaDownloadClientResource> & TagsClient;
+    }
+  }
+
+  const cache = () => ({ tags: [] }) as unknown as ServerCache;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    api.getDownloadClientSchema.mockResolvedValue([
+      {
+        implementation: "TorrentBlackhole",
+        implementationName: "Torrent Blackhole",
+        configContract: "TorrentBlackholeSettings",
+        fields: [{ name: "watchFolder", value: "" }],
+      },
+    ]);
+    api.getDownloadClients.mockResolvedValue([]);
+  });
+
+  test("reports a config skipped by validation as failed", async () => {
+    const result = await new SyncingMock().syncDownloadClients(
+      { download_clients: { data: [{ name: "broken", type: "" } as InputConfigDownloadClient] } },
+      cache(),
+    );
+
+    expect(result).toMatchObject({ added: 0, updated: 0, removed: 0, failed: 1 });
+  });
+
+  test("reports no failures for a valid config", async () => {
+    const result = await new SyncingMock().syncDownloadClients(
+      { download_clients: { data: [{ name: "bh", type: "TorrentBlackhole", fields: { watchFolder: "/data" } }] } },
+      cache(),
+    );
+
+    expect(result.failed).toBe(0);
+  });
+});
 
 describe("BaseDownloadClientSync – utility methods", () => {
   let sync: MockDownloadClientSync;

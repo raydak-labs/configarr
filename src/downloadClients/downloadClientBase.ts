@@ -531,6 +531,9 @@ export abstract class BaseDownloadClientSync<T extends DownloadClientShared> {
     // Validate configurations
     this.logger.debug("Validating download client configurations...");
     const { validClients } = await this.validateConfigClients(configClients, schema);
+    // A skipped client is a change that did not happen: it counts as failed so callers can see
+    // the server still holds whatever that entry was supposed to manage.
+    const skipped = configClients.length - validClients.length;
 
     // Create missing tags
     await this.createMissingTags(validClients, serverCache);
@@ -552,7 +555,7 @@ export abstract class BaseDownloadClientSync<T extends DownloadClientShared> {
         added: diff.create.length,
         updated: diff.update.length,
         removed: unmanagedToDelete.length,
-        failed: 0,
+        failed: skipped,
         diffEntries: downloadClientDiffToDiffEntries(diff, unmanagedToDelete),
       };
     }
@@ -570,7 +573,7 @@ export abstract class BaseDownloadClientSync<T extends DownloadClientShared> {
     const failedCreates = diff.create.length - added;
     const failedUpdates = diff.update.length - updated;
     const failedDeletes = unmanagedToDelete.length - removed;
-    const failed = failedCreates + failedUpdates + failedDeletes;
+    const failed = skipped + failedCreates + failedUpdates + failedDeletes;
 
     if (added > 0 || updated > 0 || removed > 0) {
       this.logger.info(`Download client synchronization complete: +${added} ~${updated} -${removed}`);
