@@ -5,7 +5,19 @@ import { ServerCache } from "../cache";
 import { MediaArrType } from "../types/common.types";
 import type { InputConfigDownloadClient } from "../types/config.types";
 import { MediaDownloadClientSync } from "./downloadClientMedia";
-import { createDownloadClientSync } from "./downloadClientSyncer";
+import { LidarrDownloadClientSync } from "./downloadClientLidarr";
+import { ReadarrDownloadClientSync } from "./downloadClientReadarr";
+import { RadarrDownloadClientSync } from "./downloadClientRadarr";
+import { SonarrDownloadClientSync } from "./downloadClientSonarr";
+import { WhisparrDownloadClientSync } from "./downloadClientWhisparr";
+
+const syncByArrType: Record<MediaArrType, () => MediaDownloadClientSync<DownloadClientResource>> = {
+  RADARR: () => new RadarrDownloadClientSync({} as any),
+  SONARR: () => new SonarrDownloadClientSync({} as any),
+  LIDARR: () => new LidarrDownloadClientSync({} as any),
+  READARR: () => new ReadarrDownloadClientSync({} as any),
+  WHISPARR: () => new WhisparrDownloadClientSync({} as any),
+};
 
 const qbitSchema = (extra: Record<string, unknown> = {}): DownloadClientResource =>
   ({
@@ -21,28 +33,23 @@ const qbitSchema = (extra: Record<string, unknown> = {}): DownloadClientResource
 describe("MediaDownloadClientSync – ARR type handling", () => {
   describe("constructor and ARR type initialization", () => {
     test("creates instance for RADARR", () => {
-      const sync = createDownloadClientSync("RADARR");
-      expect(sync).toBeInstanceOf(MediaDownloadClientSync);
+      expect(syncByArrType.RADARR()).toBeInstanceOf(MediaDownloadClientSync);
     });
 
     test("creates instance for SONARR", () => {
-      const sync = createDownloadClientSync("SONARR");
-      expect(sync).toBeInstanceOf(MediaDownloadClientSync);
+      expect(syncByArrType.SONARR()).toBeInstanceOf(MediaDownloadClientSync);
     });
 
     test("creates instance for LIDARR", () => {
-      const sync = createDownloadClientSync("LIDARR");
-      expect(sync).toBeInstanceOf(MediaDownloadClientSync);
+      expect(syncByArrType.LIDARR()).toBeInstanceOf(MediaDownloadClientSync);
     });
 
     test("creates instance for READARR", () => {
-      const sync = createDownloadClientSync("READARR");
-      expect(sync).toBeInstanceOf(MediaDownloadClientSync);
+      expect(syncByArrType.READARR()).toBeInstanceOf(MediaDownloadClientSync);
     });
 
     test("creates instance for WHISPARR", () => {
-      const sync = createDownloadClientSync("WHISPARR");
-      expect(sync).toBeInstanceOf(MediaDownloadClientSync);
+      expect(syncByArrType.WHISPARR()).toBeInstanceOf(MediaDownloadClientSync);
     });
   });
 
@@ -51,7 +58,7 @@ describe("MediaDownloadClientSync – ARR type handling", () => {
       const testCases: [MediaArrType][] = [["SONARR"], ["LIDARR"], ["RADARR"], ["WHISPARR"], ["READARR"]];
 
       testCases.forEach(([arrType]) => {
-        const sync = createDownloadClientSync(arrType);
+        const sync = syncByArrType[arrType]();
         // Test snake_case to camelCase normalization (no category handling)
         const result = sync.normalizeConfigFields(
           {
@@ -77,7 +84,7 @@ describe("MediaDownloadClientSync – ARR type handling", () => {
     const makeCache = () => new ServerCache();
 
     test("compares clients correctly with omission semantics", () => {
-      const sync = createDownloadClientSync("RADARR");
+      const sync = syncByArrType.RADARR();
       const cache = makeCache();
 
       const serverClient: DownloadClientResource = {
@@ -105,7 +112,7 @@ describe("MediaDownloadClientSync – ARR type handling", () => {
     });
 
     test("detects differences in specified fields", () => {
-      const sync = createDownloadClientSync("RADARR");
+      const sync = syncByArrType.RADARR();
       const cache = makeCache();
 
       const serverClient: DownloadClientResource = {
@@ -134,7 +141,7 @@ describe("MediaDownloadClientSync – ARR type handling", () => {
     });
 
     test("handles exact field name matches", () => {
-      const sync = createDownloadClientSync("SONARR");
+      const sync = syncByArrType.SONARR();
       const cache = makeCache();
 
       const serverClient: DownloadClientResource = {
@@ -168,7 +175,7 @@ describe("MediaDownloadClientSync – ARR type handling", () => {
     });
 
     test("handles password and apiKey masking without false diff", () => {
-      const sync = createDownloadClientSync("RADARR");
+      const sync = syncByArrType.RADARR();
       const cache = new ServerCache();
 
       // Server with masked password
@@ -209,7 +216,7 @@ describe("MediaDownloadClientSync – ARR type handling", () => {
     });
 
     test("uses exact field names without false diff", () => {
-      const sync = createDownloadClientSync("RADARR");
+      const sync = syncByArrType.RADARR();
       const cache = new ServerCache();
       cache.tags = [
         { id: 2, label: "4K" },
@@ -275,7 +282,7 @@ describe("MediaDownloadClientSync – ARR type handling", () => {
     });
 
     test("update_password forces password comparison", () => {
-      const sync = createDownloadClientSync("RADARR");
+      const sync = syncByArrType.RADARR();
       const cache = new ServerCache();
 
       // Server with masked password
@@ -319,7 +326,7 @@ describe("MediaDownloadClientSync – ARR type handling", () => {
 
   describe("partial update logic", () => {
     test("correctly identifies when to use partial updates", () => {
-      const sync = createDownloadClientSync("RADARR");
+      const sync = syncByArrType.RADARR();
 
       // Config with no properties should not use partial update
       const createConfig: InputConfigDownloadClient = {
@@ -360,7 +367,7 @@ describe("MediaDownloadClientSync – ARR type handling", () => {
 
   describe("client filtering logic", () => {
     test("correctly identifies unmanaged clients", () => {
-      const sync = createDownloadClientSync("RADARR");
+      const sync = syncByArrType.RADARR();
 
       const serverClients: DownloadClientResource[] = [
         {
@@ -408,7 +415,7 @@ describe("MediaDownloadClientSync – ARR type handling", () => {
     });
 
     test("respects delete unmanaged disabled", () => {
-      const sync = createDownloadClientSync("RADARR");
+      const sync = syncByArrType.RADARR();
 
       const serverClients: DownloadClientResource[] = [
         {
@@ -434,7 +441,7 @@ describe("MediaDownloadClientSync – ARR type handling", () => {
     });
 
     test("respects ignore list", () => {
-      const sync = createDownloadClientSync("RADARR");
+      const sync = syncByArrType.RADARR();
 
       const serverClients: DownloadClientResource[] = [
         {
@@ -471,7 +478,7 @@ describe("MediaDownloadClientSync – ARR type handling", () => {
     };
 
     test("RADARR create does not set categories", async () => {
-      const sync = createDownloadClientSync("RADARR");
+      const sync = syncByArrType.RADARR();
       const cache = new ServerCache();
       sync.setDownloadClientSchema([qbitSchema({ categories: [] })]);
 
@@ -480,7 +487,7 @@ describe("MediaDownloadClientSync – ARR type handling", () => {
     });
 
     test("preserves masked server secrets when updatePassword is false", async () => {
-      const sync = createDownloadClientSync("RADARR");
+      const sync = syncByArrType.RADARR();
       const cache = new ServerCache();
       sync.setDownloadClientSchema([
         qbitSchema({
@@ -518,7 +525,7 @@ describe("MediaDownloadClientSync – ARR type handling", () => {
     });
 
     test("keeps server tags when config.tags is omitted", async () => {
-      const sync = createDownloadClientSync("RADARR");
+      const sync = syncByArrType.RADARR();
       const cache = new ServerCache();
       sync.setDownloadClientSchema([qbitSchema()]);
       const server = qbitSchema({ id: 1, name: "qBittorrent", tags: [4, 5] });

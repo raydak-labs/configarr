@@ -1,6 +1,7 @@
 import { getClient } from "../clients/client";
 import { DelayProfileLidarrSync } from "../delayProfiles/delayProfileLidarr";
 import { InstanceDiffReport } from "../diffReport/diffReport.types";
+import { LidarrDownloadClientSync } from "../downloadClients/downloadClientLidarr";
 import { MediaManagementSync } from "../mediaManagement/mediaManagement";
 import { LidarrMetadataProfileSync } from "../metadataProfiles/metadataProfileLidarr";
 import { QualityDefinitionPreferredSync } from "../qualityDefinitions/qualityDefinition";
@@ -26,6 +27,7 @@ export class LidarrSyncer {
         qp: new QualityProfileLidarrSync(client),
         delay: new DelayProfileLidarrSync(client),
         root: new LidarrRootFolderSync(client),
+        downloadClients: new LidarrDownloadClientSync(client),
       },
     });
     const metadataSync = new LidarrMetadataProfileSync(client);

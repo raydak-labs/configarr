@@ -30,23 +30,19 @@ vi.mock("../logger", () => ({
 }));
 
 // Mock clients
-vi.mock("../clients/client", () => {
-  const mockServerConfig = {
-    downloadClientWorkingFolders: "/downloads/completed",
-    enableCompletedDownloadHandling: true,
-    autoRedownloadFailed: true,
-    checkForFinishedDownloadInterval: 1,
-    autoRedownloadFailedFromInteractiveSearch: false,
-  };
+const mockDefaultServerConfig = {
+  downloadClientWorkingFolders: "/downloads/completed",
+  enableCompletedDownloadHandling: true,
+  autoRedownloadFailed: true,
+  checkForFinishedDownloadInterval: 1,
+  autoRedownloadFailedFromInteractiveSearch: false,
+};
 
-  const mockClient = {
-    getDownloadClientConfig: vi.fn(() => mockServerConfig),
-    updateDownloadClientConfig: vi.fn(() => mockServerConfig),
-  };
-  return {
-    getClient: vi.fn(() => mockClient),
-  };
-});
+const createDefaultMockClient = () =>
+  ({
+    getDownloadClientConfig: vi.fn(() => mockDefaultServerConfig),
+    updateDownloadClientConfig: vi.fn(() => mockDefaultServerConfig),
+  }) as unknown as Parameters<typeof syncDownloadClientConfig>[0];
 
 // Create a mock ServerCache
 const createMockServerCache = (): ServerCache => {
@@ -77,7 +73,7 @@ describe("downloadClientConfigSyncer", () => {
       };
       const serverCache = createMockServerCache();
 
-      const result = await syncDownloadClientConfig("RADARR", config, serverCache);
+      const result = await syncDownloadClientConfig(createDefaultMockClient(), "RADARR", config, serverCache);
 
       expect(result.updated).toBe(false);
       expect(result.arrType).toBe("RADARR");
@@ -93,7 +89,7 @@ describe("downloadClientConfigSyncer", () => {
 
       for (const arrType of arrTypes) {
         const config = { ...baseConfig };
-        const result = await syncDownloadClientConfig(arrType, config, createMockServerCache());
+        const result = await syncDownloadClientConfig(createDefaultMockClient(), arrType, config, createMockServerCache());
         expect(result.arrType).toBe(arrType);
         expect(result.updated).toBe(false);
       }
@@ -101,7 +97,6 @@ describe("downloadClientConfigSyncer", () => {
 
     it("should normalize field names from snake_case to camelCase", async () => {
       const { syncDownloadClientConfig } = await import("./downloadClientConfigSyncer");
-      const { getClient } = await import("../clients/client");
       const { getEnvs } = await import("../env");
 
       const mockGetEnvs = vi.mocked(getEnvs);
@@ -125,7 +120,6 @@ describe("downloadClientConfigSyncer", () => {
         getDownloadClientConfig: mockGetConfig,
         updateDownloadClientConfig: mockUpdateConfig,
       };
-      vi.mocked(getClient).mockReturnValue(mockClient as any);
 
       const config: MergedConfigInstance = {
         custom_formats: [],
@@ -139,7 +133,7 @@ describe("downloadClientConfigSyncer", () => {
         },
       };
 
-      const result = await syncDownloadClientConfig("SONARR", config, createMockServerCache());
+      const result = await syncDownloadClientConfig(mockClient, "SONARR", config, createMockServerCache());
 
       expect(result.updated).toBe(true);
       expect(mockUpdateConfig).toHaveBeenCalled();
@@ -154,7 +148,6 @@ describe("downloadClientConfigSyncer", () => {
 
     it("should filter Radarr-only fields for Radarr", async () => {
       const { syncDownloadClientConfig } = await import("./downloadClientConfigSyncer");
-      const { getClient } = await import("../clients/client");
       const { getEnvs } = await import("../env");
 
       const mockGetEnvs = vi.mocked(getEnvs);
@@ -177,7 +170,6 @@ describe("downloadClientConfigSyncer", () => {
         getDownloadClientConfig: mockGetConfig,
         updateDownloadClientConfig: mockUpdateConfig,
       };
-      vi.mocked(getClient).mockReturnValue(mockClient as any);
 
       const config: MergedConfigInstance = {
         custom_formats: [],
@@ -189,7 +181,7 @@ describe("downloadClientConfigSyncer", () => {
         },
       };
 
-      await syncDownloadClientConfig("RADARR", config, createMockServerCache());
+      await syncDownloadClientConfig(mockClient, "RADARR", config, createMockServerCache());
 
       expect(mockUpdateConfig).toHaveBeenCalled();
       const callArgs = mockUpdateConfig.mock.calls[0];
@@ -201,7 +193,6 @@ describe("downloadClientConfigSyncer", () => {
 
     it("should filter out Radarr-only fields for Sonarr", async () => {
       const { syncDownloadClientConfig } = await import("./downloadClientConfigSyncer");
-      const { getClient } = await import("../clients/client");
       const { getEnvs } = await import("../env");
 
       const mockGetEnvs = vi.mocked(getEnvs);
@@ -224,7 +215,6 @@ describe("downloadClientConfigSyncer", () => {
         getDownloadClientConfig: mockGetConfig,
         updateDownloadClientConfig: mockUpdateConfig,
       };
-      vi.mocked(getClient).mockReturnValue(mockClient as any);
 
       const config: MergedConfigInstance = {
         custom_formats: [],
@@ -237,7 +227,7 @@ describe("downloadClientConfigSyncer", () => {
         },
       };
 
-      await syncDownloadClientConfig("SONARR", config, createMockServerCache());
+      await syncDownloadClientConfig(mockClient, "SONARR", config, createMockServerCache());
 
       expect(mockUpdateConfig).toHaveBeenCalled();
       const callArgs = mockUpdateConfig.mock.calls[0];
@@ -250,7 +240,6 @@ describe("downloadClientConfigSyncer", () => {
 
     it("should filter out autoRedownloadFailedFromInteractiveSearch for Whisparr", async () => {
       const { syncDownloadClientConfig } = await import("./downloadClientConfigSyncer");
-      const { getClient } = await import("../clients/client");
       const { getEnvs } = await import("../env");
 
       const mockGetEnvs = vi.mocked(getEnvs);
@@ -273,7 +262,6 @@ describe("downloadClientConfigSyncer", () => {
         getDownloadClientConfig: mockGetConfig,
         updateDownloadClientConfig: mockUpdateConfig,
       };
-      vi.mocked(getClient).mockReturnValue(mockClient as any);
 
       const config: MergedConfigInstance = {
         custom_formats: [],
@@ -286,7 +274,7 @@ describe("downloadClientConfigSyncer", () => {
         },
       };
 
-      await syncDownloadClientConfig("WHISPARR", config, createMockServerCache());
+      await syncDownloadClientConfig(mockClient, "WHISPARR", config, createMockServerCache());
 
       expect(mockUpdateConfig).toHaveBeenCalled();
       const callArgs = mockUpdateConfig.mock.calls[0];
@@ -299,7 +287,6 @@ describe("downloadClientConfigSyncer", () => {
 
     it("returns structured fieldChanges when config differs", async () => {
       const { syncDownloadClientConfig } = await import("./downloadClientConfigSyncer");
-      const { getClient } = await import("../clients/client");
       const { getEnvs } = await import("../env");
 
       const mockGetEnvs = vi.mocked(getEnvs);
@@ -318,13 +305,12 @@ describe("downloadClientConfigSyncer", () => {
         getDownloadClientConfig: mockGetConfig,
         updateDownloadClientConfig: mockUpdateConfig,
       };
-      vi.mocked(getClient).mockReturnValue(mockClient as any);
 
       const config = {
         download_clients: { config: { enable_completed_download_handling: true } },
       } as unknown as MergedConfigInstance;
 
-      const result = await syncDownloadClientConfig("RADARR", config, createMockServerCache());
+      const result = await syncDownloadClientConfig(mockClient, "RADARR", config, createMockServerCache());
 
       expect(result.updated).toBe(true);
       expect(result.fieldChanges).toContainEqual({
@@ -336,7 +322,6 @@ describe("downloadClientConfigSyncer", () => {
 
     it("should not update if config is already up-to-date", async () => {
       const { syncDownloadClientConfig } = await import("./downloadClientConfigSyncer");
-      const { getClient } = await import("../clients/client");
       const { getEnvs } = await import("../env");
 
       const mockGetEnvs = vi.mocked(getEnvs);
@@ -360,7 +345,6 @@ describe("downloadClientConfigSyncer", () => {
         getDownloadClientConfig: mockGetConfig,
         updateDownloadClientConfig: mockUpdateConfig,
       };
-      vi.mocked(getClient).mockReturnValue(mockClient as any);
 
       const config: MergedConfigInstance = {
         custom_formats: [],
@@ -373,7 +357,7 @@ describe("downloadClientConfigSyncer", () => {
         },
       };
 
-      const result = await syncDownloadClientConfig("SONARR", config, createMockServerCache());
+      const result = await syncDownloadClientConfig(mockClient, "SONARR", config, createMockServerCache());
 
       expect(result.updated).toBe(false);
       expect(mockUpdateConfig).not.toHaveBeenCalled();
@@ -381,7 +365,6 @@ describe("downloadClientConfigSyncer", () => {
 
     it("should handle DRY_RUN mode", async () => {
       const { syncDownloadClientConfig } = await import("./downloadClientConfigSyncer");
-      const { getClient } = await import("../clients/client");
       const { getEnvs } = await import("../env");
 
       const mockGetEnvs = vi.mocked(getEnvs);
@@ -404,7 +387,6 @@ describe("downloadClientConfigSyncer", () => {
         getDownloadClientConfig: mockGetConfig,
         updateDownloadClientConfig: mockUpdateConfig,
       };
-      vi.mocked(getClient).mockReturnValue(mockClient as any);
 
       const config: MergedConfigInstance = {
         custom_formats: [],
@@ -416,7 +398,7 @@ describe("downloadClientConfigSyncer", () => {
         },
       };
 
-      const result = await syncDownloadClientConfig("RADARR", config, createMockServerCache());
+      const result = await syncDownloadClientConfig(mockClient, "RADARR", config, createMockServerCache());
 
       expect(result.updated).toBe(true);
       expect(mockUpdateConfig).not.toHaveBeenCalled();
@@ -424,7 +406,6 @@ describe("downloadClientConfigSyncer", () => {
 
     it("should throw error on API call failure", async () => {
       const { syncDownloadClientConfig } = await import("./downloadClientConfigSyncer");
-      const { getClient } = await import("../clients/client");
       const { getEnvs } = await import("../env");
 
       const mockGetEnvs = vi.mocked(getEnvs);
@@ -442,7 +423,6 @@ describe("downloadClientConfigSyncer", () => {
         getDownloadClientConfig: mockGetConfig,
         updateDownloadClientConfig: vi.fn(),
       };
-      vi.mocked(getClient).mockReturnValue(mockClient as any);
 
       const config: MergedConfigInstance = {
         custom_formats: [],
@@ -454,14 +434,13 @@ describe("downloadClientConfigSyncer", () => {
         },
       };
 
-      await expect(syncDownloadClientConfig("RADARR", config, createMockServerCache())).rejects.toThrow(
+      await expect(syncDownloadClientConfig(mockClient, "RADARR", config, createMockServerCache())).rejects.toThrow(
         "Download client config sync failed for RADARR",
       );
     });
 
     it("should include common fields for all arrTypes", async () => {
       const { syncDownloadClientConfig } = await import("./downloadClientConfigSyncer");
-      const { getClient } = await import("../clients/client");
       const { getEnvs } = await import("../env");
 
       const mockGetEnvs = vi.mocked(getEnvs);
@@ -485,7 +464,6 @@ describe("downloadClientConfigSyncer", () => {
         getDownloadClientConfig: mockGetConfig,
         updateDownloadClientConfig: mockUpdateConfig,
       };
-      vi.mocked(getClient).mockReturnValue(mockClient as any);
 
       const config: MergedConfigInstance = {
         custom_formats: [],
@@ -503,7 +481,7 @@ describe("downloadClientConfigSyncer", () => {
       for (const arrType of arrTypes) {
         mockUpdateConfig.mockClear();
 
-        await syncDownloadClientConfig(arrType, config, createMockServerCache());
+        await syncDownloadClientConfig(mockClient, arrType, config, createMockServerCache());
 
         expect(mockUpdateConfig).toHaveBeenCalled();
         const callArgs = mockUpdateConfig.mock.calls[0];

@@ -2,6 +2,7 @@ import { DownloadProtocol } from "../__generated__/sonarr/data-contracts";
 import { getClient } from "../clients/client";
 import { StandardDelayProfileSync } from "../delayProfiles/delayProfileBase";
 import { InstanceDiffReport } from "../diffReport/diffReport.types";
+import { SonarrDownloadClientSync } from "../downloadClients/downloadClientSonarr";
 import { MediaManagementSync } from "../mediaManagement/mediaManagement";
 import { QualityDefinitionPreferredSync } from "../qualityDefinitions/qualityDefinition";
 import { QualityProfileSonarrSync } from "../qualityProfiles/qualityProfileSonarr";
@@ -27,6 +28,7 @@ export class SonarrSyncer {
         qp: new QualityProfileSonarrSync(client),
         delay: new StandardDelayProfileSync(client, DownloadProtocol),
         root: new PathRootFolderSync(client),
+        downloadClients: new SonarrDownloadClientSync(client),
       },
       trash: createTrashOps(ARR),
     });

@@ -2,6 +2,7 @@ import { DownloadProtocol } from "../__generated__/whisparr/data-contracts";
 import { getClient } from "../clients/client";
 import { StandardDelayProfileSync } from "../delayProfiles/delayProfileBase";
 import { InstanceDiffReport } from "../diffReport/diffReport.types";
+import { WhisparrDownloadClientSync } from "../downloadClients/downloadClientWhisparr";
 import { MediaManagementSync } from "../mediaManagement/mediaManagement";
 import { QualityDefinitionPreferredSync } from "../qualityDefinitions/qualityDefinition";
 import { QualityProfileWhisparrSync } from "../qualityProfiles/qualityProfileWhisparr";
@@ -26,6 +27,7 @@ export class WhisparrSyncer {
         qp: new QualityProfileWhisparrSync(client),
         delay: new StandardDelayProfileSync(client, DownloadProtocol),
         root: new PathRootFolderSync(client),
+        downloadClients: new WhisparrDownloadClientSync(client),
       },
     });
     return completeMediaSync(ctx);

@@ -1,5 +1,4 @@
 import { ServerCache } from "../cache";
-import type { DownloadClientsClient, TagsClient } from "../clients/capabilities";
 import { FieldChange } from "../diffReport/diffReport.types";
 import { MediaArrType } from "../types/common.types";
 import { InputConfigDownloadClient } from "../types/config.types";
@@ -8,8 +7,6 @@ import { BaseDownloadClientSync } from "./downloadClientBase";
 
 export abstract class MediaDownloadClientSync<T extends MediaDownloadClientResource> extends BaseDownloadClientSync<T> {
   protected abstract getArrType(): MediaArrType;
-
-  protected abstract getApi(): DownloadClientsClient<T> & TagsClient;
 
   public isDownloadClientEqual = (
     config: InputConfigDownloadClient,

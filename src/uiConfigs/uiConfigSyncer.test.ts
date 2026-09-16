@@ -1,12 +1,6 @@
 import { describe, expect, test, vi, beforeEach, afterEach } from "vitest";
 import { syncUiConfig } from "./uiConfigSyncer";
-import { getClient } from "../clients/client";
 import { getEnvs } from "../env";
-
-// Mock dependencies
-vi.mock("../clients/client", () => ({
-  getClient: vi.fn(),
-}));
 
 vi.mock("../env", () => ({
   getEnvs: vi.fn(() => ({ DRY_RUN: false })),
@@ -28,13 +22,10 @@ vi.mock("../logger", () => ({
 describe("uiConfigSyncer", () => {
   const mockGetUiConfig = vi.fn();
   const mockUpdateUiConfig = vi.fn();
+  const mockClient = { getUiConfig: mockGetUiConfig, updateUiConfig: mockUpdateUiConfig };
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(getClient).mockReturnValue({
-      getUiConfig: mockGetUiConfig,
-      updateUiConfig: mockUpdateUiConfig,
-    } as any);
   });
 
   afterEach(() => {
@@ -43,10 +34,9 @@ describe("uiConfigSyncer", () => {
 
   describe("syncUiConfig", () => {
     test("should skip when uiConfig is undefined", async () => {
-      const result = await syncUiConfig("RADARR", undefined);
+      const result = await syncUiConfig(mockClient, "RADARR", undefined);
 
       expect(result).toEqual({ updated: false, arrType: "RADARR", fieldChanges: [] });
-      expect(getClient).not.toHaveBeenCalled();
       expect(mockGetUiConfig).not.toHaveBeenCalled();
     });
 
@@ -58,9 +48,8 @@ describe("uiConfigSyncer", () => {
 
       // null as config will be treated as a valid config object
       // The diff calculation will compare null against server config
-      const result = await syncUiConfig("SONARR", null as any);
+      await syncUiConfig(mockClient, "SONARR", null as any);
 
-      expect(getClient).toHaveBeenCalledWith("SONARR");
       expect(mockGetUiConfig).toHaveBeenCalled();
     });
 
@@ -70,7 +59,7 @@ describe("uiConfigSyncer", () => {
 
       mockGetUiConfig.mockResolvedValue(serverConfig);
 
-      const result = await syncUiConfig("RADARR", localConfig);
+      const result = await syncUiConfig(mockClient, "RADARR", localConfig);
 
       expect(result).toEqual({ updated: false, arrType: "RADARR", fieldChanges: [] });
       expect(mockUpdateUiConfig).not.toHaveBeenCalled();
@@ -83,7 +72,7 @@ describe("uiConfigSyncer", () => {
       mockGetUiConfig.mockResolvedValue(serverConfig);
       mockUpdateUiConfig.mockResolvedValue({ ...serverConfig, ...localConfig });
 
-      const result = await syncUiConfig("RADARR", localConfig);
+      const result = await syncUiConfig(mockClient, "RADARR", localConfig);
 
       expect(result).toEqual({
         updated: true,
@@ -101,7 +90,7 @@ describe("uiConfigSyncer", () => {
 
       mockGetUiConfig.mockResolvedValue(serverConfig);
 
-      const result = await syncUiConfig("SONARR", localConfig);
+      const result = await syncUiConfig(mockClient, "SONARR", localConfig);
 
       expect(result).toEqual({
         updated: true,
@@ -117,7 +106,7 @@ describe("uiConfigSyncer", () => {
 
       mockGetUiConfig.mockResolvedValue(serverConfig);
 
-      await expect(syncUiConfig("RADARR", localConfig)).rejects.toThrow(
+      await expect(syncUiConfig(mockClient, "RADARR", localConfig)).rejects.toThrow(
         "UI config sync failed for RADARR: UI config for RADARR is missing required 'id' field",
       );
     });
@@ -128,7 +117,7 @@ describe("uiConfigSyncer", () => {
 
       mockGetUiConfig.mockResolvedValue(serverConfig);
 
-      await expect(syncUiConfig("SONARR", localConfig)).rejects.toThrow("missing required 'id' field");
+      await expect(syncUiConfig(mockClient, "SONARR", localConfig)).rejects.toThrow("missing required 'id' field");
     });
 
     test("should throw error when serverConfig.id is 0 (falsy)", async () => {
@@ -137,19 +126,21 @@ describe("uiConfigSyncer", () => {
 
       mockGetUiConfig.mockResolvedValue(serverConfig);
 
-      await expect(syncUiConfig("LIDARR", localConfig)).rejects.toThrow("missing required 'id' field");
+      await expect(syncUiConfig(mockClient, "LIDARR", localConfig)).rejects.toThrow("missing required 'id' field");
     });
 
     test("should propagate client errors with context", async () => {
       mockGetUiConfig.mockRejectedValue(new Error("Network error"));
 
-      await expect(syncUiConfig("RADARR", { theme: "dark" })).rejects.toThrow("UI config sync failed for RADARR: Network error");
+      await expect(syncUiConfig(mockClient, "RADARR", { theme: "dark" })).rejects.toThrow(
+        "UI config sync failed for RADARR: Network error",
+      );
     });
 
     test("should handle non-Error thrown objects", async () => {
       mockGetUiConfig.mockRejectedValue("String error");
 
-      await expect(syncUiConfig("RADARR", { theme: "dark" })).rejects.toThrow("UI config sync failed for RADARR: String error");
+      await expect(syncUiConfig(mockClient, "RADARR", { theme: "dark" })).rejects.toThrow("UI config sync failed for RADARR: String error");
     });
 
     test("should work with different arr types", async () => {
@@ -163,10 +154,10 @@ describe("uiConfigSyncer", () => {
         mockGetUiConfig.mockResolvedValue(serverConfig);
         mockUpdateUiConfig.mockResolvedValue({ ...serverConfig, ...localConfig });
 
-        const result = await syncUiConfig(arrType, localConfig);
+        const result = await syncUiConfig(mockClient, arrType, localConfig);
 
         expect(result).toEqual({ updated: true, arrType, fieldChanges: [{ field: "theme", from: "light", to: "dark" }] });
-        expect(getClient).toHaveBeenCalledWith(arrType);
+        expect(mockGetUiConfig).toHaveBeenCalled();
       }
     });
 
@@ -186,7 +177,7 @@ describe("uiConfigSyncer", () => {
       mockGetUiConfig.mockResolvedValue(serverConfig);
       mockUpdateUiConfig.mockResolvedValue({});
 
-      await syncUiConfig("RADARR", localConfig);
+      await syncUiConfig(mockClient, "RADARR", localConfig);
 
       expect(mockUpdateUiConfig).toHaveBeenCalledWith("1", {
         id: 1,

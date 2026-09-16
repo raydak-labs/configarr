@@ -15,7 +15,8 @@ import { DelayProfileShared } from "../delayProfiles/delayProfile.types";
 import { DiffCollector } from "../diffReport/diffCollector";
 import { InstanceDiffReport } from "../diffReport/diffReport.types";
 import { downloadClientConfigDiffToDiffEntries, syncDownloadClientConfig } from "../downloadClientConfig/downloadClientConfigSyncer";
-import { syncDownloadClients } from "../downloadClients/downloadClientSyncer";
+import { BaseDownloadClientSync } from "../downloadClients/downloadClientBase";
+import { MediaDownloadClientResource } from "../downloadClients/downloadClient.types";
 import { getEnvs } from "../env";
 import { logger } from "../logger";
 import { MediaManagementSync, mediamanagementDiffToDiffEntries, namingDiffToDiffEntries } from "../mediaManagement/mediaManagement";
@@ -38,6 +39,7 @@ export type MediaFeatureSyncs = {
   qp: BaseQualityProfileSync<QualityProfileShared>;
   delay: BaseDelayProfileSync<DelayProfileShared>;
   root: BaseRootFolderSync;
+  downloadClients: BaseDownloadClientSync<MediaDownloadClientResource>;
 };
 
 export type MediaTrashOps = {
@@ -76,7 +78,7 @@ export const runMediaSyncToQualityProfiles = async <T extends MediaArrType>(
   const system = await client.getSystemStatus();
   logger.info(`System status: ${JSON.stringify(system)}`);
 
-  const serverCFs = await loadServerCustomFormats(arrType);
+  const serverCFs = await loadServerCustomFormats(client);
   const serverQD = await qdSync.loadFromServer();
   const languages = await client.getLanguages();
 
@@ -108,14 +110,14 @@ export const runMediaSyncToQualityProfiles = async <T extends MediaArrType>(
     return p;
   }, new Map<string, CustomFormatRequest>());
 
-  const cfUpdateResult = await manageCf(arrType, mergedCFs, serverCFMapping);
+  const cfUpdateResult = await manageCf(client, mergedCFs, serverCFMapping);
   collector.add(cfUpdateResult.diffEntries);
 
   // add missing CFs to list because we need it for further steps
   // serverCFs.push(...cfUpdateResult.createCFs);
   if (cfUpdateResult.createCFs.length > 0 || cfUpdateResult.updatedCFs.length > 0) {
     // refresh cfs
-    serverCache.customFormats = await loadServerCustomFormats(arrType);
+    serverCache.customFormats = await loadServerCustomFormats(client);
   }
 
   if (config.delete_unmanaged_custom_formats?.enabled) {
@@ -148,7 +150,7 @@ export const runMediaSyncToQualityProfiles = async <T extends MediaArrType>(
         );
 
         for (const element of cfsToDelete) {
-          await deleteCustomFormat(arrType, element);
+          await deleteCustomFormat(client, element);
         }
       }
     }
@@ -157,7 +159,7 @@ export const runMediaSyncToQualityProfiles = async <T extends MediaArrType>(
   logger.info(`CustomFormats synchronized`);
 
   // load tags
-  const serverTags = await loadServerTags(arrType);
+  const serverTags = await loadServerTags(client);
   serverCache.tags = serverTags;
 
   if (config.quality_definition != null) {
@@ -232,7 +234,7 @@ export const runMediaSyncToQualityProfiles = async <T extends MediaArrType>(
     }
   }
 
-  const uiConfigResult = await syncUiConfig(arrType, config.ui_config);
+  const uiConfigResult = await syncUiConfig(client, arrType, config.ui_config);
   collector.add(uiConfigDiffToDiffEntries(uiConfigResult));
 
   const serverQP = await qpSync.loadFromServer();
@@ -348,7 +350,7 @@ export const completeMediaSync = async <T extends MediaArrType>(ctx: MediaSyncCo
   // Download Clients
   if (config.download_clients?.data || config.download_clients?.delete_unmanaged?.enabled) {
     try {
-      const downloadClientsResult = await syncDownloadClients(arrType, config, serverCache);
+      const downloadClientsResult = await syncs.downloadClients.syncDownloadClients(config, serverCache);
       collector.add(downloadClientsResult.diffEntries);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
@@ -359,7 +361,7 @@ export const completeMediaSync = async <T extends MediaArrType>(ctx: MediaSyncCo
   // Download Client Configuration
   if (config.download_clients?.config) {
     try {
-      const downloadClientConfigResult = await syncDownloadClientConfig(arrType, config, serverCache);
+      const downloadClientConfigResult = await syncDownloadClientConfig(client, arrType, config, serverCache);
       collector.add(downloadClientConfigDiffToDiffEntries(downloadClientConfigResult));
     } catch (err: any) {
       logger.error(`Failed to sync download client config: ${err.message}`);
@@ -373,7 +375,7 @@ export const completeMediaSync = async <T extends MediaArrType>(ctx: MediaSyncCo
   ) {
     logger.debug(`[DEBUG] About to sync remote paths for ${arrType}. Count: ${config.download_clients.remote_paths.length}`);
     try {
-      const remotePathsResult = await syncRemotePaths(arrType, config);
+      const remotePathsResult = await syncRemotePaths(client, arrType, config);
       collector.add(remotePathsResult.diffEntries);
     } catch (err: any) {
       logger.error(`Failed to sync remote path mappings: ${err.message}`);

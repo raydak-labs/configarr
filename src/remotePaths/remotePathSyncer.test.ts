@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { syncRemotePaths, remotePathsToDiffEntries } from "./remotePathSyncer";
-import { getClient } from "../clients/client";
 import { RemotePathMappingResource } from "./remotePath.types";
 
 // Mock env - use importOriginal to preserve other env functions
@@ -18,7 +17,6 @@ vi.mock("../env", async (importOriginal) => {
   };
 });
 
-vi.mock("../clients/client");
 vi.mock("../logger");
 
 describe("remotePathSyncer", () => {
@@ -33,7 +31,7 @@ describe("remotePathSyncer", () => {
       download_clients: {},
     };
 
-    const result = await syncRemotePaths("RADARR", config);
+    const result = await syncRemotePaths({} as any, "RADARR", config);
 
     expect(result).toEqual({
       created: 0,
@@ -57,7 +55,7 @@ describe("remotePathSyncer", () => {
       },
     };
 
-    const result = await syncRemotePaths("RADARR", config);
+    const result = await syncRemotePaths({} as any, "RADARR", config);
 
     expect(result.created).toBe(0);
     expect(result.updated).toBe(0);
@@ -75,8 +73,6 @@ describe("remotePathSyncer", () => {
         updateRemotePathMapping: vi.fn(),
         deleteRemotePathMapping: vi.fn(),
       };
-
-      vi.mocked(getClient).mockReturnValue(mockRadarrClient);
     });
 
     it("should handle already exists error by falling back to update", async () => {
@@ -107,7 +103,7 @@ describe("remotePathSyncer", () => {
         },
       };
 
-      const result = await syncRemotePaths("RADARR", config);
+      const result = await syncRemotePaths(mockRadarrClient, "RADARR", config);
 
       expect(result.updated).toBe(1);
       expect(mockRadarrClient.updateRemotePathMapping).toHaveBeenCalledWith(
@@ -142,7 +138,7 @@ describe("remotePathSyncer", () => {
         },
       };
 
-      const result = await syncRemotePaths("RADARR", config);
+      const result = await syncRemotePaths(mockRadarrClient, "RADARR", config);
 
       // Should be detected as unchanged (paths are the same after normalization)
       expect(result.unchanged).toBe(1);
@@ -156,7 +152,7 @@ describe("remotePathSyncer", () => {
         { id: 1, host: "transmission", remotePath: "/downloads/tv", localPath: "/downloads/1/" },
       ]);
 
-      const result = await syncRemotePaths("SONARR", {
+      const result = await syncRemotePaths(mockRadarrClient, "SONARR", {
         custom_formats: [],
         quality_profiles: [],
         download_clients: {
@@ -187,7 +183,7 @@ describe("remotePathSyncer", () => {
         },
       };
 
-      const result = await syncRemotePaths("RADARR", config);
+      const result = await syncRemotePaths(mockRadarrClient, "RADARR", config);
 
       expect(result.deleted).toBe(2);
       expect(mockRadarrClient.deleteRemotePathMapping).toHaveBeenCalledWith("1");
@@ -233,7 +229,7 @@ describe("remotePathSyncer", () => {
         },
       };
 
-      const result = await syncRemotePaths("RADARR", config);
+      const result = await syncRemotePaths(mockRadarrClient, "RADARR", config);
 
       expect(result.created).toBe(1);
       expect(result.updated).toBe(1);
@@ -291,7 +287,7 @@ describe("remotePathSyncer", () => {
         },
       };
 
-      const result = await syncRemotePaths("RADARR", config);
+      const result = await syncRemotePaths(mockRadarrClient, "RADARR", config);
 
       expect(result.created).toBe(2);
       expect(mockRadarrClient.createRemotePathMapping).toHaveBeenCalledTimes(2);

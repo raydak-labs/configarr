@@ -61,7 +61,14 @@ export abstract class BaseDownloadClientSync<T extends DownloadClientShared> {
   protected readonly logger = logger;
   private schema: T[] | null = null;
 
-  protected abstract getApi(): DownloadClientsClient<T> & TagsClient;
+  constructor(protected readonly api?: DownloadClientsClient<T> & TagsClient) {}
+
+  protected getApi(): DownloadClientsClient<T> & TagsClient {
+    if (this.api === undefined) {
+      throw new Error("Please configure API first.");
+    }
+    return this.api;
+  }
 
   protected abstract getArrType(): ArrType;
 

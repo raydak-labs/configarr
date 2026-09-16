@@ -4,11 +4,11 @@ import { DownloadProtocol } from "../__generated__/radarr/data-contracts";
 import type { DownloadClientResource } from "../__generated__/radarr/data-contracts";
 import { ServerCache } from "../cache";
 import type { InputConfigDownloadClient } from "../types/config.types";
-import { createDownloadClientSync } from "./downloadClientSyncer";
+import { RadarrDownloadClientSync } from "./downloadClientRadarr";
 
-const getTestSync = () => createDownloadClientSync("RADARR");
+const getTestSync = () => new RadarrDownloadClientSync({} as any);
 
-describe("downloadClientSyncer – tag resolution", () => {
+describe("RadarrDownloadClientSync – tag resolution", () => {
   test("resolves tag names to IDs (case-insensitive)", () => {
     const serverTags: Tag[] = [
       { id: 1, label: "movies" },
@@ -65,7 +65,7 @@ describe("downloadClientSyncer – tag resolution", () => {
   });
 });
 
-describe("downloadClientSyncer – field normalization", () => {
+describe("RadarrDownloadClientSync – field normalization", () => {
   test("converts snake_case to camelCase", () => {
     const result = getTestSync().normalizeConfigFields({ use_ssl: true, api_key: "test123", recent_priority: 5 }, "RADARR");
 
@@ -134,7 +134,7 @@ describe("downloadClientSyncer – field normalization", () => {
   });
 });
 
-describe("downloadClientSyncer – validation", () => {
+describe("RadarrDownloadClientSync – validation", () => {
   const mockSchema: DownloadClientResource[] = [
     {
       id: 0,
@@ -266,7 +266,7 @@ describe("downloadClientSyncer – validation", () => {
   });
 });
 
-describe("downloadClientSyncer – deletion logic", () => {
+describe("RadarrDownloadClientSync – deletion logic", () => {
   test("filterUnmanagedClients uses composite key of name + implementation", () => {
     const serverClients: DownloadClientResource[] = [
       {
@@ -346,7 +346,7 @@ describe("downloadClientSyncer – deletion logic", () => {
   });
 });
 
-describe("downloadClientSyncer – equality & omission semantics", () => {
+describe("RadarrDownloadClientSync – equality & omission semantics", () => {
   const makeCache = (tags: Tag[] = []) => new ServerCache({ tags });
 
   test("isDownloadClientEqual treats omitted top-level fields as 'do not manage'", () => {

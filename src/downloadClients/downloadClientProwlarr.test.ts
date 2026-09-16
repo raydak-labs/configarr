@@ -1,21 +1,9 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { ServerCache } from "../cache";
-import { getClient } from "../clients/client";
 import { logger } from "../logger";
 import type { InputConfigDownloadClient } from "../types/config.types";
 import type { DownloadClientResource } from "../__generated__/prowlarr/data-contracts";
 import { ProwlarrDownloadClientSync } from "./downloadClientProwlarr";
-
-vi.mock("../clients/client", () => ({
-  getClient: vi.fn(() => ({
-    getDownloadClients: vi.fn(),
-    getDownloadClientSchema: vi.fn(),
-    createDownloadClient: vi.fn(),
-    updateDownloadClient: vi.fn(),
-    deleteDownloadClient: vi.fn(),
-    testDownloadClient: vi.fn(),
-  })),
-}));
 
 const qbitSchema = (extra: Record<string, unknown> = {}): DownloadClientResource =>
   ({
@@ -123,19 +111,17 @@ describe("ProwlarrDownloadClientSync", () => {
   });
 
   describe("syncDownloadClients failed create", () => {
-    const mockClient = (createDownloadClient: ReturnType<typeof vi.fn>) => {
-      vi.mocked(getClient).mockReturnValue({
-        getDownloadClients: vi.fn(async () => []),
-        getDownloadClientSchema: vi.fn(async () => [qbitSchema({ categories: [] }), qbitSchema({ implementation: "Transmission" })]),
-        createDownloadClient,
-        updateDownloadClient: vi.fn(),
-        deleteDownloadClient: vi.fn(),
-        testDownloadClient: vi.fn(),
-      } as never);
-    };
+    const makeMockClient = (createDownloadClient: ReturnType<typeof vi.fn>) => ({
+      getDownloadClients: vi.fn(async () => []),
+      getDownloadClientSchema: vi.fn(async () => [qbitSchema({ categories: [] }), qbitSchema({ implementation: "Transmission" })]),
+      createDownloadClient,
+      updateDownloadClient: vi.fn(),
+      deleteDownloadClient: vi.fn(),
+      testDownloadClient: vi.fn(),
+    });
 
     test("failed create does not throw, omits create from diff, and does not log no changes needed", async () => {
-      mockClient(
+      const mockClient = makeMockClient(
         vi.fn(async () => {
           throw new Error("HTTP Error: 409 Conflict. NOT NULL constraint failed: DownloadClients.Categories");
         }),
@@ -144,7 +130,7 @@ describe("ProwlarrDownloadClientSync", () => {
       const infoSpy = vi.spyOn(logger, "info");
       const warnSpy = vi.spyOn(logger, "warn");
       try {
-        const sync = new ProwlarrDownloadClientSync();
+        const sync = new ProwlarrDownloadClientSync(mockClient as never);
         const result = await sync.syncDownloadClients(
           { download_clients: { data: [{ name: "qBittorrent", type: "qbittorrent", fields: { host: "qbittorrent" } }] } },
           new ServerCache(),
@@ -161,7 +147,7 @@ describe("ProwlarrDownloadClientSync", () => {
     });
 
     test("mixed create success and failure reports success and warns about the failure", async () => {
-      mockClient(
+      const mockClient = makeMockClient(
         vi.fn(async (payload: { name?: string }) => {
           if (payload.name === "Broken") {
             throw new Error("HTTP Error: 409 Conflict");
@@ -173,7 +159,7 @@ describe("ProwlarrDownloadClientSync", () => {
       const infoSpy = vi.spyOn(logger, "info");
       const warnSpy = vi.spyOn(logger, "warn");
       try {
-        const sync = new ProwlarrDownloadClientSync();
+        const sync = new ProwlarrDownloadClientSync(mockClient as never);
         const result = await sync.syncDownloadClients(
           {
             download_clients: {
@@ -197,9 +183,9 @@ describe("ProwlarrDownloadClientSync", () => {
     });
 
     test("successful create is reported in diffEntries", async () => {
-      mockClient(vi.fn(async (c) => c));
+      const mockClient = makeMockClient(vi.fn(async (c) => c));
 
-      const sync = new ProwlarrDownloadClientSync();
+      const sync = new ProwlarrDownloadClientSync(mockClient as never);
       const result = await sync.syncDownloadClients(
         { download_clients: { data: [{ name: "qBittorrent", type: "qbittorrent", fields: { host: "qbittorrent" } }] } },
         new ServerCache(),

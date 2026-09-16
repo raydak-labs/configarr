@@ -1,5 +1,5 @@
 import { ServerCache } from "../cache";
-import { getClient } from "../clients/client";
+import type { ArrTypeToClient } from "../clients/client";
 import { DiffEntry } from "../diffReport/diffReport.types";
 import { logger } from "../logger";
 import { MediaArrType } from "../types/common.types";
@@ -7,6 +7,8 @@ import { InputConfigDownloadClientConfig, MergedConfigInstance } from "../types/
 import { getEnvs } from "../env";
 import { camelToSnake, compareObjectsCarr, snakeToCamel } from "../util";
 import { DownloadClientConfigSyncResult } from "./downloadClientConfig.types";
+
+type DownloadClientConfigClient = Pick<ArrTypeToClient[MediaArrType], "getDownloadClientConfig" | "updateDownloadClientConfig">;
 
 /**
  * Normalize field names from snake_case (config) to camelCase (server)
@@ -69,6 +71,7 @@ function filterFieldsByArrType(fields: Record<string, any>, arrType: MediaArrTyp
  * Sync download client configuration for a specific *arr instance
  */
 export async function syncDownloadClientConfig(
+  client: DownloadClientConfigClient,
   arrType: MediaArrType,
   config: MergedConfigInstance,
   serverCache: ServerCache,
@@ -81,8 +84,6 @@ export async function syncDownloadClientConfig(
   }
 
   try {
-    const client = getClient(arrType);
-
     // Fetch current server config
     logger.debug(`Fetching download client config from ${arrType}...`);
     const serverConfig = await client.getDownloadClientConfig();

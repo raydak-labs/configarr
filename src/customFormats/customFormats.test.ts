@@ -1,6 +1,5 @@
 import fs from "node:fs";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import * as clientModule from "../clients/client";
 import * as config from "../config";
 import * as env from "../env";
 import { calculateCFsToManage, loadCustomFormatDefinitions, loadLocalCfs, manageCf, mergeCfSources } from "./customFormats";
@@ -237,12 +236,12 @@ describe("CustomFormats", () => {
       const serverCfs = new Map<string, CustomFormatRequest>([["Dup", serverCf]]);
 
       const updateCustomFormat = vi.fn();
-      vi.spyOn(clientModule, "getClient").mockReturnValue({
+      const mockClient = {
         updateCustomFormat,
         createCustomFormat: vi.fn(),
-      } as unknown as ReturnType<typeof clientModule.getClient>);
+      };
 
-      const out = await manageCf("SONARR", cfProcessing, serverCfs);
+      const out = await manageCf(mockClient as any, cfProcessing, serverCfs);
 
       expect(updateCustomFormat).not.toHaveBeenCalled();
       expect(out.errorCFs.length).toBe(0);
@@ -281,12 +280,12 @@ describe("CustomFormats", () => {
       const serverCfs = new Map<string, CustomFormatRequest>([["Dup", serverCfStale]]);
 
       const updateCustomFormat = vi.fn().mockResolvedValue({ id: 1, name: "Dup", ...requestConfigB });
-      vi.spyOn(clientModule, "getClient").mockReturnValue({
+      const mockClient = {
         updateCustomFormat,
         createCustomFormat: vi.fn(),
-      } as unknown as ReturnType<typeof clientModule.getClient>);
+      };
 
-      await manageCf("SONARR", cfProcessing, serverCfs);
+      await manageCf(mockClient as any, cfProcessing, serverCfs);
 
       expect(updateCustomFormat).toHaveBeenCalledTimes(1);
       const updatePayload = updateCustomFormat.mock.calls[0]?.[1];
@@ -309,12 +308,12 @@ describe("CustomFormats", () => {
 
       const serverCfs = new Map<string, CustomFormatRequest>();
 
-      vi.spyOn(clientModule, "getClient").mockReturnValue({
+      const mockClient = {
         createCustomFormat: vi.fn().mockResolvedValue({ id: 1, name: "NewCF", ...requestConfig }),
         updateCustomFormat: vi.fn(),
-      } as unknown as ReturnType<typeof clientModule.getClient>);
+      };
 
-      const out = await manageCf("SONARR", cfProcessing, serverCfs);
+      const out = await manageCf(mockClient as any, cfProcessing, serverCfs);
 
       expect(out.diffEntries).toEqual([{ resourceType: "CustomFormat", name: "NewCF", action: "create" }]);
     });
@@ -337,12 +336,12 @@ describe("CustomFormats", () => {
       existingCf.specifications![0]!.negate = true;
       const serverCfs = new Map<string, CustomFormatRequest>([["ChangedCF", existingCf]]);
 
-      vi.spyOn(clientModule, "getClient").mockReturnValue({
+      const mockClient = {
         createCustomFormat: vi.fn(),
         updateCustomFormat: vi.fn(),
-      } as unknown as ReturnType<typeof clientModule.getClient>);
+      };
 
-      const out = await manageCf("SONARR", cfProcessing, serverCfs);
+      const out = await manageCf(mockClient as any, cfProcessing, serverCfs);
 
       expect(out.diffEntries).toHaveLength(1);
       expect(out.diffEntries[0]!.resourceType).toBe("CustomFormat");

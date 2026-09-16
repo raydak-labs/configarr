@@ -1,10 +1,15 @@
-import { getClient } from "../clients/client";
+import type { ArrTypeToClient } from "../clients/client";
 import { logger } from "../logger";
 import { MediaArrType } from "../types/common.types";
 import { RemotePathMappingResource, RemotePathSyncResult, RemotePathDiff } from "./remotePath.types";
 import { InputConfigRemotePath, MergedConfigInstance } from "../types/config.types";
 import { getEnvs } from "../env";
 import { DiffEntry } from "../diffReport/diffReport.types";
+
+type RemotePathClient = Pick<
+  ArrTypeToClient[MediaArrType],
+  "getRemotePathMappings" | "createRemotePathMapping" | "updateRemotePathMapping" | "deleteRemotePathMapping"
+>;
 
 /**
  * Normalize a path by removing trailing slashes
@@ -103,7 +108,11 @@ export function remotePathsToDiffEntries(diff: RemotePathDiff): DiffEntry[] {
 /**
  * Sync remote path mappings for a specific *Arr instance
  */
-export async function syncRemotePaths(arrType: MediaArrType, config: MergedConfigInstance): Promise<RemotePathSyncResult> {
+export async function syncRemotePaths(
+  client: RemotePathClient,
+  arrType: MediaArrType,
+  config: MergedConfigInstance,
+): Promise<RemotePathSyncResult> {
   const remotePaths = config.download_clients?.remote_paths;
   const deleteUnmanaged = config.download_clients?.delete_unmanaged_remote_paths ?? false;
 
@@ -124,9 +133,6 @@ export async function syncRemotePaths(arrType: MediaArrType, config: MergedConfi
   }
 
   try {
-    // Config validation happens earlier in validateConfig (config.ts)
-    const client = getClient(arrType);
-
     // Fetch current server mappings
     logger.debug(`Fetching remote path mappings from ${arrType}...`);
     const serverMappings = await client.getRemotePathMappings();

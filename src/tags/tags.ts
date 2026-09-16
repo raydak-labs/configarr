@@ -1,11 +1,10 @@
 import type { Tag } from "./tag.types";
-import { getClient } from "../clients/client";
+import type { TagsClient } from "../clients/capabilities";
 import { getEnvs } from "../env";
-import { ArrType } from "../types/common.types";
 
-export const loadServerTags = async (arrType: ArrType): Promise<Tag[]> => {
+export const loadServerTags = async (client: TagsClient): Promise<Tag[]> => {
   if (getEnvs().LOAD_LOCAL_SAMPLES) {
     throw new Error("Local sample loading for tags is not implemented yet.");
   }
-  return getClient(arrType).getTags();
+  return client.getTags();
 };

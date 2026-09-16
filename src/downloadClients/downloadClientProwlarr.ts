@@ -1,5 +1,3 @@
-import type { DownloadClientsClient, TagsClient } from "../clients/capabilities";
-import { getClient } from "../clients/client";
 import type { DownloadClientResource } from "../__generated__/prowlarr/data-contracts";
 import { ServerCache } from "../cache";
 import { FieldChange } from "../diffReport/diffReport.types";
@@ -10,10 +8,6 @@ import { BaseDownloadClientSync } from "./downloadClientBase";
 export class ProwlarrDownloadClientSync extends BaseDownloadClientSync<DownloadClientResource> {
   protected getArrType(): "PROWLARR" {
     return "PROWLARR";
-  }
-
-  protected getApi(): DownloadClientsClient<DownloadClientResource> & TagsClient {
-    return getClient("PROWLARR");
   }
 
   public isDownloadClientEqual = (
