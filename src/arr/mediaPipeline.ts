@@ -312,14 +312,6 @@ export const completeMediaSync = async <T extends MediaArrType>(ctx: MediaSyncCo
       if (getEnvs().DRY_RUN) {
         logger.info("DryRun: Would update DelayProfiles.");
       } else {
-        if (delayProfilesDiff.defaultProfileChanged && delayProfilesDiff.defaultProfile) {
-          if (delayProfilesDiff.defaultProfileId == null) {
-            throw new Error("Default delay profile id missing from server; cannot update.");
-          }
-          logger.info(`Updating default DelayProfile`);
-          await delaySync.updateDefaultFromConfig(delayProfilesDiff.defaultProfile, serverCache.tags, delayProfilesDiff.defaultProfileId);
-        }
-
         if (delayProfilesDiff.missingTags.length > 0) {
           logger.info(`Creating missing tags on server: ${delayProfilesDiff.missingTags.join(", ")}`);
           try {
@@ -327,10 +319,19 @@ export const completeMediaSync = async <T extends MediaArrType>(ctx: MediaSyncCo
               const newTag = await client.createTag({ label: tagName });
               serverCache.tags.push(newTag);
             }
-          } catch (err: any) {
-            logger.error(`Failed creating tags: ${err.message}`);
+          } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : String(err);
+            logger.error(`Failed creating tags: ${message}`);
             throw err;
           }
+        }
+
+        if (delayProfilesDiff.defaultProfileChanged && delayProfilesDiff.defaultProfile) {
+          if (delayProfilesDiff.defaultProfileId == null) {
+            throw new Error("Default delay profile id missing from server; cannot update.");
+          }
+          logger.info(`Updating default DelayProfile`);
+          await delaySync.updateDefaultFromConfig(delayProfilesDiff.defaultProfile, serverCache.tags, delayProfilesDiff.defaultProfileId);
         }
 
         if (delayProfilesDiff.additionalProfilesChanged && delayProfilesDiff.additionalProfiles) {
@@ -349,8 +350,9 @@ export const completeMediaSync = async <T extends MediaArrType>(ctx: MediaSyncCo
     try {
       const downloadClientsResult = await syncDownloadClients(arrType, config, serverCache);
       collector.add(downloadClientsResult.diffEntries);
-    } catch (err: any) {
-      logger.error(`Failed to sync download clients: ${err.message}`);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      logger.error(`Failed to sync download clients: ${message}`);
     }
   }
 

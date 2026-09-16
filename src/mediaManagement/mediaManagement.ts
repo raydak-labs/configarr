@@ -64,7 +64,11 @@ export class MediaManagementSync<Naming extends { id?: number }, Management exte
   async persistNaming(mediaNaming: MediaNamingApiType | undefined, write: boolean) {
     const namingDiff = await this.calculateNamingDiff(mediaNaming);
     if (namingDiff && write) {
-      await this.getApi().updateNaming(namingDiff.updatedData.id! + "", namingDiff.updatedData);
+      const id = namingDiff.updatedData.id;
+      if (id == null) {
+        throw new Error("Naming configuration response is missing its id.");
+      }
+      await this.getApi().updateNaming(String(id), namingDiff.updatedData);
     }
     return namingDiff;
   }
@@ -80,7 +84,11 @@ export class MediaManagementSync<Naming extends { id?: number }, Management exte
   async persistMediamanagement(mediaManagement: MediaManagementType | undefined, write: boolean) {
     const managementDiff = await this.calculateMediamanagementDiff(mediaManagement);
     if (managementDiff && write) {
-      await this.getApi().updateMediamanagement(managementDiff.updatedData.id! + "", managementDiff.updatedData);
+      const id = managementDiff.updatedData.id;
+      if (id == null) {
+        throw new Error("Media-management configuration response is missing its id.");
+      }
+      await this.getApi().updateMediamanagement(String(id), managementDiff.updatedData);
     }
     return managementDiff;
   }

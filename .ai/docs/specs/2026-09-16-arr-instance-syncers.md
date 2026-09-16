@@ -27,7 +27,7 @@ One injected feature-sync instance per feature is passed in as `syncs`. Root fol
 ## What was not done
 
 - No `MediaClient` mega-interface.
-- No constructor-inject of clients into feature syncers.
+- Constructor-inject of clients into feature syncers: superseded by [2026-09-16-feature-sync-client-inject.md](./2026-09-16-feature-sync-client-inject.md). Instance syncers still do not take clients.
 - Pattern B (`manageCf`, tags, UI config, remote paths, download client config) still takes `arrType`.
 - No `UiConfigClient`.
 - Pattern A class internals unchanged.

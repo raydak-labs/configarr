@@ -78,6 +78,50 @@ describe("ProwlarrDownloadClientSync", () => {
     });
   });
 
+  describe("partial update", () => {
+    test("keeps server fields when enable, priority, and tags are all set", async () => {
+      const sync = new ProwlarrDownloadClientSync();
+      const cache = new ServerCache({ tags: [{ id: 3, label: "tv" }] });
+      sync.setDownloadClientSchema([
+        qbitSchema({
+          fields: [
+            { name: "host", value: "" },
+            { name: "password", value: "" },
+          ],
+        }),
+      ]);
+      const server = qbitSchema({
+        id: 1,
+        name: "qBittorrent",
+        enable: true,
+        priority: 1,
+        tags: [3],
+        fields: [
+          { name: "host", value: "keep-me" },
+          { name: "password", value: "********" },
+        ],
+      });
+      const config: InputConfigDownloadClient = {
+        name: "qBittorrent",
+        type: "qbittorrent",
+        enable: false,
+        priority: 10,
+        tags: ["tv"],
+      };
+
+      expect(sync.shouldUsePartialUpdate(config)).toBe(true);
+
+      const payload = await sync.resolveConfig(config, cache, server, true, false);
+      expect(payload.fields).toEqual([
+        { name: "host", value: "keep-me" },
+        { name: "password", value: "********" },
+      ]);
+      expect(payload.enable).toBe(false);
+      expect(payload.priority).toBe(10);
+      expect(payload.tags).toEqual([3]);
+    });
+  });
+
   describe("syncDownloadClients failed create", () => {
     const mockClient = (createDownloadClient: ReturnType<typeof vi.fn>) => {
       vi.mocked(getClient).mockReturnValue({

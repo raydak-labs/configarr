@@ -170,9 +170,9 @@ export async function calculateDelayProfilesDiffFor<T extends DelayProfileShared
 
   logger.info(`DelayProfiles changes detected - default: ${defaultProfileChanged}, additional: ${additionalProfilesChanged}`);
 
-  const missingTags = configAdditional.flatMap((profile) => {
-    return profile.tags?.filter((tagName) => !tags.some((t) => t.label === tagName)) || [];
-  });
+  const missingFrom = (profile?: InputConfigDelayProfile) =>
+    profile?.tags?.filter((tagName) => !tags.some((t) => t.label === tagName)) ?? [];
+  const missingTags = [...missingFrom(configDefault), ...configAdditional.flatMap((profile) => missingFrom(profile))];
 
   return {
     defaultProfileChanged,

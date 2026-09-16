@@ -1,7 +1,6 @@
 import { ServerCache } from "../cache";
 import type { DownloadClientsClient, TagsClient } from "../clients/capabilities";
 import { FieldChange } from "../diffReport/diffReport.types";
-import { logger } from "../logger";
 import { MediaArrType } from "../types/common.types";
 import { InputConfigDownloadClient } from "../types/config.types";
 import { DownloadClientDiff, MediaDownloadClientResource } from "./downloadClient.types";
@@ -92,26 +91,18 @@ export abstract class MediaDownloadClientSync<T extends MediaDownloadClientResou
     return { create, update, unchanged, deleted };
   }
 
-  async resolveConfig(config: InputConfigDownloadClient, cache: ServerCache, serverClient?: T, partialUpdate: boolean = false): Promise<T> {
+  async resolveConfig(
+    config: InputConfigDownloadClient,
+    cache: ServerCache,
+    serverClient?: T,
+    partialUpdate: boolean = false,
+    updatePassword: boolean = true,
+  ): Promise<T> {
     const schema = await this.getDownloadClientSchema(cache);
     const template = this.findImplementationInSchema(schema, config.type);
 
     if (!template) {
       throw new Error(`Download client implementation '${config.type}' not found in schema`);
-    }
-
-    let tagIds: number[] = [];
-    if (config.tags && config.tags.length > 0) {
-      const { ids, missingTags } = this.resolveTagNamesToIds(config.tags, cache.tags);
-
-      if (missingTags.length > 0) {
-        logger.warn(
-          `Missing tags for download client '${config.name}': ${missingTags.join(", ")}. ` +
-            `These should have been created during batch tag creation.`,
-        );
-      }
-
-      tagIds = ids;
     }
 
     const mergedFields = this.mergeFieldsWithSchema(
@@ -120,6 +111,7 @@ export abstract class MediaDownloadClientSync<T extends MediaDownloadClientResou
       this.getArrType(),
       serverClient?.fields ?? undefined,
       partialUpdate,
+      updatePassword,
     );
 
     const payload = {
@@ -133,7 +125,7 @@ export abstract class MediaDownloadClientSync<T extends MediaDownloadClientResou
       implementation: template.implementation,
       configContract: template.configContract,
       infoLink: template.infoLink,
-      tags: tagIds,
+      tags: this.resolveDownloadClientTags(config, cache, serverClient),
       removeCompletedDownloads: config.remove_completed_downloads ?? serverClient?.removeCompletedDownloads ?? true,
       removeFailedDownloads: config.remove_failed_downloads ?? serverClient?.removeFailedDownloads ?? true,
     };

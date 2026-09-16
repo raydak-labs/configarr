@@ -18,6 +18,7 @@ vi.mock("./logger", () => ({
 
 vi.mock("./clients/connection", () => ({
   createConnectionErrorParts: vi.fn().mockReturnValue([]),
+  selectConnectionErrorDetail: vi.fn().mockReturnValue(undefined),
 }));
 
 const makeHTTPError = (status: number, statusText: string, body: string, contentType: string) => {

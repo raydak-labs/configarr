@@ -1,35 +1,32 @@
 import type { QualityProfileResource } from "../__generated__/whisparr/data-contracts";
 import { FieldChange } from "../diffReport/diffReport.types";
 import {
-  attachLanguageOnCreate,
   attachMinUpgradeOnCreate,
   BaseQualityProfileSync,
-  diffLanguageOnUpdate,
   diffMinUpgradeOnUpdate,
-  resolveQualityProfileLanguage,
+  warnUnsupportedQualityProfileLanguage,
 } from "./qualityProfileBase";
 import { QualityProfileLanguage, QualityProfileShared } from "./qualityProfile.types";
 
 export class QualityProfileWhisparrSync extends BaseQualityProfileSync<QualityProfileResource> {
   protected resolveLanguage(
-    _profileName: string,
+    profileName: string,
     configLanguage: string | undefined,
-    languageMap: Map<string, QualityProfileLanguage>,
+    _languageMap: Map<string, QualityProfileLanguage>,
   ): QualityProfileLanguage | undefined {
-    return resolveQualityProfileLanguage(configLanguage, languageMap);
+    warnUnsupportedQualityProfileLanguage(profileName, "WHISPARR", configLanguage);
+    return undefined;
   }
 
-  protected attachLanguageOnCreate(profile: QualityProfileShared, language: QualityProfileLanguage | undefined): void {
-    attachLanguageOnCreate(profile, language);
-  }
+  protected attachLanguageOnCreate(_profile: QualityProfileShared, _language: QualityProfileLanguage | undefined): void {}
 
   protected diffLanguageOnUpdate(
-    updated: QualityProfileShared,
-    serverMatch: QualityProfileShared,
-    language: QualityProfileLanguage | undefined,
-    fieldChanges: FieldChange[],
+    _updated: QualityProfileShared,
+    _serverMatch: QualityProfileShared,
+    _language: QualityProfileLanguage | undefined,
+    _fieldChanges: FieldChange[],
   ): boolean {
-    return diffLanguageOnUpdate(updated, serverMatch, language, fieldChanges);
+    return false;
   }
 
   protected attachMinUpgradeOnCreate(profile: QualityProfileShared, minUpgradeFormatScore: number): void {

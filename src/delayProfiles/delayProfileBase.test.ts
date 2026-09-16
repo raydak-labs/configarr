@@ -233,6 +233,43 @@ describe("DelayProfiles", () => {
     expect(diff?.missingTags).toHaveLength(1);
   });
 
+  test("includes default-profile tags in missingTags", async () => {
+    const configProfiles = {
+      default: {
+        enableUsenet: false,
+        enableTorrent: true,
+        preferredProtocol: "torrent",
+        usenetDelay: 0,
+        torrentDelay: 15,
+        bypassIfHighestQuality: true,
+        bypassIfAboveCustomFormatScore: false,
+        minimumCustomFormatScore: 0,
+        tags: ["new-default-tag"],
+      },
+    };
+
+    delayApi.getDelayProfiles.mockResolvedValue([
+      {
+        id: 7,
+        enableUsenet: true,
+        enableTorrent: false,
+        preferredProtocol: "usenet" as any,
+        usenetDelay: 10,
+        torrentDelay: 0,
+        bypassIfHighestQuality: false,
+        bypassIfAboveCustomFormatScore: false,
+        minimumCustomFormatScore: 0,
+        order: 1,
+        tags: [],
+      },
+    ]);
+
+    const diff = await sonarrDelay().calculateDiff(configProfiles, []);
+
+    expect(diff?.defaultProfileChanged).toBe(true);
+    expect(diff?.missingTags).toEqual(["new-default-tag"]);
+  });
+
   test("calculateDelayProfilesDiff - default profile change exposes structured fieldChanges", async () => {
     const configProfiles = {
       default: {

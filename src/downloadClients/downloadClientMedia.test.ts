@@ -478,5 +478,54 @@ describe("MediaDownloadClientSync – ARR type handling", () => {
       const payload = await sync.resolveConfig(config, cache);
       expect(payload).not.toHaveProperty("categories");
     });
+
+    test("preserves masked server secrets when updatePassword is false", async () => {
+      const sync = createDownloadClientSync("RADARR");
+      const cache = new ServerCache();
+      sync.setDownloadClientSchema([
+        qbitSchema({
+          fields: [
+            { name: "host", value: "" },
+            { name: "password", value: "" },
+          ],
+        }),
+      ]);
+      const server = qbitSchema({
+        id: 1,
+        name: "qBittorrent",
+        fields: [
+          { name: "host", value: "old-host" },
+          { name: "password", value: "********" },
+        ],
+      });
+
+      const payload = await sync.resolveConfig(
+        {
+          name: "qBittorrent",
+          type: "qbittorrent",
+          fields: { host: "new-host", password: "from-config" },
+        },
+        cache,
+        server,
+        false,
+        false,
+      );
+
+      expect(payload.fields).toEqual([
+        { name: "host", value: "new-host" },
+        { name: "password", value: "********" },
+      ]);
+    });
+
+    test("keeps server tags when config.tags is omitted", async () => {
+      const sync = createDownloadClientSync("RADARR");
+      const cache = new ServerCache();
+      sync.setDownloadClientSchema([qbitSchema()]);
+      const server = qbitSchema({ id: 1, name: "qBittorrent", tags: [4, 5] });
+
+      const payload = await sync.resolveConfig({ name: "qBittorrent", type: "qbittorrent", enable: false }, cache, server, true);
+
+      expect(payload.tags).toEqual([4, 5]);
+    });
   });
 });

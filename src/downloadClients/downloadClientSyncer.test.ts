@@ -378,6 +378,33 @@ describe("downloadClientSyncer – equality & omission semantics", () => {
     expect(equal).toBe(true);
   });
 
+  test("isDownloadClientEqual preserves server tags when config.tags is omitted", () => {
+    const cache = makeCache([{ id: 9, label: "keep" }]);
+
+    const server: DownloadClientResource = {
+      id: 1,
+      enable: true,
+      protocol: DownloadProtocol.Torrent,
+      name: "client-1",
+      implementation: "qBittorrent",
+      priority: 1,
+      tags: [9],
+      removeCompletedDownloads: true,
+      removeFailedDownloads: true,
+      configContract: "",
+      fields: [],
+    };
+
+    const config: InputConfigDownloadClient = {
+      name: "client-1",
+      type: "qBittorrent",
+    };
+
+    const { equal } = getTestSync().isDownloadClientEqual(config, server, cache);
+
+    expect(equal).toBe(true);
+  });
+
   test("isDownloadClientEqual detects explicit differences when fields are set", () => {
     const cache = makeCache();
 

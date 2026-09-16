@@ -26,8 +26,9 @@ export class ProwlarrSyncer {
       try {
         const downloadClientsResult = await syncDownloadClients("PROWLARR", { download_clients: instance.download_clients }, serverCache);
         diffCollector.add(downloadClientsResult.diffEntries);
-      } catch (err: any) {
-        logger.error(`Failed to sync download clients: ${err.message}`);
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        logger.error(`Failed to sync download clients: ${message}`);
       }
     }
 

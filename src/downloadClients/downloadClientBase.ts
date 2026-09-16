@@ -77,6 +77,7 @@ export abstract class BaseDownloadClientSync<T extends DownloadClientShared> {
     cache: ServerCache,
     serverClient?: T,
     partialUpdate?: boolean,
+    updatePassword?: boolean,
   ): Promise<T>;
 
   public normalizeConfigFields(configFields: Record<string, unknown>, arrType: ArrType): Record<string, unknown> {
@@ -176,18 +177,35 @@ export abstract class BaseDownloadClientSync<T extends DownloadClientShared> {
       }
     }
 
-    const configTags = config.tags ?? [];
-    const { ids: resolvedTagIds } = this.resolveTagNamesToIds(configTags, cache.tags);
-    const serverTags = server.tags ?? [];
+    const configTags = config.tags;
+    if (configTags !== undefined) {
+      const { ids: resolvedTagIds } = this.resolveTagNamesToIds(configTags, cache.tags);
+      const serverTags = server.tags ?? [];
 
-    const sortedConfigTagIds = [...resolvedTagIds].sort();
-    const sortedServerTags = [...serverTags].sort();
+      const sortedConfigTagIds = [...resolvedTagIds].sort();
+      const sortedServerTags = [...serverTags].sort();
 
-    if (JSON.stringify(sortedConfigTagIds) !== JSON.stringify(sortedServerTags)) {
-      changes.push({ field: "tags", from: sortedServerTags, to: sortedConfigTagIds });
+      if (JSON.stringify(sortedConfigTagIds) !== JSON.stringify(sortedServerTags)) {
+        changes.push({ field: "tags", from: sortedServerTags, to: sortedConfigTagIds });
+      }
     }
 
     return changes;
+  }
+
+  protected resolveDownloadClientTags(config: InputConfigDownloadClient, cache: ServerCache, serverClient?: T): number[] {
+    if (config.tags === undefined) {
+      return serverClient?.tags ?? [];
+    }
+
+    const { ids, missingTags } = this.resolveTagNamesToIds(config.tags, cache.tags);
+    if (missingTags.length > 0) {
+      this.logger.warn(
+        `Missing tags for download client '${config.name}': ${missingTags.join(", ")}. ` +
+          `These should have been created during batch tag creation.`,
+      );
+    }
+    return ids;
   }
 
   protected findImplementationInSchema(schema: T[], implementation: string): T | undefined {
@@ -200,12 +218,20 @@ export abstract class BaseDownloadClientSync<T extends DownloadClientShared> {
     arrType: ArrType,
     serverFields: F[] | null | undefined,
     partialUpdate = false,
+    updatePassword = true,
   ): F[] {
     const normalizedFields = this.normalizeConfigFields(configFields, arrType);
     const baseFields = partialUpdate && serverFields ? serverFields : schemaFields;
 
     return baseFields.map((field) => {
       const fieldName = field.name ?? "";
+      const isSecret = fieldName.toLowerCase().includes("password") || fieldName.toLowerCase().includes("apikey");
+      if (!updatePassword && isSecret && serverFields) {
+        const serverField = serverFields.find((f) => f.name === fieldName);
+        if (serverField) {
+          return { ...field, value: serverField.value };
+        }
+      }
       const configValue = normalizedFields[fieldName];
       return configValue !== undefined ? { ...field, value: configValue } : field;
     });
@@ -422,6 +448,7 @@ export abstract class BaseDownloadClientSync<T extends DownloadClientShared> {
   private async updateClients(
     updates: DownloadClientDiff<T>["update"],
     serverCache: ServerCache,
+    updatePassword: boolean,
   ): Promise<DownloadClientDiff<T>["update"]> {
     const updated: DownloadClientDiff<T>["update"] = [];
 
@@ -431,7 +458,7 @@ export abstract class BaseDownloadClientSync<T extends DownloadClientShared> {
         const updateType = partialUpdate ? "partial" : "full";
         this.logger.info(`Updating download client: '${config.name}' (${updateType} update)...`);
 
-        const payload = await this.resolveConfig(config, serverCache, server, partialUpdate);
+        const payload = await this.resolveConfig(config, serverCache, server, partialUpdate, updatePassword);
         payload.id = server.id; // Preserve server ID
 
         await this.getApi().updateDownloadClient(server.id!.toString(), payload);
@@ -524,7 +551,7 @@ export abstract class BaseDownloadClientSync<T extends DownloadClientShared> {
 
     const [created, updatedItems] = await Promise.all([
       this.createClients(diff.create, serverCache),
-      this.updateClients(diff.update, serverCache),
+      this.updateClients(diff.update, serverCache, updatePassword),
     ]);
 
     const deletedItems = config.download_clients?.delete_unmanaged?.enabled ? await this.deleteUnmanagedClients(unmanagedToDelete) : [];

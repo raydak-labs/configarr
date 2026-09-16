@@ -3,7 +3,6 @@ import { getClient } from "../clients/client";
 import type { DownloadClientResource } from "../__generated__/prowlarr/data-contracts";
 import { ServerCache } from "../cache";
 import { FieldChange } from "../diffReport/diffReport.types";
-import { logger } from "../logger";
 import { InputConfigDownloadClient } from "../types/config.types";
 import { DownloadClientDiff } from "./downloadClient.types";
 import { BaseDownloadClientSync } from "./downloadClientBase";
@@ -42,7 +41,7 @@ export class ProwlarrDownloadClientSync extends BaseDownloadClientSync<DownloadC
 
     const specifiedTopLevelProps = [config.enable !== undefined, config.priority !== undefined, hasTags].filter(Boolean).length;
 
-    return specifiedTopLevelProps > 0 && specifiedTopLevelProps <= 2;
+    return specifiedTopLevelProps > 0;
   };
 
   async calculateDiff(
@@ -84,6 +83,7 @@ export class ProwlarrDownloadClientSync extends BaseDownloadClientSync<DownloadC
     cache: ServerCache,
     serverClient?: DownloadClientResource,
     partialUpdate: boolean = false,
+    updatePassword: boolean = true,
   ): Promise<DownloadClientResource> {
     const schema = await this.getDownloadClientSchema(cache);
     const template = this.findImplementationInSchema(schema, config.type);
@@ -92,26 +92,13 @@ export class ProwlarrDownloadClientSync extends BaseDownloadClientSync<DownloadC
       throw new Error(`Download client implementation '${config.type}' not found in schema`);
     }
 
-    let tagIds: number[] = [];
-    if (config.tags && config.tags.length > 0) {
-      const { ids, missingTags } = this.resolveTagNamesToIds(config.tags, cache.tags);
-
-      if (missingTags.length > 0) {
-        logger.warn(
-          `Missing tags for download client '${config.name}': ${missingTags.join(", ")}. ` +
-            `These should have been created during batch tag creation.`,
-        );
-      }
-
-      tagIds = ids;
-    }
-
     const mergedFields = this.mergeFieldsWithSchema(
       template.fields || [],
       config.fields || {},
       "PROWLARR",
       serverClient?.fields ?? undefined,
       partialUpdate,
+      updatePassword,
     );
 
     return {
@@ -125,7 +112,7 @@ export class ProwlarrDownloadClientSync extends BaseDownloadClientSync<DownloadC
       implementation: template.implementation,
       configContract: template.configContract,
       infoLink: template.infoLink,
-      tags: tagIds,
+      tags: this.resolveDownloadClientTags(config, cache, serverClient),
       categories: serverClient?.categories ?? template.categories ?? [],
     };
   }

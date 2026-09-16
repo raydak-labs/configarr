@@ -16,13 +16,15 @@ export const validateClientParams = (url: string, apiKey: string, arrType: ArrTy
   }
 };
 
+export const selectConnectionErrorDetail = (errorParts: string[]): string | undefined =>
+  errorParts.find((part) => part.startsWith("HTTP ") || part.startsWith("Connection test failed")) ?? errorParts[0];
+
 export const logConnectionError = (error: unknown, arrType: ArrType) => {
   const arrLabel = arrType.toLowerCase();
   const errorParts = createConnectionErrorParts(error);
 
   if (errorParts.length > 0) {
-    const [friendlyMessage, structuredMessage] = errorParts;
-    const bestMessage = structuredMessage || friendlyMessage;
+    const bestMessage = selectConnectionErrorDetail(errorParts);
     return `Connection to ${arrLabel} API failed: ${bestMessage}`;
   }
 
