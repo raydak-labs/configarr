@@ -52,8 +52,10 @@ function fieldChanges(config: InputConfigSyncProfile, server: AppProfileResource
  * way; matching exactly here would let `standard` create a duplicate of `Standard` that an
  * indexer reference could not then tell apart.
  *
- * A failed create, update or delete throws: indexers reference these by name, so continuing
- * would bind them to the wrong sync rules.
+ * A failed create or update throws: indexers reference these by name, so continuing
+ * would bind them to the wrong sync rules. Unmanaged deletes run later via
+ * `deleteUnmanagedSyncProfiles` so indexers that still reference a profile can be
+ * removed first (Prowlarr returns 500 while the profile is in use).
  */
 export async function syncSyncProfiles(section: InputConfigProwlarrInstance["sync_profiles"]): Promise<SyncProfileSyncResult> {
   const configItems = section?.data ?? [];
@@ -131,34 +133,59 @@ export async function syncSyncProfiles(section: InputConfigProwlarrInstance["syn
   }
 
   const goneIds = new Set<number>();
-
   if (deleteConfig?.enabled) {
     const keep = new Set([...names, ...(deleteConfig.ignore ?? []).map((n) => n.toLowerCase())]);
-
     for (const profile of serverProfiles) {
       const name = profile.name ?? "";
       if (!name || keep.has(name.toLowerCase()) || profile.id == null) continue;
-
-      result.diffEntries.push({ resourceType: RESOURCE_TYPE, name, action: "delete" });
-      result.removed++;
-      // Recorded before the dry-run branch: a dry run deletes nothing, but the profile is still
-      // gone by the time indexers sync in a real run, so it must not be offered to them here.
+      // Still excluded from the list handed to indexers so a new indexer without
+      // `sync_profile` cannot bind to a profile this run will delete afterwards.
       goneIds.add(profile.id);
-
-      if (dryRun) {
-        logger.info(`DryRun: Would delete unmanaged sync profile '${name}'.`);
-        continue;
-      }
-      try {
-        await api.deleteAppProfile(profile.id.toString());
-        logger.info(`Deleted unmanaged sync profile: '${name}'`);
-      } catch (error: unknown) {
-        throw fatal(`Failed to delete sync profile '${name}'`, error);
-      }
     }
   }
 
   result.profiles = profiles.filter((p) => p.id == null || !goneIds.has(p.id));
+  return result;
+}
+
+/**
+ * Deletes unmanaged sync profiles after indexers have been removed. Prowlarr returns
+ * 500 while an indexer still references the profile.
+ */
+export async function deleteUnmanagedSyncProfiles(section: InputConfigProwlarrInstance["sync_profiles"]): Promise<SyncProfileSyncResult> {
+  const result: SyncProfileSyncResult = { added: 0, updated: 0, removed: 0, diffEntries: [] };
+  const deleteConfig = section?.delete_unmanaged;
+  if (!deleteConfig?.enabled) {
+    return result;
+  }
+
+  const api = getClient("PROWLARR");
+  const dryRun = getEnvs().DRY_RUN;
+  const serverProfiles = await api.getAppProfiles();
+  const keep = new Set([
+    ...(section?.data ?? []).map((c) => c.name.toLowerCase()),
+    ...(deleteConfig.ignore ?? []).map((n) => n.toLowerCase()),
+  ]);
+
+  for (const profile of serverProfiles) {
+    const name = profile.name ?? "";
+    if (!name || keep.has(name.toLowerCase()) || profile.id == null) continue;
+
+    result.diffEntries.push({ resourceType: RESOURCE_TYPE, name, action: "delete" });
+    result.removed++;
+
+    if (dryRun) {
+      logger.info(`DryRun: Would delete unmanaged sync profile '${name}'.`);
+      continue;
+    }
+    try {
+      await api.deleteAppProfile(profile.id.toString());
+      logger.info(`Deleted unmanaged sync profile: '${name}'`);
+    } catch (error: unknown) {
+      throw fatal(`Failed to delete sync profile '${name}'`, error);
+    }
+  }
+
   return result;
 }
 

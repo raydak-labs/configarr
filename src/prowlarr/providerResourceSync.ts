@@ -49,6 +49,11 @@ export interface ProviderSyncOutcome {
   diffEntries: DiffEntry[];
 }
 
+export type ProviderSyncOptions = {
+  /** Create/update only. Unmanaged deletes run later via `deleteUnmanaged`. */
+  deferDeletes?: boolean;
+};
+
 /**
  * One extra top-level property (beyond `fields`/`tags`) that a specific provider
  * resource carries - e.g. an application's `syncLevel`, or an indexer's `enable`
@@ -392,6 +397,35 @@ export abstract class ProviderResourceSync<
     }
   }
 
+  /**
+   * Config items that pass schema validation and are not duplicate names. Create, update and
+   * unmanaged-delete all work off this set, so a rejected item never counts as managed.
+   * `report` is false on the deferred delete pass, where `sync` already logged the reasons.
+   */
+  private selectValidItems(configItems: TConfig[], schema: TResource[], report: boolean): TConfig[] {
+    const keys = configItems.map((c) => this.configKey(c));
+    const duplicates = new Set(keys.filter((key, i) => keys.indexOf(key) !== i));
+
+    const valid: TConfig[] = [];
+    for (const [i, c] of configItems.entries()) {
+      const validation = this.validate(c, schema);
+      const isDuplicate = duplicates.has(keys[i]!);
+      if (report) {
+        if (!validation.valid) {
+          this.logger.error(`Validation failed for ${this.label} '${c.name}': ${validation.errors.join(", ")}`);
+        }
+        if (isDuplicate) {
+          this.logger.error(`Validation failed for ${this.label} '${c.name}': name must be unique`);
+        }
+        if (validation.warnings.length > 0) {
+          this.logger.warn(`Validation warnings for ${this.label} '${c.name}': ${validation.warnings.join(", ")}`);
+        }
+      }
+      if (validation.valid && !isDuplicate) valid.push(c);
+    }
+    return valid;
+  }
+
   private filterUnmanaged(server: TResource[], configItems: TConfig[], deleteConfig: ProviderDeleteUnmanaged): TResource[] {
     const { enabled = false, ignore = [] } = deleteConfig ?? {};
     if (!enabled) return [];
@@ -408,7 +442,12 @@ export abstract class ProviderResourceSync<
     return entries;
   }
 
-  async sync(configItems: TConfig[], deleteUnmanaged: ProviderDeleteUnmanaged, serverCache: ServerCache): Promise<ProviderSyncOutcome> {
+  async sync(
+    configItems: TConfig[],
+    deleteUnmanaged: ProviderDeleteUnmanaged,
+    serverCache: ServerCache,
+    options?: ProviderSyncOptions,
+  ): Promise<ProviderSyncOutcome> {
     const deleteEnabled = deleteUnmanaged?.enabled ?? false;
     if (configItems.length === 0 && !deleteEnabled) {
       this.logger.debug(`No ${this.label}s configured and delete_unmanaged not enabled, skipping`);
@@ -422,25 +461,7 @@ export abstract class ProviderResourceSync<
     ]);
     this.logger.info(`Found ${serverItems.length} ${this.label}(s) on server`);
 
-    const keys = configItems.map((c) => this.configKey(c));
-    const duplicates = new Set(keys.filter((key, i) => keys.indexOf(key) !== i));
-
-    const valid: TConfig[] = [];
-    for (const [i, c] of configItems.entries()) {
-      const validation = this.validate(c, schema);
-      const isDuplicate = duplicates.has(keys[i]!);
-      if (!validation.valid) {
-        this.logger.error(`Validation failed for ${this.label} '${c.name}': ${validation.errors.join(", ")}`);
-      }
-      if (isDuplicate) {
-        this.logger.error(`Validation failed for ${this.label} '${c.name}': name must be unique`);
-      }
-      if (validation.warnings.length > 0) {
-        this.logger.warn(`Validation warnings for ${this.label} '${c.name}': ${validation.warnings.join(", ")}`);
-      }
-      if (validation.valid && !isDuplicate) valid.push(c);
-    }
-
+    const valid = this.selectValidItems(configItems, schema, true);
     await this.createMissingTags(valid, serverCache);
 
     const diff = this.calculateDiff(valid, serverItems, serverCache.tags, ctx);
@@ -448,7 +469,7 @@ export abstract class ProviderResourceSync<
       `${this.label}s diff - Create: ${diff.create.length}, Update: ${diff.update.length}, Unchanged: ${diff.unchanged.length}`,
     );
 
-    const unmanagedToDelete = deleteEnabled ? this.filterUnmanaged(serverItems, valid, deleteUnmanaged) : [];
+    const unmanagedToDelete = deleteEnabled && !options?.deferDeletes ? this.filterUnmanaged(serverItems, valid, deleteUnmanaged) : [];
     const diffEntries = this.diffToEntries(diff, unmanagedToDelete);
 
     if (getEnvs().DRY_RUN) {
@@ -498,6 +519,48 @@ export abstract class ProviderResourceSync<
     }
 
     return { added, updated, removed, diffEntries };
+  }
+
+  /**
+   * Deletes unmanaged resources after dependents have been removed (e.g. indexer
+   * proxies after indexers). No-op unless `deleteUnmanaged.enabled`.
+   */
+  async deleteUnmanaged(configItems: TConfig[], deleteUnmanaged: ProviderDeleteUnmanaged): Promise<ProviderSyncOutcome> {
+    const empty: ProviderSyncOutcome = { added: 0, updated: 0, removed: 0, diffEntries: [] };
+    if (!deleteUnmanaged?.enabled) {
+      return empty;
+    }
+
+    const [serverItems, schema] = await Promise.all([
+      this.fetchServer(),
+      configItems.length > 0 ? this.getSchema() : Promise.resolve([] as TResource[]),
+    ]);
+    const unmanagedToDelete = this.filterUnmanaged(serverItems, this.selectValidItems(configItems, schema, false), deleteUnmanaged);
+    const diffEntries = unmanagedToDelete.map((c) => ({
+      resourceType: this.label,
+      name: c.name ?? "unknown",
+      action: "delete" as const,
+    }));
+
+    if (getEnvs().DRY_RUN) {
+      for (const item of unmanagedToDelete) {
+        this.logger.info(`DryRun: Would delete unmanaged ${this.label}: '${item.name ?? "Unknown"}'.`);
+      }
+      return { added: 0, updated: 0, removed: unmanagedToDelete.length, diffEntries };
+    }
+
+    let removed = 0;
+    for (const item of unmanagedToDelete) {
+      try {
+        this.logger.info(`Deleting unmanaged ${this.label}: '${item.name ?? "Unknown"}'...`);
+        await this.deleteResource(item.id!.toString());
+        removed++;
+      } catch (error) {
+        throw this.toError(`Delete ${this.label} '${item.name ?? "Unknown"}' failed`, error);
+      }
+    }
+
+    return { added: 0, updated: 0, removed, diffEntries };
   }
 
   private toError(message: string, error: unknown): Error {

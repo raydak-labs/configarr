@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ServerCache } from "../cache";
 import type { InputConfigProwlarrInstance } from "../types/config.types";
-import { syncTags } from "./tagSync";
+import { deleteUnmanagedTags, syncTags } from "./tagSync";
 
 vi.mock("../env", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../env")>();
@@ -41,7 +41,7 @@ describe("syncTags", () => {
       { id: 4, label: "orphan" },
     ]);
 
-    const res = await syncTags(
+    const res = await deleteUnmanagedTags(
       {
         ...base,
         tags: ["keep-listed"],
@@ -56,6 +56,13 @@ describe("syncTags", () => {
     expect(res.removed).toBe(1);
   });
 
+  it("does not delete tags during create", async () => {
+    const cache = makeCache([{ id: 4, label: "orphan" }]);
+    const res = await syncTags({ ...base, tags: [], delete_unmanaged_tags: { enabled: true } }, cache);
+    expect(mockClient.deleteTag).not.toHaveBeenCalled();
+    expect(res.removed).toBe(0);
+  });
+
   it("fails the run when a tag cannot be created", async () => {
     mockClient.createTag.mockRejectedValueOnce(new Error("400 Bad Request"));
     const cache = makeCache([]);
@@ -68,7 +75,7 @@ describe("syncTags", () => {
     mockClient.deleteTag.mockRejectedValueOnce(new Error("409 Conflict"));
 
     await expect(
-      syncTags({ ...base, tags: [], delete_unmanaged_tags: { enabled: true } }, makeCache([{ id: 4, label: "orphan" }])),
+      deleteUnmanagedTags({ ...base, tags: [], delete_unmanaged_tags: { enabled: true } }, makeCache([{ id: 4, label: "orphan" }])),
     ).rejects.toThrow("Failed to delete tag 'orphan': 409 Conflict");
   });
 

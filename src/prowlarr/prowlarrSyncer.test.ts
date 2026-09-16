@@ -12,12 +12,14 @@ const syncProfileSync = vi.fn(async () => ({
   diffEntries: [{ resourceType: "SyncProfile", name: "s", action: "create" }],
   profiles: [{ id: 4, name: "Seeded" }],
 }));
+const deleteUnmanagedProfiles = vi.fn(async () => ({ added: 0, updated: 0, removed: 0, diffEntries: [] }));
 const proxySync = vi.fn(async () => ({
   added: 0,
   updated: 0,
   removed: 0,
   diffEntries: [{ resourceType: "IndexerProxy", name: "p", action: "create" }],
 }));
+const proxyDeleteUnmanaged = vi.fn(async () => ({ added: 0, updated: 0, removed: 0, diffEntries: [] }));
 const indexerSync = vi.fn(async () => ({
   added: 0,
   updated: 0,
@@ -34,10 +36,14 @@ const applicationSync = vi.fn(async () => ({
 const indexerSyncCtor = vi.fn();
 
 vi.mock("./tagSync", () => ({ syncTags: (...args: unknown[]) => syncTags(...(args as [])) }));
-vi.mock("./syncProfileSync", () => ({ syncSyncProfiles: (...args: unknown[]) => syncProfileSync(...(args as [])) }));
+vi.mock("./syncProfileSync", () => ({
+  syncSyncProfiles: (...args: unknown[]) => syncProfileSync(...(args as [])),
+  deleteUnmanagedSyncProfiles: (...args: unknown[]) => deleteUnmanagedProfiles(...(args as [])),
+}));
 vi.mock("./indexerProxySync", () => ({
   IndexerProxySync: class {
     sync = proxySync;
+    deleteUnmanaged = proxyDeleteUnmanaged;
   },
 }));
 vi.mock("./indexerSync", () => ({
@@ -75,6 +81,11 @@ describe("syncProwlarrProviders", () => {
     const entries = await syncProwlarrProviders(fullInstance, cache());
 
     expect(entries.map((e) => e.resourceType)).toEqual(["Tag", "SyncProfile", "IndexerProxy", "Indexer", "Application"]);
+    expect(proxySync).toHaveBeenCalledWith([{ name: "flare", type: "FlareSolverr" }], undefined, expect.anything(), {
+      deferDeletes: true,
+    });
+    expect(proxyDeleteUnmanaged).toHaveBeenCalledWith([{ name: "flare", type: "FlareSolverr" }], undefined);
+    expect(deleteUnmanagedProfiles).toHaveBeenCalledWith({ data: [{ name: "Seeded" }] });
   });
 
   it("hands the synced profiles to the indexer sync so it can resolve one created this run", async () => {
@@ -97,9 +108,11 @@ describe("syncProwlarrProviders", () => {
 
     expect(syncTags).toHaveBeenCalledTimes(1);
     expect(syncProfileSync).toHaveBeenCalledWith(undefined);
-    expect(proxySync).toHaveBeenCalledWith([], undefined, expect.anything());
+    expect(proxySync).toHaveBeenCalledWith([], undefined, expect.anything(), { deferDeletes: true });
     expect(indexerSync).toHaveBeenCalledWith([], undefined, expect.anything());
     expect(applicationSync).toHaveBeenCalledWith(undefined, expect.anything());
+    expect(proxyDeleteUnmanaged).toHaveBeenCalledWith([], undefined);
+    expect(deleteUnmanagedProfiles).toHaveBeenCalledWith(undefined);
   });
 
   it("fails the whole run when tag sync fails, without touching later sections", async () => {
@@ -117,12 +130,16 @@ describe("syncProwlarrProviders", () => {
 
     await expect(syncProwlarrProviders(fullInstance, cache())).rejects.toThrow("indexer boom");
     expect(applicationSync).not.toHaveBeenCalled();
+    expect(proxyDeleteUnmanaged).not.toHaveBeenCalled();
+    expect(deleteUnmanagedProfiles).not.toHaveBeenCalled();
   });
 
   it("fails the whole run when application sync fails", async () => {
     applicationSync.mockRejectedValueOnce(new Error("app boom"));
 
     await expect(syncProwlarrProviders(fullInstance, cache())).rejects.toThrow("app boom");
+    expect(proxyDeleteUnmanaged).not.toHaveBeenCalled();
+    expect(deleteUnmanagedProfiles).not.toHaveBeenCalled();
   });
 
   it("forwards the applications section, including a bare sync_indexers", async () => {

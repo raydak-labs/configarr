@@ -516,7 +516,7 @@ export abstract class BaseDownloadClientSync<T extends DownloadClientShared> {
 
     if (configClients.length === 0 && !config.download_clients?.delete_unmanaged?.enabled) {
       this.logger.info("No download clients configured and delete_unmanaged not enabled, skipping");
-      return { added: 0, updated: 0, removed: 0, diffEntries: [] };
+      return { added: 0, updated: 0, removed: 0, failed: 0, diffEntries: [] };
     }
 
     // Get schema and server clients
@@ -552,6 +552,7 @@ export abstract class BaseDownloadClientSync<T extends DownloadClientShared> {
         added: diff.create.length,
         updated: diff.update.length,
         removed: unmanagedToDelete.length,
+        failed: 0,
         diffEntries: downloadClientDiffToDiffEntries(diff, unmanagedToDelete),
       };
     }
@@ -584,6 +585,7 @@ export abstract class BaseDownloadClientSync<T extends DownloadClientShared> {
       added,
       updated,
       removed,
+      failed,
       diffEntries: downloadClientDiffToDiffEntries(
         { create: created, update: updatedItems, unchanged: diff.unchanged, deleted: [] },
         deletedItems,
