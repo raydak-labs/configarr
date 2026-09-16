@@ -28,85 +28,24 @@ pnpm typecheck         # TypeScript type checking
 
 ## Development Rules
 
-### ✅ Must Do After Every Implementation
+Before considering work complete, all must pass: `pnpm build && pnpm test && pnpm lint && pnpm typecheck`.
 
-1. **Run all three checks** - ALL must pass before considering work complete:
-   ```bash
-   pnpm build && pnpm test && pnpm lint
-   ```
-2. **Type checking** - Ensure no TypeScript errors:
-   ```bash
-   pnpm typecheck
-   ```
-
-### 🎯 Coding Standards
-
-1. **Follow Existing Patterns**
-   - Study similar existing code before implementing new features
-   - Maintain consistency with current architecture
-   - Use established patterns (e.g., rootFolder pattern for new modules)
-
-2. **TypeScript Best Practices**
-   - Use strict typing - avoid `any` when possible
-   - Prefer interfaces for public APIs, types for internal use
-   - Use type inference where it improves readability
-   - Leverage union types and discriminated unions
-   - Use `unknown` instead of `any` for truly unknown types
-
-3. **Architecture Patterns**
-   - **Base Classes** - Abstract common logic (e.g., `BaseMetadataProfileSync`, `BaseRootFolderSync`)
-   - **Type-Specific Implementations** - Extend base classes for each \*arr type
-   - **Factory Pattern** - Use factories to instantiate correct implementation
-   - **Syncer Pattern** - Orchestrate sync operations (create/update/delete)
-
-4. **Code Organization**
-   - Group related functionality in directories (e.g., `metadataProfiles/`, `rootFolder/`)
-   - Use meaningful file names that reflect purpose
-   - Keep client abstractions in `clients/`
-   - Type definitions in `types/` or local `*.types.ts` files
-   - Generated API code in `__generated__/`
+- Use strict typing; `unknown` over `any`. Interfaces for public APIs, types for internal use.
+- Architecture: **Base Classes** abstract shared logic per feature (`BaseMetadataProfileSync`, `BaseRootFolderSync`) → **type-specific implementations** extend them per \*arr type → a **Factory** instantiates the right one → a **Syncer** orchestrates create/update/delete. See "Typed per-*arr clients" below for which pattern (A/B/C) a new feature needs.
 
 ## AI-Internal Documentation
 
 Store design, architecture, and implementation planning documents created during agent-assisted development in `.ai/docs/` — not in `docs/` (user-facing documentation for configarr.de):
 
-- **`.ai/docs/specs/`** — feature design and architecture documents
+- **`.ai/docs/specs/`** — feature design and architecture decisions
 - **`.ai/docs/plans/`** — step-by-step implementation plans
 
-Use dated filenames (e.g. `2026-07-06-feature-name-design.md`). Cross-reference specs from plans when both exist.
+Specs are dated and fixed, not living documents — a spec is a record of the decision made at that time, not a description of current code (read the code for that). Do not edit a spec's decisions after the fact to match later changes.
 
-## Project Structure
-
-```
-src/
-├── __generated__/         # Auto-generated API clients (don't modify)
-├── clients/               # Per-*arr API clients
-│   ├── client.ts          # configureApi / getClient / unsetApi / ArrTypeToClient
-│   ├── connection.ts      # connection helpers
-│   ├── capabilities.ts    # small shared capability interfaces
-│   ├── radarr-client.ts
-│   ├── sonarr-client.ts
-│   └── ...
-├── qualityProfiles/       # Quality profile mapping + sync
-├── customFormats/         # Custom format mapping + sync
-├── qualityDefinitions/    # Quality definition mapping + sync
-├── delayProfiles/         # Delay profile mapping + sync
-├── mediaManagement/       # Naming + media management
-├── tags/                  # Tag loading
-├── metadataProfiles/      # Metadata profiles sync (Lidarr/Readarr)
-│   ├── metadataProfileBase.ts
-│   ├── metadataProfileLidarr.ts
-│   ├── metadataProfileReadarr.ts
-│   └── metadataProfileSyncer.ts
-├── rootFolder/            # Root folder sync
-├── types/                 # Shared config / YAML types
-│   ├── config.types.ts    # Configuration types
-│   ├── common.types.ts    # Shared types
-│   └── ...
-├── config.ts              # Configuration loading/merging
-├── index.ts               # Main entry point
-└── ...
-```
+- Filename: `YYYY-MM-DD-feature-name-design.md` (specs) / `YYYY-MM-DD-feature-name.md` (plans).
+- Cross-link: plan links back to its spec at the top; spec links forward to its plan once one exists.
+- When a spec's implementation lands, add a one-line `Status: implemented (YYYY-MM-DD)` at the top — don't rewrite the body.
+- Superseding a past decision: write a new dated spec that links to the old one and states what changed and why. Never rewrite history in place.
 
 ## Key Concepts
 
@@ -160,48 +99,17 @@ Each feature (quality profiles, custom formats, metadata profiles, root folders)
 
 ## Testing
 
-- **Unit tests**: `*.test.ts` files alongside source
-- **Samples**: Test data in `tests/samples/`
-- **Mocking**: Use Vitest mocks for API clients
-- **Coverage**: Run `pnpm coverage` to check coverage
+- Unit tests: `*.test.ts` alongside source. Samples: `tests/samples/`. Mock API clients with Vitest.
 
-## Common Tasks
+## Adding a New \*arr Feature
 
-### Adding Support for New \*arr Feature
-
-1. Add methods on the concrete *arr clients that support the feature. Shared method sets go in `src/clients/capabilities.ts`.
-2. Create feature directory (e.g., `featureName/`)
-3. Implement base class with abstract methods
-4. Create type-specific implementations
-5. Add factory function and syncer
-6. Update main pipeline in `index.ts`
-7. Add tests
-8. Run: `pnpm build && pnpm test && pnpm lint && pnpm typecheck`
-
-### Modifying Existing Feature
-
-1. Locate relevant files (base class, implementations, syncer)
-2. Make changes following existing patterns
-3. Update tests
-4. Run: `pnpm build && pnpm test && pnpm lint && pnpm typecheck`
-
-### Adding New Configuration Options
-
-1. Update types in `types/config.types.ts`
-2. Update configuration merging in `config.ts`
-3. Implement feature logic
-4. Update documentation (if needed)
-5. Run all checks
+Add methods on the concrete \*arr clients (shared method sets go in `src/clients/capabilities.ts`), pick a pattern (A/B/C, see above), implement base + type-specific classes, wire the factory and syncer, update the pipeline in `index.ts`, add tests.
 
 ## Important Notes
 
-- **Never edit `CHANGELOG.md` manually** — it is created and maintained by CI/CD (e.g. release automation). Do not add, remove, or rewrite changelog entries by hand; describe user-facing changes in PRs/commits so the pipeline can record them.
-- **Never commit without passing all checks**: build, test, lint, typecheck
-- **Always use pnpm** - not npm or yarn
-- **Backward compatibility** - Maintain existing APIs when refactoring
-- **Type safety** - Prefer compile-time errors over runtime errors
-- **Logging** - Use the `logger` instance for consistent logging
-- **Error handling** - Graceful degradation, informative error messages
+- **Never edit `CHANGELOG.md` manually** — generated by CI release automation. Describe user-facing changes in commits/PRs instead.
+- **Backward compatibility** — maintain existing APIs when refactoring.
+- **Logging** — use the `logger` instance, not `console`.
 
 ## Commit Message Conventions
 
@@ -215,17 +123,5 @@ Each feature (quality profiles, custom formats, metadata profiles, root folders)
 
 ## Resources
 
-- **Documentation**: https://configarr.de
-- **Repository**: https://github.com/raydak-labs/configarr
-- **TRaSH Guides**: https://trash-guides.info/
-- **Recyclarr Compatibility**: Config templates are compatible
-
-## Getting Help
-
-When implementing new features:
-
-1. Look for similar existing implementations
-2. Follow established patterns (especially rootFolder/metadataProfiles)
-3. Keep TypeScript strict typing
-4. Test thoroughly
-5. Ensure all checks pass
+- Docs: https://configarr.de · Repo: https://github.com/raydak-labs/configarr · TRaSH Guides: https://trash-guides.info/
+- Recyclarr config templates are compatible.
