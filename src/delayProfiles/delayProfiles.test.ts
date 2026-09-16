@@ -1,22 +1,17 @@
 import { describe, expect, test, vi } from "vitest";
-import { DelayProfileShared } from "./delayProfile.types";
+import { DownloadProtocol } from "../__generated__/sonarr/data-contracts";
+import { areTagsEqual, delayProfilesToDiffEntries, StandardDelayProfile, StandardDelayProfileSync } from "./delayProfileBase";
+import { DelayProfileLidarrSync } from "./delayProfileLidarr";
 
-type StandardDelayProfile = DelayProfileShared & {
-  enableUsenet?: boolean;
-  enableTorrent?: boolean;
-  preferredProtocol?: string;
-  usenetDelay?: number;
-  torrentDelay?: number;
+const delayApi = {
+  getDelayProfiles: vi.fn(),
+  createDelayProfile: vi.fn(),
+  updateDelayProfile: vi.fn(),
+  deleteDelayProfile: vi.fn(),
 };
 
-// Hoist the mock to ensure it runs before imports
-const mockGetDelayProfiles = vi.hoisted(() => vi.fn());
-
-vi.mock("../clients/client", () => ({
-  getClient: () => ({
-    getDelayProfiles: mockGetDelayProfiles,
-  }),
-}));
+const sonarrDelay = () => new StandardDelayProfileSync(delayApi, DownloadProtocol);
+const lidarrDelay = () => new DelayProfileLidarrSync(delayApi);
 
 describe("DelayProfiles", () => {
   test("should not diff (with default profile and additional profile)", async () => {
@@ -77,10 +72,9 @@ describe("DelayProfiles", () => {
       },
     ];
 
-    mockGetDelayProfiles.mockResolvedValue(serverProfiles);
+    delayApi.getDelayProfiles.mockResolvedValue(serverProfiles);
 
-    const { calculateDelayProfilesDiff } = await import("./delayProfileSyncer");
-    const diff = await calculateDelayProfilesDiff("SONARR", configProfiles, [{ label: "test", id: 1 }]);
+    const diff = await sonarrDelay().calculateDiff(configProfiles, [{ label: "test", id: 1 }]);
 
     expect(diff).toBeNull();
   });
@@ -116,10 +110,9 @@ describe("DelayProfiles", () => {
       },
     ];
 
-    mockGetDelayProfiles.mockResolvedValue(serverProfiles);
+    delayApi.getDelayProfiles.mockResolvedValue(serverProfiles);
 
-    const { calculateDelayProfilesDiff } = await import("./delayProfileSyncer");
-    const diff = await calculateDelayProfilesDiff("SONARR", configProfiles, []);
+    const diff = await sonarrDelay().calculateDiff(configProfiles, []);
 
     expect(diff).not.toBeNull();
     expect(diff?.defaultProfileChanged).toBe(true);
@@ -176,10 +169,9 @@ describe("DelayProfiles", () => {
       },
     ];
 
-    mockGetDelayProfiles.mockResolvedValue(serverProfiles);
+    delayApi.getDelayProfiles.mockResolvedValue(serverProfiles);
 
-    const { calculateDelayProfilesDiff } = await import("./delayProfileSyncer");
-    const diff = await calculateDelayProfilesDiff("SONARR", configProfiles, []);
+    const diff = await sonarrDelay().calculateDiff(configProfiles, []);
 
     expect(diff).not.toBeNull();
     expect(diff?.defaultProfileChanged).toBe(false);
@@ -235,10 +227,9 @@ describe("DelayProfiles", () => {
       },
     ];
 
-    mockGetDelayProfiles.mockResolvedValue(serverProfiles);
+    delayApi.getDelayProfiles.mockResolvedValue(serverProfiles);
 
-    const { calculateDelayProfilesDiff } = await import("./delayProfileSyncer");
-    const diff = await calculateDelayProfilesDiff("SONARR", configProfiles, []);
+    const diff = await sonarrDelay().calculateDiff(configProfiles, []);
 
     expect(diff).not.toBeNull();
     expect(diff?.missingTags).toHaveLength(1);
@@ -275,18 +266,15 @@ describe("DelayProfiles", () => {
       },
     ];
 
-    mockGetDelayProfiles.mockResolvedValue(serverProfiles);
+    delayApi.getDelayProfiles.mockResolvedValue(serverProfiles);
 
-    const { calculateDelayProfilesDiff } = await import("./delayProfileSyncer");
-    const diff = await calculateDelayProfilesDiff("SONARR", configProfiles, []);
+    const diff = await sonarrDelay().calculateDiff(configProfiles, []);
 
     expect(diff?.defaultProfileChanged).toBe(true);
     expect(diff?.defaultProfileFieldChanges).toEqual([{ field: "usenetDelay", from: 0, to: 10 }]);
   });
 
   test("delayProfilesToDiffEntries - builds a DiffEntry for the default profile", async () => {
-    const { delayProfilesToDiffEntries } = await import("./delayProfileBase");
-
     const diff = {
       defaultProfileChanged: true,
       additionalProfilesChanged: false,
@@ -318,7 +306,7 @@ describe("DelayProfiles", () => {
       },
     };
 
-    mockGetDelayProfiles.mockResolvedValue([
+    delayApi.getDelayProfiles.mockResolvedValue([
       {
         id: 1,
         tags: [],
@@ -334,8 +322,7 @@ describe("DelayProfiles", () => {
       },
     ]);
 
-    const { calculateDelayProfilesDiff } = await import("./delayProfileSyncer");
-    const diff = await calculateDelayProfilesDiff("LIDARR", configProfiles, []);
+    const diff = await lidarrDelay().calculateDiff(configProfiles, []);
 
     expect(diff?.defaultProfileChanged).toBe(true);
     expect(diff?.defaultProfileFieldChanges).toEqual(
@@ -347,9 +334,7 @@ describe("DelayProfiles", () => {
   });
 
   test("mapToServerDelayProfile - Lidarr classic YAML keeps enableUsenet/usenetDelay", async () => {
-    const { mapToServerDelayProfile } = await import("./delayProfileSyncer");
-    const mapped = mapToServerDelayProfile(
-      "LIDARR",
+    const mapped = lidarrDelay().mapToServer(
       {
         enableUsenet: true,
         enableTorrent: false,
@@ -371,9 +356,7 @@ describe("DelayProfiles", () => {
   });
 
   test("mapToServerDelayProfile - items-only payload omits legacy protocol fields", async () => {
-    const { mapToServerDelayProfile } = await import("./delayProfileSyncer");
-    const mapped = mapToServerDelayProfile(
-      "LIDARR",
+    const mapped = lidarrDelay().mapToServer(
       {
         items: [
           { name: "Usenet", protocol: "UsenetDownloadProtocol", allowed: true, delay: 2 },
@@ -419,7 +402,6 @@ describe("DelayProfiles", () => {
 
 describe("areTagsEqual", () => {
   test("does not mutate input arrays", async () => {
-    const { areTagsEqual } = await import("./delayProfileBase");
     const left = [3, 1, 2];
     const right = [2, 3, 1];
 

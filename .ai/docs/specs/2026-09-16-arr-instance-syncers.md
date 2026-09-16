@@ -8,7 +8,7 @@ Replace `pipeline(arrType)` + `prowlarrPipeline()` in `src/index.ts` with per-ar
 
 `new SonarrSyncer().run(...)`, `new RadarrSyncer().run(...)`, …, `new ProwlarrSyncer().run(...)`.
 
-No `createInstanceSync` factory. `configureApi` / `getClient` / `unsetApi` stay in `runInstances` in `index.ts`. Feature Pattern A still uses `createXSync("LITERAL")` + `getClient("LITERAL")` inside those classes.
+No `createInstanceSync` factory. `configureApi` / `getClient` / `unsetApi` stay in `runInstances` in `index.ts`. Feature syncers take the typed client in the constructor.
 
 ## Shared media steps
 
@@ -17,12 +17,12 @@ No `createInstanceSync` factory. `configureApi` / `getClient` / `unsetApi` stay 
 - `runMediaSyncToQualityProfiles` — start through quality-profile persist + optional unmanaged QP delete. Stops before metadata.
 - `completeMediaSync` — root folders through remote paths, then `{ arrType, instanceName, entries }`.
 
-One `createXSync` instance per feature is passed in as `syncs`. Root folders use `ctx.syncs.root.syncRootFolders` (no second handler).
+One injected feature-sync instance per feature is passed in as `syncs`. Root folders use `ctx.syncs.root.syncRootFolders` (no second handler).
 
 ## TRaSH / metadata
 
 - TRaSH only from Sonarr/Radarr via `createTrashOps("SONARR"|"RADARR")`. Whisparr/Lidarr/Readarr omit `trash`.
-- Metadata only from Lidarr/Readarr via `createMetadataProfileSync("LIDARR"|"READARR")` (never null), after quality profiles and before `completeMediaSync`.
+- Metadata only from Lidarr/Readarr via `new LidarrMetadataProfileSync(client)` / `new ReadarrMetadataProfileSync(client)` (never null), after quality profiles and before `completeMediaSync`.
 
 ## What was not done
 

@@ -28,7 +28,7 @@ new QualityProfileSonarrSync(client); // still a class: language hooks
 
 Lidarr delay, Lidarr/Readarr root folders, Lidarr/Readarr metadata stay dedicated classes. Readarr QD uses `QualityDefinitionSync` (no preferred size).
 
-`createXSync(arrType)` remains for tests (`vi.mock(getClient)`). Production instance syncers construct directly.
+Production instance syncers construct feature classes directly. No `createXSync(arrType)` factories.
 
 ## Extension
 
@@ -36,5 +36,5 @@ Lidarr delay, Lidarr/Readarr root folders, Lidarr/Readarr metadata stay dedicate
 | -------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
 | New arr, standard delay / preferred QD / path roots / MM | New `*Syncer` + `new StandardDelayProfileSync(client, FooDownloadProtocol)` etc. No new feature file. |
 | New arr, Radarr-like QP                                  | New `qualityProfileFoo.ts` (or reuse an existing combo if identical).                                 |
-| Lidarr-only payload (`items[]`, named root folders)      | Dedicated class, constructor takes `LidarrClient`.                                                    |
+| Lidarr-only payload (`items[]`, named root folders)      | Dedicated class, constructor takes that arr’s client/capability.                                      |
 | Shared lifecycle                                         | The base only.                                                                                        |

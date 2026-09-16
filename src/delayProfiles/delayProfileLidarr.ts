@@ -1,5 +1,5 @@
 import { Tag } from "../tags/tag.types";
-import { LidarrClient } from "../clients/lidarr-client";
+import type { DelayProfilesClient } from "../clients/capabilities";
 import { FieldChange } from "../diffReport/diffReport.types";
 import { InputConfigDelayProfile } from "../types/config.types";
 import { DelayProfileResource, DownloadProtocol } from "../__generated__/lidarr/data-contracts";
@@ -47,7 +47,7 @@ function compareLidarrDelayProfileFields(config: InputConfigDelayProfile, server
 }
 
 export class DelayProfileLidarrSync extends BaseDelayProfileSync<LidarrDelayProfile> {
-  constructor(api: LidarrClient) {
+  constructor(api: DelayProfilesClient<LidarrDelayProfile>) {
     super(api);
   }
 

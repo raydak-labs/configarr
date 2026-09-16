@@ -16,7 +16,9 @@ export const arrE2eEnabled = process.env.ARR_E2E === "1";
 export type DelayProfileClient = {
   getSystemStatus: () => Promise<{ version?: string | null; appName?: string | null }>;
   getDelayProfiles: () => Promise<any[]>;
+  createDelayProfile: (profile: any) => Promise<any>;
   updateDelayProfile: (id: string, data: any) => Promise<any>;
+  deleteDelayProfile: (id: string) => Promise<void>;
 };
 
 type ArrTarget = {

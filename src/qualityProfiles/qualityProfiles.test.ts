@@ -1,6 +1,5 @@
 import path from "path";
 import { beforeEach, afterEach, describe, expect, test, vi } from "vitest";
-import * as uclient from "../clients/client";
 import * as log from "../logger";
 import { CustomFormatRequest } from "../customFormats/customFormat.types";
 import { QualityDefinitionShared } from "../qualityDefinitions/qualityDefinition.types";
@@ -15,12 +14,8 @@ import {
   mapQualityProfiles,
   qualityProfilesToDiffEntries,
 } from "./qualityProfileBase";
-import {
-  calculateQualityProfilesDiff,
-  deleteAllQualityProfiles,
-  deleteQualityProfile,
-  loadQualityProfilesFromServer,
-} from "./qualityProfileSyncer";
+import { calculateQualityProfilesDiff } from "./qualityProfileSyncer";
+import { QualityProfileSonarrSync } from "./qualityProfileSonarr";
 import { CFProcessing } from "../customFormats/customFormat.types";
 import { ConfigQualityProfile, ConfigQualityProfileItem, MergedConfigInstance } from "../types/config.types";
 import { cloneWithJSON, loadJsonFile } from "../util";
@@ -894,8 +889,7 @@ describe("QualityProfiles", async () => {
       vi.restoreAllMocks();
     });
 
-    test("deleteAllQualityProfiles() deletes every quality profile returned by server", async () => {
-      // Arrange
+    test("deleteAll deletes every quality profile returned by server", async () => {
       const qp1 = cloneWithJSON(sampleQualityProfile);
       qp1.id = 1001;
       qp1.name = "QP-1";
@@ -908,18 +902,15 @@ describe("QualityProfiles", async () => {
 
       const deleteFn = vi.fn().mockResolvedValue(undefined);
       const getFn = vi.fn().mockResolvedValue([qp1, qp2, qp3]);
-
-      vi.spyOn(uclient, "getClient").mockReturnValue({
-        getQualityProfiles: getFn,
-        deleteQualityProfile: deleteFn,
-      } as any);
-
       const logSpy = vi.spyOn(log.logger, "info").mockImplementation(() => {});
 
-      // Act
-      await deleteAllQualityProfiles("SONARR");
+      await new QualityProfileSonarrSync({
+        getQualityProfiles: getFn,
+        createQualityProfile: vi.fn(),
+        updateQualityProfile: vi.fn(),
+        deleteQualityProfile: deleteFn,
+      }).deleteAll();
 
-      // Assert
       expect(deleteFn).toHaveBeenCalledTimes(3);
       expect(deleteFn).toHaveBeenNthCalledWith(1, "1001");
       expect(deleteFn).toHaveBeenNthCalledWith(2, "1002");
@@ -930,26 +921,22 @@ describe("QualityProfiles", async () => {
       expect(logSpy).toHaveBeenCalledWith("Deleted QP: 'QP-3'");
     });
 
-    test("when no profiles then no deletions by deleteAllQualityProfiles", async () => {
-      // Arrange
+    test("when no profiles then no deletions by deleteAll", async () => {
       const deleteFn = vi.fn();
-      const getFn = vi.fn().mockResolvedValue([] as any[]);
+      const getFn = vi.fn().mockResolvedValue([]);
 
-      vi.spyOn(uclient, "getClient").mockReturnValue({
+      await new QualityProfileSonarrSync({
         getQualityProfiles: getFn,
+        createQualityProfile: vi.fn(),
+        updateQualityProfile: vi.fn(),
         deleteQualityProfile: deleteFn,
-      } as any);
+      }).deleteAll();
 
-      // Act
-      await deleteAllQualityProfiles("SONARR");
-
-      // Assert
       expect(getFn).toHaveBeenCalledTimes(1);
       expect(deleteFn).not.toHaveBeenCalled();
     });
 
-    test("deleteQualityProfile() deletes only the given quality profile id", async () => {
-      // Arrange
+    test("deleteOnServer deletes only the given quality profile id", async () => {
       const qp1 = cloneWithJSON(sampleQualityProfile);
       qp1.id = 1001;
       qp1.name = "QP-1";
@@ -962,24 +949,17 @@ describe("QualityProfiles", async () => {
 
       const deleteFn = vi.fn().mockResolvedValue(undefined);
 
-      vi.spyOn(uclient, "getClient").mockReturnValue({
+      await new QualityProfileSonarrSync({
+        getQualityProfiles: vi.fn(),
+        createQualityProfile: vi.fn(),
+        updateQualityProfile: vi.fn(),
         deleteQualityProfile: deleteFn,
-      } as any);
+      }).deleteOnServer(qp1);
 
-      const logSpy = vi.spyOn(log.logger, "info").mockImplementation(() => {});
-
-      // Act
-      await deleteQualityProfile("SONARR", qp1);
-
-      // Assert
       expect(deleteFn).toHaveBeenCalledTimes(1);
       expect(deleteFn).toHaveBeenNthCalledWith(1, "1001");
       expect(deleteFn).not.toHaveBeenCalledWith("1002");
       expect(deleteFn).not.toHaveBeenCalledWith("1003");
-
-      expect(logSpy).toHaveBeenCalledWith("Deleted QP: 'QP-1'");
-      expect(logSpy).not.toHaveBeenCalledWith("Deleted QP: 'QP-2'");
-      expect(logSpy).not.toHaveBeenCalledWith("Deleted QP: 'QP-3'");
     });
   });
 

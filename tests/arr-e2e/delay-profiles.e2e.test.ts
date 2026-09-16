@@ -5,9 +5,9 @@
  *   ARR_E2E=1 pnpm test:e2e:arr
  */
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
-import { mapToServerDelayProfile } from "../../src/delayProfiles/delayProfileSyncer";
 import { InputConfigDelayProfileSchema } from "../../src/types/config.types";
-import { LidarrDelayProfile } from "../../src/delayProfiles/delayProfileLidarr";
+import { DelayProfileLidarrSync, LidarrDelayProfile } from "../../src/delayProfiles/delayProfileLidarr";
+import { StandardDelayProfileSync } from "../../src/delayProfiles/delayProfileBase";
 import { DelayProfileShared } from "../../src/delayProfiles/delayProfile.types";
 import type { MediaArrType } from "../../src/types/common.types";
 import {
@@ -49,7 +49,11 @@ describe.runIf(arrE2eEnabled)("arr delay profiles (live)", () => {
           bypassIfAboveCustomFormatScore: false,
           minimumCustomFormatScore: 0,
         });
-        const payload = mapToServerDelayProfile(target.kind, parsed, []);
+        const payload = new StandardDelayProfileSync(client, {
+          Unknown: "unknown",
+          Usenet: "usenet",
+          Torrent: "torrent",
+        }).mapToServer(parsed, []);
         expect(payload).not.toHaveProperty("items");
         expect(payload).toMatchObject({ enableUsenet: true });
 
@@ -107,7 +111,7 @@ describe.runIf(arrE2eEnabled)("arr delay profiles (live)", () => {
         minimumCustomFormatScore: 0,
       });
 
-      const payload = mapToServerDelayProfile(target.kind, parsed, []);
+      const payload = new DelayProfileLidarrSync(client).mapToServer(parsed, []);
       expect("items" in payload && payload.items).toHaveLength(2);
       expect(payload).not.toHaveProperty("enableUsenet");
 

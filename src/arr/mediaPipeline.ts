@@ -10,22 +10,21 @@ import {
   loadServerCustomFormats,
   manageCf,
 } from "../customFormats/customFormats";
-import { delayProfilesToDiffEntries } from "../delayProfiles/delayProfileBase";
-import { createDelayProfileSync } from "../delayProfiles/delayProfileSyncer";
+import { BaseDelayProfileSync, delayProfilesToDiffEntries } from "../delayProfiles/delayProfileBase";
+import { DelayProfileShared } from "../delayProfiles/delayProfile.types";
 import { DiffCollector } from "../diffReport/diffCollector";
 import { InstanceDiffReport } from "../diffReport/diffReport.types";
 import { downloadClientConfigDiffToDiffEntries, syncDownloadClientConfig } from "../downloadClientConfig/downloadClientConfigSyncer";
 import { syncDownloadClients } from "../downloadClients/downloadClientSyncer";
 import { getEnvs } from "../env";
 import { logger } from "../logger";
-import { createMediaManagementSync } from "../mediaManagement/mediaManagement";
-import { mediamanagementDiffToDiffEntries, namingDiffToDiffEntries } from "../mediaManagement/mediaManagementBase";
-import { qualityDefinitionsToDiffEntries } from "../qualityDefinitions/qualityDefinitionBase";
-import { createQualityDefinitionSync } from "../qualityDefinitions/qualityDefinitionSyncer";
-import { getUnmanagedQualityProfiles, qualityProfilesToDiffEntries } from "../qualityProfiles/qualityProfileBase";
-import { createQualityProfileSync } from "../qualityProfiles/qualityProfileSyncer";
+import { BaseMediaManagementSync, mediamanagementDiffToDiffEntries, namingDiffToDiffEntries } from "../mediaManagement/mediaManagementBase";
+import { QualityDefinitionSync, qualityDefinitionsToDiffEntries } from "../qualityDefinitions/qualityDefinitionBase";
+import { QualityDefinitionShared } from "../qualityDefinitions/qualityDefinition.types";
+import { BaseQualityProfileSync, getUnmanagedQualityProfiles, qualityProfilesToDiffEntries } from "../qualityProfiles/qualityProfileBase";
+import { QualityProfileShared } from "../qualityProfiles/qualityProfile.types";
 import { syncRemotePaths } from "../remotePaths/remotePathSyncer";
-import { createRootFolderSync } from "../rootFolder/rootFolderSyncer";
+import { BaseRootFolderSync } from "../rootFolder/rootFolderBase";
 import { loadServerTags } from "../tags/tags";
 import { getTelemetryInstance, Telemetry } from "../telemetry";
 import { MediaArrType } from "../types/common.types";
@@ -34,11 +33,11 @@ import { TrashQualityDefinitionQuality } from "../types/trashguide.types";
 import { syncUiConfig, uiConfigDiffToDiffEntries } from "../uiConfigs/uiConfigSyncer";
 
 export type MediaFeatureSyncs = {
-  qd: ReturnType<typeof createQualityDefinitionSync>;
-  mm: ReturnType<typeof createMediaManagementSync>;
-  qp: ReturnType<typeof createQualityProfileSync>;
-  delay: ReturnType<typeof createDelayProfileSync>;
-  root: ReturnType<typeof createRootFolderSync>;
+  qd: QualityDefinitionSync<QualityDefinitionShared>;
+  mm: BaseMediaManagementSync<{ id?: number }, { id?: number }>;
+  qp: BaseQualityProfileSync<QualityProfileShared>;
+  delay: BaseDelayProfileSync<DelayProfileShared>;
+  root: BaseRootFolderSync;
 };
 
 export type MediaTrashOps = {
