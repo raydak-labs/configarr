@@ -35,6 +35,7 @@ import {
   snapshotMediaBaseline,
   stripVolatile,
   syncConfig,
+  teardown,
   waitUntil,
 } from "./helpers";
 
@@ -74,8 +75,10 @@ describe("sonarr (live)", () => {
   }, 180_000);
 
   afterAll(async () => {
-    await restoreMediaBaseline(client, baseline);
-    await cleanupMediaE2e(client);
+    await teardown(
+      () => restoreMediaBaseline(client, baseline),
+      () => cleanupMediaE2e(client),
+    );
   });
 
   test("custom formats", async () => {

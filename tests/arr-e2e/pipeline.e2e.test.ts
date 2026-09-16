@@ -33,6 +33,7 @@ import {
   restoreMediaBaseline,
   snapshotMediaBaseline,
   syncConfig,
+  teardown,
 } from "./helpers";
 
 const KINDS = ["SONARR", "RADARR", "WHISPARR", "READARR", "LIDARR", "PROWLARR"] as const;
@@ -141,24 +142,26 @@ describe("configarr full pipeline (live)", () => {
   const media: MediaArrClient[] = [sonarr, radarr, whisparr, readarr, lidarr];
   const baselines = new Map<MediaArrClient, MediaBaseline>();
 
-  const cleanup = async () => {
-    for (const client of media) await cleanupMediaE2e(client);
-    await cleanupMetadataProfilesE2e(readarr);
-    await cleanupMetadataProfilesE2e(lidarr);
-    await cleanupProwlarrE2e(prowlarr);
-  };
+  const cleanupSteps = [
+    ...media.map((client) => () => cleanupMediaE2e(client)),
+    () => cleanupMetadataProfilesE2e(readarr),
+    () => cleanupMetadataProfilesE2e(lidarr),
+    () => cleanupProwlarrE2e(prowlarr),
+  ];
 
   beforeAll(async () => {
-    await cleanup();
+    await teardown(...cleanupSteps);
     for (const client of media) baselines.set(client, await snapshotMediaBaseline(client));
   }, 180_000);
 
   afterAll(async () => {
-    for (const client of media) {
-      const baseline = baselines.get(client);
-      if (baseline) await restoreMediaBaseline(client, baseline);
-    }
-    await cleanup();
+    await teardown(
+      ...media.map((client) => async () => {
+        const baseline = baselines.get(client);
+        if (baseline) await restoreMediaBaseline(client, baseline);
+      }),
+      ...cleanupSteps,
+    );
   });
 
   test("create then idempotent second run", async () => {

@@ -330,6 +330,24 @@ function throwCleanupErrors(errors: string[]): void {
   }
 }
 
+/**
+ * Runs every teardown step even when an earlier one throws, then reports all failures.
+ * A restore that fails must not stop the cleanup behind it, or the next run starts dirty.
+ */
+export async function teardown(...steps: Array<() => Promise<unknown>>): Promise<void> {
+  const errors: string[] = [];
+  for (const step of steps) {
+    try {
+      await step();
+    } catch (err) {
+      errors.push(err instanceof Error ? (err.stack ?? err.message) : String(err));
+    }
+  }
+  if (errors.length > 0) {
+    throw new Error(`e2e teardown errors (${errors.length}):\n${errors.join("\n\n")}`);
+  }
+}
+
 /** Deletes every `e2e-` resource this suite can create on a media *arr. Safe to call twice. */
 export async function cleanupMediaE2e(client: MediaArrClient): Promise<void> {
   const errors: string[] = [];
