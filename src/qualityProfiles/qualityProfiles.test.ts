@@ -313,7 +313,7 @@ describe("QualityProfiles", async () => {
     const serverQD: QualityDefinitionShared[] = resources;
     const serverCF: CustomFormatRequest[] = [cloneWithJSON(sampleCustomFormat)];
 
-    const serverCache = new ServerCache(serverQD, serverQP, serverCF, []);
+    const serverCache = new ServerCache({ qualityDefinitions: serverQD, qualityProfiles: serverQP, customFormats: serverCF });
 
     let diff = await calculateQualityProfilesDiff("RADARR", cfMap, config, serverCache);
     expect(diff.changedQPs.length).toBe(1);
@@ -376,7 +376,7 @@ describe("QualityProfiles", async () => {
     const serverQD: QualityDefinitionShared[] = resources;
     const serverCF: CustomFormatRequest[] = [cloneWithJSON(sampleCustomFormat)];
 
-    const serverCache = new ServerCache(serverQD, serverQP, serverCF, []);
+    const serverCache = new ServerCache({ qualityDefinitions: serverQD, qualityProfiles: serverQP, customFormats: serverCF });
 
     const diff = await calculateQualityProfilesDiff("RADARR", cfMap, config, serverCache);
     expect(diff.changedQPs.length).toBe(0);
@@ -426,7 +426,12 @@ describe("QualityProfiles", async () => {
     const serverQD: QualityDefinitionShared[] = resources;
     const serverCF: CustomFormatRequest[] = [cloneWithJSON(sampleCustomFormat)];
 
-    const serverCache = new ServerCache(serverQD, serverQP, serverCF, [{ id: 0, name: "Any" }]);
+    const serverCache = new ServerCache({
+      qualityDefinitions: serverQD,
+      qualityProfiles: serverQP,
+      customFormats: serverCF,
+      languages: [{ id: 0, name: "Any" }],
+    });
 
     const diff = await calculateQualityProfilesDiff("RADARR", cfMap, config, serverCache);
     expect(diff.changedQPs.length).toBe(1);
@@ -472,7 +477,12 @@ describe("QualityProfiles", async () => {
     const serverQD: QualityDefinitionShared[] = resources;
     const serverCF: CustomFormatRequest[] = [cloneWithJSON(sampleCustomFormat)];
 
-    const serverCache = new ServerCache(serverQD, serverQP, serverCF, [{ id: 0, name: "Any" }]);
+    const serverCache = new ServerCache({
+      qualityDefinitions: serverQD,
+      qualityProfiles: serverQP,
+      customFormats: serverCF,
+      languages: [{ id: 0, name: "Any" }],
+    });
 
     const diff = await calculateQualityProfilesDiff("RADARR", cfMap, config, serverCache);
     expect(diff.changedQPs.length).toBe(1);
@@ -518,7 +528,12 @@ describe("QualityProfiles", async () => {
     const serverCF: CustomFormatRequest[] = [cloneWithJSON(sampleCustomFormat)];
 
     // No "Any" language present on the server
-    const serverCache = new ServerCache(serverQD, serverQP, serverCF, [{ id: 1, name: "English" }]);
+    const serverCache = new ServerCache({
+      qualityDefinitions: serverQD,
+      qualityProfiles: serverQP,
+      customFormats: serverCF,
+      languages: [{ id: 1, name: "English" }],
+    });
 
     const logSpy = vi.spyOn(log.logger, "warn").mockImplementation(() => {});
 
@@ -567,7 +582,12 @@ describe("QualityProfiles", async () => {
     const serverQD: QualityDefinitionShared[] = resources;
     const serverCF: CustomFormatRequest[] = [cloneWithJSON(sampleCustomFormat)];
 
-    const serverCache = new ServerCache(serverQD, serverQP, serverCF, [{ id: 0, name: "Any" }]);
+    const serverCache = new ServerCache({
+      qualityDefinitions: serverQD,
+      qualityProfiles: serverQP,
+      customFormats: serverCF,
+      languages: [{ id: 0, name: "Any" }],
+    });
 
     const diff = await calculateQualityProfilesDiff("RADARR", cfMap, config, serverCache);
     expect(diff.changedQPs.length).toBe(0);
@@ -611,7 +631,7 @@ describe("QualityProfiles", async () => {
       media_naming: {},
     };
 
-    const serverCache = new ServerCache(resources, [], [], []);
+    const serverCache = new ServerCache({ qualityDefinitions: resources });
 
     const diff = await calculateQualityProfilesDiff("RADARR", cfMap, config, serverCache);
     expect(diff.changedQPs.length).toBe(0);
@@ -665,7 +685,7 @@ describe("QualityProfiles", async () => {
       media_naming: {},
     };
 
-    const serverCache = new ServerCache(resources, [], [], []);
+    const serverCache = new ServerCache({ qualityDefinitions: resources });
 
     const diff = await calculateQualityProfilesDiff("RADARR", cfMap, config, serverCache);
     expect(diff.create.length).toBe(1);
@@ -712,7 +732,7 @@ describe("QualityProfiles", async () => {
     serverProfile.minUpgradeFormatScore = 1;
     serverProfile.items = [{ allowed: true, items: [], quality: { id: 10, name: "HDTV-1080p" } }];
 
-    const serverCache = new ServerCache(resources, [serverProfile], [], []);
+    const serverCache = new ServerCache({ qualityDefinitions: resources, qualityProfiles: [serverProfile] });
 
     const diff = await calculateQualityProfilesDiff("RADARR", cfMap, config, serverCache);
     expect(diff.changedQPs.length).toBe(1);
@@ -795,7 +815,7 @@ describe("QualityProfiles", async () => {
       },
     ];
 
-    const serverCache = new ServerCache(resources, [serverProfile], [], []);
+    const serverCache = new ServerCache({ qualityDefinitions: resources, qualityProfiles: [serverProfile] });
 
     const diff = await calculateQualityProfilesDiff("RADARR", cfMap, config, serverCache);
     expect(diff.changedQPs.length).toBe(1);
@@ -850,7 +870,7 @@ describe("QualityProfiles", async () => {
       { allowed: true, items: [], quality: { id: 13, name: "Remux-1080p" } },
     ];
 
-    const serverCache = new ServerCache(resources, [serverProfile], [], []);
+    const serverCache = new ServerCache({ qualityDefinitions: resources, qualityProfiles: [serverProfile] });
 
     const diff = await calculateQualityProfilesDiff("RADARR", cfMap, config, serverCache);
     expect(diff.changedQPs.length).toBe(1);
@@ -1845,7 +1865,7 @@ describe("QualityProfiles", async () => {
     const serverQD: QualityDefinitionShared[] = resources;
     const serverCF: CustomFormatRequest[] = [cloneWithJSON(sampleCustomFormat)];
 
-    const serverCache = new ServerCache(serverQD, serverQP, serverCF, []);
+    const serverCache = new ServerCache({ qualityDefinitions: serverQD, qualityProfiles: serverQP, customFormats: serverCF });
 
     const diff = await calculateQualityProfilesDiff("RADARR", cfMap, config, serverCache);
 
@@ -1892,7 +1912,7 @@ describe("QualityProfiles", async () => {
       media_naming: {},
     };
 
-    const diff = await calculateQualityProfilesDiff("LIDARR", cfMap, config, new ServerCache(resources, [], [], []));
+    const diff = await calculateQualityProfilesDiff("LIDARR", cfMap, config, new ServerCache({ qualityDefinitions: resources }));
     expect(diff.create).toHaveLength(1);
     expect(diff.create[0]).not.toHaveProperty("language");
     expect(diff.create[0]).not.toHaveProperty("minUpgradeFormatScore");
@@ -1932,7 +1952,11 @@ describe("QualityProfiles", async () => {
       "LIDARR",
       cfMap,
       config,
-      new ServerCache(resources, [serverProfile], [], [{ id: 1, name: "English" }]),
+      new ServerCache({
+        qualityDefinitions: resources,
+        qualityProfiles: [serverProfile],
+        languages: [{ id: 1, name: "English" }],
+      }),
     );
     expect(diff.changedQPs).toHaveLength(0);
     expect(diff.noChanges).toEqual(["Music"]);

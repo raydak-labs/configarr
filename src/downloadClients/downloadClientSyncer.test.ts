@@ -347,7 +347,7 @@ describe("downloadClientSyncer – deletion logic", () => {
 });
 
 describe("downloadClientSyncer – equality & omission semantics", () => {
-  const makeCache = (tags: Tag[] = []) => new ServerCache([], [], [], []);
+  const makeCache = (tags: Tag[] = []) => new ServerCache({ tags });
 
   test("isDownloadClientEqual treats omitted top-level fields as 'do not manage'", () => {
     const cache = makeCache();

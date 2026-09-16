@@ -5,8 +5,7 @@ import { getConfig } from "../config";
 import { DiffEntry } from "../diffReport/diffReport.types";
 import { getEnvs } from "../env";
 import { logger } from "../logger";
-import { loadTrashCFs } from "../trash-guide";
-import { ArrType, MediaArrType } from "../types/common.types";
+import { MediaArrType } from "../types/common.types";
 import { ConfigCustomFormatList, CustomFormatDefinitions } from "../types/config.types";
 import { TrashCF } from "../types/trashguide.types";
 import { compareCustomFormats, loadJsonFile, mapImportCfToRequestCf, toCarrCF } from "../util";
@@ -185,17 +184,13 @@ export const mapCustomFormatDefinitions = (customFormatDefinitions: CustomFormat
   return carrIdToObject;
 };
 
-export const loadCustomFormatDefinitions = async (idsToMange: Set<string>, arrType: ArrType, additionalCFDs: CustomFormatDefinitions) => {
-  let trashCFs: CFIDToConfigGroup = new Map();
-
-  if (arrType === "RADARR" || arrType === "SONARR") {
-    trashCFs = await loadTrashCFs(arrType);
-  }
-
+export const loadCustomFormatDefinitions = async (
+  idsToMange: Set<string>,
+  additionalCFDs: CustomFormatDefinitions,
+  trashCFs: CFIDToConfigGroup = new Map(),
+) => {
   const localFileCFs = await loadLocalCfs();
-
   logger.debug(`Total loaded CF definitions: ${trashCFs.size} TrashCFs, ${localFileCFs.size} LocalCFs, ${additionalCFDs.length} ConfigCFs`);
-
   return mergeCfSources(idsToMange, [trashCFs, localFileCFs, mapCustomFormatDefinitions(additionalCFDs)]);
 };
 

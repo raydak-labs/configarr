@@ -4,23 +4,27 @@ import type { QualityDefinitionShared } from "./qualityDefinitions/qualityDefini
 import type { QualityProfileLanguage, QualityProfileShared } from "./qualityProfiles/qualityProfile.types";
 import type { Tag } from "./tags/tag.types";
 
+export type ServerCacheInit = {
+  qualityDefinitions?: QualityDefinitionShared[];
+  qualityProfiles?: QualityProfileShared[];
+  customFormats?: CustomFormatRequest[];
+  languages?: QualityProfileLanguage[];
+  tags?: Tag[];
+};
+
 export class ServerCache {
   private _qualityDefinitions: QualityDefinitionShared[];
   private _qualityProfiles: QualityProfileShared[];
   private _customFormats: CustomFormatRequest[];
-  private _tags: Tag[] = [];
+  private _tags: Tag[];
   private _languages: QualityProfileLanguage[];
 
-  constructor(
-    qualityDefinitions: QualityDefinitionShared[],
-    qualityProfiles: QualityProfileShared[],
-    customFormats: CustomFormatRequest[],
-    languages: QualityProfileLanguage[],
-  ) {
-    this._qualityDefinitions = qualityDefinitions;
-    this._qualityProfiles = qualityProfiles;
-    this._customFormats = customFormats;
-    this._languages = languages;
+  constructor(init: ServerCacheInit = {}) {
+    this._qualityDefinitions = init.qualityDefinitions ?? [];
+    this._qualityProfiles = init.qualityProfiles ?? [];
+    this._customFormats = init.customFormats ?? [];
+    this._languages = init.languages ?? [];
+    this._tags = init.tags ?? [];
   }
 
   public get qualityDefinitions() {

@@ -17,7 +17,7 @@ describe("PathRootFolderSync", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     (getClient as any).mockReturnValue(mockApi);
-    serverCache = new ServerCache([], [], [], []);
+    serverCache = new ServerCache();
   });
 
   describe("calculateDiff", () => {

@@ -43,7 +43,7 @@ describe("ProwlarrDownloadClientSync", () => {
 
     test("PROWLARR create uses schema categories (default [])", async () => {
       const sync = new ProwlarrDownloadClientSync();
-      const cache = new ServerCache([], [], [], []);
+      const cache = new ServerCache();
       sync.setDownloadClientSchema([qbitSchema({ categories: [] })]);
 
       const payload = await sync.resolveConfig(config, cache);
@@ -54,7 +54,7 @@ describe("ProwlarrDownloadClientSync", () => {
 
     test("PROWLARR create uses [] when schema omits categories", async () => {
       const sync = new ProwlarrDownloadClientSync();
-      const cache = new ServerCache([], [], [], []);
+      const cache = new ServerCache();
       sync.setDownloadClientSchema([qbitSchema()]);
 
       const payload = await sync.resolveConfig(config, cache);
@@ -64,7 +64,7 @@ describe("ProwlarrDownloadClientSync", () => {
 
     test("PROWLARR update keeps server categories", async () => {
       const sync = new ProwlarrDownloadClientSync();
-      const cache = new ServerCache([], [], [], []);
+      const cache = new ServerCache();
       sync.setDownloadClientSchema([qbitSchema({ categories: [] })]);
       const server = qbitSchema({
         id: 1,
@@ -103,7 +103,7 @@ describe("ProwlarrDownloadClientSync", () => {
         const sync = new ProwlarrDownloadClientSync();
         const result = await sync.syncDownloadClients(
           { download_clients: { data: [{ name: "qBittorrent", type: "qbittorrent", fields: { host: "qbittorrent" } }] } },
-          new ServerCache([], [], [], []),
+          new ServerCache(),
         );
 
         expect(result.added).toBe(0);
@@ -139,7 +139,7 @@ describe("ProwlarrDownloadClientSync", () => {
               ],
             },
           },
-          new ServerCache([], [], [], []),
+          new ServerCache(),
         );
 
         expect(result.added).toBe(1);
@@ -158,7 +158,7 @@ describe("ProwlarrDownloadClientSync", () => {
       const sync = new ProwlarrDownloadClientSync();
       const result = await sync.syncDownloadClients(
         { download_clients: { data: [{ name: "qBittorrent", type: "qbittorrent", fields: { host: "qbittorrent" } }] } },
-        new ServerCache([], [], [], []),
+        new ServerCache(),
       );
 
       expect(result.added).toBe(1);

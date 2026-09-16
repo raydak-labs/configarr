@@ -22,7 +22,7 @@ describe("LidarrMetadataProfileSync", () => {
     vi.clearAllMocks();
     mockApi.getMetadataProfiles.mockResolvedValue([]);
     (getClient as any).mockReturnValue(mockApi);
-    serverCache = new ServerCache([], [], [], []);
+    serverCache = new ServerCache();
   });
 
   describe("resolveConfig", () => {

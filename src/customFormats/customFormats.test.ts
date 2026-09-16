@@ -164,7 +164,7 @@ describe("CustomFormats", () => {
       vi.mocked(loadTrashCFs).mockResolvedValue(mockTrashCFs);
       vi.spyOn(config, "getConfig").mockReturnValue({ localCustomFormatsPath: undefined });
 
-      const result = await loadCustomFormatDefinitions(new Set(["trash1"]), "RADARR", []);
+      const result = await loadCustomFormatDefinitions(new Set(["trash1"]), [], mockTrashCFs);
 
       expect(result.carrIdMapping.size).toBe(1);
       expect(result.carrIdMapping.has("trash1")).toBeTruthy();
@@ -179,7 +179,7 @@ describe("CustomFormats", () => {
       vi.mocked(loadTrashCFs).mockResolvedValue(mockTrashCFs);
       vi.spyOn(config, "getConfig").mockReturnValue({ localCustomFormatsPath: undefined });
 
-      const result = await loadCustomFormatDefinitions(new Set(["trash1", customCF.trash_id]), "RADARR", [customCF]);
+      const result = await loadCustomFormatDefinitions(new Set(["trash1", customCF.trash_id]), [customCF], mockTrashCFs);
 
       expect(result.carrIdMapping.size).toBe(2);
       expect(result.carrIdMapping.has("trash1")).toBeTruthy();
@@ -194,7 +194,7 @@ describe("CustomFormats", () => {
       vi.mocked(loadTrashCFs).mockResolvedValue(mockTrashCFs);
       vi.spyOn(config, "getConfig").mockReturnValue({ localCustomFormatsPath: undefined });
 
-      const result = await loadCustomFormatDefinitions(new Set(["trash1"]), "RADARR", [customCF]);
+      const result = await loadCustomFormatDefinitions(new Set(["trash1"]), [customCF], mockTrashCFs);
 
       expect(result.carrIdMapping.size).toBe(1);
       expect(result.carrIdMapping.has("trash1")).toBeTruthy();

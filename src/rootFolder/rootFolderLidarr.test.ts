@@ -22,7 +22,7 @@ describe("LidarrRootFolderSync", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(getClient).mockReturnValue(mockApi as unknown as LidarrClient);
-    serverCache = new ServerCache([], [], [], []);
+    serverCache = new ServerCache();
     serverCache.tags = [];
     mockApi.getQualityProfiles.mockResolvedValue([
       { id: 1, name: "Any" },

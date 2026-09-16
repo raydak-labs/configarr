@@ -74,7 +74,7 @@ describe("MediaDownloadClientSync – ARR type handling", () => {
   });
 
   describe("download client comparison logic", () => {
-    const makeCache = () => new ServerCache([], [], [], []);
+    const makeCache = () => new ServerCache();
 
     test("compares clients correctly with omission semantics", () => {
       const sync = createDownloadClientSync("RADARR");
@@ -169,7 +169,7 @@ describe("MediaDownloadClientSync – ARR type handling", () => {
 
     test("handles password and apiKey masking without false diff", () => {
       const sync = createDownloadClientSync("RADARR");
-      const cache = new ServerCache([], [], [], []);
+      const cache = new ServerCache();
 
       // Server with masked password
       const serverClient: DownloadClientResource = {
@@ -210,7 +210,7 @@ describe("MediaDownloadClientSync – ARR type handling", () => {
 
     test("uses exact field names without false diff", () => {
       const sync = createDownloadClientSync("RADARR");
-      const cache = new ServerCache([], [], [], []);
+      const cache = new ServerCache();
       cache.tags = [
         { id: 2, label: "4K" },
         { id: 3, label: "Anime" },
@@ -276,7 +276,7 @@ describe("MediaDownloadClientSync – ARR type handling", () => {
 
     test("update_password forces password comparison", () => {
       const sync = createDownloadClientSync("RADARR");
-      const cache = new ServerCache([], [], [], []);
+      const cache = new ServerCache();
 
       // Server with masked password
       const serverClient: DownloadClientResource = {
@@ -472,7 +472,7 @@ describe("MediaDownloadClientSync – ARR type handling", () => {
 
     test("RADARR create does not set categories", async () => {
       const sync = createDownloadClientSync("RADARR");
-      const cache = new ServerCache([], [], [], []);
+      const cache = new ServerCache();
       sync.setDownloadClientSchema([qbitSchema({ categories: [] })]);
 
       const payload = await sync.resolveConfig(config, cache);
