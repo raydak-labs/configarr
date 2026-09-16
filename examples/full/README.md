@@ -6,7 +6,7 @@ This example contains every feature provided by configarr.
    - Create network for containers
    - Creates sonarr instance
    - Creates radarr instance
-   - API keys are provided with the `xml` configs
+   - API keys are provided with environment variables (e.g. `SONARR__AUTH__APIKEY`)
 2. Run configarr with `docker-compose -f docker-compose.jobs.yml run --rm configarr`
 
 URLs:
