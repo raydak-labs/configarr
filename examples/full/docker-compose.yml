@@ -50,7 +50,7 @@ services:
       - whisparr-download1:/downloads/1
       - whisparr-download2:/downloads/2
       - ${PWD}/whisparr.xml:/config/config.xml:rw
-    entrypoint: ["/bin/sh", "-c", "mkdir -p /config/library && exec /init"]
+    entrypoint: ["/bin/sh", "-c", "mkdir -p /config/library && chown 1000:1000 /config/library && exec /init"]
     restart: unless-stopped
 
   # experimental
