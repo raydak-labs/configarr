@@ -1,4 +1,3 @@
-import { getClient } from "../clients/client";
 import type { QualityProfileResource } from "../__generated__/whisparr/data-contracts";
 import { FieldChange } from "../diffReport/diffReport.types";
 import {
@@ -12,10 +11,6 @@ import {
 import { QualityProfileLanguage, QualityProfileShared } from "./qualityProfile.types";
 
 export class QualityProfileWhisparrSync extends BaseQualityProfileSync<QualityProfileResource> {
-  protected getApi() {
-    return getClient("WHISPARR");
-  }
-
   protected resolveLanguage(
     _profileName: string,
     configLanguage: string | undefined,

@@ -46,8 +46,12 @@ export function calculateMediamanagementDiffFor<T extends { id?: number }>(serve
   };
 }
 
-export abstract class BaseMediaManagementSync<Naming extends { id?: number }, Management extends { id?: number }> {
-  protected abstract getApi(): MediaManagementClient<Naming, Management>;
+export class BaseMediaManagementSync<Naming extends { id?: number }, Management extends { id?: number }> {
+  constructor(protected readonly api: MediaManagementClient<Naming, Management>) {}
+
+  protected getApi() {
+    return this.api;
+  }
 
   async calculateNamingDiff(mediaNaming?: MediaNamingApiType) {
     if (mediaNaming == null) {

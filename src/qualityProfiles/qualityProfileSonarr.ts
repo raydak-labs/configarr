@@ -1,4 +1,3 @@
-import { getClient } from "../clients/client";
 import type { QualityProfileResource } from "../__generated__/sonarr/data-contracts";
 import { FieldChange } from "../diffReport/diffReport.types";
 import {
@@ -10,10 +9,6 @@ import {
 import { QualityProfileLanguage, QualityProfileShared } from "./qualityProfile.types";
 
 export class QualityProfileSonarrSync extends BaseQualityProfileSync<QualityProfileResource> {
-  protected getApi() {
-    return getClient("SONARR");
-  }
-
   protected resolveLanguage(
     profileName: string,
     configLanguage: string | undefined,

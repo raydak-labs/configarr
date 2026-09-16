@@ -1,17 +1,24 @@
 import { MonitorTypes, NewItemMonitorTypes, RootFolderResource, TagResource } from "../__generated__/readarr/data-contracts";
 import { ServerCache } from "../cache";
-import { getClient } from "../clients/client";
+import type { MetadataProfilesClient, QualityProfilesClient, RootFoldersClient, TagsClient } from "../clients/capabilities";
 import { FieldChange } from "../diffReport/diffReport.types";
 import { InputConfigRootFolderReadarr } from "../types/config.types";
 import { compareObjectsCarr, toEnumOrThrow } from "../util";
 import { RootFolderDiff } from "./rootFolder.types";
 import { BaseRootFolderSync, definedFields, nameIdMap } from "./rootFolderBase";
 
+type NamedProfile = { name?: string | null; id?: number };
+
+export type ReadarrRootFolderApi = RootFoldersClient<RootFolderResource> &
+  Pick<QualityProfilesClient<NamedProfile>, "getQualityProfiles"> &
+  Pick<MetadataProfilesClient<NamedProfile>, "getMetadataProfiles"> &
+  Pick<TagsClient, "createTag">;
+
 export class ReadarrRootFolderSync extends BaseRootFolderSync<InputConfigRootFolderReadarr> {
   private profileIdMaps: { quality: Map<string, number>; metadata: Map<string, number> } | null = null;
 
-  protected getApi() {
-    return getClient("READARR");
+  constructor(protected readonly api: ReadarrRootFolderApi) {
+    super(api);
   }
 
   private async getProfileIdMaps(serverCache: ServerCache) {
@@ -20,8 +27,8 @@ export class ReadarrRootFolderSync extends BaseRootFolderSync<InputConfigRootFol
     }
 
     const quality =
-      serverCache.qualityProfiles.length > 0 ? nameIdMap(serverCache.qualityProfiles) : nameIdMap(await this.getApi().getQualityProfiles());
-    const metadata = nameIdMap(await this.getApi().getMetadataProfiles());
+      serverCache.qualityProfiles.length > 0 ? nameIdMap(serverCache.qualityProfiles) : nameIdMap(await this.api.getQualityProfiles());
+    const metadata = nameIdMap(await this.api.getMetadataProfiles());
     this.profileIdMaps = { quality, metadata };
     return this.profileIdMaps;
   }
@@ -55,7 +62,7 @@ export class ReadarrRootFolderSync extends BaseRootFolderSync<InputConfigRootFol
               return existingTag.id;
             } else {
               // Tag doesn't exist, create it
-              const newTag = await this.getApi().createTag({ label: tagName });
+              const newTag = await this.api.createTag({ label: tagName });
               newTags.push(newTag);
               this.logger.info(`Created new tag '${tagName}' with ID ${newTag.id}`);
               return newTag.id!;
@@ -152,7 +159,7 @@ export class ReadarrRootFolderSync extends BaseRootFolderSync<InputConfigRootFol
   }
 
   async calculateDiff(
-    rootFolders: InputConfigRootFolderReadarr[],
+    rootFolders: InputConfigRootFolderReadarr[] | null,
     serverCache: ServerCache,
   ): Promise<RootFolderDiff<InputConfigRootFolderReadarr> | null> {
     if (rootFolders == null) {

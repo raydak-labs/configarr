@@ -1,14 +1,17 @@
 import { MetadataProfileResource } from "../__generated__/lidarr/data-contracts";
 import { ServerCache } from "../cache";
-import { getClient } from "../clients/client";
+import type { MetadataProfilesClient } from "../clients/capabilities";
+import { LidarrClient } from "../clients/lidarr-client";
 import { InputConfigLidarrMetadataProfile, InputConfigMetadataProfile } from "../types/config.types";
 import { FieldChange } from "../diffReport/diffReport.types";
 import { MetadataProfileDiff } from "./metadataProfile.types";
 import { BaseMetadataProfileSync } from "./metadataProfileBase";
 
+export type LidarrMetadataProfileApi = MetadataProfilesClient<MetadataProfileResource> & Pick<LidarrClient, "getMetadataProfileSchema">;
+
 export class LidarrMetadataProfileSync extends BaseMetadataProfileSync<MetadataProfileResource> {
-  protected getApi() {
-    return getClient("LIDARR");
+  constructor(protected readonly api: LidarrMetadataProfileApi) {
+    super(api);
   }
 
   protected getArrType(): "LIDARR" {
@@ -70,7 +73,7 @@ export class LidarrMetadataProfileSync extends BaseMetadataProfileSync<MetadataP
     let schemaTemplate: MetadataProfileResource | undefined;
     if (!existingProfile) {
       try {
-        schemaTemplate = await getClient("LIDARR").getMetadataProfileSchema();
+        schemaTemplate = await this.api.getMetadataProfileSchema();
         this.logger.debug(`Fetched schema for new profile '${lidarrConfig.name}'`);
       } catch (error) {
         this.logger.warn(`Failed to fetch schema for new profile, will try simple structure: ${error}`);
@@ -245,7 +248,7 @@ export class LidarrMetadataProfileSync extends BaseMetadataProfileSync<MetadataP
   }
 
   async calculateDiff(
-    profiles: InputConfigMetadataProfile[],
+    profiles: InputConfigMetadataProfile[] | null,
     serverCache: ServerCache,
   ): Promise<MetadataProfileDiff<MetadataProfileResource> | null> {
     if (profiles == null) {

@@ -1,17 +1,24 @@
 import { MonitorTypes, NewItemMonitorTypes, RootFolderResource, TagResource } from "../__generated__/lidarr/data-contracts";
 import { ServerCache } from "../cache";
-import { getClient } from "../clients/client";
+import type { MetadataProfilesClient, QualityProfilesClient, RootFoldersClient, TagsClient } from "../clients/capabilities";
 import { FieldChange } from "../diffReport/diffReport.types";
 import { InputConfigRootFolderLidarr } from "../types/config.types";
 import { compareObjectsCarr, toEnumOrThrow } from "../util";
 import { RootFolderDiff } from "./rootFolder.types";
 import { BaseRootFolderSync, definedFields, nameIdMap } from "./rootFolderBase";
 
+type NamedProfile = { name?: string | null; id?: number };
+
+export type LidarrRootFolderApi = RootFoldersClient<RootFolderResource> &
+  Pick<QualityProfilesClient<NamedProfile>, "getQualityProfiles"> &
+  Pick<MetadataProfilesClient<NamedProfile>, "getMetadataProfiles"> &
+  Pick<TagsClient, "createTag">;
+
 export class LidarrRootFolderSync extends BaseRootFolderSync<InputConfigRootFolderLidarr> {
   private profileIdMaps: { quality: Map<string, number>; metadata: Map<string, number> } | null = null;
 
-  protected getApi() {
-    return getClient("LIDARR");
+  constructor(protected readonly api: LidarrRootFolderApi) {
+    super(api);
   }
 
   private async getProfileIdMaps(serverCache: ServerCache) {
@@ -20,8 +27,8 @@ export class LidarrRootFolderSync extends BaseRootFolderSync<InputConfigRootFold
     }
 
     const quality =
-      serverCache.qualityProfiles.length > 0 ? nameIdMap(serverCache.qualityProfiles) : nameIdMap(await this.getApi().getQualityProfiles());
-    const metadata = nameIdMap(await this.getApi().getMetadataProfiles());
+      serverCache.qualityProfiles.length > 0 ? nameIdMap(serverCache.qualityProfiles) : nameIdMap(await this.api.getQualityProfiles());
+    const metadata = nameIdMap(await this.api.getMetadataProfiles());
     this.profileIdMaps = { quality, metadata };
     return this.profileIdMaps;
   }
@@ -55,7 +62,7 @@ export class LidarrRootFolderSync extends BaseRootFolderSync<InputConfigRootFold
               return existingTag.id;
             } else {
               // Tag doesn't exist, create it
-              const newTag = await this.getApi().createTag({ label: tagName });
+              const newTag = await this.api.createTag({ label: tagName });
               newTags.push(newTag);
               this.logger.info(`Created new tag '${tagName}' with ID ${newTag.id}`);
               return newTag.id!;
@@ -117,7 +124,7 @@ export class LidarrRootFolderSync extends BaseRootFolderSync<InputConfigRootFold
   }
 
   async calculateDiff(
-    rootFolders: InputConfigRootFolderLidarr[],
+    rootFolders: InputConfigRootFolderLidarr[] | null,
     serverCache: ServerCache,
   ): Promise<RootFolderDiff<InputConfigRootFolderLidarr> | null> {
     if (rootFolders == null) {

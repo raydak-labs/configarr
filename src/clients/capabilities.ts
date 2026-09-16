@@ -1,4 +1,5 @@
 import type { CustomFormatRequest } from "../customFormats/customFormat.types";
+import type { DelayProfileShared } from "../delayProfiles/delayProfile.types";
 import type { Tag } from "../tags/tag.types";
 
 export type { Tag };
@@ -43,13 +44,13 @@ export interface QualityDefinitionsClient<QualityDefinition extends { id?: numbe
   updateQualityDefinitions(definitions: QualityDefinition[]): Promise<QualityDefinition[]>;
 }
 
-export interface DelayProfilesWriter<DelayProfile> {
-  createDelayProfile(profile: DelayProfile): Promise<unknown>;
-  updateDelayProfile(id: string, profile: DelayProfile): Promise<unknown>;
+export interface DelayProfilesWriter {
+  createDelayProfile(profile: DelayProfileShared): Promise<unknown>;
+  updateDelayProfile(id: string, profile: DelayProfileShared): Promise<unknown>;
   deleteDelayProfile(id: string): Promise<void>;
 }
 
-export interface DelayProfilesClient<DelayProfile> extends DelayProfilesWriter<DelayProfile> {
+export interface DelayProfilesClient<DelayProfile extends DelayProfileShared = DelayProfileShared> extends DelayProfilesWriter {
   getDelayProfiles(): Promise<DelayProfile[]>;
 }
 

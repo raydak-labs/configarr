@@ -1,24 +1,26 @@
+import { getClient } from "../clients/client";
 import { Tag } from "../tags/tag.types";
 import { MediaArrType } from "../types/common.types";
 import { InputConfigDelayProfile } from "../types/config.types";
+import { DownloadProtocol as RadarrDownloadProtocol } from "../__generated__/radarr/data-contracts";
+import { DownloadProtocol as ReadarrDownloadProtocol } from "../__generated__/readarr/data-contracts";
+import { DownloadProtocol as SonarrDownloadProtocol } from "../__generated__/sonarr/data-contracts";
+import { DownloadProtocol as WhisparrDownloadProtocol } from "../__generated__/whisparr/data-contracts";
+import { StandardDelayProfileSync } from "./delayProfileBase";
 import { DelayProfileLidarrSync } from "./delayProfileLidarr";
-import { DelayProfileRadarrSync } from "./delayProfileRadarr";
-import { DelayProfileReadarrSync } from "./delayProfileReadarr";
-import { DelayProfileSonarrSync } from "./delayProfileSonarr";
-import { DelayProfileWhisparrSync } from "./delayProfileWhisparr";
 
 export function createDelayProfileSync(arrType: MediaArrType) {
   switch (arrType) {
     case "LIDARR":
-      return new DelayProfileLidarrSync();
+      return new DelayProfileLidarrSync(getClient("LIDARR"));
     case "SONARR":
-      return new DelayProfileSonarrSync();
+      return new StandardDelayProfileSync(getClient("SONARR"), SonarrDownloadProtocol);
     case "RADARR":
-      return new DelayProfileRadarrSync();
+      return new StandardDelayProfileSync(getClient("RADARR"), RadarrDownloadProtocol);
     case "READARR":
-      return new DelayProfileReadarrSync();
+      return new StandardDelayProfileSync(getClient("READARR"), ReadarrDownloadProtocol);
     case "WHISPARR":
-      return new DelayProfileWhisparrSync();
+      return new StandardDelayProfileSync(getClient("WHISPARR"), WhisparrDownloadProtocol);
   }
 }
 

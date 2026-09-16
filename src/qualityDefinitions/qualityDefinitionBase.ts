@@ -7,7 +7,7 @@ import { TrashQualityDefinitionQuality } from "../types/trashguide.types";
 import { cloneWithJSON, loadJsonFile, roundToDecimal } from "../util";
 import { QualityDefinitionShared } from "./qualityDefinition.types";
 
-function diffPreferredSize(
+export function applyPreferredSizeDiff(
   clonedQuality: TrashQualityDefinitionQuality,
   serverQuality: QualityDefinitionShared,
   newData: QualityDefinitionShared,
@@ -19,8 +19,12 @@ function diffPreferredSize(
   }
 }
 
-export abstract class QualityDefinitionSync<T extends QualityDefinitionShared> {
-  protected abstract getApi(): QualityDefinitionsClient<T>;
+export class QualityDefinitionSync<T extends QualityDefinitionShared> {
+  constructor(protected readonly api: QualityDefinitionsClient<T>) {}
+
+  protected getApi() {
+    return this.api;
+  }
 
   loadFromServer() {
     if (getEnvs().LOAD_LOCAL_SAMPLES) {
@@ -56,9 +60,9 @@ export abstract class QualityDefinitionSync<T extends QualityDefinitionShared> {
   }
 }
 
-export abstract class QualityDefinitionPreferredSync<T extends QualityDefinitionShared> extends QualityDefinitionSync<T> {
+export class QualityDefinitionPreferredSync<T extends QualityDefinitionShared> extends QualityDefinitionSync<T> {
   protected diffPreferredSize(clonedQuality: TrashQualityDefinitionQuality, serverQuality: T, newData: T, changes: FieldChange[]): void {
-    diffPreferredSize(clonedQuality, serverQuality, newData, changes);
+    applyPreferredSizeDiff(clonedQuality, serverQuality, newData, changes);
   }
 }
 

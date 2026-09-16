@@ -1,3 +1,4 @@
+import { getClient } from "../clients/client";
 import { LidarrMetadataProfileSync } from "./metadataProfileLidarr";
 import { ReadarrMetadataProfileSync } from "./metadataProfileReadarr";
 
@@ -6,8 +7,8 @@ export function createMetadataProfileSync(arrType: "READARR"): ReadarrMetadataPr
 export function createMetadataProfileSync(arrType: "LIDARR" | "READARR") {
   switch (arrType) {
     case "LIDARR":
-      return new LidarrMetadataProfileSync();
+      return new LidarrMetadataProfileSync(getClient("LIDARR"));
     case "READARR":
-      return new ReadarrMetadataProfileSync();
+      return new ReadarrMetadataProfileSync(getClient("READARR"));
   }
 }

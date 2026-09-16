@@ -1,5 +1,5 @@
 import { Tag } from "../tags/tag.types";
-import { getClient } from "../clients/client";
+import { LidarrClient } from "../clients/lidarr-client";
 import { FieldChange } from "../diffReport/diffReport.types";
 import { InputConfigDelayProfile } from "../types/config.types";
 import { DelayProfileResource, DownloadProtocol } from "../__generated__/lidarr/data-contracts";
@@ -17,7 +17,7 @@ import {
 export type LidarrDelayProfile = DelayProfileResource & { items?: DelayProfileProtocolItem[] };
 
 function hasLidarrItems(profile: DelayProfileResource): profile is DelayProfileResource & { items: DelayProfileProtocolItem[] } {
-  return "items" in profile && Array.isArray((profile as LidarrDelayProfile).items);
+  return "items" in profile && Array.isArray(profile.items);
 }
 
 const LIDARR_PLUGIN_COMPARE_KEYS = [
@@ -47,12 +47,12 @@ function compareLidarrDelayProfileFields(config: InputConfigDelayProfile, server
 }
 
 export class DelayProfileLidarrSync extends BaseDelayProfileSync<LidarrDelayProfile> {
-  protected getApi() {
-    return getClient("LIDARR");
+  constructor(api: LidarrClient) {
+    super(api);
   }
 
   async loadFromServer(): Promise<LidarrDelayProfile[]> {
-    const profiles = await this.getApi().getDelayProfiles();
+    const profiles = await this.api.getDelayProfiles();
     return profiles.map((profile) => {
       if (hasLidarrItems(profile)) {
         return { ...profile, items: profile.items };

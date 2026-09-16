@@ -1,3 +1,4 @@
+import { getClient } from "../clients/client";
 import { logger } from "../logger";
 import { CFProcessing } from "../customFormats/customFormat.types";
 import { MediaArrType } from "../types/common.types";
@@ -13,15 +14,15 @@ import { QualityProfileShared } from "./qualityProfile.types";
 export function createQualityProfileSync(arrType: MediaArrType) {
   switch (arrType) {
     case "SONARR":
-      return new QualityProfileSonarrSync();
+      return new QualityProfileSonarrSync(getClient("SONARR"));
     case "RADARR":
-      return new QualityProfileRadarrSync();
+      return new QualityProfileRadarrSync(getClient("RADARR"));
     case "WHISPARR":
-      return new QualityProfileWhisparrSync();
+      return new QualityProfileWhisparrSync(getClient("WHISPARR"));
     case "LIDARR":
-      return new QualityProfileLidarrSync();
+      return new QualityProfileLidarrSync(getClient("LIDARR"));
     case "READARR":
-      return new QualityProfileReadarrSync();
+      return new QualityProfileReadarrSync(getClient("READARR"));
   }
 }
 
@@ -31,7 +32,18 @@ export const calculateQualityProfilesDiff = async (
   config: MergedConfigInstance,
   serverCache: ServerCache,
 ) => {
-  return createQualityProfileSync(arrType).calculateQualityProfilesDiff(cfMap, config, serverCache);
+  switch (arrType) {
+    case "SONARR":
+      return new QualityProfileSonarrSync().calculateQualityProfilesDiff(cfMap, config, serverCache);
+    case "RADARR":
+      return new QualityProfileRadarrSync().calculateQualityProfilesDiff(cfMap, config, serverCache);
+    case "WHISPARR":
+      return new QualityProfileWhisparrSync().calculateQualityProfilesDiff(cfMap, config, serverCache);
+    case "LIDARR":
+      return new QualityProfileLidarrSync().calculateQualityProfilesDiff(cfMap, config, serverCache);
+    case "READARR":
+      return new QualityProfileReadarrSync().calculateQualityProfilesDiff(cfMap, config, serverCache);
+  }
 };
 
 export const loadQualityProfilesFromServer = async (arrType: MediaArrType): Promise<QualityProfileShared[]> => {

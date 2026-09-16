@@ -52,9 +52,14 @@ export function rootFolderDiffToDiffEntries(diff: RootFolderDiff): DiffEntry[] {
 export abstract class BaseRootFolderSync<TConfig extends InputConfigRootFolder = InputConfigRootFolder> {
   protected logger = logger;
 
-  abstract calculateDiff(rootFolders: TConfig[], serverCache: ServerCache): Promise<RootFolderDiff<TConfig> | null>;
+  constructor(protected readonly api: RootFoldersClient<RootFolderServerResource>) {}
+
+  abstract calculateDiff(rootFolders: TConfig[] | null, serverCache: ServerCache): Promise<RootFolderDiff<TConfig> | null>;
   public abstract resolveRootFolderConfig(config: TConfig, serverCache: ServerCache): Promise<RootFolderServerResource>;
-  protected abstract getApi(): RootFoldersClient<RootFolderServerResource>;
+
+  protected getApi(): RootFoldersClient<RootFolderServerResource> {
+    return this.api;
+  }
 
   protected getRootfolders() {
     return this.getApi().getRootfolders();
@@ -125,7 +130,7 @@ export abstract class BaseRootFolderSync<TConfig extends InputConfigRootFolder =
   }
 }
 
-export abstract class PathRootFolderSync extends BaseRootFolderSync<InputConfigRootFolder> {
+export class PathRootFolderSync extends BaseRootFolderSync<InputConfigRootFolder> {
   public async resolveRootFolderConfig(config: InputConfigRootFolder, _serverCache: ServerCache): Promise<RootFolderServerResource> {
     if (typeof config === "string") {
       return { path: config };
@@ -135,7 +140,7 @@ export abstract class PathRootFolderSync extends BaseRootFolderSync<InputConfigR
   }
 
   async calculateDiff(
-    rootFolders: InputConfigRootFolder[],
+    rootFolders: InputConfigRootFolder[] | null,
     _serverCache: ServerCache,
   ): Promise<RootFolderDiff<InputConfigRootFolder> | null> {
     if (rootFolders == null) {

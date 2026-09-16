@@ -2,7 +2,7 @@ import { Tag } from "../tags/tag.types";
 import { DiffEntry, FieldChange } from "../diffReport/diffReport.types";
 import { logger } from "../logger";
 import { InputConfigDelayProfile } from "../types/config.types";
-import type { DelayProfilesClient, DelayProfilesWriter } from "../clients/capabilities";
+import type { DelayProfilesClient } from "../clients/capabilities";
 import { toEnumOrThrow } from "../util";
 import { DelayProfileShared, DelayProfileProtocolItem } from "./delayProfile.types";
 
@@ -186,7 +186,7 @@ export async function calculateDelayProfilesDiffFor<T extends DelayProfileShared
   };
 }
 
-type StandardDownloadProtocolEnum = {
+export type StandardDownloadProtocolEnum = {
   readonly Usenet: "usenet";
   readonly Torrent: "torrent";
   readonly Unknown: "unknown";
@@ -207,22 +207,25 @@ export function mapStandardDelayProfile<P>(profile: InputConfigDelayProfile, ser
   };
 }
 
+export type StandardDelayProfile = DelayProfileShared & GenericDelayProfileFields;
+
 export abstract class BaseDelayProfileSync<T extends DelayProfileShared> {
-  protected abstract getApi(): DelayProfilesWriter<T>;
+  constructor(protected readonly api: DelayProfilesClient<T>) {}
+
   abstract loadFromServer(): Promise<T[]>;
-  abstract mapToServer(profile: InputConfigDelayProfile, serverTags: Tag[]): T;
+  abstract mapToServer(profile: InputConfigDelayProfile, serverTags: Tag[]): DelayProfileShared;
   protected abstract compareFields(config: InputConfigDelayProfile, server: T): FieldChange[];
 
-  createOnServer(profile: T) {
-    return this.getApi().createDelayProfile(profile);
+  createOnServer(profile: DelayProfileShared) {
+    return this.api.createDelayProfile(profile);
   }
 
-  updateOnServer(id: string, profile: T) {
-    return this.getApi().updateDelayProfile(id, profile);
+  updateOnServer(id: string, profile: DelayProfileShared) {
+    return this.api.updateDelayProfile(id, profile);
   }
 
   deleteOnServer(id: string) {
-    return this.getApi().deleteDelayProfile(id);
+    return this.api.deleteDelayProfile(id);
   }
 
   async calculateDiff(delayProfilesObj: { default?: InputConfigDelayProfile; additional?: InputConfigDelayProfile[] }, tags: Tag[]) {
@@ -256,11 +259,24 @@ export abstract class BaseDelayProfileSync<T extends DelayProfileShared> {
   }
 }
 
-export abstract class StandardDelayProfileSync<T extends DelayProfileShared> extends BaseDelayProfileSync<T> {
-  protected abstract getApi(): DelayProfilesClient<T>;
+export class StandardDelayProfileSync extends BaseDelayProfileSync<StandardDelayProfile> {
+  constructor(
+    api: DelayProfilesClient<StandardDelayProfile>,
+    private readonly protocol: StandardDownloadProtocolEnum,
+  ) {
+    super(api);
+  }
 
   loadFromServer() {
-    return this.getApi().getDelayProfiles();
+    return this.api.getDelayProfiles();
+  }
+
+  mapToServer(profile: InputConfigDelayProfile, serverTags: Tag[]) {
+    return mapStandardDelayProfile(profile, serverTags, toDownloadProtocol(this.protocol, profile.preferredProtocol));
+  }
+
+  protected compareFields(config: InputConfigDelayProfile, server: StandardDelayProfile) {
+    return compareGenericDelayProfileFields(config, server);
   }
 }
 

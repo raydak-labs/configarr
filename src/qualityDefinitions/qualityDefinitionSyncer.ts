@@ -1,24 +1,26 @@
+import { getClient } from "../clients/client";
 import { MediaArrType } from "../types/common.types";
 import { TrashQualityDefinitionQuality } from "../types/trashguide.types";
-import { QualityDefinitionLidarrSync } from "./qualityDefinitionLidarr";
-import { QualityDefinitionRadarrSync } from "./qualityDefinitionRadarr";
-import { QualityDefinitionReadarrSync } from "./qualityDefinitionReadarr";
-import { QualityDefinitionSonarrSync } from "./qualityDefinitionSonarr";
-import { QualityDefinitionWhisparrSync } from "./qualityDefinitionWhisparr";
+import {
+  applyPreferredSizeDiff,
+  calculateQualityDefinitionDiffCore,
+  QualityDefinitionPreferredSync,
+  QualityDefinitionSync,
+} from "./qualityDefinitionBase";
 import { QualityDefinitionShared } from "./qualityDefinition.types";
 
 export function createQualityDefinitionSync(arrType: MediaArrType) {
   switch (arrType) {
     case "SONARR":
-      return new QualityDefinitionSonarrSync();
+      return new QualityDefinitionPreferredSync(getClient("SONARR"));
     case "RADARR":
-      return new QualityDefinitionRadarrSync();
+      return new QualityDefinitionPreferredSync(getClient("RADARR"));
     case "LIDARR":
-      return new QualityDefinitionLidarrSync();
+      return new QualityDefinitionPreferredSync(getClient("LIDARR"));
     case "WHISPARR":
-      return new QualityDefinitionWhisparrSync();
+      return new QualityDefinitionPreferredSync(getClient("WHISPARR"));
     case "READARR":
-      return new QualityDefinitionReadarrSync();
+      return new QualityDefinitionSync(getClient("READARR"));
   }
 }
 
@@ -31,5 +33,5 @@ export const calculateQualityDefinitionDiff = (
   serverQDs: QualityDefinitionShared[],
   qualityDefinitions: TrashQualityDefinitionQuality[],
 ) => {
-  return createQualityDefinitionSync(arrType).calculateDiff(serverQDs, qualityDefinitions);
+  return calculateQualityDefinitionDiffCore(serverQDs, qualityDefinitions, arrType === "READARR" ? () => {} : applyPreferredSizeDiff);
 };

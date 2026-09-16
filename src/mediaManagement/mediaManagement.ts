@@ -1,21 +1,18 @@
+import { getClient } from "../clients/client";
 import { MediaArrType } from "../types/common.types";
-import { LidarrMediaManagementSync } from "./mediaManagementLidarr";
-import { RadarrMediaManagementSync } from "./mediaManagementRadarr";
-import { ReadarrMediaManagementSync } from "./mediaManagementReadarr";
-import { SonarrMediaManagementSync } from "./mediaManagementSonarr";
-import { WhisparrMediaManagementSync } from "./mediaManagementWhisparr";
+import { BaseMediaManagementSync } from "./mediaManagementBase";
 
 export function createMediaManagementSync(arrType: MediaArrType) {
   switch (arrType) {
     case "SONARR":
-      return new SonarrMediaManagementSync();
+      return new BaseMediaManagementSync(getClient("SONARR"));
     case "RADARR":
-      return new RadarrMediaManagementSync();
+      return new BaseMediaManagementSync(getClient("RADARR"));
     case "LIDARR":
-      return new LidarrMediaManagementSync();
+      return new BaseMediaManagementSync(getClient("LIDARR"));
     case "READARR":
-      return new ReadarrMediaManagementSync();
+      return new BaseMediaManagementSync(getClient("READARR"));
     case "WHISPARR":
-      return new WhisparrMediaManagementSync();
+      return new BaseMediaManagementSync(getClient("WHISPARR"));
   }
 }

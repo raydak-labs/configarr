@@ -1,26 +1,24 @@
+import { getClient } from "../clients/client";
 import { ServerCache } from "../cache";
 import { MediaArrType } from "../types/common.types";
 import { InputConfigRootFolder } from "../types/config.types";
 import { RootFolderSyncResult } from "./rootFolder.types";
-import { BaseRootFolderSync } from "./rootFolderBase";
+import { BaseRootFolderSync, PathRootFolderSync } from "./rootFolderBase";
 import { LidarrRootFolderSync } from "./rootFolderLidarr";
-import { RadarrRootFolderSync } from "./rootFolderRadarr";
 import { ReadarrRootFolderSync } from "./rootFolderReadarr";
-import { SonarrRootFolderSync } from "./rootFolderSonarr";
-import { WhisparrRootFolderSync } from "./rootFolderWhisparr";
 
 export function createRootFolderSync(arrType: MediaArrType): BaseRootFolderSync {
   switch (arrType) {
     case "LIDARR":
-      return new LidarrRootFolderSync();
+      return new LidarrRootFolderSync(getClient("LIDARR"));
     case "READARR":
-      return new ReadarrRootFolderSync();
+      return new ReadarrRootFolderSync(getClient("READARR"));
     case "SONARR":
-      return new SonarrRootFolderSync();
+      return new PathRootFolderSync(getClient("SONARR"));
     case "RADARR":
-      return new RadarrRootFolderSync();
+      return new PathRootFolderSync(getClient("RADARR"));
     case "WHISPARR":
-      return new WhisparrRootFolderSync();
+      return new PathRootFolderSync(getClient("WHISPARR"));
   }
 }
 

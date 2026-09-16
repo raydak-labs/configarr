@@ -41,16 +41,6 @@ export type MediaFeatureSyncs = {
   root: ReturnType<typeof createRootFolderSync>;
 };
 
-export function createMediaFeatureSyncs<T extends MediaArrType>(arrType: T): MediaFeatureSyncs {
-  return {
-    qd: createQualityDefinitionSync(arrType),
-    mm: createMediaManagementSync(arrType),
-    qp: createQualityProfileSync(arrType),
-    delay: createDelayProfileSync(arrType),
-    root: createRootFolderSync(arrType),
-  };
-}
-
 export type MediaTrashOps = {
   loadCFs: () => Promise<CFIDToConfigGroup>;
   checkConflicts: (mergedCFs: CFProcessing, config: MergedConfigInstance) => Promise<void>;

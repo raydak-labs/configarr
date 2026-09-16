@@ -1,17 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { ReadarrRootFolderSync } from "./rootFolderReadarr";
-import { ReadarrClient } from "../clients/readarr-client";
-import { getClient } from "../clients/client";
+import type { Mocked } from "vitest";
+import { MonitorTypes, NewItemMonitorTypes } from "../__generated__/readarr/data-contracts";
+import { ReadarrRootFolderApi, ReadarrRootFolderSync } from "./rootFolderReadarr";
 import { ServerCache } from "../cache";
 import { InputConfigRootFolderReadarr } from "../types/config.types";
 
-vi.mock("../clients/client", () => ({
-  getClient: vi.fn(),
-}));
-
 describe("ReadarrRootFolderSync", () => {
-  const mockApi = {
+  const mockApi: Mocked<ReadarrRootFolderApi> = {
     getRootfolders: vi.fn(),
+    addRootFolder: vi.fn(),
+    updateRootFolder: vi.fn(),
+    deleteRootFolder: vi.fn(),
     getMetadataProfiles: vi.fn(),
     getQualityProfiles: vi.fn(),
     createTag: vi.fn(),
@@ -21,7 +20,6 @@ describe("ReadarrRootFolderSync", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(getClient).mockReturnValue(mockApi as unknown as ReadarrClient);
     serverCache = new ServerCache();
     serverCache.tags = [];
     mockApi.getQualityProfiles.mockResolvedValue([
@@ -41,7 +39,7 @@ describe("ReadarrRootFolderSync", () => {
         { id: 200, label: "tag2" },
       ];
 
-      const sync = new ReadarrRootFolderSync();
+      const sync = new ReadarrRootFolderSync(mockApi);
       const config: InputConfigRootFolderReadarr = {
         path: "/books",
         name: "My Books",
@@ -61,7 +59,7 @@ describe("ReadarrRootFolderSync", () => {
     });
 
     it("fetches quality and metadata profiles once across resolves", async () => {
-      const sync = new ReadarrRootFolderSync();
+      const sync = new ReadarrRootFolderSync(mockApi);
       const config: InputConfigRootFolderReadarr = {
         path: "/books",
         name: "My Books",
@@ -82,7 +80,7 @@ describe("ReadarrRootFolderSync", () => {
         { id: 2, name: "Audiobook" },
       ];
 
-      const sync = new ReadarrRootFolderSync();
+      const sync = new ReadarrRootFolderSync(mockApi);
       const result = await sync.resolveRootFolderConfig(
         {
           path: "/books",
@@ -101,7 +99,7 @@ describe("ReadarrRootFolderSync", () => {
     it("should resolve Readarr config with optional monitor fields", async () => {
       serverCache.tags = [];
 
-      const sync = new ReadarrRootFolderSync();
+      const sync = new ReadarrRootFolderSync(mockApi);
       const config: InputConfigRootFolderReadarr = {
         path: "/books",
         name: "My Books",
@@ -130,7 +128,7 @@ describe("ReadarrRootFolderSync", () => {
         { id: 200, label: "tag2" },
       ];
 
-      const sync = new ReadarrRootFolderSync();
+      const sync = new ReadarrRootFolderSync(mockApi);
       const config: InputConfigRootFolderReadarr = {
         path: "/books",
         name: "My Books",
@@ -153,7 +151,7 @@ describe("ReadarrRootFolderSync", () => {
     it("should resolve Readarr config with Calibre integration", async () => {
       serverCache.tags = [];
 
-      const sync = new ReadarrRootFolderSync();
+      const sync = new ReadarrRootFolderSync(mockApi);
       const config: InputConfigRootFolderReadarr = {
         path: "/books",
         name: "Calibre Library",
@@ -181,7 +179,7 @@ describe("ReadarrRootFolderSync", () => {
     it("should throw error for missing metadata profile", async () => {
       serverCache.tags = [];
 
-      const sync = new ReadarrRootFolderSync();
+      const sync = new ReadarrRootFolderSync(mockApi);
       const config: InputConfigRootFolderReadarr = {
         path: "/books",
         name: "My Books",
@@ -197,7 +195,7 @@ describe("ReadarrRootFolderSync", () => {
     it("should throw error for missing quality profile", async () => {
       serverCache.tags = [];
 
-      const sync = new ReadarrRootFolderSync();
+      const sync = new ReadarrRootFolderSync(mockApi);
       const config: InputConfigRootFolderReadarr = {
         path: "/books",
         name: "My Books",
@@ -214,7 +212,7 @@ describe("ReadarrRootFolderSync", () => {
       serverCache.tags = [{ id: 100, label: "existing" }];
       mockApi.createTag.mockResolvedValue({ id: 300, label: "nonexistent" });
 
-      const sync = new ReadarrRootFolderSync();
+      const sync = new ReadarrRootFolderSync(mockApi);
       const config: InputConfigRootFolderReadarr = {
         path: "/books",
         name: "My Books",
@@ -242,9 +240,9 @@ describe("ReadarrRootFolderSync", () => {
 
   describe("calculateDiff", () => {
     it("should handle object root folders", async () => {
-      mockApi.getRootfolders.mockResolvedValue(["/existing"]);
+      mockApi.getRootfolders.mockResolvedValue([{ path: "/existing" }]);
 
-      const sync = new ReadarrRootFolderSync();
+      const sync = new ReadarrRootFolderSync(mockApi);
       const result = await sync.calculateDiff(
         [
           { path: "/existing", name: "existing", metadata_profile: "Standard", quality_profile: "eBook" },
@@ -262,7 +260,7 @@ describe("ReadarrRootFolderSync", () => {
         metadata_profile: "Standard",
         quality_profile: "eBook",
       });
-      expect(result?.changed[0]?.server).toEqual("/existing");
+      expect(result?.changed[0]?.server).toEqual({ path: "/existing" });
       expect(result?.changed[0]?.fieldChanges.length).toBeGreaterThan(0);
     });
 
@@ -272,7 +270,7 @@ describe("ReadarrRootFolderSync", () => {
         { path: "/old-server", id: 2, name: "Old Server" },
       ]);
 
-      const sync = new ReadarrRootFolderSync();
+      const sync = new ReadarrRootFolderSync(mockApi);
       const result = await sync.calculateDiff(
         [
           { path: "/server-folder", name: "Config Folder", metadata_profile: "Standard", quality_profile: "eBook" },
@@ -304,8 +302,8 @@ describe("ReadarrRootFolderSync", () => {
           name: "App",
           defaultMetadataProfileId: 10,
           defaultQualityProfileId: 1,
-          defaultMonitorOption: "all",
-          defaultNewItemMonitorOption: "all",
+          defaultMonitorOption: MonitorTypes.All,
+          defaultNewItemMonitorOption: NewItemMonitorTypes.All,
           defaultTags: [],
           isCalibreLibrary: false,
           port: 0,
@@ -313,7 +311,7 @@ describe("ReadarrRootFolderSync", () => {
         },
       ]);
 
-      const sync = new ReadarrRootFolderSync();
+      const sync = new ReadarrRootFolderSync(mockApi);
       const result = await sync.calculateDiff(
         [{ path: "/books", name: "App", metadata_profile: "Standard", quality_profile: "eBook" }],
         serverCache,

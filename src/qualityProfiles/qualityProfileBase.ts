@@ -466,15 +466,24 @@ export const checkForConflictingCFs = (
   }
 };
 
+export type QualityProfileSyncApi<T extends QualityProfileShared> = {
+  getQualityProfiles(): Promise<T[]>;
+  createQualityProfile(profile: QualityProfileShared): Promise<T>;
+  updateQualityProfile(id: string, profile: QualityProfileShared): Promise<T>;
+  deleteQualityProfile(id: string): Promise<void>;
+};
+
 export abstract class BaseQualityProfileSync<T extends QualityProfileShared> {
   protected readonly logger = logger;
 
-  protected abstract getApi(): {
-    getQualityProfiles(): Promise<T[]>;
-    createQualityProfile(profile: QualityProfileShared): Promise<T>;
-    updateQualityProfile(id: string, profile: QualityProfileShared): Promise<T>;
-    deleteQualityProfile(id: string): Promise<void>;
-  };
+  constructor(protected readonly api?: QualityProfileSyncApi<T>) {}
+
+  protected getApi(): QualityProfileSyncApi<T> {
+    if (this.api === undefined) {
+      throw new Error("Quality profile API client is required");
+    }
+    return this.api;
+  }
 
   protected abstract resolveLanguage(
     profileName: string,

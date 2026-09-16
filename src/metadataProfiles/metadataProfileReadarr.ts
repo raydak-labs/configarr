@@ -1,6 +1,6 @@
 import { MetadataProfileResource } from "../__generated__/readarr/data-contracts";
 import { ServerCache } from "../cache";
-import { getClient } from "../clients/client";
+import type { MetadataProfilesClient } from "../clients/capabilities";
 import { InputConfigReadarrMetadataProfile, InputConfigMetadataProfile } from "../types/config.types";
 import { compareObjectsCarr } from "../util";
 import { FieldChange } from "../diffReport/diffReport.types";
@@ -8,8 +8,8 @@ import { MetadataProfileDiff } from "./metadataProfile.types";
 import { BaseMetadataProfileSync } from "./metadataProfileBase";
 
 export class ReadarrMetadataProfileSync extends BaseMetadataProfileSync<MetadataProfileResource> {
-  protected getApi() {
-    return getClient("READARR");
+  constructor(api: MetadataProfilesClient<MetadataProfileResource>) {
+    super(api);
   }
 
   protected getArrType(): "READARR" {
@@ -137,7 +137,7 @@ export class ReadarrMetadataProfileSync extends BaseMetadataProfileSync<Metadata
   }
 
   async calculateDiff(
-    profiles: InputConfigMetadataProfile[],
+    profiles: InputConfigMetadataProfile[] | null,
     serverCache: ServerCache,
   ): Promise<MetadataProfileDiff<MetadataProfileResource> | null> {
     if (profiles == null) {

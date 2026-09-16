@@ -1,14 +1,9 @@
-import { getClient } from "../clients/client";
 import type { QualityProfileResource } from "../__generated__/lidarr/data-contracts";
 import { FieldChange } from "../diffReport/diffReport.types";
 import { BaseQualityProfileSync, warnUnsupportedQualityProfileLanguage } from "./qualityProfileBase";
 import { QualityProfileLanguage, QualityProfileShared } from "./qualityProfile.types";
 
 export class QualityProfileLidarrSync extends BaseQualityProfileSync<QualityProfileResource> {
-  protected getApi() {
-    return getClient("LIDARR");
-  }
-
   protected resolveLanguage(
     profileName: string,
     configLanguage: string | undefined,

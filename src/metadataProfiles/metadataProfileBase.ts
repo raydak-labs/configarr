@@ -23,13 +23,18 @@ export function metadataProfileDiffToDiffEntries(diff: MetadataProfileDiff): Dif
 
 // Base class for metadata profile synchronization
 export abstract class BaseMetadataProfileSync<T extends BaseMetadataProfileResource = BaseMetadataProfileResource> {
-  protected abstract getApi(): MetadataProfilesClient<T>;
+  constructor(protected readonly api: MetadataProfilesClient<T>) {}
+
+  protected getApi() {
+    return this.api;
+  }
+
   protected logger = logger;
   protected loadedFromServer: T[] | null = null;
 
   protected abstract getArrType(): ArrType;
 
-  abstract calculateDiff(profiles: InputConfigMetadataProfile[], serverCache: ServerCache): Promise<MetadataProfileDiff<T> | null>;
+  abstract calculateDiff(profiles: InputConfigMetadataProfile[] | null, serverCache: ServerCache): Promise<MetadataProfileDiff<T> | null>;
 
   public abstract resolveConfig(config: InputConfigMetadataProfile, serverCache: ServerCache): Promise<T>;
 
