@@ -1,199 +1,124 @@
-# Specific *arr clients (no UnifiedClient)
+# Typed per-*arr clients (no UnifiedClient)
 
-Status: implemented (2026-09-15). Implementation plan: [`.ai/docs/plans/2026-09-15-unified-client-removal.md`](../plans/2026-09-15-unified-client-removal.md).
+Status: implemented (2026-09-16). Amended 2026-09-16 with per-arr instance syncers and feature-sync client inject (see [Amendments](#amendments-2026-09-16)).
+Implementation plan: [`.ai/docs/plans/2026-09-15-specific-clients.md`](../plans/2026-09-15-specific-clients.md).
 
-Goal: callers use the concrete client (`SonarrClient`, `LidarrClient`, …) with proper generics. `UnifiedClient` is a type-erasing facade; delete it.
+Goal: every call site holds the concrete client (`SonarrClient`, `LidarrClient`, …) with the generated resource types of that *arr. `UnifiedClient` was a type-erasing facade — 33 required `IArrClient` methods, `Merged*` (Sonarr∩Radarr) defaults, `any` for naming/MM/root/delay, plus Prowlarr stubs that threw. Delete the facade, not just its types.
 
-Prior art already on this path: `getSpecificClient` / `ArrTypeToClient` (`src/clients/unified-client.ts`), metadata + Lidarr/Readarr root folders, UI config (`ae95d14`), remote paths, Prowlarr Pattern C. `ArrTypeToClient` landed in `b9ad772`; extras left `IArrClient` in `ae95d14`; Lidarr/Readarr specific clients in `042c8e5`.
-
----
-
-## Open questions (answer before coding)
-
-Frozen 2026-09-15:
-
-| #   | Decision                                                                                                                                                                                                |
-| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | Typed singleton `getClient<T>()` — same seam as today’s `getSpecificClient`. No constructor-inject.                                                                                                     |
-| 2   | Small capability interfaces. Delete mega-`IArrClient`.                                                                                                                                                  |
-| 3   | Client methods return the generated `*Resource` for that arr. No `Merged*` as a client/cache return type. Mapping/TRaSH helpers may keep an intersection until those helpers split.                     |
-| 4   | Use the concrete typed client whenever the call site knows the arr. Share System/Tags/DC **only** because those modules already have one code path across media + Prowlarr. No media stubs on Prowlarr. |
+Prior art on this path before the train: `getSpecificClient` / `ArrTypeToClient` (`b9ad772`), metadata + Lidarr/Readarr root folders (`042c8e5`), UI config / remote paths (`ae95d14`), Prowlarr Pattern C.
 
 ---
 
-## Recommendation
+## Decisions
 
-Replace `UnifiedClient` with a **typed factory + process singleton**:
+| #   | Decision                                                                                                                                     | Rejected                                                                                                                                                              |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Typed factory + process singleton: `configureApi<T>` returns `ArrTypeToClient[T]`, `getClient<T>(arrType)` reads it, `unsetApi()` clears it. | DI framework. Full constructor-inject from `runInstances` into every loader — blast radius is all call sites at once for no type win once `getClient<T>` exists.      |
+| 2   | Small capability interfaces in `src/clients/capabilities.ts`, only where a module already has one code path across *arrs.                    | Mega-`IArrClient` with optional methods (AGENTS.md claimed this existed; all 33 were required). Also: no interfaces at all — DC/tags/status genuinely share one path. |
+| 3   | Client methods take and return that *arr's generated `*Resource`. `Merged*` dies with the modules that consumed it, in the same PRs.         | "Clients typed, returns still `Merged*`" plateau — that is the erasure the facade was invented for.                                                                   |
+| 4   | Prowlarr implements System + Tags + DownloadClients only. No media stubs, no media unions.                                                   | Keeping throwing stubs so Pattern B unions typecheck (the stub tax). Splitting tags/DC into a second Prowlarr call path — sharing has been cheaper.                   |
+
+---
+
+## Patterns
+
+Three patterns, no fourth. AGENTS.md carries the version an agent needs while writing code; this section records the reasoning.
+
+- *_A — fields or methods differ per *arr.*_ One class file per *arr (`qualityProfileLidarr.ts`), shared behaviour as unnamed helpers on the typed base (`PathRootFolderSync`, `QualityDefinitionPreferredSync`, `attachMinUpgradeOnCreate`). The *arr is bound by a literal `getClient("LIDARR")` or by the client passed into the constructor.
+- **B — identical method set _and_ field set** (custom formats, tags): one module behind a capability generic (`CustomFormatsClient<CF>`). The request type must be assignable to each *arr's generated resource so the client hands it to swagger unchanged.
+- **C — Prowlarr-only** generic provider base (`src/prowlarr/providerResourceSync.ts`). Media managers never get a Pattern C.
+
+**Why a variable `arrType` cannot carry a shared write path:** `getClient(arrType)` returns a union, so parameters intersect. Each *arr's `DownloadProtocol` / `QualitySource` is a distinct generated enum even when the string values match, and five of them do not unify — which is exactly where `as GeneratedResource` used to come back. Enum-bearing writes are therefore Pattern A with a literal client.
+
+Per-module outcome:
+
+| Module                                          | Pattern | Why                                                                                       |
+| ----------------------------------------------- | ------- | ----------------------------------------------------------------------------------------- |
+| Quality profiles                                | A       | `language` (Radarr, Whisparr), `minUpgradeFormatScore` (not Lidarr/Readarr)               |
+| Quality definitions                             | A       | `preferredSize` missing on Readarr; base `QualityDefinitionPreferredSync` covers the rest |
+| Delay profiles                                  | A       | per-*arr `DownloadProtocol`; Lidarr `items[]`                                             |
+| Naming + media management                       | A       | movies vs episodes vs tracks vs books — the old `any`                                     |
+| Root folders                                    | A       | Lidarr/Readarr named folders + default profiles; others path-only (`PathRootFolderSync`)  |
+| Metadata profiles                               | A       | Lidarr/Readarr only                                                                       |
+| Custom formats, tags                            | B       | same shape everywhere                                                                     |
+| Download clients                                | B       | capability generic; Prowlarr's resource typed from `__generated__/prowlarr`               |
+| UI config, remote paths, download-client config | B       | `MediaArrType` param, so Prowlarr drops out of the union                                  |
+| Prowlarr applications / indexers / proxies      | C       |                                                                                           |
+
+## Type placement
+
+The object handed to swagger **is** that *arr's generated resource — no assertion. A runtime `toContract` layer is the same hole with more code.
+
+| Kind                   | Where                                                                                                                                           |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| Generated resource     | `__generated__/<arr>/data-contracts`, imported by that *arr's client and class file                                                             |
+| OpenAPI gap            | intersection in that *arr's file only (`DelayProfileResource & { items: … }`), read back with a type guard; delete when OpenAPI grows the field |
+| YAML / TRaSH / diff    | `src/<feature>/*.types.ts` — never a product payload (`ProwlarrDownloadClientResource`)                                                         |
+| Structural base subset | unnamed fields on the base (`{ id?: number; name?: string \| null }`) that generated types are assignable to                                    |
+
+YAML strings become generated enums once, in that *arr's mapper, via `toEnumOrThrow(Enum, value, label)`. If a regen drops a member, that throws at the mapper instead of silently asserting.
+
+## Landmines
+
+Real per-*arr divergence — do not re-flatten it:
+
+| Topic                      | Reality                                                                                                                               |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| QP `language`              | Radarr + Whisparr (Whisparr via module augmentation). Sonarr generated QP has none. Lidarr/Readarr none.                              |
+| QP `minUpgradeFormatScore` | Radarr / Sonarr / Whisparr yes; Lidarr / Readarr no.                                                                                  |
+| Root folders               | Lidarr/Readarr: name, default profiles, tags (Readarr adds Calibre). Others: `unmappedFolders`, `updateRootFolder` throws.            |
+| Delay                      | Shared OpenAPI shape; Lidarr nightly `items[]` is not in the spec.                                                                    |
+| Download clients           | Prowlarr's `DownloadClientResource` is a different generated type from the media five — type it separately, do not widen dishonestly. |
+
+## Non-goals
+
+Considered and deliberately not done — revisit only with a new dated spec:
+
+- **Reviving `*Generic.ts` or mashed names** (`qualityProfileLidarrReadarr.ts`, `QualityProfileRadarrWhisparrResource`). A thin Pattern A file whose body is `getApi()` plus two hooks is the intended shape.
+- **Splitting Pattern B custom formats into five handlers** — method set and field set are identical.
+- **Forcing QP writes onto `QualityProfilesClient<T>`** — `QualityProfileShared` is the mapping DTO, not any *arr's generated resource; the generic would need `as T` at the write.
+- **Test wrappers around `createXSync`** stay (used by unit tests and e2e); `index.ts` must not route persist through them.
+- *_Splitting UI config / remote paths / download-client config per *arr*_ — no divergence shown yet.
+- **A single error policy** for persist failures (download clients log and continue, delay profiles throw). Product choice; needs its own change.
+- **`MergedConfigInstance`, DI container, handler instance cache.**
+
+---
+
+## Amendments (2026-09-16)
+
+### Per-*arr instance syncers
+
+`pipeline(arrType)` + `prowlarrPipeline()` became one syncer class per *arr (`SonarrSyncer`, …, `ProwlarrSyncer`) in `src/arr/`, each with `run(...)`. Support is now _which methods a syncer calls_, not a runtime `arrType` switch inside a shared media body. No `createInstanceSync` factory; `configureApi` / `getClient` / `unsetApi` stay in `runInstances` (`src/index.ts`).
+
+Shared media steps live in `src/arr/mediaPipeline.ts`:
+
+- `runMediaSyncToQualityProfiles` — start through quality-profile persist and the optional unmanaged-QP delete.
+- `completeMediaSync` — root folders through remote paths, returning `{ arrType, instanceName, entries }`.
+
+Both take one already-constructed feature-sync instance per feature (`ctx.syncs.root.syncRootFolders`), so diff and persist hit the same object. TRaSH comes only from `createTrashOps("SONARR" | "RADARR")`; metadata only from `LidarrMetadataProfileSync` / `ReadarrMetadataProfileSync`, after quality profiles and before `completeMediaSync`.
+
+Not done here: no `MediaClient` mega-interface, no `UiConfigClient`; Pattern B features still take `arrType`.
+
+### Feature syncers take the typed client
+
+Supersedes "instance syncers do not take clients" from the syncer amendment above. A Pattern A file that only bound `getClient("LITERAL")` (plus an enum) was a type adapter, not behaviour — and the instance syncer already holds the literal client. So: *_keep a per-*arr class only when behaviour or the generated payload differs*_; otherwise construct the shared base with the client, and with that *arr's enum when the mapper needs it.
 
 ```ts
-export type ArrTypeToClient = {
-  RADARR: RadarrClient;
-  SONARR: SonarrClient;
-  LIDARR: LidarrClient;
-  READARR: ReadarrClient;
-  WHISPARR: WhisparrClient;
-  PROWLARR: ProwlarrClient;
-};
-
-configureApi<T extends ArrType>(type: T, baseUrl: string, apiKey: string): Promise<ArrTypeToClient[T]>
-getClient<T extends ArrType>(arrType: T): ArrTypeToClient[T]
-unsetApi(): void
+const client = getClient("SONARR");
+new StandardDelayProfileSync(client, DownloadProtocol);
+new QualityDefinitionPreferredSync(client);
+new MediaManagementSync(client);
+new PathRootFolderSync(client);
+new QualityProfileSonarrSync(client); // still a class: language / minUpgrade hooks
 ```
 
-Lifecycle stays where it is today (`configureApi` / `unsetApi` around each instance in `runInstances`). Callers that know a literal arr type get a concrete class. Callers with a variable `ArrType` get a union — same as `getSpecificClient` today.
+Dedicated classes remain for Lidarr delay, Lidarr/Readarr root folders, and Lidarr/Readarr metadata. Readarr QD uses `QualityDefinitionSync` (no preferred size). Production instance syncers construct feature classes directly — no `createXSync(arrType)` factory in the pipeline.
 
-**Alternative (not first):** constructor-inject the client from `pipeline` into every syncer. Production functions currently take **zero** `IArrClient` params; coupling is the singleton. Full inject is a larger API change for no type win once `getClient<T>` exists. Revisit after the facade is gone.
+Rejected in this amendment:
 
-**Do not:** DI framework, optional methods on a mega-interface, a new Pattern C for media managers.
+- `FooSync<T extends MediaArrType>` resolving `getClient(arrType)` internally — the five-enum problem again.
+- Constructor feature flags (`language: boolean`) — writes optional fields onto a shared DTO, which is how `IArrClient` started.
+- Deleting the five QP classes — the language / `minUpgradeFormatScore` combinations are real adapters.
+- Binding the enum in two places (instance syncer _and_ a `DelayProfileSonarrSync`) — bind once, next to the standard mapper.
 
----
-
-## Why UnifiedClient dies
-
-`UnifiedClient` (`src/clients/unified-client.ts:235`) is a switch + one-line forwards. Unique value is **lifecycle** (construct, `testConnection`, hold, `unsetApi`), not the class. `getSpecificClient` already unwraps `.api` with a type check (`:43`). No `instanceof`. `IArrClient` has **33 required methods, none optional** (`:175`) — the AGENTS.md “optional methods” claim is false.
-
-`IArrClient<QP,QD,CF,L>` defaults to `Merged*` (Sonarr∩Radarr only). `UnifiedClient implements IArrClient` with no type args → erasure. Naming/MM/root/delay/tags/system are `any`. Extra methods (UI config, remote paths, metadata) live on concrete clients only.
-
-Prowlarr implements default `IArrClient` and throws on media members (`src/clients/prowlarr-client.ts:174`) plus extras so the `getSpecificClient()` union stays structural (`:268`). That stub tax goes away when Prowlarr is not in media unions.
-
----
-
-## Target architecture
-
-```
-src/clients/
-  client.ts            # configureApi / getClient / unsetApi / ArrTypeToClient  (rename from unified-client.ts)
-  connection.ts        # validateClientParams, logConnectionError, createConnectionErrorParts
-  capabilities.ts      # small interfaces; not a mega IArrClient
-  sonarr-client.ts     # implements media capabilities + its own extras
-  radarr-client.ts
-  lidarr-client.ts
-  readarr-client.ts
-  whisparr-client.ts
-  prowlarr-client.ts   # System + Tags + DownloadClients only; own Prowlarr methods
-```
-
-Holder stores `{ type: T, api: ArrTypeToClient[T] }` (or equivalent). `getClient("LIDARR")` returns `LidarrClient`. Mismatch throws the same error `getSpecificClient` throws today.
-
-`configureApi` constructs the concrete client directly (today’s constructor switch, without wrapping it). Returns that client. Pipeline may keep calling `getClient()` internally (Q1 default).
-
-### Capability interfaces (Q2 default)
-
-Used **only** where a module is shared across media *arrs (or media+Prowlarr for the three below). Not a reconstruction of `IArrClient`.
-
-| Interface                      | Methods                             | Implementers                                         |
-| ------------------------------ | ----------------------------------- | ---------------------------------------------------- |
-| `SystemClient`                 | `getSystemStatus`, `testConnection` | all six                                              |
-| `TagsClient`                   | `getTags`, `createTag`              | all six                                              |
-| `DownloadClientsClient`        | schema/list/CRUD/test               | all six (Prowlarr already shares `downloadClients/`) |
-| `QualityProfilesClient<QP>`    | get/create/update/delete            | media five                                           |
-| `CustomFormatsClient<CF>`      | get/create/update/delete            | media five                                           |
-| `QualityDefinitionsClient<QD>` | get/update                          | media five                                           |
-
-**Not** capability interfaces (fields/methods differ → Pattern A): naming, media management, root folders, delay profiles, languages, metadata, UI config, remote paths, download-client _config_.
-
-Media clients keep implementing the media capabilities **and** their own extra methods. Callers that need Lidarr metadata still take `LidarrClient`.
-
-Delete `IArrClient` once no implementer and no import remain.
-
-**Alternative (Q2 reject):** delete all shared interfaces; every module is Pattern A. Rejected for DC/tags/status because those modules already share one code path.
-
----
-
-## Pattern A vs B (copy, do not invent a third)
-
-Existing:
-
-- **A — arr-specific resource:** factory `switch` + literal `getSpecificClient("LIDARR")`. `rootFolder/`, `metadataProfiles/`.
-- **B — shared extra:** `getSpecificClient(arrType)` union. `uiConfigs/`, `remotePaths/`, `downloadClientConfig/`. Pays Prowlarr stub tax today because `ArrType` includes `PROWLARR`.
-- **C — Prowlarr-only generic base:** `ProviderResourceSync`. Media managers do not get a Pattern C.
-
-Rule:
-
-- **A** when fields or methods differ per arr (QP, naming, delay, root folders, languages, metadata).
-- **B** (capability + generic param) when the **method set** is identical and only the resource type varies (QD, CF — CF generated shapes are the same; QD is close). Still not `Merged*` as the return type: `CustomFormatsClient<CF>` / `QualityDefinitionsClient<QD>`.
-- **B** (union on `MediaArrType`) when every media client shares the method **and** Prowlarr is excluded (`MediaArrType = Exclude<ArrType, "PROWLARR">`), **or** the method is one of the three shared capabilities (DC/tags/status) that Prowlarr actually implements.
-
-| Module                                                | Pattern                              | Client type at seam                                                                                                                                                                            |
-| ----------------------------------------------------- | ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `metadataProfiles/`                                   | A (done)                             | `LidarrClient` / `ReadarrClient`                                                                                                                                                               |
-| `rootFolder/` Lidarr/Readarr                          | A (done)                             | same                                                                                                                                                                                           |
-| `rootFolder/` generic (Sonarr/Radarr/Whisparr)        | A                                    | factory branch + those clients; stop using `IArrClient` in `GenericRootFolderSync`                                                                                                             |
-| `quality-profiles.ts`                                 | A                                    | factory: language / `minUpgradeFormatScore` differ (Radarr+Whisparr have `language`; Lidarr/Readarr lack `minUpgradeFormatScore`). **Not** `MergedQualityProfileResource` as the client return |
-| `quality-definitions.ts`                              | B via `QualityDefinitionsClient<QD>` | method set identical; generated QD still differs (`preferredSize` missing on Readarr; Lidarr/Readarr quality is id+name only)                                                                  |
-| `custom-formats.ts`                                   | B via `CustomFormatsClient<CF>`      | generated CF shape is the same; still parameterize `CF` — do not return `MergedCustomFormatResource`                                                                                           |
-| `media-management.ts` (naming + MM)                   | A                                    | per-arr naming/MM types; factory or literal                                                                                                                                                    |
-| `delay-profiles.ts`                                   | A                                    | per-arr delay resource                                                                                                                                                                         |
-| `tags.ts`                                             | B via `TagsClient`                   | media + Prowlarr                                                                                                                                                                               |
-| `downloadClients/`                                    | B via `DownloadClientsClient`        | media + Prowlarr                                                                                                                                                                               |
-| `uiConfigs/`, `remotePaths/`, `downloadClientConfig/` | B                                    | change param to `MediaArrType` so Prowlarr drops out of the union                                                                                                                              |
-| `prowlarr/` providers                                 | C (done)                             | `ProwlarrClient`                                                                                                                                                                               |
-| `index.ts` pipeline                                   | holder                               | `getClient(arrType)` / later inject                                                                                                                                                            |
-
-Add `MediaArrType` next to `ArrType` in `src/types/common.types.ts`. Pipeline already splits Prowlarr (`prowlarrPipeline` at `src/index.ts:460`).
-
----
-
-## Prowlarr (Q4 default)
-
-`ProwlarrClient` **stops** implementing `IArrClient`. Delete throwing media stubs and extra stubs (`getUiConfig`, remote paths, …). Keep real methods: applications/indexers/proxies, tags, download clients, `syncAppIndexers`, system/connection.
-
-Pattern C unchanged. `getClient("PROWLARR")` returns `ProwlarrClient` only.
-
-If Q4 is “own class only”: `downloadClients/` and `tags.ts` become two call paths (media capability vs Prowlarr methods). Do that only if sharing DC/tags proves more expensive than a second thin adapter — it has not so far.
-
----
-
-## Merged\* types (Q3 default)
-
-Comment at `src/types/merged.types.ts:21`:
-
-> Those types are only to make the API client unified usable. … If someday we need specific fields per *arr instance then we have to split the API usage and modify every module.
-
-That someday is this work.
-
-- Client methods return the generated `*Resource` for that arr, or a generic parameter bound to it. **Not** `Merged*` as the client return type.
-- Split `Merged*` in the same PRs as the modules that consume them (QP, CF, QD, delay, root generic, tags).
-- `ServerCache` (`src/cache.ts`) currently stores `Merged*` + `ArrClientLanguageResource`. Genericize or narrow it when QP/CF/QD/languages migrate; do not leave cache as a `Merged*` dump while clients are already specific.
-- Helpers that are truly Sonarr∩Radarr-shaped (`mapImportCfToRequestCf` in `util.ts`, TRaSH mapping) may keep a **mapping** intersection type until those helpers are split. That is not the client return type.
-
-Do **not** leave a “clients typed, still return Merged\*” plateau.
-
----
-
-## Hidden coupling to fix while touching root folders
-
-Lidarr/Readarr root folders call `loadQualityProfilesFromServer()` (`src/rootFolder/rootFolderLidarr.ts:32`, `rootFolderReadarr.ts:31`), which still goes through the singleton + `MergedQualityProfileResource`. When QP migrates, those call sites must use `this.api.getQualityProfiles()` (already a `LidarrClient` / `ReadarrClient`).
-
-`metadataProfileBase` / `rootFolderBase` still hold `IArrClient = getUnifiedClient()` for the generic path; Lidarr/Readarr subclasses override with `getSpecificClient("LIDARR")`. After this work the base has no `IArrClient`.
-
----
-
-## Resource landmines (Phase 4)
-
-Do not flatten these into `Merged*` again:
-
-| Topic                           | Reality                                                                                                                                                                                           |
-| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| QP `language`                   | Radarr + Whisparr (Whisparr is a module-augmentation in `whisparr-client.ts`). Sonarr generated QP has **no** `language`. Lidarr/Readarr none.                                                    |
-| QP `minUpgradeFormatScore`      | Radarr/Sonarr/Whisparr yes; Lidarr/Readarr **no**.                                                                                                                                                |
-| `SonarrClient` create/update QP | takes a weaker local `SonarrQualityProfileResource` stub, not the full generated QP. Fix when QP migrates (bivariance hides this today).                                                          |
-| Naming                          | Radarr movies vs Sonarr episodes vs Lidarr tracks vs Readarr books vs Whisparr episode-ish. `IArrClient` `any` exists because of this.                                                            |
-| Root folders                    | Lidarr/Readarr: name, default profiles, tags. Readarr: Calibre fields. Radarr/Sonarr/Whisparr: `unmappedFolders`; `updateRootFolder` **throws**.                                                  |
-| Delay                           | OpenAPI shape shared; Lidarr nightly `items[]` is hand-extended on `MergedDelayProfileResource`.                                                                                                  |
-| Download clients (list)         | Five media types in `download-client.types.ts`; Prowlarr is **not** in that union (casts `as unknown`). Keep `DownloadClientsClient` but type Prowlarr DC separately or widen the union honestly. |
-| `downloadClientConfigSyncer.ts` | unused `RadarrClient`…`WhisparrClient` imports — delete in the `MediaArrType` PR.                                                                                                                 |
-
-E2E (`tests/arr-e2e/helpers.ts`) already constructs `new SonarrClient(...)`. No e2e rewrite. No unit tests for media client classes except `prowlarr-client.test.ts` — do not add a client-class test suite as part of this train unless a stub-deletion needs it.
-
-## Tests
-
-Stop spying `getUnifiedClient` and casting `as unknown as ReturnType<typeof getUnifiedClient>`. Mock the **concrete** client (or `getClient`) with the methods the test needs.
-
-Do not introduce a test-only DI container. A `setClientForTests` is unnecessary if tests keep mocking the getter; prefer that until/unless pipeline inject lands.
-
----
-
-## Docs (last)
-
-Rewrite AGENTS.md / CLAUDE.md “Unified Client Pattern”: factory + `getClient<T>`, capability interfaces, Pattern A/B/C, Prowlarr does not implement media APIs. Delete “optional methods on IArrClient” and “check if unified client needs new optional methods”.
+Extension points: a new *arr with standard delay / preferred QD / path roots / MM needs a `*Syncer` and constructor calls, no new feature file; a Radarr-like QP needs a `qualityProfileFoo.ts` (or reuses an identical combo); an *arr-only payload needs a dedicated class taking that client; shared lifecycle goes on the base only.
