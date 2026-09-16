@@ -151,10 +151,10 @@ describe("ApplicationSync – syncApplications", () => {
     expect(out.added).toBe(1);
   });
 
-  it("triggers app-indexer sync when requested", async () => {
+  it("triggers app-indexer sync when requested without adding a diff entry", async () => {
     const out = await sync().syncApplications({ data: [], sync_indexers: true }, cache());
     expect(mockClient.syncAppIndexers).toHaveBeenCalledTimes(1);
-    expect(out.diffEntries).toContainEqual({ resourceType: "Application", name: "Sync App Indexers", action: "update" });
+    expect(out.diffEntries).toEqual([]);
   });
 
   it("fails the instance when the app-indexer sync command is rejected", async () => {
