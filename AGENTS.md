@@ -92,6 +92,7 @@ Each feature (quality profiles, custom formats, metadata profiles, root folders)
 ## Testing
 
 - Unit tests: `*.test.ts` alongside source. Samples: `tests/samples/`. Mock API clients with Vitest.
+- Live *arr e2e: `tests/arr-e2e/` (`pnpm test:e2e:arr`, needs the compose stack up). Adding or changing a sync feature requires matching e2e coverage; matrix in `tests/arr-e2e/README.md`.
 
 ## Adding a New \*arr Feature
 
