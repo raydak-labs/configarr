@@ -18,8 +18,8 @@ import { downloadClientConfigDiffToDiffEntries, syncDownloadClientConfig } from 
 import { syncDownloadClients } from "../downloadClients/downloadClientSyncer";
 import { getEnvs } from "../env";
 import { logger } from "../logger";
-import { BaseMediaManagementSync, mediamanagementDiffToDiffEntries, namingDiffToDiffEntries } from "../mediaManagement/mediaManagementBase";
-import { QualityDefinitionSync, qualityDefinitionsToDiffEntries } from "../qualityDefinitions/qualityDefinitionBase";
+import { MediaManagementSync, mediamanagementDiffToDiffEntries, namingDiffToDiffEntries } from "../mediaManagement/mediaManagement";
+import { QualityDefinitionSync, qualityDefinitionsToDiffEntries } from "../qualityDefinitions/qualityDefinition";
 import { QualityDefinitionShared } from "../qualityDefinitions/qualityDefinition.types";
 import { BaseQualityProfileSync, getUnmanagedQualityProfiles, qualityProfilesToDiffEntries } from "../qualityProfiles/qualityProfileBase";
 import { QualityProfileShared } from "../qualityProfiles/qualityProfile.types";
@@ -34,7 +34,7 @@ import { syncUiConfig, uiConfigDiffToDiffEntries } from "../uiConfigs/uiConfigSy
 
 export type MediaFeatureSyncs = {
   qd: QualityDefinitionSync<QualityDefinitionShared>;
-  mm: BaseMediaManagementSync<{ id?: number }, { id?: number }>;
+  mm: MediaManagementSync<{ id?: number }, { id?: number }>;
   qp: BaseQualityProfileSync<QualityProfileShared>;
   delay: BaseDelayProfileSync<DelayProfileShared>;
   root: BaseRootFolderSync;

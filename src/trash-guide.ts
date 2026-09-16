@@ -4,7 +4,7 @@ import { z } from "zod";
 import { CFIDToConfigGroup, ConfigarrCF, CustomFormatRequest } from "./customFormats/customFormat.types";
 import { getConfig } from "./config";
 import { logger } from "./logger";
-import { interpolateSize } from "./qualityDefinitions/qualityDefinitionBase";
+import { interpolateSize } from "./qualityDefinitions/qualityDefinition";
 import { QualityDefinitionsRadarr, QualityDefinitionsSonarr } from "./types/common.types";
 import {
   ConfigCustomFormat,

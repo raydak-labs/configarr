@@ -1,9 +1,9 @@
 import { getClient } from "../clients/client";
 import { DelayProfileLidarrSync } from "../delayProfiles/delayProfileLidarr";
 import { InstanceDiffReport } from "../diffReport/diffReport.types";
-import { BaseMediaManagementSync } from "../mediaManagement/mediaManagementBase";
+import { MediaManagementSync } from "../mediaManagement/mediaManagement";
 import { LidarrMetadataProfileSync } from "../metadataProfiles/metadataProfileLidarr";
-import { QualityDefinitionPreferredSync } from "../qualityDefinitions/qualityDefinitionBase";
+import { QualityDefinitionPreferredSync } from "../qualityDefinitions/qualityDefinition";
 import { QualityProfileLidarrSync } from "../qualityProfiles/qualityProfileLidarr";
 import { LidarrRootFolderSync } from "../rootFolder/rootFolderLidarr";
 import { InputConfigArrInstance, InputConfigSchema } from "../types/config.types";
@@ -22,7 +22,7 @@ export class LidarrSyncer {
       client,
       syncs: {
         qd: new QualityDefinitionPreferredSync(client),
-        mm: new BaseMediaManagementSync(client),
+        mm: new MediaManagementSync(client),
         qp: new QualityProfileLidarrSync(client),
         delay: new DelayProfileLidarrSync(client),
         root: new LidarrRootFolderSync(client),

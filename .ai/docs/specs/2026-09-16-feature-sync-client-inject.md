@@ -21,7 +21,7 @@ Rejected:
 const client = getClient("SONARR");
 new StandardDelayProfileSync(client, DownloadProtocol);
 new QualityDefinitionPreferredSync(client);
-new BaseMediaManagementSync(client);
+new MediaManagementSync(client);
 new PathRootFolderSync(client);
 new QualityProfileSonarrSync(client); // still a class: language hooks
 ```

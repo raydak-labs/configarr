@@ -46,7 +46,7 @@ export function calculateMediamanagementDiffFor<T extends { id?: number }>(serve
   };
 }
 
-export class BaseMediaManagementSync<Naming extends { id?: number }, Management extends { id?: number }> {
+export class MediaManagementSync<Naming extends { id?: number }, Management extends { id?: number }> {
   constructor(protected readonly api: MediaManagementClient<Naming, Management>) {}
 
   protected getApi() {

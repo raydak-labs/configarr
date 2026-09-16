@@ -2,8 +2,8 @@ import { DownloadProtocol } from "../__generated__/radarr/data-contracts";
 import { getClient } from "../clients/client";
 import { StandardDelayProfileSync } from "../delayProfiles/delayProfileBase";
 import { InstanceDiffReport } from "../diffReport/diffReport.types";
-import { BaseMediaManagementSync } from "../mediaManagement/mediaManagementBase";
-import { QualityDefinitionPreferredSync } from "../qualityDefinitions/qualityDefinitionBase";
+import { MediaManagementSync } from "../mediaManagement/mediaManagement";
+import { QualityDefinitionPreferredSync } from "../qualityDefinitions/qualityDefinition";
 import { QualityProfileRadarrSync } from "../qualityProfiles/qualityProfileRadarr";
 import { PathRootFolderSync } from "../rootFolder/rootFolderBase";
 import { InputConfigArrInstance, InputConfigSchema } from "../types/config.types";
@@ -23,7 +23,7 @@ export class RadarrSyncer {
       client,
       syncs: {
         qd: new QualityDefinitionPreferredSync(client),
-        mm: new BaseMediaManagementSync(client),
+        mm: new MediaManagementSync(client),
         qp: new QualityProfileRadarrSync(client),
         delay: new StandardDelayProfileSync(client, DownloadProtocol),
         root: new PathRootFolderSync(client),

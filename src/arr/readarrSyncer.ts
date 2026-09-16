@@ -2,9 +2,9 @@ import { DownloadProtocol } from "../__generated__/readarr/data-contracts";
 import { getClient } from "../clients/client";
 import { StandardDelayProfileSync } from "../delayProfiles/delayProfileBase";
 import { InstanceDiffReport } from "../diffReport/diffReport.types";
-import { BaseMediaManagementSync } from "../mediaManagement/mediaManagementBase";
+import { MediaManagementSync } from "../mediaManagement/mediaManagement";
 import { ReadarrMetadataProfileSync } from "../metadataProfiles/metadataProfileReadarr";
-import { QualityDefinitionSync } from "../qualityDefinitions/qualityDefinitionBase";
+import { QualityDefinitionSync } from "../qualityDefinitions/qualityDefinition";
 import { QualityProfileReadarrSync } from "../qualityProfiles/qualityProfileReadarr";
 import { ReadarrRootFolderSync } from "../rootFolder/rootFolderReadarr";
 import { InputConfigArrInstance, InputConfigSchema } from "../types/config.types";
@@ -23,7 +23,7 @@ export class ReadarrSyncer {
       client,
       syncs: {
         qd: new QualityDefinitionSync(client),
-        mm: new BaseMediaManagementSync(client),
+        mm: new MediaManagementSync(client),
         qp: new QualityProfileReadarrSync(client),
         delay: new StandardDelayProfileSync(client, DownloadProtocol),
         root: new ReadarrRootFolderSync(client),

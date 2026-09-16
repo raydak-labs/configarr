@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { QualityDefinitionShared } from "./qualityDefinition.types";
-import { interpolateSize, qualityDefinitionsToDiffEntries, calculateQualityDefinitionDiff } from "./qualityDefinitionBase";
+import { interpolateSize, qualityDefinitionsToDiffEntries, calculateQualityDefinitionDiff } from "./qualityDefinition";
 import { TrashQualityDefinition } from "../types/trashguide.types";
 
 describe("QualityDefinitions", async () => {
