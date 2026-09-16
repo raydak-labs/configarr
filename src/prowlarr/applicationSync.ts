@@ -79,7 +79,6 @@ export class ApplicationSync extends ProviderResourceSync<InputConfigApplication
       }
     }
 
-    outcome.diffEntries.push({ resourceType: "Application", name: "Sync App Indexers", action: "update" });
     return outcome;
   }
 }
