@@ -34,9 +34,8 @@ const mockClient = {
   getAppProfiles: vi.fn(async () => [{ id: 1, name: "Standard" }]),
   createTag: vi.fn(async (t: { label: string }) => ({ id: 7, label: t.label })),
 };
-vi.mock("../clients/unified-client", () => ({
-  getSpecificClient: vi.fn(() => mockClient),
-  getUnifiedClient: vi.fn(() => ({ api: mockClient })),
+vi.mock("../clients/client", () => ({
+  getClient: vi.fn(() => mockClient),
 }));
 
 const cache = () => ({ tags: [] as any[] }) as unknown as ServerCache;

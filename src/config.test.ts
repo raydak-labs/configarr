@@ -22,6 +22,8 @@ import {
   InputConfigCustomFormat,
   InputConfigCustomFormatGroupSchema,
   InputConfigIncludeItemSchema,
+  InputConfigMetadataProfileSchema,
+  InputConfigRootFolderSchema,
   InputConfigSchema,
   InputConfigSchemaSchema,
 } from "./types/config.types";
@@ -1887,6 +1889,17 @@ describe("InputConfigSchemaSchema (regression)", () => {
           .join("\n")}`,
       );
     }
+
+    expect(result.data.readarr?.instance1?.metadata_profiles?.find((p) => p.name === "Default")).toMatchObject({
+      min_popularity: 10,
+      skip_missing_date: true,
+      allowed_languages: ["eng", "deu"],
+      min_pages: 50,
+    });
+    expect(result.data.readarr?.instance1?.root_folders?.[0]).toMatchObject({
+      path: "/app",
+      monitor_new_items: "all",
+    });
   });
 
   // Zod object schemas silently strip keys they don't recognize on a *successful* parse -
@@ -1944,5 +1957,52 @@ describe("InputConfigSchemaSchema (regression)", () => {
     const result = InputConfigCustomFormatGroupSchema.parse(config);
 
     expect(result).toMatchObject(config);
+  });
+
+  test("does not silently strip Readarr metadata_profiles fields", () => {
+    const profile = {
+      name: "Default",
+      min_popularity: 10,
+      skip_missing_date: true,
+      skip_missing_isbn: false,
+      skip_parts_and_sets: false,
+      skip_secondary_series: false,
+      allowed_languages: ["eng", "deu"],
+      min_pages: 50,
+      must_not_contain: ["Text in title"],
+    };
+
+    expect(InputConfigMetadataProfileSchema.parse(profile)).toMatchObject(profile);
+    expect(
+      InputConfigArrInstanceSchema.parse({
+        base_url: "http://readarr:8787",
+        api_key: "key",
+        metadata_profiles: [profile],
+      }).metadata_profiles?.[0],
+    ).toMatchObject(profile);
+  });
+
+  test("does not silently strip Lidarr metadata_profiles fields", () => {
+    const profile = {
+      name: "Default",
+      primary_types: ["Album", "EP"],
+      secondary_types: ["Studio"],
+      release_statuses: ["Official"],
+    };
+
+    expect(InputConfigMetadataProfileSchema.parse(profile)).toMatchObject(profile);
+  });
+
+  test("does not silently strip Readarr root_folder fields", () => {
+    const folder = {
+      path: "/app",
+      name: "App",
+      metadata_profile: "Default",
+      quality_profile: "ExampleProfile",
+      monitor_new_items: "all" as const,
+      is_calibre_library: false,
+    };
+
+    expect(InputConfigRootFolderSchema.parse(folder)).toMatchObject(folder);
   });
 });

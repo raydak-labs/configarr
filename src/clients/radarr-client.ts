@@ -1,8 +1,14 @@
 import { KyHttpClient } from "../ky-client";
 import { Api } from "../__generated__/radarr/Api";
 import {
-  CustomFormatResource,
+  DelayProfileResource,
+  MediaManagementConfigResource,
+  NamingConfigResource,
+  RootFolderResource,
+  SystemResource,
+  TagResource,
   DownloadClientConfigResource,
+  DownloadClientResource,
   LanguageResource,
   QualityDefinitionResource,
   QualityProfileResource,
@@ -10,11 +16,26 @@ import {
   UiConfigResource,
 } from "../__generated__/radarr/data-contracts";
 import { logger } from "../logger";
-import type { DownloadClientResource } from "../types/download-client.types";
+import type { CustomFormatRequest } from "../customFormats/customFormat.types";
 import { ANY_LANGUAGE_NAME, cloneWithJSON } from "../util";
-import { IArrClient, logConnectionError, validateClientParams } from "./unified-client";
-
-export class RadarrClient implements IArrClient<QualityProfileResource, QualityDefinitionResource, CustomFormatResource, LanguageResource> {
+import { logConnectionError, validateClientParams } from "./connection";
+import {
+  CustomFormatsClient,
+  DownloadClientsClient,
+  QualityDefinitionsClient,
+  QualityProfilesClient,
+  SystemClient,
+  TagsClient,
+} from "./capabilities";
+export class RadarrClient
+  implements
+    SystemClient,
+    TagsClient,
+    DownloadClientsClient<DownloadClientResource>,
+    QualityProfilesClient<QualityProfileResource>,
+    CustomFormatsClient,
+    QualityDefinitionsClient<QualityDefinitionResource>
+{
   private api!: Api<unknown>;
   private languageMap: Map<string, LanguageResource> = new Map();
 
@@ -46,16 +67,15 @@ export class RadarrClient implements IArrClient<QualityProfileResource, QualityD
 
   async updateQualityDefinitions(definitions: QualityDefinitionResource[]) {
     await this.api.v3QualitydefinitionUpdateUpdate(definitions);
-    this.api.v3LanguageList();
     return this.getQualityDefinitions();
   }
 
   // Quality Profiles
-  getQualityProfiles(): Promise<QualityProfileResource[]> {
+  getQualityProfiles() {
     return this.api.v3QualityprofileList();
   }
 
-  async createQualityProfile(profile: QualityProfileResource): Promise<QualityProfileResource> {
+  async createQualityProfile(profile: QualityProfileResource) {
     const cloned = cloneWithJSON(profile);
 
     if (this.languageMap.size <= 0) {
@@ -70,7 +90,7 @@ export class RadarrClient implements IArrClient<QualityProfileResource, QualityD
     return this.api.v3QualityprofileCreate(cloned);
   }
 
-  updateQualityProfile(id: string, profile: QualityProfileResource): Promise<QualityProfileResource> {
+  updateQualityProfile(id: string, profile: QualityProfileResource) {
     return this.api.v3QualityprofileUpdate(id, profile);
   }
 
@@ -83,11 +103,11 @@ export class RadarrClient implements IArrClient<QualityProfileResource, QualityD
     return this.api.v3CustomformatList();
   }
 
-  createCustomFormat(format: CustomFormatResource) {
+  createCustomFormat(format: CustomFormatRequest) {
     return this.api.v3CustomformatCreate(format);
   }
 
-  updateCustomFormat(id: string, format: CustomFormatResource) {
+  updateCustomFormat(id: string, format: CustomFormatRequest) {
     return this.api.v3CustomformatUpdate(id, format);
   }
 
@@ -95,19 +115,19 @@ export class RadarrClient implements IArrClient<QualityProfileResource, QualityD
     return this.api.v3CustomformatDelete(+id);
   }
 
-  async getNaming() {
+  async getNaming(): Promise<NamingConfigResource> {
     return this.api.v3ConfigNamingList();
   }
 
-  async updateNaming(id: string, data: any) {
+  async updateNaming(id: string, data: NamingConfigResource): Promise<NamingConfigResource> {
     return this.api.v3ConfigNamingUpdate(id, data);
   }
 
-  async getMediamanagement() {
+  async getMediamanagement(): Promise<MediaManagementConfigResource> {
     return this.api.v3ConfigMediamanagementList();
   }
 
-  async updateMediamanagement(id: string, data: any) {
+  async updateMediamanagement(id: string, data: MediaManagementConfigResource): Promise<MediaManagementConfigResource> {
     return this.api.v3ConfigMediamanagementUpdate(id, data);
   }
 
@@ -119,44 +139,44 @@ export class RadarrClient implements IArrClient<QualityProfileResource, QualityD
     return this.api.v3ConfigUiUpdate(id, data);
   }
 
-  async getRootfolders() {
+  async getRootfolders(): Promise<RootFolderResource[]> {
     return this.api.v3RootfolderList();
   }
 
-  async addRootFolder(data: any) {
+  async addRootFolder(data: RootFolderResource): Promise<RootFolderResource> {
     return this.api.v3RootfolderCreate(data);
   }
 
-  async updateRootFolder(id: string, data: any) {
+  async updateRootFolder(id: string, data: RootFolderResource): Promise<RootFolderResource> {
     throw new Error("Radarr does not support updating root folders");
   }
 
-  async deleteRootFolder(id: string) {
+  async deleteRootFolder(id: string): Promise<void> {
     return this.api.v3RootfolderDelete(+id);
   }
 
   // Delay Profiles
-  async getDelayProfiles() {
+  async getDelayProfiles(): Promise<DelayProfileResource[]> {
     return this.api.v3DelayprofileList();
   }
 
-  async createDelayProfile(profile: any) {
+  async createDelayProfile(profile: DelayProfileResource): Promise<DelayProfileResource> {
     return this.api.v3DelayprofileCreate(profile);
   }
 
-  async updateDelayProfile(id: string, data: any) {
+  async updateDelayProfile(id: string, data: DelayProfileResource): Promise<DelayProfileResource> {
     return this.api.v3DelayprofileUpdate(id, data);
   }
 
-  async deleteDelayProfile(id: string) {
+  async deleteDelayProfile(id: string): Promise<void> {
     return this.api.v3DelayprofileDelete(+id);
   }
 
-  async getTags() {
+  async getTags(): Promise<TagResource[]> {
     return this.api.v3TagList();
   }
 
-  async createTag(tag: any) {
+  async createTag(tag: TagResource): Promise<TagResource> {
     return this.api.v3TagCreate(tag);
   }
 
@@ -181,7 +201,7 @@ export class RadarrClient implements IArrClient<QualityProfileResource, QualityD
     return this.api.v3DownloadclientDelete(+id);
   }
 
-  async testDownloadClient(client: DownloadClientResource): Promise<any> {
+  async testDownloadClient(client: DownloadClientResource): Promise<void> {
     return this.api.v3DownloadclientTestCreate(client);
   }
 
@@ -212,7 +232,7 @@ export class RadarrClient implements IArrClient<QualityProfileResource, QualityD
   }
 
   // System/Health Check
-  getSystemStatus() {
+  getSystemStatus(): Promise<SystemResource> {
     return this.api.v3SystemStatusList();
   }
 

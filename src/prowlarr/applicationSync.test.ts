@@ -32,9 +32,8 @@ const mockClient = {
   syncAppIndexers: vi.fn(async () => ({ id: 1 })),
   createTag: vi.fn(async (t: { label: string }) => ({ id: 9, label: t.label })),
 };
-vi.mock("../clients/unified-client", () => ({
-  getSpecificClient: vi.fn(() => mockClient),
-  getUnifiedClient: vi.fn(() => ({ api: mockClient })),
+vi.mock("../clients/client", () => ({
+  getClient: vi.fn(() => mockClient),
 }));
 
 const cache = () => ({ tags: [] as any[] }) as unknown as ServerCache;

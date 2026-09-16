@@ -1,25 +1,36 @@
-import {
-  MetadataProfileResource,
-  MonitorTypes,
-  NewItemMonitorTypes,
-  QualityProfileResource,
-  RootFolderResource,
-  TagResource,
-} from "../__generated__/readarr/data-contracts";
+import { MonitorTypes, NewItemMonitorTypes, RootFolderResource, TagResource } from "../__generated__/readarr/data-contracts";
 import { ServerCache } from "../cache";
-import { getSpecificClient } from "../clients/unified-client";
+import type { MetadataProfilesClient, QualityProfilesClient, RootFoldersClient, TagsClient } from "../clients/capabilities";
 import { FieldChange } from "../diffReport/diffReport.types";
-import { loadQualityProfilesFromServer } from "../quality-profiles";
 import { InputConfigRootFolderReadarr } from "../types/config.types";
-import { compareObjectsCarr } from "../util";
+import { compareObjectsCarr, toEnumOrThrow } from "../util";
 import { RootFolderDiff } from "./rootFolder.types";
-import { BaseRootFolderSync } from "./rootFolderBase";
+import { BaseRootFolderSync, definedFields, nameIdMap } from "./rootFolderBase";
+
+type NamedProfile = { name?: string | null; id?: number };
+
+export type ReadarrRootFolderApi = RootFoldersClient<RootFolderResource> &
+  Pick<QualityProfilesClient<NamedProfile>, "getQualityProfiles"> &
+  Pick<MetadataProfilesClient<NamedProfile>, "getMetadataProfiles"> &
+  Pick<TagsClient, "createTag">;
 
 export class ReadarrRootFolderSync extends BaseRootFolderSync<InputConfigRootFolderReadarr> {
-  protected api = getSpecificClient("READARR");
+  private profileIdMaps: { quality: Map<string, number>; metadata: Map<string, number> } | null = null;
 
-  protected getArrType(): "READARR" {
-    return "READARR";
+  constructor(protected readonly api: ReadarrRootFolderApi) {
+    super(api);
+  }
+
+  private async getProfileIdMaps(serverCache: ServerCache) {
+    if (this.profileIdMaps) {
+      return this.profileIdMaps;
+    }
+
+    const quality =
+      serverCache.qualityProfiles.length > 0 ? nameIdMap(serverCache.qualityProfiles) : nameIdMap(await this.api.getQualityProfiles());
+    const metadata = nameIdMap(await this.api.getMetadataProfiles());
+    this.profileIdMaps = { quality, metadata };
+    return this.profileIdMaps;
   }
 
   public async resolveRootFolderConfig(config: InputConfigRootFolderReadarr, serverCache: ServerCache): Promise<RootFolderResource> {
@@ -27,23 +38,7 @@ export class ReadarrRootFolderSync extends BaseRootFolderSync<InputConfigRootFol
       throw new Error(`Readarr root folders must be objects with name, metadata_profile, and quality_profile. Got string: ${config}`);
     }
 
-    // Load quality profiles and metadata profiles for Readarr
-    const [qualityProfiles, metadataProfiles] = await Promise.all([loadQualityProfilesFromServer(), this.api.getMetadataProfiles()]);
-
-    const qualityProfileMap = new Map<string, number>();
-    const metadataProfileMap = new Map<string, number>();
-
-    qualityProfiles.forEach((profile: QualityProfileResource) => {
-      if (profile.name && profile.id !== undefined) {
-        qualityProfileMap.set(profile.name, profile.id);
-      }
-    });
-
-    metadataProfiles.forEach((profile: MetadataProfileResource) => {
-      if (profile.id !== undefined && profile.name) {
-        metadataProfileMap.set(profile.name, profile.id);
-      }
-    });
+    const { quality: qualityProfileMap, metadata: metadataProfileMap } = await this.getProfileIdMaps(serverCache);
 
     const name = config.name;
     const metadataProfileId = config.metadata_profile ? metadataProfileMap.get(config.metadata_profile) : undefined;
@@ -90,11 +85,11 @@ export class ReadarrRootFolderSync extends BaseRootFolderSync<InputConfigRootFol
     };
 
     if (config.monitor) {
-      result.defaultMonitorOption = config.monitor as MonitorTypes;
+      result.defaultMonitorOption = toEnumOrThrow(MonitorTypes, config.monitor, "Readarr monitor");
     }
 
     if (config.monitor_new_items) {
-      result.defaultNewItemMonitorOption = config.monitor_new_items as NewItemMonitorTypes;
+      result.defaultNewItemMonitorOption = toEnumOrThrow(NewItemMonitorTypes, config.monitor_new_items, "Readarr monitor_new_items");
     }
 
     // Calibre integration fields (Readarr-specific)
@@ -160,11 +155,11 @@ export class ReadarrRootFolderSync extends BaseRootFolderSync<InputConfigRootFol
       useSsl: serverFolder.useSsl,
     };
 
-    return compareObjectsCarr(serverFields, configFields);
+    return compareObjectsCarr(serverFields, definedFields(configFields));
   }
 
   async calculateDiff(
-    rootFolders: InputConfigRootFolderReadarr[],
+    rootFolders: InputConfigRootFolderReadarr[] | null,
     serverCache: ServerCache,
   ): Promise<RootFolderDiff<InputConfigRootFolderReadarr> | null> {
     if (rootFolders == null) {

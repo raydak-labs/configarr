@@ -1,8 +1,14 @@
 import { KyHttpClient } from "../ky-client";
 import { Api } from "../__generated__/readarr/Api";
 import {
-  CustomFormatResource,
+  DelayProfileResource,
+  MediaManagementConfigResource,
+  NamingConfigResource,
+  RootFolderResource,
+  SystemResource,
+  TagResource,
   DownloadClientConfigResource,
+  DownloadClientResource,
   LanguageResource,
   MetadataProfileResource,
   QualityDefinitionResource,
@@ -11,15 +17,27 @@ import {
   UiConfigResource,
 } from "../__generated__/readarr/data-contracts";
 import { logger } from "../logger";
-import type { DownloadClientResource } from "../types/download-client.types";
-import { IArrClient, logConnectionError, validateClientParams } from "./unified-client";
-
-export class ReadarrClient implements IArrClient<
-  QualityProfileResource,
-  QualityDefinitionResource,
-  CustomFormatResource,
-  LanguageResource
-> {
+import type { CustomFormatRequest } from "../customFormats/customFormat.types";
+import { logConnectionError, validateClientParams } from "./connection";
+import {
+  CustomFormatsClient,
+  DownloadClientsClient,
+  QualityDefinitionsClient,
+  QualityProfilesClient,
+  SystemClient,
+  TagsClient,
+  MetadataProfilesClient,
+} from "./capabilities";
+export class ReadarrClient
+  implements
+    SystemClient,
+    TagsClient,
+    DownloadClientsClient<DownloadClientResource>,
+    QualityProfilesClient<QualityProfileResource>,
+    CustomFormatsClient,
+    QualityDefinitionsClient<QualityDefinitionResource>,
+    MetadataProfilesClient<MetadataProfileResource>
+{
   private api!: Api<unknown>;
 
   constructor(baseUrl: string, apiKey: string) {
@@ -75,11 +93,11 @@ export class ReadarrClient implements IArrClient<
     return this.api.v1CustomformatList();
   }
 
-  createCustomFormat(format: CustomFormatResource) {
+  createCustomFormat(format: CustomFormatRequest) {
     return this.api.v1CustomformatCreate(format);
   }
 
-  updateCustomFormat(id: string, format: CustomFormatResource) {
+  updateCustomFormat(id: string, format: CustomFormatRequest) {
     return this.api.v1CustomformatUpdate(id, format);
   }
 
@@ -104,19 +122,19 @@ export class ReadarrClient implements IArrClient<
     return this.api.v1MetadataprofileDelete(Number(id));
   }
 
-  async getNaming() {
+  async getNaming(): Promise<NamingConfigResource> {
     return this.api.v1ConfigNamingList();
   }
 
-  async updateNaming(id: string, data: any) {
+  async updateNaming(id: string, data: NamingConfigResource): Promise<NamingConfigResource> {
     return this.api.v1ConfigNamingUpdate(id, data);
   }
 
-  async getMediamanagement() {
+  async getMediamanagement(): Promise<MediaManagementConfigResource> {
     return this.api.v1ConfigMediamanagementList();
   }
 
-  async updateMediamanagement(id: string, data: any) {
+  async updateMediamanagement(id: string, data: MediaManagementConfigResource): Promise<MediaManagementConfigResource> {
     return this.api.v1ConfigMediamanagementUpdate(id, data);
   }
 
@@ -128,44 +146,44 @@ export class ReadarrClient implements IArrClient<
     return this.api.v1ConfigUiUpdate(id, data);
   }
 
-  async getRootfolders() {
+  async getRootfolders(): Promise<RootFolderResource[]> {
     return this.api.v1RootfolderList();
   }
 
-  async addRootFolder(data: any) {
+  async addRootFolder(data: RootFolderResource): Promise<RootFolderResource> {
     return this.api.v1RootfolderCreate(data);
   }
 
-  async updateRootFolder(id: string, data: any) {
+  async updateRootFolder(id: string, data: RootFolderResource): Promise<RootFolderResource> {
     return this.api.v1RootfolderUpdate(id, data);
   }
 
-  async deleteRootFolder(id: string) {
+  async deleteRootFolder(id: string): Promise<void> {
     return this.api.v1RootfolderDelete(+id);
   }
 
   // Delay Profiles
-  async getDelayProfiles() {
+  async getDelayProfiles(): Promise<DelayProfileResource[]> {
     return this.api.v1DelayprofileList();
   }
 
-  async createDelayProfile(profile: any) {
+  async createDelayProfile(profile: DelayProfileResource): Promise<DelayProfileResource> {
     return this.api.v1DelayprofileCreate(profile);
   }
 
-  async updateDelayProfile(id: string, data: any) {
+  async updateDelayProfile(id: string, data: DelayProfileResource): Promise<DelayProfileResource> {
     return this.api.v1DelayprofileUpdate(id, data);
   }
 
-  async deleteDelayProfile(id: string) {
+  async deleteDelayProfile(id: string): Promise<void> {
     return this.api.v1DelayprofileDelete(+id);
   }
 
-  async getTags() {
+  async getTags(): Promise<TagResource[]> {
     return this.api.v1TagList();
   }
 
-  async createTag(tag: any) {
+  async createTag(tag: TagResource): Promise<TagResource> {
     return this.api.v1TagCreate(tag);
   }
 
@@ -191,7 +209,7 @@ export class ReadarrClient implements IArrClient<
     return this.api.v1DownloadclientDelete(+id);
   }
 
-  async testDownloadClient(client: DownloadClientResource): Promise<any> {
+  async testDownloadClient(client: DownloadClientResource): Promise<void> {
     return this.api.v1DownloadclientTestCreate(client);
   }
 
@@ -222,7 +240,7 @@ export class ReadarrClient implements IArrClient<
   }
 
   // System/Health Check
-  getSystemStatus() {
+  getSystemStatus(): Promise<SystemResource> {
     return this.api.v1SystemStatusList();
   }
 

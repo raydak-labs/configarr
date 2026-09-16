@@ -63,9 +63,16 @@ sonarr:
       type: series
 
     include:
+      - template: shared-lifecycle
       #### Custom
       - template: sonarr-cf
       - template: sonarr-quality
+
+    root_folders:
+      - "/app"
+
+    ui_config:
+      firstDayOfWeek: 1
 
     custom_formats:
       - trash_ids:
@@ -121,13 +128,19 @@ sonarr:
         ignore:
           - "Some client name"
       # (since v1.20.0) Remote path mappings for download clients
+      config:
+        download_client_working_folders: "/downloads,/tmp"
+        enable_completed_download_handling: true
+        auto_redownload_failed: false
+        auto_redownload_failed_from_interactive_search: false
+        check_for_finished_download_interval: 5
       remote_paths:
         - host: "transmission"
           remote_path: "/downloads/tv"
-          local_path: "/data/media/downloads/tv"
+          local_path: "/downloads/1"
         - host: "qbittorrent"
           remote_path: "/downloads"
-          local_path: "/data/downloads"
+          local_path: "/downloads/2"
 
 radarr:
   instance1:
@@ -139,33 +152,8 @@ radarr:
     root_folders:
       - "/app"
 
-    # since v1.14.0. Optional
-    delay_profiles:
-      default:
-        enableUsenet: true
-        enableTorrent: false
-        preferredProtocol: usenet
-        usenetDelay: 10
-        torrentDelay: 0
-        bypassIfHighestQuality: false
-        bypassIfAboveCustomFormatScore: false
-        minimumCustomFormatScore: 0
-      additional:
-        - enableUsenet: true
-          enableTorrent: false
-          preferredProtocol: usenet
-          usenetDelay: 10
-          torrentDelay: 0
-          bypassIfHighestQuality: false
-          bypassIfAboveCustomFormatScore: false
-          minimumCustomFormatScore: 0
-          order: 1
-          tags:
-            - delayprofiletest
-
-    # experimental
-    media_management:
-      recycleBin: "/tmp"
+    ui_config:
+      firstDayOfWeek: 1
 
     # experimental
     media_naming_api: {}
@@ -215,6 +203,7 @@ radarr:
     media_naming: {}
 
     include:
+      - template: shared-lifecycle
       # Comment out any of the following includes to disable them
       #- template: radarr-quality-definition-movie
       #- template: radarr-quality-profile-hd-bluray-web
@@ -303,8 +292,16 @@ whisparr:
     #   type: movie # Quality definition type
 
     include:
+      - template: shared-lifecycle
       # only custom defined templates available
       - template: whisparr
+
+    root_folders:
+      # hotio image: /app is not writable by user `hotio`. /config is.
+      - "/config/library"
+
+    ui_config:
+      firstDayOfWeek: 1
 
     custom_formats: # Custom format assignments
       - trash_ids:
@@ -321,6 +318,43 @@ whisparr:
           # Not supported in whisparr
           #min_format_score: 200
 
+    download_clients:
+      data:
+        - name: "qBit 4K"
+          type: qbittorrent
+          enable: false
+          priority: 1
+          remove_completed_downloads: true
+          remove_failed_downloads: true
+          tags:
+            - "4K"
+            - "Anime"
+          fields:
+            host: qbittorrent
+            port: 8080
+            use_ssl: false
+            url_base: /
+            username: sonarr
+            password: changeme
+      update_password: false
+      delete_unmanaged:
+        enabled: false
+        ignore:
+          - "Some client name"
+      config:
+        download_client_working_folders: "/downloads,/tmp"
+        enable_completed_download_handling: true
+        auto_redownload_failed: false
+        auto_redownload_failed_from_interactive_search: false
+        check_for_finished_download_interval: 5
+      remote_paths:
+        - host: "transmission"
+          remote_path: "/downloads/xxx"
+          local_path: "/downloads/1"
+        - host: "qbittorrent"
+          remote_path: "/downloads"
+          local_path: "/downloads/2"
+
 readarr:
   instance1: # Instance name (can be any unique identifier)
     base_url: http://readarr:8787 # instance URL
@@ -331,8 +365,19 @@ readarr:
     #   type: movie # Quality definition type
 
     include:
+      - template: shared-lifecycle
       # only custom defined templates available
       - template: readarr
+
+    root_folders:
+      - path: /app
+        name: App
+        metadata_profile: Default
+        quality_profile: ExampleProfile
+        monitor_new_items: all
+
+    ui_config:
+      firstDayOfWeek: 1
 
     custom_formats: # Custom format assignments
       - trash_ids:
@@ -362,6 +407,12 @@ readarr:
         min_pages: 50
         must_not_contain:
           - "Text in title"
+      - name: "Configarr Test"
+        min_popularity: 25
+        skip_missing_date: true
+        allowed_languages:
+          - eng
+        min_pages: 10
 
     delete_unmanaged_metadata_profiles:
       enabled: true
@@ -371,6 +422,43 @@ readarr:
 
     delete_unmanaged_profiles:
       enabled: true
+
+    download_clients:
+      data:
+        - name: "qBit 4K"
+          type: qbittorrent
+          enable: false
+          priority: 1
+          remove_completed_downloads: true
+          remove_failed_downloads: true
+          tags:
+            - "4K"
+            - "Anime"
+          fields:
+            host: qbittorrent
+            port: 8080
+            use_ssl: false
+            url_base: /
+            username: sonarr
+            password: changeme
+      update_password: false
+      delete_unmanaged:
+        enabled: false
+        ignore:
+          - "Some client name"
+      config:
+        download_client_working_folders: "/downloads,/tmp"
+        enable_completed_download_handling: true
+        auto_redownload_failed: false
+        auto_redownload_failed_from_interactive_search: false
+        check_for_finished_download_interval: 5
+      remote_paths:
+        - host: "transmission"
+          remote_path: "/downloads/books"
+          local_path: "/downloads/1"
+        - host: "qbittorrent"
+          remote_path: "/downloads"
+          local_path: "/downloads/2"
 
 lidarr:
   instance1:
@@ -383,8 +471,19 @@ lidarr:
     #   type: movie # Quality definition type
 
     include:
+      - template: shared-lifecycle
       # only custom defined templates available
       - template: lidarr
+
+    root_folders:
+      - path: /app
+        name: App
+        metadata_profile: Default
+        quality_profile: ExampleProfile
+        monitor_new_album: new
+
+    ui_config:
+      firstDayOfWeek: 1
 
     custom_formats: # Custom format assignments
       - trash_ids:
@@ -410,9 +509,55 @@ lidarr:
           - Studio
         release_statuses:
           - Official
+      - name: Configarr Test
+        primary_types:
+          - Album
+        secondary_types:
+          - Studio
+        release_statuses:
+          - Official
 
     delete_unmanaged_metadata_profiles:
       enabled: true
+      ignore:
+        - None
+
+    download_clients:
+      data:
+        - name: "qBit 4K"
+          type: qbittorrent
+          enable: false
+          priority: 1
+          remove_completed_downloads: true
+          remove_failed_downloads: true
+          tags:
+            - "4K"
+            - "Anime"
+          fields:
+            host: qbittorrent
+            port: 8080
+            use_ssl: false
+            url_base: /
+            username: sonarr
+            password: changeme
+      update_password: false
+      delete_unmanaged:
+        enabled: false
+        ignore:
+          - "Some client name"
+      config:
+        download_client_working_folders: "/downloads,/tmp"
+        enable_completed_download_handling: true
+        auto_redownload_failed: false
+        auto_redownload_failed_from_interactive_search: false
+        check_for_finished_download_interval: 5
+      remote_paths:
+        - host: "transmission"
+          remote_path: "/downloads/music"
+          local_path: "/downloads/1"
+        - host: "qbittorrent"
+          remote_path: "/downloads"
+          local_path: "/downloads/2"
 
 # (experimental) since v1.31.0 - Prowlarr: tags, applications, indexers, indexer proxies, download clients
 # check https://configarr.rayak.de/docs/configuration/experimental-support#prowlarr-v1

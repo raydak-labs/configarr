@@ -1,14 +1,14 @@
 import { z } from "zod";
 import { ServerCache } from "../cache";
 import { ProwlarrClient } from "../clients/prowlarr-client";
-import { getSpecificClient } from "../clients/unified-client";
+import { getClient } from "../clients/client";
 import { DiffEntry, FieldChange } from "../diffReport/diffReport.types";
 import { getEnvs } from "../env";
 import { logger } from "../logger";
-import type { TagLike } from "../types/download-client.types";
+import type { Tag } from "../tags/tag.types";
 import { camelToSnake, snakeToCamel } from "../util";
 
-export type { TagLike };
+export type { Tag };
 
 export type ProviderField = { name?: string | null; value?: any };
 
@@ -116,7 +116,7 @@ export abstract class ProviderResourceSync<
   /** Lazily resolved so pure helper methods stay usable without a configured API. */
   protected get apiClient(): ProwlarrClient {
     if (!this._api) {
-      this._api = getSpecificClient("PROWLARR");
+      this._api = getClient("PROWLARR");
     }
     return this._api;
   }
@@ -140,7 +140,7 @@ export abstract class ProviderResourceSync<
     return normalized;
   }
 
-  resolveTagNamesToIds(tagNames: (string | number)[], serverTags: TagLike[]): { ids: number[]; missingTags: string[] } {
+  resolveTagNamesToIds(tagNames: (string | number)[], serverTags: Tag[]): { ids: number[]; missingTags: string[] } {
     const ids: number[] = [];
     const missingTags: string[] = [];
     for (const tag of tagNames) {
@@ -203,7 +203,7 @@ export abstract class ProviderResourceSync<
     return { valid: errors.length === 0, errors, warnings };
   }
 
-  isEqual(config: TConfig, server: TResource, serverTags: TagLike[], ctx: TCtx): { equal: boolean; changes: FieldChange[] } {
+  isEqual(config: TConfig, server: TResource, serverTags: Tag[], ctx: TCtx): { equal: boolean; changes: FieldChange[] } {
     if (!this.matches(config, server)) {
       return { equal: false, changes: [] };
     }
@@ -282,7 +282,7 @@ export abstract class ProviderResourceSync<
     return this.extras.some((e) => e.specified(config)) || (config.tags?.length ?? 0) > 0;
   }
 
-  calculateDiff(configItems: TConfig[], serverItems: TResource[], serverTags: TagLike[], ctx: TCtx): ProviderDiff<TConfig, TResource> {
+  calculateDiff(configItems: TConfig[], serverItems: TResource[], serverTags: Tag[], ctx: TCtx): ProviderDiff<TConfig, TResource> {
     // First match wins, as a linear scan would.
     const byKey = new Map<string, TResource>();
     for (const server of serverItems) {
@@ -309,7 +309,7 @@ export abstract class ProviderResourceSync<
     return diff;
   }
 
-  async resolveConfig(config: TConfig, serverTags: TagLike[], ctx: TCtx, server?: TResource, partialUpdate = false): Promise<TResource> {
+  async resolveConfig(config: TConfig, serverTags: Tag[], ctx: TCtx, server?: TResource, partialUpdate = false): Promise<TResource> {
     const schema = await this.getSchema();
     const template = this.findTemplate(config, schema);
     if (!template) {

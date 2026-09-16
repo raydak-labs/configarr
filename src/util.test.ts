@@ -1,8 +1,17 @@
 import path from "path";
 import { describe, expect, test } from "vitest";
-import { MergedCustomFormatResource } from "./types/merged.types";
+import { CustomFormatRequest } from "./customFormats/customFormat.types";
 import { TrashCF, TrashCFSpF } from "./types/trashguide.types";
-import { cloneWithJSON, compareCustomFormats, compareObjectsCarr, loadJsonFile, mapImportCfToRequestCf, toCarrCF, zip } from "./util";
+import {
+  cloneWithJSON,
+  compareCustomFormats,
+  compareObjectsCarr,
+  loadJsonFile,
+  mapImportCfToRequestCf,
+  toCarrCF,
+  toEnumOrThrow,
+  zip,
+} from "./util";
 
 const exampleCFImplementations = {
   name: "TestSpec",
@@ -75,7 +84,7 @@ const exampleCFImplementations = {
 };
 
 describe("SizeSpecification", async () => {
-  const serverResponse: MergedCustomFormatResource = {
+  const serverResponse: CustomFormatRequest = {
     id: 103,
     name: "Size: Block More 40GB",
     includeCustomFormatWhenRenaming: false,
@@ -171,7 +180,7 @@ describe("SizeSpecification", async () => {
 
 describe("compareImportCFs - general", async () => {
   const filePath = path.resolve(__dirname, "../tests/samples/20240930_cf_exceptLanguage.json");
-  const serverResponse = loadJsonFile<MergedCustomFormatResource>(filePath);
+  const serverResponse = loadJsonFile<CustomFormatRequest>(filePath);
 
   const custom: TrashCF = {
     trash_id: "test123",
@@ -381,5 +390,17 @@ describe("compareObjectsCarr", () => {
     // Counts differ (two "a" vs two "b"), so this is a real content change, not a reorder -
     // it must report per-index field changes, not collapse into one "tags" change.
     expect(result.changes.some((c) => c.field === "tags")).toBe(false);
+  });
+});
+
+describe("toEnumOrThrow", () => {
+  const Sample = { All: "all", None: "none" } as const;
+
+  test("returns the matching enum member", () => {
+    expect(toEnumOrThrow(Sample, "all", "sample")).toBe(Sample.All);
+  });
+
+  test("throws on unknown values", () => {
+    expect(() => toEnumOrThrow(Sample, "nope", "sample")).toThrow("Unknown sample value 'nope'");
   });
 });

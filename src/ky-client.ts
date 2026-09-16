@@ -2,7 +2,7 @@
 import type { BeforeRequestHook, Hooks, KyInstance, Options as KyOptions, NormalizedOptions } from "ky";
 import ky, { HTTPError } from "ky";
 import { logger } from "./logger";
-import { createConnectionErrorParts } from "./clients/unified-client";
+import { createConnectionErrorParts, selectConnectionErrorDetail } from "./clients/connection";
 
 function toErrorMessage(value: unknown): string {
   if (value === null) return "null";
@@ -208,9 +208,7 @@ export class HttpClient<SecurityDataType = unknown> {
       logger.debug(`Error during request with error: ${error?.name}`);
 
       // Use createConnectionErrorParts for consistent error handling
-      const errorParts = createConnectionErrorParts(error);
-      const [friendlyMessage, structuredMessage, rawMessage] = errorParts;
-      const enhancedMessage = structuredMessage || friendlyMessage || rawMessage;
+      const enhancedMessage = selectConnectionErrorDetail(createConnectionErrorParts(error));
 
       if (error instanceof HTTPError) {
         const { response, request } = error;

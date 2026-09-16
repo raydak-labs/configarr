@@ -5,9 +5,11 @@
  *   ARR_E2E=1 pnpm test:e2e:arr
  */
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
-import { mapToServerDelayProfile } from "../../src/delay-profiles";
 import { InputConfigDelayProfileSchema } from "../../src/types/config.types";
-import { MergedDelayProfileResource } from "../../src/types/merged.types";
+import { DelayProfileLidarrSync, LidarrDelayProfile } from "../../src/delayProfiles/delayProfileLidarr";
+import { StandardDelayProfileSync } from "../../src/delayProfiles/delayProfileBase";
+import { DelayProfileShared } from "../../src/delayProfiles/delayProfile.types";
+import type { MediaArrType } from "../../src/types/common.types";
 import {
   ARR_TARGETS,
   LEGACY_DELAY_PROFILE,
@@ -18,10 +20,10 @@ import {
   type DelayProfileClient,
 } from "./helpers";
 
-const LEGACY_KINDS = ["sonarr", "radarr", "whisparr", "readarr"] as const;
+const LEGACY_KINDS: MediaArrType[] = ["SONARR", "RADARR", "WHISPARR", "READARR"];
 
 describe.runIf(arrE2eEnabled)("arr delay profiles (live)", () => {
-  for (const target of ARR_TARGETS.filter((t) => (LEGACY_KINDS as readonly string[]).includes(t.kind))) {
+  for (const target of ARR_TARGETS.filter((t) => LEGACY_KINDS.includes(t.kind))) {
     describe(target.kind, () => {
       let client: DelayProfileClient;
 
@@ -47,25 +49,31 @@ describe.runIf(arrE2eEnabled)("arr delay profiles (live)", () => {
           bypassIfAboveCustomFormatScore: false,
           minimumCustomFormatScore: 0,
         });
-        const payload = mapToServerDelayProfile(parsed, []);
-        expect(payload.items).toBeUndefined();
-        expect(payload.enableUsenet).toBe(true);
+        const payload = new StandardDelayProfileSync(client, {
+          Unknown: "unknown",
+          Usenet: "usenet",
+          Torrent: "torrent",
+        }).mapToServer(parsed, []);
+        expect(payload).not.toHaveProperty("items");
+        expect(payload).toMatchObject({ enableUsenet: true });
 
         await client.updateDelayProfile("1", payload);
 
-        const profiles = (await client.getDelayProfiles()) as MergedDelayProfileResource[];
+        const profiles = (await client.getDelayProfiles()) as DelayProfileShared[];
         const def = defaultDelayProfile(profiles);
         expect(def).toBeDefined();
-        expect(def!.usenetDelay).toBe(7);
-        expect(def!.torrentDelay).toBe(3);
-        expect(def!.bypassIfHighestQuality).toBe(true);
-        expect(def!.preferredProtocol).toBe("usenet");
+        expect(def).toMatchObject({
+          usenetDelay: 7,
+          torrentDelay: 3,
+          bypassIfHighestQuality: true,
+          preferredProtocol: "usenet",
+        });
       });
     });
   }
 
   describe("lidarr nightly", () => {
-    const target = ARR_TARGETS.find((t) => t.kind === "lidarr")!;
+    const target = ARR_TARGETS.find((t) => t.kind === "LIDARR")!;
     let client: DelayProfileClient;
 
     beforeAll(async () => {
@@ -103,16 +111,17 @@ describe.runIf(arrE2eEnabled)("arr delay profiles (live)", () => {
         minimumCustomFormatScore: 0,
       });
 
-      const payload = mapToServerDelayProfile(parsed, []);
-      expect(payload.items).toHaveLength(2);
+      const payload = new DelayProfileLidarrSync(client).mapToServer(parsed, []);
+      expect("items" in payload && payload.items).toHaveLength(2);
       expect(payload).not.toHaveProperty("enableUsenet");
 
       await client.updateDelayProfile("1", payload);
 
-      const profiles = (await client.getDelayProfiles()) as MergedDelayProfileResource[];
+      const profiles = (await client.getDelayProfiles()) as LidarrDelayProfile[];
       const def = defaultDelayProfile(profiles);
       expect(def).toBeDefined();
-      expect(def!.items).toEqual([
+      const items = def && "items" in def ? def.items : undefined;
+      expect(items).toEqual([
         { name: "Usenet", protocol: "UsenetDownloadProtocol", allowed: true, delay: 2 },
         { name: "Torrent", protocol: "TorrentDownloadProtocol", allowed: true, delay: 0 },
       ]);

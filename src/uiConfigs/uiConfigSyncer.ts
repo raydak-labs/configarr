@@ -1,11 +1,13 @@
-import { getSpecificClient } from "../clients/unified-client";
+import type { ArrTypeToClient } from "../clients/client";
 import { DiffEntry } from "../diffReport/diffReport.types";
 import { logger } from "../logger";
-import { ArrType } from "../types/common.types";
+import { MediaArrType } from "../types/common.types";
 import type { UiConfigType } from "../types/config.types";
 import { UiConfigSyncResult, UiConfigResource } from "./uiConfig.types";
 import { compareObjectsCarr } from "../util";
 import { getEnvs } from "../env";
+
+type UiConfigClient = Pick<ArrTypeToClient[MediaArrType], "getUiConfig" | "updateUiConfig">;
 
 /**
  * Type guard to validate that server config has the required id field
@@ -17,7 +19,11 @@ function hasValidId(config: Record<string, unknown>): config is UiConfigResource
 /**
  * Sync UI config for a specific *Arr instance
  */
-export async function syncUiConfig(arrType: ArrType, uiConfig: UiConfigType | undefined): Promise<UiConfigSyncResult> {
+export async function syncUiConfig(
+  client: UiConfigClient,
+  arrType: MediaArrType,
+  uiConfig: UiConfigType | undefined,
+): Promise<UiConfigSyncResult> {
   // If ui_config is undefined/not present, skip management entirely
   if (uiConfig === undefined) {
     logger.debug(`No UI config specified for ${arrType}`);
@@ -25,9 +31,6 @@ export async function syncUiConfig(arrType: ArrType, uiConfig: UiConfigType | un
   }
 
   try {
-    // Get specific client for this arrType - TypeScript infers the correct type
-    const client = getSpecificClient(arrType);
-
     // Fetch current server UI config
     logger.debug(`Fetching UI config from ${arrType}...`);
     const serverConfig = await client.getUiConfig();

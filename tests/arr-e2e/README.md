@@ -35,7 +35,7 @@ Default URLs / key (override with `SONARR_BASE_URL`, `SONARR_API_KEY`, …):
 
 1. **Full pipeline smoke** (`full-pipeline.e2e.test.ts`): runs real `configarr` twice against all five *arrs (CF/QP/delay/… pipeline). Asserts exit `0` and `Execution Summary` success `(1/0/0)` per type. Not field-level.
 2. **Delay profiles** (`delay-profiles.e2e.test.ts`):
-   - Sonarr / Radarr / Whisparr / Readarr — legacy delay-profile payload via `mapToServerDelayProfile`
+   - Sonarr / Radarr / Whisparr / Readarr — legacy delay-profile payload via `StandardDelayProfileSync.mapToServer`
    - Lidarr nightly — legacy → 400; `items` → success (#481)
 
 ## GitHub Actions (optional)

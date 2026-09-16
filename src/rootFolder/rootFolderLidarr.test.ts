@@ -1,25 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { LidarrRootFolderSync } from "./rootFolderLidarr";
+import type { Mocked } from "vitest";
+import { MonitorTypes, NewItemMonitorTypes } from "../__generated__/lidarr/data-contracts";
+import { LidarrRootFolderApi, LidarrRootFolderSync } from "./rootFolderLidarr";
 import { ServerCache } from "../cache";
 import { InputConfigRootFolderLidarr } from "../types/config.types";
-import { getSpecificClient } from "../clients/unified-client";
-
-// Mock the unified client
-vi.mock("../clients/unified-client", () => ({
-  getSpecificClient: vi.fn(),
-}));
-
-// Mock the quality profiles loader
-vi.mock("../quality-profiles", () => ({
-  loadQualityProfilesFromServer: vi.fn(),
-}));
-
-import { loadQualityProfilesFromServer } from "../quality-profiles";
 
 describe("LidarrRootFolderSync", () => {
-  const mockApi = {
+  const mockApi: Mocked<LidarrRootFolderApi> = {
     getRootfolders: vi.fn(),
+    addRootFolder: vi.fn(),
+    updateRootFolder: vi.fn(),
+    deleteRootFolder: vi.fn(),
     getMetadataProfiles: vi.fn(),
+    getQualityProfiles: vi.fn(),
     createTag: vi.fn(),
   };
 
@@ -27,10 +20,9 @@ describe("LidarrRootFolderSync", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    (getSpecificClient as any).mockReturnValue(mockApi);
-    serverCache = new ServerCache([], [], [], []);
+    serverCache = new ServerCache();
     serverCache.tags = [];
-    vi.mocked(loadQualityProfilesFromServer).mockResolvedValue([
+    mockApi.getQualityProfiles.mockResolvedValue([
       { id: 1, name: "Any" },
       { id: 2, name: "Lossless" },
     ]);
@@ -47,7 +39,7 @@ describe("LidarrRootFolderSync", () => {
         { id: 200, label: "tag2" },
       ];
 
-      const sync = new LidarrRootFolderSync();
+      const sync = new LidarrRootFolderSync(mockApi);
       const config: InputConfigRootFolderLidarr = {
         path: "/music",
         name: "My Music",
@@ -66,10 +58,48 @@ describe("LidarrRootFolderSync", () => {
       });
     });
 
+    it("fetches quality and metadata profiles once across resolves", async () => {
+      const sync = new LidarrRootFolderSync(mockApi);
+      const config: InputConfigRootFolderLidarr = {
+        path: "/music",
+        name: "My Music",
+        metadata_profile: "Standard",
+        quality_profile: "Any",
+      };
+
+      await sync.resolveRootFolderConfig(config, serverCache);
+      await sync.resolveRootFolderConfig({ ...config, path: "/music2", name: "Other" }, serverCache);
+
+      expect(mockApi.getQualityProfiles).toHaveBeenCalledTimes(1);
+      expect(mockApi.getMetadataProfiles).toHaveBeenCalledTimes(1);
+    });
+
+    it("uses cached quality profiles instead of fetching", async () => {
+      serverCache.qualityProfiles = [
+        { id: 1, name: "Any" },
+        { id: 2, name: "Lossless" },
+      ];
+
+      const sync = new LidarrRootFolderSync(mockApi);
+      const result = await sync.resolveRootFolderConfig(
+        {
+          path: "/music",
+          name: "My Music",
+          metadata_profile: "Standard",
+          quality_profile: "Any",
+        },
+        serverCache,
+      );
+
+      expect(mockApi.getQualityProfiles).not.toHaveBeenCalled();
+      expect(mockApi.getMetadataProfiles).toHaveBeenCalledTimes(1);
+      expect(result.defaultQualityProfileId).toBe(1);
+    });
+
     it("should resolve Lidarr config with optional monitor fields", async () => {
       serverCache.tags = [];
 
-      const sync = new LidarrRootFolderSync();
+      const sync = new LidarrRootFolderSync(mockApi);
       const config: InputConfigRootFolderLidarr = {
         path: "/music",
         name: "My Music",
@@ -98,7 +128,7 @@ describe("LidarrRootFolderSync", () => {
         { id: 200, label: "tag2" },
       ];
 
-      const sync = new LidarrRootFolderSync();
+      const sync = new LidarrRootFolderSync(mockApi);
       const config: InputConfigRootFolderLidarr = {
         path: "/music",
         name: "My Music",
@@ -121,7 +151,7 @@ describe("LidarrRootFolderSync", () => {
     it("should throw error for missing metadata profile", async () => {
       serverCache.tags = [];
 
-      const sync = new LidarrRootFolderSync();
+      const sync = new LidarrRootFolderSync(mockApi);
       const config: InputConfigRootFolderLidarr = {
         path: "/music",
         name: "My Music",
@@ -137,7 +167,7 @@ describe("LidarrRootFolderSync", () => {
     it("should throw error for missing quality profile", async () => {
       serverCache.tags = [];
 
-      const sync = new LidarrRootFolderSync();
+      const sync = new LidarrRootFolderSync(mockApi);
       const config: InputConfigRootFolderLidarr = {
         path: "/music",
         name: "My Music",
@@ -154,7 +184,7 @@ describe("LidarrRootFolderSync", () => {
       serverCache.tags = [{ id: 100, label: "existing" }];
       mockApi.createTag.mockResolvedValue({ id: 300, label: "nonexistent" });
 
-      const sync = new LidarrRootFolderSync();
+      const sync = new LidarrRootFolderSync(mockApi);
       const config: InputConfigRootFolderLidarr = {
         path: "/music",
         name: "My Music",
@@ -182,9 +212,9 @@ describe("LidarrRootFolderSync", () => {
 
   describe("calculateDiff", () => {
     it("should handle object root folders", async () => {
-      mockApi.getRootfolders.mockResolvedValue(["/existing"]);
+      mockApi.getRootfolders.mockResolvedValue([{ path: "/existing" }]);
 
-      const sync = new LidarrRootFolderSync();
+      const sync = new LidarrRootFolderSync(mockApi);
       const result = await sync.calculateDiff(
         [
           { path: "/existing", name: "existing", metadata_profile: "Standard", quality_profile: "Any" },
@@ -202,7 +232,7 @@ describe("LidarrRootFolderSync", () => {
         metadata_profile: "Standard",
         quality_profile: "Any",
       });
-      expect(result?.changed[0]?.server).toEqual("/existing");
+      expect(result?.changed[0]?.server).toEqual({ path: "/existing" });
       expect(result?.changed[0]?.fieldChanges.length).toBeGreaterThan(0);
     });
 
@@ -212,7 +242,7 @@ describe("LidarrRootFolderSync", () => {
         { path: "/old-server", id: 2, name: "Old Server" },
       ]);
 
-      const sync = new LidarrRootFolderSync();
+      const sync = new LidarrRootFolderSync(mockApi);
       const result = await sync.calculateDiff(
         [
           { path: "/server-folder", name: "Config Folder", metadata_profile: "Standard", quality_profile: "Any" },
@@ -241,7 +271,7 @@ describe("LidarrRootFolderSync", () => {
         { path: "/music", id: 1, name: "old-name", defaultQualityProfileId: 1, defaultMetadataProfileId: 10, defaultTags: [] },
       ]);
 
-      const sync = new LidarrRootFolderSync();
+      const sync = new LidarrRootFolderSync(mockApi);
       const result = await sync.calculateDiff(
         [{ path: "/music", name: "new-name", metadata_profile: "Standard", quality_profile: "Any" }],
         serverCache,
@@ -249,6 +279,29 @@ describe("LidarrRootFolderSync", () => {
 
       expect(result?.changed).toHaveLength(1);
       expect(result?.changed[0]?.fieldChanges).toContainEqual({ field: "name", from: "old-name", to: "new-name" });
+    });
+
+    it("does not treat omitted monitor as a change against the server default", async () => {
+      mockApi.getRootfolders.mockResolvedValue([
+        {
+          path: "/music",
+          id: 1,
+          name: "My Music",
+          defaultMetadataProfileId: 10,
+          defaultQualityProfileId: 1,
+          defaultMonitorOption: MonitorTypes.All,
+          defaultNewItemMonitorOption: NewItemMonitorTypes.All,
+          defaultTags: [],
+        },
+      ]);
+
+      const sync = new LidarrRootFolderSync(mockApi);
+      const result = await sync.calculateDiff(
+        [{ path: "/music", name: "My Music", metadata_profile: "Standard", quality_profile: "Any" }],
+        serverCache,
+      );
+
+      expect(result).toBeNull();
     });
   });
 });

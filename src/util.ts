@@ -1,10 +1,9 @@
 import { existsSync, mkdirSync, readFileSync, rmSync } from "node:fs";
 import path from "node:path";
 import simpleGit, { CheckRepoActions } from "simple-git";
-import { MergedCustomFormatResource } from "./types/merged.types";
+import { ConfigarrCF, CustomFormatRequest, ImportCF, UserFriendlyField } from "./customFormats/customFormat.types";
 import { getHelpers } from "./env";
 import { logger } from "./logger";
-import { ConfigarrCF, ImportCF, UserFriendlyField } from "./types/common.types";
 import { TrashCF } from "./types/trashguide.types";
 import { FieldChange } from "./diffReport/diffReport.types";
 
@@ -66,7 +65,7 @@ export const toCarrCF = (input: TrashCF | ConfigarrCF): ConfigarrCF => {
   return trashToCarrCF(input);
 };
 
-export const mapImportCfToRequestCf = (cf: TrashCF | ConfigarrCF): MergedCustomFormatResource => {
+export const mapImportCfToRequestCf = (cf: TrashCF | ConfigarrCF): CustomFormatRequest => {
   let customId;
   let rest: ImportCF;
 
@@ -112,17 +111,9 @@ export const mapImportCfToRequestCf = (cf: TrashCF | ConfigarrCF): MergedCustomF
 };
 
 export function compareCustomFormats(
-  serverObject: MergedCustomFormatResource,
-  localObject: MergedCustomFormatResource,
+  serverObject: CustomFormatRequest,
+  localObject: CustomFormatRequest,
 ): ReturnType<typeof compareObjectsCarr> {
-  return compareObjectsCarr(serverObject, localObject);
-}
-
-export function compareNaming(serverObject: any, localObject: any): ReturnType<typeof compareObjectsCarr> {
-  return compareObjectsCarr(serverObject, localObject);
-}
-
-export function compareMediamanagement(serverObject: any, localObject: any): ReturnType<typeof compareObjectsCarr> {
   return compareObjectsCarr(serverObject, localObject);
 }
 
@@ -417,6 +408,15 @@ export function pickFromConst<T extends readonly string[], K extends T[number]>(
 
 export function isInConstArray<T extends readonly unknown[]>(array: T, value: unknown): value is T[number] {
   return array.includes(value as T[number]);
+}
+
+export function toEnumOrThrow<T extends Record<string, string>>(enumObj: T, value: string, label: string): T[keyof T] {
+  const members = Object.values(enumObj);
+  const match = members.find((member) => member === value);
+  if (match === undefined) {
+    throw new Error(`Unknown ${label} value '${value}'. Expected: ${members.join(", ")}`);
+  }
+  return match as T[keyof T];
 }
 
 /**

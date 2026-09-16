@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { syncRemotePaths, remotePathsToDiffEntries } from "./remotePathSyncer";
-import { getUnifiedClient, getSpecificClient } from "../clients/unified-client";
 import { RemotePathMappingResource } from "./remotePath.types";
 
 // Mock env - use importOriginal to preserve other env functions
@@ -18,7 +17,6 @@ vi.mock("../env", async (importOriginal) => {
   };
 });
 
-vi.mock("../clients/unified-client");
 vi.mock("../logger");
 
 describe("remotePathSyncer", () => {
@@ -33,7 +31,7 @@ describe("remotePathSyncer", () => {
       download_clients: {},
     };
 
-    const result = await syncRemotePaths("RADARR", config);
+    const result = await syncRemotePaths({} as any, "RADARR", config);
 
     expect(result).toEqual({
       created: 0,
@@ -57,7 +55,7 @@ describe("remotePathSyncer", () => {
       },
     };
 
-    const result = await syncRemotePaths("RADARR", config);
+    const result = await syncRemotePaths({} as any, "RADARR", config);
 
     expect(result.created).toBe(0);
     expect(result.updated).toBe(0);
@@ -75,15 +73,6 @@ describe("remotePathSyncer", () => {
         updateRemotePathMapping: vi.fn(),
         deleteRemotePathMapping: vi.fn(),
       };
-
-      vi.mocked(getUnifiedClient).mockReturnValue({
-        api: mockRadarrClient,
-      } as any);
-
-      // Mock getSpecificClient for all arrTypes
-      vi.mocked(getSpecificClient).mockImplementation((arrType?: string) => {
-        return mockRadarrClient;
-      });
     });
 
     it("should handle already exists error by falling back to update", async () => {
@@ -114,7 +103,7 @@ describe("remotePathSyncer", () => {
         },
       };
 
-      const result = await syncRemotePaths("RADARR", config);
+      const result = await syncRemotePaths(mockRadarrClient, "RADARR", config);
 
       expect(result.updated).toBe(1);
       expect(mockRadarrClient.updateRemotePathMapping).toHaveBeenCalledWith(
@@ -149,13 +138,31 @@ describe("remotePathSyncer", () => {
         },
       };
 
-      const result = await syncRemotePaths("RADARR", config);
+      const result = await syncRemotePaths(mockRadarrClient, "RADARR", config);
 
       // Should be detected as unchanged (paths are the same after normalization)
       expect(result.unchanged).toBe(1);
       expect(result.created).toBe(0);
       expect(result.updated).toBe(0);
       expect(mockRadarrClient.createRemotePathMapping).not.toHaveBeenCalled();
+    });
+
+    it("should treat local_path trailing slashes as unchanged", async () => {
+      mockRadarrClient.getRemotePathMappings.mockResolvedValue([
+        { id: 1, host: "transmission", remotePath: "/downloads/tv", localPath: "/downloads/1/" },
+      ]);
+
+      const result = await syncRemotePaths(mockRadarrClient, "SONARR", {
+        custom_formats: [],
+        quality_profiles: [],
+        download_clients: {
+          remote_paths: [{ host: "transmission", remote_path: "/downloads/tv", local_path: "/downloads/1" }],
+        },
+      } as any);
+
+      expect(result.unchanged).toBe(1);
+      expect(result.updated).toBe(0);
+      expect(mockRadarrClient.updateRemotePathMapping).not.toHaveBeenCalled();
     });
 
     it("should delete all mappings when delete_unmanaged_remote_paths is true with empty array", async () => {
@@ -176,7 +183,7 @@ describe("remotePathSyncer", () => {
         },
       };
 
-      const result = await syncRemotePaths("RADARR", config);
+      const result = await syncRemotePaths(mockRadarrClient, "RADARR", config);
 
       expect(result.deleted).toBe(2);
       expect(mockRadarrClient.deleteRemotePathMapping).toHaveBeenCalledWith("1");
@@ -222,7 +229,7 @@ describe("remotePathSyncer", () => {
         },
       };
 
-      const result = await syncRemotePaths("RADARR", config);
+      const result = await syncRemotePaths(mockRadarrClient, "RADARR", config);
 
       expect(result.created).toBe(1);
       expect(result.updated).toBe(1);
@@ -280,7 +287,7 @@ describe("remotePathSyncer", () => {
         },
       };
 
-      const result = await syncRemotePaths("RADARR", config);
+      const result = await syncRemotePaths(mockRadarrClient, "RADARR", config);
 
       expect(result.created).toBe(2);
       expect(mockRadarrClient.createRemotePathMapping).toHaveBeenCalledTimes(2);

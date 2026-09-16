@@ -13,9 +13,8 @@ const mockClient = {
   createTag: vi.fn(async (t: { label: string }) => ({ id: Math.floor(Math.random() * 1000) + 10, label: t.label })),
   deleteTag: vi.fn(async () => undefined),
 };
-vi.mock("../clients/unified-client", () => ({
-  getSpecificClient: vi.fn(() => mockClient),
-  getUnifiedClient: vi.fn(() => ({ api: mockClient })),
+vi.mock("../clients/client", () => ({
+  getClient: vi.fn(() => mockClient),
 }));
 
 const makeCache = (tags: { id: number; label: string }[]) => ({ tags: [...tags] }) as unknown as ServerCache;

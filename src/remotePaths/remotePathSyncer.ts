@@ -1,10 +1,15 @@
-import { getSpecificClient } from "../clients/unified-client";
+import type { ArrTypeToClient } from "../clients/client";
 import { logger } from "../logger";
-import { ArrType } from "../types/common.types";
+import { MediaArrType } from "../types/common.types";
 import { RemotePathMappingResource, RemotePathSyncResult, RemotePathDiff } from "./remotePath.types";
 import { InputConfigRemotePath, MergedConfigInstance } from "../types/config.types";
 import { getEnvs } from "../env";
 import { DiffEntry } from "../diffReport/diffReport.types";
+
+type RemotePathClient = Pick<
+  ArrTypeToClient[MediaArrType],
+  "getRemotePathMappings" | "createRemotePathMapping" | "updateRemotePathMapping" | "deleteRemotePathMapping"
+>;
 
 /**
  * Normalize a path by removing trailing slashes
@@ -52,7 +57,7 @@ function calculateDiff(configs: InputConfigRemotePath[], serverMappings: RemoteP
     const serverMapping = serverMap.get(key);
     if (!serverMapping) {
       toCreate.push(config);
-    } else if (serverMapping.localPath !== config.local_path) {
+    } else if (normalizePath(serverMapping.localPath ?? "") !== normalizePath(config.local_path)) {
       if (serverMapping.id) {
         toUpdate.push({ id: serverMapping.id, config, server: serverMapping });
       }
@@ -103,7 +108,11 @@ export function remotePathsToDiffEntries(diff: RemotePathDiff): DiffEntry[] {
 /**
  * Sync remote path mappings for a specific *Arr instance
  */
-export async function syncRemotePaths(arrType: ArrType, config: MergedConfigInstance): Promise<RemotePathSyncResult> {
+export async function syncRemotePaths(
+  client: RemotePathClient,
+  arrType: MediaArrType,
+  config: MergedConfigInstance,
+): Promise<RemotePathSyncResult> {
   const remotePaths = config.download_clients?.remote_paths;
   const deleteUnmanaged = config.download_clients?.delete_unmanaged_remote_paths ?? false;
 
@@ -124,10 +133,6 @@ export async function syncRemotePaths(arrType: ArrType, config: MergedConfigInst
   }
 
   try {
-    // Config validation happens earlier in validateConfig (config.ts)
-    // Get specific client for this arrType - TypeScript infers the correct type
-    const client = getSpecificClient(arrType);
-
     // Fetch current server mappings
     logger.debug(`Fetching remote path mappings from ${arrType}...`);
     const serverMappings = await client.getRemotePathMappings();

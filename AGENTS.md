@@ -13,92 +13,31 @@
 ## Quick Setup
 
 ```bash
-# Install dependencies
 pnpm install
-
-# Development
-pnpm start              # Run the application
-pnpm test              # Run tests
-pnpm test:watch        # Run tests in watch mode
-pnpm build             # Build for production
-pnpm lint              # Check formatting
-pnpm lint:fix          # Fix formatting
-pnpm typecheck         # TypeScript type checking
 ```
+
+Scripts are in `package.json` (`start`, `test`, `test:watch`, `build`, `lint`, `lint:fix`, `typecheck`, plus `coverage`, `generateApi`, `test:e2e:arr`, `release`).
 
 ## Development Rules
 
-### ✅ Must Do After Every Implementation
+Before considering work complete, all must pass: `pnpm build && pnpm test && pnpm lint && pnpm typecheck`.
 
-1. **Run all three checks** - ALL must pass before considering work complete:
-   ```bash
-   pnpm build && pnpm test && pnpm lint
-   ```
-2. **Type checking** - Ensure no TypeScript errors:
-   ```bash
-   pnpm typecheck
-   ```
-
-### 🎯 Coding Standards
-
-1. **Follow Existing Patterns**
-   - Study similar existing code before implementing new features
-   - Maintain consistency with current architecture
-   - Use established patterns (e.g., rootFolder pattern for new modules)
-
-2. **TypeScript Best Practices**
-   - Use strict typing - avoid `any` when possible
-   - Prefer interfaces for public APIs, types for internal use
-   - Use type inference where it improves readability
-   - Leverage union types and discriminated unions
-   - Use `unknown` instead of `any` for truly unknown types
-
-3. **Architecture Patterns**
-   - **Base Classes** - Abstract common logic (e.g., `BaseMetadataProfileSync`, `BaseRootFolderSync`)
-   - **Type-Specific Implementations** - Extend base classes for each \*arr type
-   - **Factory Pattern** - Use factories to instantiate correct implementation
-   - **Syncer Pattern** - Orchestrate sync operations (create/update/delete)
-
-4. **Code Organization**
-   - Group related functionality in directories (e.g., `metadataProfiles/`, `rootFolder/`)
-   - Use meaningful file names that reflect purpose
-   - Keep client abstractions in `clients/`
-   - Type definitions in `types/` or local `*.types.ts` files
-   - Generated API code in `__generated__/`
+- Use strict typing; `unknown` over `any`. Interfaces for public APIs, types for internal use.
+- Architecture: base classes abstract shared logic per feature; type-specific implementations extend them per \*arr type; a syncer orchestrates create/update/delete. See "Typed per-*arr clients" below for which pattern (A/B/C) a new feature needs and how construction works.
 
 ## AI-Internal Documentation
 
 Store design, architecture, and implementation planning documents created during agent-assisted development in `.ai/docs/` — not in `docs/` (user-facing documentation for configarr.de):
 
-- **`.ai/docs/specs/`** — feature design and architecture documents
+- **`.ai/docs/specs/`** — feature design and architecture decisions
 - **`.ai/docs/plans/`** — step-by-step implementation plans
 
-Use dated filenames (e.g. `2026-07-06-feature-name-design.md`). Cross-reference specs from plans when both exist.
+Specs are dated and fixed, not living documents — a spec is a record of the decision made at that time, not a description of current code (read the code for that). Do not edit a spec's decisions after the fact to match later changes.
 
-## Project Structure
-
-```
-src/
-├── __generated__/         # Auto-generated API clients (don't modify)
-├── clients/               # API client abstractions
-│   ├── unified-client.ts  # Unified interface for all *arr types
-│   ├── radarr-client.ts
-│   ├── sonarr-client.ts
-│   └── ...
-├── metadataProfiles/      # Metadata profiles sync (Lidarr/Readarr)
-│   ├── metadataProfileBase.ts
-│   ├── metadataProfileLidarr.ts
-│   ├── metadataProfileReadarr.ts
-│   └── metadataProfileSyncer.ts
-├── rootFolder/            # Root folder sync
-├── types/                 # Type definitions
-│   ├── config.types.ts    # Configuration types
-│   ├── common.types.ts    # Shared types
-│   └── ...
-├── config.ts              # Configuration loading/merging
-├── index.ts               # Main entry point
-└── ...
-```
+- Filename: `YYYY-MM-DD-feature-name-design.md` (specs) / `YYYY-MM-DD-feature-name.md` (plans).
+- Cross-link: plan links back to its spec at the top; spec links forward to its plan once one exists.
+- When a spec's implementation lands, add a one-line `Status: implemented (YYYY-MM-DD)` at the top — don't rewrite the body.
+- Superseding a past decision: write a new dated spec that links to the old one and states what changed and why. Never rewrite history in place.
 
 ## Key Concepts
 
@@ -114,13 +53,25 @@ The project supports multiple \*arr applications with varying feature support:
   generic base (`src/prowlarr/providerResourceSync.ts`); see `src/prowlarr/` and
   `src/clients/prowlarr-client.ts`.
 
-### Unified Client Pattern
+### Typed per-*arr clients
 
-All \*arr clients implement `IArrClient` interface:
+Callers use `getClient<T>(arrType)` (`src/clients/client.ts`). A literal arr type returns that concrete class (`getClient("SONARR")` → `SonarrClient`). A variable `ArrType` / `MediaArrType` returns a union.
 
-- Provides consistent API across different \*arr types
-- Optional methods for features not supported by all types (e.g., `getMetadataProfiles?()`)
-- Type-safe with generics for quality profiles, custom formats, etc.
+Media clients implement small capabilities in `src/clients/capabilities.ts` (System, Tags, DownloadClients, QualityProfiles, CustomFormats, QualityDefinitions) plus their own methods. Prowlarr implements System + Tags + DownloadClients only — no media stubs.
+
+- **Pattern A** — fields or methods differ per arr: factory `switch` with **one case per arr** + literal `getClient("LIDARR")`. One class file per *arr (`qualityProfileLidarr.ts`). Shared _behavior_ lives on the base as unnamed helpers (`attachMinUpgradeOnCreate`, `PathRootFolderSync`). Do not mash products into filenames or type names (`qualityProfileLidarrReadarr.ts`, `QualityProfileRadarrWhisparrResource`).
+  - Do not put per-arr classes in a `*Generic.ts` file. If 3+ arrs share behavior (path-only root folders, media naming persist), put that behavior on the typed base and keep one thin class file per arr. Pass-through CRUD belongs on the base via `getApi()` plus a capability generic (`DelayProfilesClient<T>`, `QualityDefinitionsClient<T>`) — same as download clients. YAML string → generated string enum uses `toEnumOrThrow(Enum, value, label)` with that arr’s enum object (`getClient("RADARR")` still binds the arr). A variable `arrType` cannot carry five distinct enums. Shared lifecycle lives on the typed base (`BaseDelayProfileSync`, `QualityDefinitionPreferredSync`, `MediaManagementSync`).
+- Pipeline: for Pattern A media features (`qd`, `mm`, `qp`, `delay`, `root`, `downloadClients` in each `src/arr/*Syncer.ts`), the instance syncer constructs the feature class directly with the injected typed client — no factory, no runtime `switch(arrType)`. **One** instance per feature per instance run; load, diff, persist, and delete all go through that object (`persist` / `persistNaming` on the instance, `syncs.downloadClients.syncDownloadClients(...)` for download clients). Do not `new` a second handler to write. Pattern B stages (custom formats, tags, UI config, download-client config, remote paths) take the injected client as a parameter instead of a constructor, since they're plain functions, not classes — see below.
+- **Pattern B** — same method set **and** same field set (custom formats, tags): one module. Capability generic (`CustomFormatsClient<CF>`). The request type must be assignable to each arr’s generated resource so the client passes it to swagger as-is. Do not split into 5 handlers. Takes the injected client as its first parameter (`manageCf(client, ...)`, `loadServerTags(client)`, `syncUiConfig(client, arrType, ...)`, `syncDownloadClientConfig(client, arrType, ...)`, `syncRemotePaths(client, arrType, ...)`) — no internal `getClient(arrType)`. `arrType` stays only where the function needs it for something other than client lookup (logging, per-arr field filtering, result shape).
+- **Pattern C** — Prowlarr-only (`src/prowlarr/providerResourceSync.ts`). Media managers do not get a Pattern C.
+
+Client methods take that arr’s generated resource from `__generated__/<arr>/data-contracts` (same type the handler in that arr’s class file uses). YAML/TRaSH strings become generated enums in that arr’s mapper (`toEnumOrThrow(DownloadProtocol, value, "preferredProtocol")`, or `toDownloadProtocol` when undefined should default). OpenAPI gaps are an intersection in that arr file only (`DelayProfileResource & { items: ... }` in `delayProfileLidarr.ts`).
+
+Shared `src/<feature>/*.types.ts` holds YAML, TRaSH, and diff types — not product payloads (`ProwlarrDownloadClientResource`). Prowlarr uses `__generated__/prowlarr` `DownloadClientResource` in `downloadClientProwlarr.ts` / `prowlarr-client.ts`.
+
+Import the real module (`qualityProfileBase.ts`). Do not add barrels that only re-export.
+
+Do not introduce `Merged*` intersection types for client or cache returns. Do not assert mapping types onto generated resources (`as QualityProfileResource`); if it is not assignable, fix the mapper or the class’s type.
 
 ### Configuration System
 
@@ -140,48 +91,17 @@ Each feature (quality profiles, custom formats, metadata profiles, root folders)
 
 ## Testing
 
-- **Unit tests**: `*.test.ts` files alongside source
-- **Samples**: Test data in `tests/samples/`
-- **Mocking**: Use Vitest mocks for API clients
-- **Coverage**: Run `pnpm coverage` to check coverage
+- Unit tests: `*.test.ts` alongside source. Samples: `tests/samples/`. Mock API clients with Vitest.
 
-## Common Tasks
+## Adding a New \*arr Feature
 
-### Adding Support for New \*arr Feature
-
-1. Check if unified client needs new optional methods
-2. Create feature directory (e.g., `featureName/`)
-3. Implement base class with abstract methods
-4. Create type-specific implementations
-5. Add factory function and syncer
-6. Update main pipeline in `index.ts`
-7. Add tests
-8. Run: `pnpm build && pnpm test && pnpm lint && pnpm typecheck`
-
-### Modifying Existing Feature
-
-1. Locate relevant files (base class, implementations, syncer)
-2. Make changes following existing patterns
-3. Update tests
-4. Run: `pnpm build && pnpm test && pnpm lint && pnpm typecheck`
-
-### Adding New Configuration Options
-
-1. Update types in `types/config.types.ts`
-2. Update configuration merging in `config.ts`
-3. Implement feature logic
-4. Update documentation (if needed)
-5. Run all checks
+Add methods on the concrete \*arr clients (shared method sets go in `src/clients/capabilities.ts`), pick a pattern (A/B/C, see above), implement base + type-specific classes, construct the new class in each `*Syncer.ts`, update the pipeline in `index.ts`, add tests.
 
 ## Important Notes
 
-- **Never edit `CHANGELOG.md` manually** — it is created and maintained by CI/CD (e.g. release automation). Do not add, remove, or rewrite changelog entries by hand; describe user-facing changes in PRs/commits so the pipeline can record them.
-- **Never commit without passing all checks**: build, test, lint, typecheck
-- **Always use pnpm** - not npm or yarn
-- **Backward compatibility** - Maintain existing APIs when refactoring
-- **Type safety** - Prefer compile-time errors over runtime errors
-- **Logging** - Use the `logger` instance for consistent logging
-- **Error handling** - Graceful degradation, informative error messages
+- **Never edit `CHANGELOG.md` manually** — generated by CI release automation. Describe user-facing changes in commits/PRs instead.
+- **Backward compatibility** — maintain existing APIs when refactoring.
+- **Logging** — use the `logger` instance, not `console`.
 
 ## Commit Message Conventions
 
@@ -195,17 +115,5 @@ Each feature (quality profiles, custom formats, metadata profiles, root folders)
 
 ## Resources
 
-- **Documentation**: https://configarr.de
-- **Repository**: https://github.com/raydak-labs/configarr
-- **TRaSH Guides**: https://trash-guides.info/
-- **Recyclarr Compatibility**: Config templates are compatible
-
-## Getting Help
-
-When implementing new features:
-
-1. Look for similar existing implementations
-2. Follow established patterns (especially rootFolder/metadataProfiles)
-3. Keep TypeScript strict typing
-4. Test thoroughly
-5. Ensure all checks pass
+- Docs: https://configarr.de · Repo: https://github.com/raydak-labs/configarr · TRaSH Guides: https://trash-guides.info/
+- Recyclarr config templates are compatible.

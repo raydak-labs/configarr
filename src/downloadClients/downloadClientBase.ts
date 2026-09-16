@@ -1,19 +1,13 @@
 import { z } from "zod";
 import { ServerCache } from "../cache";
-import { getUnifiedClient, IArrClient } from "../clients/unified-client";
-import { DiffEntry } from "../diffReport/diffReport.types";
+import type { DownloadClientsClient, TagsClient } from "../clients/capabilities";
+import type { Tag } from "../tags/tag.types";
+import { DiffEntry, FieldChange } from "../diffReport/diffReport.types";
 import { getEnvs } from "../env";
 import { logger } from "../logger";
 import { ArrType } from "../types/common.types";
 import { InputConfigDownloadClient, MergedConfigInstance } from "../types/config.types";
-import {
-  DownloadClientDiff,
-  DownloadClientField,
-  DownloadClientResource,
-  DownloadClientSyncResult,
-  TagLike,
-  ValidationResult,
-} from "../types/download-client.types";
+import { DownloadClientDiff, DownloadClientShared, DownloadClientSyncResult, ValidationResult } from "./downloadClient.types";
 import { camelToSnake, snakeToCamel } from "../util";
 
 // Constants
@@ -38,7 +32,10 @@ const DownloadClientConfigSchema = z.object({
     .default([]),
 });
 
-export function downloadClientDiffToDiffEntries(diff: DownloadClientDiff, unmanagedToDelete: DownloadClientResource[]): DiffEntry[] {
+export function downloadClientDiffToDiffEntries<T extends DownloadClientShared>(
+  diff: DownloadClientDiff<T>,
+  unmanagedToDelete: T[],
+): DiffEntry[] {
   const entries: DiffEntry[] = diff.create.map((c) => ({
     resourceType: "DownloadClient",
     name: c.name,
@@ -60,32 +57,35 @@ export function downloadClientDiffToDiffEntries(diff: DownloadClientDiff, unmana
   return entries;
 }
 
-export abstract class BaseDownloadClientSync {
-  private _api: IArrClient | undefined;
+export abstract class BaseDownloadClientSync<T extends DownloadClientShared> {
   protected readonly logger = logger;
+  private schema: T[] | null = null;
 
-  protected getApi(): IArrClient {
-    if (!this._api) {
-      this._api = getUnifiedClient();
+  constructor(protected readonly api?: DownloadClientsClient<T> & TagsClient) {}
+
+  protected getApi(): DownloadClientsClient<T> & TagsClient {
+    if (this.api === undefined) {
+      throw new Error("Please configure API first.");
     }
-    return this._api;
+    return this.api;
   }
 
   protected abstract getArrType(): ArrType;
 
   protected abstract calculateDiff(
     configClients: InputConfigDownloadClient[],
-    serverClients: DownloadClientResource[],
+    serverClients: T[],
     cache: ServerCache,
     updatePassword?: boolean,
-  ): Promise<DownloadClientDiff>;
+  ): Promise<DownloadClientDiff<T>>;
 
   public abstract resolveConfig(
     config: InputConfigDownloadClient,
     cache: ServerCache,
-    serverClient?: DownloadClientResource,
+    serverClient?: T,
     partialUpdate?: boolean,
-  ): Promise<DownloadClientResource>;
+    updatePassword?: boolean,
+  ): Promise<T>;
 
   public normalizeConfigFields(configFields: Record<string, unknown>, arrType: ArrType): Record<string, unknown> {
     const normalized: Record<string, unknown> = {};
@@ -104,7 +104,7 @@ export abstract class BaseDownloadClientSync {
     return normalized;
   }
 
-  public resolveTagNamesToIds(tagNames: (string | number)[], serverTags: TagLike[]): { ids: number[]; missingTags: string[] } {
+  public resolveTagNamesToIds(tagNames: (string | number)[], serverTags: Tag[]): { ids: number[]; missingTags: string[] } {
     const ids: number[] = [];
     const missingTags: string[] = [];
 
@@ -124,22 +124,121 @@ export abstract class BaseDownloadClientSync {
     return { ids, missingTags };
   }
 
-  protected findImplementationInSchema(schema: DownloadClientResource[], implementation: string): DownloadClientResource | undefined {
+  protected collectSharedFieldChanges(
+    config: InputConfigDownloadClient,
+    server: T,
+    cache: ServerCache,
+    updatePassword: boolean,
+  ): FieldChange[] {
+    const changes: FieldChange[] = [];
+
+    if (config.enable !== undefined && config.enable !== server.enable) {
+      changes.push({ field: "enable", from: server.enable, to: config.enable });
+    }
+    if (config.priority !== undefined && config.priority !== server.priority) {
+      changes.push({ field: "priority", from: server.priority, to: config.priority });
+    }
+
+    const normalizedConfigFields = this.normalizeConfigFields(config.fields || {}, this.getArrType());
+    const serverFields = server.fields || [];
+
+    for (const serverField of serverFields) {
+      const fieldName = serverField.name;
+      if (!fieldName) continue;
+
+      const configValue = normalizedConfigFields[fieldName];
+      const serverValue = serverField.value;
+
+      if (configValue === undefined) continue;
+
+      let valuesMatch = JSON.stringify(configValue) === JSON.stringify(serverValue);
+
+      if (
+        !valuesMatch &&
+        (fieldName.toLowerCase().includes("password") || fieldName.toLowerCase().includes("apikey")) &&
+        serverValue === "********" &&
+        typeof configValue === "string" &&
+        configValue.length > 0 &&
+        !updatePassword
+      ) {
+        valuesMatch = true;
+      }
+
+      if (!valuesMatch) {
+        changes.push({ field: `fields.${fieldName}`, from: serverValue, to: configValue });
+      }
+    }
+
+    const serverFieldNames = new Set(
+      serverFields.map((f) => f.name).filter((name): name is string => typeof name === "string" && name.length > 0),
+    );
+
+    for (const key of Object.keys(normalizedConfigFields)) {
+      if (key !== snakeToCamel(key)) {
+        continue;
+      }
+
+      if (!serverFieldNames.has(key) && normalizedConfigFields[key] !== undefined) {
+        this.logger.warn(`Config field '${key}' does not exist on server`);
+        changes.push({ field: `fields.${key}`, from: undefined, to: normalizedConfigFields[key] });
+      }
+    }
+
+    const configTags = config.tags;
+    if (configTags !== undefined) {
+      const { ids: resolvedTagIds } = this.resolveTagNamesToIds(configTags, cache.tags);
+      const serverTags = server.tags ?? [];
+
+      const sortedConfigTagIds = [...resolvedTagIds].sort();
+      const sortedServerTags = [...serverTags].sort();
+
+      if (JSON.stringify(sortedConfigTagIds) !== JSON.stringify(sortedServerTags)) {
+        changes.push({ field: "tags", from: sortedServerTags, to: sortedConfigTagIds });
+      }
+    }
+
+    return changes;
+  }
+
+  protected resolveDownloadClientTags(config: InputConfigDownloadClient, cache: ServerCache, serverClient?: T): number[] {
+    if (config.tags === undefined) {
+      return serverClient?.tags ?? [];
+    }
+
+    const { ids, missingTags } = this.resolveTagNamesToIds(config.tags, cache.tags);
+    if (missingTags.length > 0) {
+      this.logger.warn(
+        `Missing tags for download client '${config.name}': ${missingTags.join(", ")}. ` +
+          `These should have been created during batch tag creation.`,
+      );
+    }
+    return ids;
+  }
+
+  protected findImplementationInSchema(schema: T[], implementation: string): T | undefined {
     return schema.find((s) => s.implementation?.toLowerCase() === implementation.toLowerCase());
   }
 
-  protected mergeFieldsWithSchema(
-    schemaFields: DownloadClientField[],
+  protected mergeFieldsWithSchema<F extends { name?: string | null; value?: unknown }>(
+    schemaFields: F[],
     configFields: Record<string, unknown>,
     arrType: ArrType,
-    serverFields: DownloadClientField[] | null | undefined,
+    serverFields: F[] | null | undefined,
     partialUpdate = false,
-  ): DownloadClientField[] {
+    updatePassword = true,
+  ): F[] {
     const normalizedFields = this.normalizeConfigFields(configFields, arrType);
     const baseFields = partialUpdate && serverFields ? serverFields : schemaFields;
 
     return baseFields.map((field) => {
       const fieldName = field.name ?? "";
+      const isSecret = fieldName.toLowerCase().includes("password") || fieldName.toLowerCase().includes("apikey");
+      if (!updatePassword && isSecret && serverFields) {
+        const serverField = serverFields.find((f) => f.name === fieldName);
+        if (serverField) {
+          return { ...field, value: serverField.value };
+        }
+      }
       const configValue = normalizedFields[fieldName];
       return configValue !== undefined ? { ...field, value: configValue } : field;
     });
@@ -162,7 +261,7 @@ export abstract class BaseDownloadClientSync {
         };
   }
 
-  public validateDownloadClient(config: InputConfigDownloadClient, schema: DownloadClientResource[]): ValidationResult {
+  public validateDownloadClient(config: InputConfigDownloadClient, schema: T[]): ValidationResult {
     const zodValidation = this.validateDownloadClientConfig(config);
 
     if (!zodValidation.valid) {
@@ -207,22 +306,24 @@ export abstract class BaseDownloadClientSync {
     return { valid: errors.length === 0, errors, warnings };
   }
 
-  protected async getDownloadClientSchema(cache: ServerCache): Promise<DownloadClientResource[]> {
-    const cached = cache.getDownloadClientSchema();
-    if (cached) {
-      return cached;
+  public setDownloadClientSchema(schema: T[]): void {
+    this.schema = schema;
+  }
+
+  protected async getDownloadClientSchema(_cache: ServerCache): Promise<T[]> {
+    if (this.schema) {
+      return this.schema;
     }
 
-    const schema = await this.getApi().getDownloadClientSchema();
-    cache.setDownloadClientSchema(schema);
-    return schema;
+    this.schema = await this.getApi().getDownloadClientSchema();
+    return this.schema;
   }
 
   public filterUnmanagedClients(
-    serverClients: DownloadClientResource[],
+    serverClients: T[],
     configClients: InputConfigDownloadClient[],
     deleteConfig: Exclude<MergedConfigInstance["download_clients"], undefined>["delete_unmanaged"],
-  ): DownloadClientResource[] {
+  ): T[] {
     const { enabled = false, ignore = [] } = deleteConfig ?? {};
 
     if (!enabled) {
@@ -243,7 +344,7 @@ export abstract class BaseDownloadClientSync {
 
   private async validateConfigClients(
     configClients: InputConfigDownloadClient[],
-    schema: DownloadClientResource[],
+    schema: T[],
   ): Promise<{
     validClients: InputConfigDownloadClient[];
     hasErrors: boolean;
@@ -351,8 +452,12 @@ export abstract class BaseDownloadClientSync {
     return created;
   }
 
-  private async updateClients(updates: DownloadClientDiff["update"], serverCache: ServerCache): Promise<DownloadClientDiff["update"]> {
-    const updated: DownloadClientDiff["update"] = [];
+  private async updateClients(
+    updates: DownloadClientDiff<T>["update"],
+    serverCache: ServerCache,
+    updatePassword: boolean,
+  ): Promise<DownloadClientDiff<T>["update"]> {
+    const updated: DownloadClientDiff<T>["update"] = [];
 
     for (const item of updates) {
       const { config, server, partialUpdate } = item;
@@ -360,7 +465,7 @@ export abstract class BaseDownloadClientSync {
         const updateType = partialUpdate ? "partial" : "full";
         this.logger.info(`Updating download client: '${config.name}' (${updateType} update)...`);
 
-        const payload = await this.resolveConfig(config, serverCache, server, partialUpdate);
+        const payload = await this.resolveConfig(config, serverCache, server, partialUpdate, updatePassword);
         payload.id = server.id; // Preserve server ID
 
         await this.getApi().updateDownloadClient(server.id!.toString(), payload);
@@ -379,8 +484,8 @@ export abstract class BaseDownloadClientSync {
     return updated;
   }
 
-  private async deleteUnmanagedClients(unmanagedClients: DownloadClientResource[]): Promise<DownloadClientResource[]> {
-    const removed: DownloadClientResource[] = [];
+  private async deleteUnmanagedClients(unmanagedClients: T[]): Promise<T[]> {
+    const removed: T[] = [];
 
     for (const client of unmanagedClients) {
       try {
@@ -453,7 +558,7 @@ export abstract class BaseDownloadClientSync {
 
     const [created, updatedItems] = await Promise.all([
       this.createClients(diff.create, serverCache),
-      this.updateClients(diff.update, serverCache),
+      this.updateClients(diff.update, serverCache, updatePassword),
     ]);
 
     const deletedItems = config.download_clients?.delete_unmanaged?.enabled ? await this.deleteUnmanagedClients(unmanagedToDelete) : [];

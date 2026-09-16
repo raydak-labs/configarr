@@ -1,26 +1,36 @@
-import {
-  MetadataProfileResource,
-  MonitorTypes,
-  NewItemMonitorTypes,
-  QualityProfileResource,
-  RootFolderResource,
-  TagResource,
-} from "../__generated__/lidarr/data-contracts";
+import { MonitorTypes, NewItemMonitorTypes, RootFolderResource, TagResource } from "../__generated__/lidarr/data-contracts";
 import { ServerCache } from "../cache";
-import { LidarrClient } from "../clients/lidarr-client";
-import { getSpecificClient } from "../clients/unified-client";
+import type { MetadataProfilesClient, QualityProfilesClient, RootFoldersClient, TagsClient } from "../clients/capabilities";
 import { FieldChange } from "../diffReport/diffReport.types";
-import { loadQualityProfilesFromServer } from "../quality-profiles";
 import { InputConfigRootFolderLidarr } from "../types/config.types";
-import { compareObjectsCarr } from "../util";
+import { compareObjectsCarr, toEnumOrThrow } from "../util";
 import { RootFolderDiff } from "./rootFolder.types";
-import { BaseRootFolderSync } from "./rootFolderBase";
+import { BaseRootFolderSync, definedFields, nameIdMap } from "./rootFolderBase";
+
+type NamedProfile = { name?: string | null; id?: number };
+
+export type LidarrRootFolderApi = RootFoldersClient<RootFolderResource> &
+  Pick<QualityProfilesClient<NamedProfile>, "getQualityProfiles"> &
+  Pick<MetadataProfilesClient<NamedProfile>, "getMetadataProfiles"> &
+  Pick<TagsClient, "createTag">;
 
 export class LidarrRootFolderSync extends BaseRootFolderSync<InputConfigRootFolderLidarr> {
-  protected api: LidarrClient = getSpecificClient("LIDARR");
+  private profileIdMaps: { quality: Map<string, number>; metadata: Map<string, number> } | null = null;
 
-  protected getArrType(): "LIDARR" {
-    return "LIDARR";
+  constructor(protected readonly api: LidarrRootFolderApi) {
+    super(api);
+  }
+
+  private async getProfileIdMaps(serverCache: ServerCache) {
+    if (this.profileIdMaps) {
+      return this.profileIdMaps;
+    }
+
+    const quality =
+      serverCache.qualityProfiles.length > 0 ? nameIdMap(serverCache.qualityProfiles) : nameIdMap(await this.api.getQualityProfiles());
+    const metadata = nameIdMap(await this.api.getMetadataProfiles());
+    this.profileIdMaps = { quality, metadata };
+    return this.profileIdMaps;
   }
 
   public async resolveRootFolderConfig(config: InputConfigRootFolderLidarr, serverCache: ServerCache): Promise<RootFolderResource> {
@@ -28,23 +38,7 @@ export class LidarrRootFolderSync extends BaseRootFolderSync<InputConfigRootFold
       throw new Error(`Lidarr root folders must be objects with name, metadata_profile, and quality_profile. Got string: ${config}`);
     }
 
-    // Load quality profiles and metadata profiles for Lidarr
-    const [qualityProfiles, metadataProfiles] = await Promise.all([loadQualityProfilesFromServer(), this.api.getMetadataProfiles()]);
-
-    const qualityProfileMap = new Map<string, number>();
-    const metadataProfileMap = new Map<string, number>();
-
-    qualityProfiles.forEach((profile: QualityProfileResource) => {
-      if (profile.name && profile.id !== undefined) {
-        qualityProfileMap.set(profile.name, profile.id);
-      }
-    });
-
-    metadataProfiles.forEach((profile: MetadataProfileResource) => {
-      if (profile.id !== undefined && profile.name) {
-        metadataProfileMap.set(profile.name, profile.id);
-      }
-    });
+    const { quality: qualityProfileMap, metadata: metadataProfileMap } = await this.getProfileIdMaps(serverCache);
 
     const name = config.name;
     const metadataProfileId = config.metadata_profile ? metadataProfileMap.get(config.metadata_profile) : undefined;
@@ -91,11 +85,11 @@ export class LidarrRootFolderSync extends BaseRootFolderSync<InputConfigRootFold
     };
 
     if (config.monitor) {
-      result.defaultMonitorOption = config.monitor as MonitorTypes;
+      result.defaultMonitorOption = toEnumOrThrow(MonitorTypes, config.monitor, "Lidarr monitor");
     }
 
     if (config.monitor_new_album) {
-      result.defaultNewItemMonitorOption = config.monitor_new_album as NewItemMonitorTypes;
+      result.defaultNewItemMonitorOption = toEnumOrThrow(NewItemMonitorTypes, config.monitor_new_album, "Lidarr monitor_new_album");
     }
 
     return result;
@@ -116,31 +110,21 @@ export class LidarrRootFolderSync extends BaseRootFolderSync<InputConfigRootFold
       defaultTags: resolvedConfig.defaultTags,
     };
 
-    // For Lidarr, we know the server folder has the Lidarr-specific fields
-    const lidarrServerFolder = serverFolder as RootFolderResource & {
-      name?: string;
-      defaultMetadataProfileId?: number;
-      defaultQualityProfileId?: number;
-      defaultMonitorOption?: string;
-      defaultNewItemMonitorOption?: string;
-      defaultTags?: number[];
-    };
-
     const serverFields = {
-      name: lidarrServerFolder.name,
-      path: lidarrServerFolder.path,
-      defaultMetadataProfileId: lidarrServerFolder.defaultMetadataProfileId,
-      defaultQualityProfileId: lidarrServerFolder.defaultQualityProfileId,
-      defaultMonitorOption: lidarrServerFolder.defaultMonitorOption,
-      defaultNewItemMonitorOption: lidarrServerFolder.defaultNewItemMonitorOption,
-      defaultTags: lidarrServerFolder.defaultTags,
+      name: serverFolder.name,
+      path: serverFolder.path,
+      defaultMetadataProfileId: serverFolder.defaultMetadataProfileId,
+      defaultQualityProfileId: serverFolder.defaultQualityProfileId,
+      defaultMonitorOption: serverFolder.defaultMonitorOption,
+      defaultNewItemMonitorOption: serverFolder.defaultNewItemMonitorOption,
+      defaultTags: serverFolder.defaultTags,
     };
 
-    return compareObjectsCarr(serverFields, configFields);
+    return compareObjectsCarr(serverFields, definedFields(configFields));
   }
 
   async calculateDiff(
-    rootFolders: InputConfigRootFolderLidarr[],
+    rootFolders: InputConfigRootFolderLidarr[] | null,
     serverCache: ServerCache,
   ): Promise<RootFolderDiff<InputConfigRootFolderLidarr> | null> {
     if (rootFolders == null) {

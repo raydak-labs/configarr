@@ -1,12 +1,25 @@
-import { MergedRootFolderResource } from "../types/merged.types";
 import { ServerCache } from "../cache";
-import { getUnifiedClient, IArrClient } from "../clients/unified-client";
+import type { RootFoldersClient } from "../clients/capabilities";
 import { DiffEntry } from "../diffReport/diffReport.types";
 import { getEnvs } from "../env";
 import { logger } from "../logger";
-import { ArrType } from "../types/common.types";
 import { InputConfigRootFolder } from "../types/config.types";
-import { RootFolderDiff, RootFolderSyncResult } from "./rootFolder.types";
+import { RootFolderDiff, RootFolderServerResource, RootFolderSyncResult } from "./rootFolder.types";
+
+export function nameIdMap(profiles: { name?: string | null; id?: number }[]): Map<string, number> {
+  const map = new Map<string, number>();
+  for (const profile of profiles) {
+    if (profile.name && profile.id !== undefined) {
+      map.set(profile.name, profile.id);
+    }
+  }
+  return map;
+}
+
+/** Drop undefined so compareObjectsCarr does not treat omitted YAML fields as "set to undefined". */
+export function definedFields<T extends Record<string, unknown>>(obj: T): Partial<T> {
+  return Object.fromEntries(Object.entries(obj).filter(([, value]) => value !== undefined)) as Partial<T>;
+}
 
 export function rootFolderDiffToDiffEntries(diff: RootFolderDiff): DiffEntry[] {
   const entries: DiffEntry[] = diff.missingOnServer.map((folder) => ({
@@ -37,11 +50,32 @@ export function rootFolderDiffToDiffEntries(diff: RootFolderDiff): DiffEntry[] {
 
 // Base class for root folder synchronization
 export abstract class BaseRootFolderSync<TConfig extends InputConfigRootFolder = InputConfigRootFolder> {
-  protected api!: IArrClient;
   protected logger = logger;
 
-  abstract calculateDiff(rootFolders: TConfig[], serverCache: ServerCache): Promise<RootFolderDiff<TConfig> | null>;
-  public abstract resolveRootFolderConfig(config: TConfig, serverCache: ServerCache): Promise<MergedRootFolderResource>;
+  constructor(protected readonly api: RootFoldersClient<RootFolderServerResource>) {}
+
+  abstract calculateDiff(rootFolders: TConfig[] | null, serverCache: ServerCache): Promise<RootFolderDiff<TConfig> | null>;
+  public abstract resolveRootFolderConfig(config: TConfig, serverCache: ServerCache): Promise<RootFolderServerResource>;
+
+  protected getApi(): RootFoldersClient<RootFolderServerResource> {
+    return this.api;
+  }
+
+  protected getRootfolders() {
+    return this.getApi().getRootfolders();
+  }
+
+  protected addRootFolder(data: RootFolderServerResource) {
+    return this.getApi().addRootFolder(data);
+  }
+
+  protected updateRootFolder(id: string, data: RootFolderServerResource) {
+    return this.getApi().updateRootFolder(id, data);
+  }
+
+  protected deleteRootFolder(id: string) {
+    return this.getApi().deleteRootFolder(id);
+  }
 
   async syncRootFolders(rootFolders: TConfig[], serverCache: ServerCache): Promise<RootFolderSyncResult> {
     const diff = await this.calculateDiff(rootFolders, serverCache);
@@ -64,7 +98,7 @@ export abstract class BaseRootFolderSync<TConfig extends InputConfigRootFolder =
     // Remove folders not in config
     for (const folder of diff.notAvailableAnymore) {
       this.logger.info(`Deleting RootFolder not available anymore: ${folder.path}`);
-      await this.api.deleteRootFolder(`${folder.id}`);
+      await this.deleteRootFolder(`${folder.id}`);
       removed++;
     }
 
@@ -72,7 +106,7 @@ export abstract class BaseRootFolderSync<TConfig extends InputConfigRootFolder =
     for (const folder of diff.missingOnServer) {
       this.logger.info(`Adding RootFolder missing on server: ${typeof folder === "string" ? folder : folder.path}`);
       const resolvedConfig = await this.resolveRootFolderConfig(folder, serverCache);
-      await this.api.addRootFolder(resolvedConfig);
+      await this.addRootFolder(resolvedConfig);
       added++;
     }
 
@@ -80,7 +114,7 @@ export abstract class BaseRootFolderSync<TConfig extends InputConfigRootFolder =
     for (const { config, server } of diff.changed) {
       this.logger.info(`Updating RootFolder: ${typeof config === "string" ? config : config.path}`);
       const resolvedConfig = await this.resolveRootFolderConfig(config, serverCache);
-      await this.api.updateRootFolder(`${server.id}`, resolvedConfig);
+      await this.updateRootFolder(`${server.id}`, resolvedConfig);
       updated++;
     }
 
@@ -91,38 +125,23 @@ export abstract class BaseRootFolderSync<TConfig extends InputConfigRootFolder =
     return { added, removed, updated, diffEntries };
   }
 
-  protected async loadRootFoldersFromServer(): Promise<MergedRootFolderResource[]> {
-    const result = await this.api.getRootfolders();
-    return result as MergedRootFolderResource[];
+  protected async loadRootFoldersFromServer(): Promise<RootFolderServerResource[]> {
+    return this.getRootfolders();
   }
-
-  protected abstract getArrType(): ArrType;
 }
 
-// Generic sync for most arr types (Radarr, Sonarr, etc.)
-export class GenericRootFolderSync extends BaseRootFolderSync<InputConfigRootFolder> {
-  protected api: IArrClient = getUnifiedClient();
-
-  constructor(private arrType: ArrType) {
-    super();
-  }
-
-  protected getArrType(): ArrType {
-    return this.arrType;
-  }
-
-  public async resolveRootFolderConfig(config: InputConfigRootFolder, serverCache: ServerCache): Promise<MergedRootFolderResource> {
+export class PathRootFolderSync extends BaseRootFolderSync<InputConfigRootFolder> {
+  public async resolveRootFolderConfig(config: InputConfigRootFolder, _serverCache: ServerCache): Promise<RootFolderServerResource> {
     if (typeof config === "string") {
       return { path: config };
     }
 
-    // For non-Lidarr types, just return the path
     return { path: config.path };
   }
 
   async calculateDiff(
-    rootFolders: InputConfigRootFolder[],
-    serverCache: ServerCache,
+    rootFolders: InputConfigRootFolder[] | null,
+    _serverCache: ServerCache,
   ): Promise<RootFolderDiff<InputConfigRootFolder> | null> {
     if (rootFolders == null) {
       this.logger.debug(`Config 'root_folders' not specified. Ignoring.`);
@@ -143,7 +162,7 @@ export class GenericRootFolderSync extends BaseRootFolderSync<InputConfigRootFol
       };
     }
 
-    // For generic arr types, only compare paths
+    // Path-only arrs compare folder paths, not Lidarr/Readarr metadata.
     const serverDataStrings = serverData
       .map((folder) => (typeof folder === "string" ? folder : folder.path))
       .filter((folder): folder is string => typeof folder === "string" && !!folder);
@@ -154,7 +173,7 @@ export class GenericRootFolderSync extends BaseRootFolderSync<InputConfigRootFol
     const serverDataSet = new Set(serverDataStrings);
 
     const missingOnServer: InputConfigRootFolder[] = [];
-    const notAvailableAnymore: MergedRootFolderResource[] = [];
+    const notAvailableAnymore: RootFolderServerResource[] = [];
 
     rootFolders.forEach((folder) => {
       const folderPath = typeof folder === "string" ? folder : folder.path;
@@ -184,9 +203,5 @@ export class GenericRootFolderSync extends BaseRootFolderSync<InputConfigRootFol
       notAvailableAnymore,
       changed: [],
     };
-  }
-
-  protected async loadRootFoldersFromServer(): Promise<MergedRootFolderResource[]> {
-    return super.loadRootFoldersFromServer();
   }
 }

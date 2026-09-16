@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ConfigarrCF, ConfigarrCFSchema } from "./common.types";
+import { ConfigarrCF, ConfigarrCFSchema } from "../customFormats/customFormat.types";
 import { TrashCF, TrashCFSchema, TrashQualityDefinitionQualitySchema, TrashScoresSchema } from "./trashguide.types";
 
 // ============================================================================
@@ -8,7 +8,7 @@ import { TrashCF, TrashCFSchema, TrashQualityDefinitionQualitySchema, TrashScore
 // a schema becomes a compile error at every place the code reads it, instead of
 // silently disappearing at runtime (Zod strips unrecognized keys on a successful
 // parse). Two kinds of exception keep a manually-written type instead:
-//   - ImportCF/ConfigarrCF (common.types.ts) extend generated __generated__ API
+//   - ImportCF/ConfigarrCF (customFormat.types.ts) extend generated __generated__ API
 //     client types, which aren't reasonably re-modeled in Zod.
 //   - The "Derived types" section at the end (ConfigArrInstance, ConfigQualityProfile,
 //     etc.) is the merged/output shape produced by this app's own code (transformConfig,
@@ -172,8 +172,10 @@ export type InputConfigRootFolderGeneric = z.infer<typeof InputConfigRootFolderG
 
 export const InputConfigRootFolderSchema = z.union([
   InputConfigRootFolderGenericSchema,
-  InputConfigRootFolderLidarrSchema,
-  InputConfigRootFolderReadarrSchema,
+  z.object({
+    ...InputConfigRootFolderLidarrSchema.shape,
+    ...InputConfigRootFolderReadarrSchema.shape,
+  }),
 ]);
 export type InputConfigRootFolder = z.infer<typeof InputConfigRootFolderSchema>;
 
@@ -299,7 +301,10 @@ export const InputConfigReadarrMetadataProfileSchema = z.object({
 });
 export type InputConfigReadarrMetadataProfile = z.infer<typeof InputConfigReadarrMetadataProfileSchema>;
 
-export const InputConfigMetadataProfileSchema = z.union([InputConfigLidarrMetadataProfileSchema, InputConfigReadarrMetadataProfileSchema]);
+export const InputConfigMetadataProfileSchema = z.object({
+  ...InputConfigLidarrMetadataProfileSchema.shape,
+  ...InputConfigReadarrMetadataProfileSchema.shape,
+});
 export type InputConfigMetadataProfile = z.infer<typeof InputConfigMetadataProfileSchema>;
 
 // Prowlarr (experimental) is an indexer manager, not a media manager, so it gets a

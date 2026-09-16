@@ -1,21 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { LidarrMetadataProfileSync } from "./metadataProfileLidarr";
+import type { Mocked } from "vitest";
+import { LidarrMetadataProfileApi, LidarrMetadataProfileSync } from "./metadataProfileLidarr";
 import { ServerCache } from "../cache";
 import { InputConfigLidarrMetadataProfile } from "../types/config.types";
-import { getUnifiedClient, getSpecificClient } from "../clients/unified-client";
-
-// Mock the unified client
-vi.mock("../clients/unified-client", () => ({
-  getUnifiedClient: vi.fn(),
-  getSpecificClient: vi.fn(),
-}));
 
 describe("LidarrMetadataProfileSync", () => {
-  const mockApi = {
+  const mockApi: Mocked<LidarrMetadataProfileApi> = {
     getMetadataProfiles: vi.fn(),
     createMetadataProfile: vi.fn(),
     updateMetadataProfile: vi.fn(),
     deleteMetadataProfile: vi.fn(),
+    getMetadataProfileSchema: vi.fn(),
   };
 
   let serverCache: ServerCache;
@@ -23,16 +18,12 @@ describe("LidarrMetadataProfileSync", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockApi.getMetadataProfiles.mockResolvedValue([]);
-    (getUnifiedClient as any).mockReturnValue({
-      api: mockApi,
-    });
-    (getSpecificClient as any).mockReturnValue(mockApi);
-    serverCache = new ServerCache([], [], [], []);
+    serverCache = new ServerCache();
   });
 
   describe("resolveConfig", () => {
     it("should resolve basic Lidarr config", async () => {
-      const sync = new LidarrMetadataProfileSync();
+      const sync = new LidarrMetadataProfileSync(mockApi);
       const config: InputConfigLidarrMetadataProfile = {
         name: "Test Profile",
       };
@@ -45,7 +36,7 @@ describe("LidarrMetadataProfileSync", () => {
     });
 
     it("should resolve config with primary types - new profile", async () => {
-      const sync = new LidarrMetadataProfileSync();
+      const sync = new LidarrMetadataProfileSync(mockApi);
       const config: InputConfigLidarrMetadataProfile = {
         name: "Test Profile",
         primary_types: ["Album", "EP"],
@@ -57,8 +48,8 @@ describe("LidarrMetadataProfileSync", () => {
         name: "Test Profile",
         id: undefined,
         primaryAlbumTypes: [
-          { albumType: "Album", allowed: true },
-          { albumType: "EP", allowed: true },
+          { albumType: { name: "Album" }, allowed: true },
+          { albumType: { name: "EP" }, allowed: true },
         ],
       });
     });
@@ -75,7 +66,7 @@ describe("LidarrMetadataProfileSync", () => {
       };
       mockApi.getMetadataProfiles.mockResolvedValue([serverProfile]);
 
-      const sync = new LidarrMetadataProfileSync();
+      const sync = new LidarrMetadataProfileSync(mockApi);
       const config: InputConfigLidarrMetadataProfile = {
         name: "Test Profile",
         primary_types: ["Album", "EP"], // Single not listed, should be disabled
@@ -95,7 +86,7 @@ describe("LidarrMetadataProfileSync", () => {
     });
 
     it("should resolve config with secondary types", async () => {
-      const sync = new LidarrMetadataProfileSync();
+      const sync = new LidarrMetadataProfileSync(mockApi);
       const config: InputConfigLidarrMetadataProfile = {
         name: "Test Profile",
         secondary_types: ["Compilation", "Live"],
@@ -107,14 +98,14 @@ describe("LidarrMetadataProfileSync", () => {
         name: "Test Profile",
         id: undefined,
         secondaryAlbumTypes: [
-          { albumType: "Compilation", allowed: true },
-          { albumType: "Live", allowed: true },
+          { albumType: { name: "Compilation" }, allowed: true },
+          { albumType: { name: "Live" }, allowed: true },
         ],
       });
     });
 
     it("should resolve config with release statuses", async () => {
-      const sync = new LidarrMetadataProfileSync();
+      const sync = new LidarrMetadataProfileSync(mockApi);
       const config: InputConfigLidarrMetadataProfile = {
         name: "Test Profile",
         release_statuses: ["Official", "Promotion"],
@@ -126,8 +117,8 @@ describe("LidarrMetadataProfileSync", () => {
         name: "Test Profile",
         id: undefined,
         releaseStatuses: [
-          { releaseStatus: "Official", allowed: true },
-          { releaseStatus: "Promotion", allowed: true },
+          { releaseStatus: { name: "Official" }, allowed: true },
+          { releaseStatus: { name: "Promotion" }, allowed: true },
         ],
       });
     });
@@ -144,7 +135,7 @@ describe("LidarrMetadataProfileSync", () => {
       };
       mockApi.getMetadataProfiles.mockResolvedValue([serverProfile]);
 
-      const sync = new LidarrMetadataProfileSync();
+      const sync = new LidarrMetadataProfileSync(mockApi);
       const config: InputConfigLidarrMetadataProfile = {
         name: "Test Profile",
         secondary_types: ["Studio"], // Only Studio enabled, others should be disabled
@@ -166,7 +157,7 @@ describe("LidarrMetadataProfileSync", () => {
 
   describe("validation", () => {
     it("should throw error for empty primary_types array in calculateDiff", async () => {
-      const sync = new LidarrMetadataProfileSync();
+      const sync = new LidarrMetadataProfileSync(mockApi);
       const config: InputConfigLidarrMetadataProfile = {
         name: "Test Profile",
         primary_types: [], // Empty array should be rejected
@@ -178,7 +169,7 @@ describe("LidarrMetadataProfileSync", () => {
     });
 
     it("should throw error for empty secondary_types array in calculateDiff", async () => {
-      const sync = new LidarrMetadataProfileSync();
+      const sync = new LidarrMetadataProfileSync(mockApi);
       const config: InputConfigLidarrMetadataProfile = {
         name: "Test Profile",
         primary_types: ["Album"],
@@ -190,7 +181,7 @@ describe("LidarrMetadataProfileSync", () => {
     });
 
     it("should throw error for empty release_statuses array in calculateDiff", async () => {
-      const sync = new LidarrMetadataProfileSync();
+      const sync = new LidarrMetadataProfileSync(mockApi);
       const config: InputConfigLidarrMetadataProfile = {
         name: "Test Profile",
         primary_types: ["Album"],
@@ -202,7 +193,7 @@ describe("LidarrMetadataProfileSync", () => {
     });
 
     it("should validate all profiles and report all errors at once", async () => {
-      const sync = new LidarrMetadataProfileSync();
+      const sync = new LidarrMetadataProfileSync(mockApi);
       const configs: InputConfigLidarrMetadataProfile[] = [
         {
           name: "Profile 1",
@@ -232,7 +223,7 @@ describe("LidarrMetadataProfileSync", () => {
     it("should detect missing profiles", async () => {
       mockApi.getMetadataProfiles.mockResolvedValue([]);
 
-      const sync = new LidarrMetadataProfileSync();
+      const sync = new LidarrMetadataProfileSync(mockApi);
       const result = await sync.calculateDiff(
         [{ name: "New Profile", primary_types: ["Album"], secondary_types: ["Studio"], release_statuses: ["Official"] }],
         serverCache,
@@ -248,7 +239,7 @@ describe("LidarrMetadataProfileSync", () => {
     it("should return null for empty config (no automatic deletion)", async () => {
       mockApi.getMetadataProfiles.mockResolvedValue([{ name: "Old Profile", id: 1 }]);
 
-      const sync = new LidarrMetadataProfileSync();
+      const sync = new LidarrMetadataProfileSync(mockApi);
       const result = await sync.calculateDiff([], serverCache);
 
       // Empty config means no profiles to manage, so no changes
@@ -258,7 +249,7 @@ describe("LidarrMetadataProfileSync", () => {
     it("should ignore unmanaged profiles (no automatic deletion)", async () => {
       mockApi.getMetadataProfiles.mockResolvedValue([{ name: "Server Profile", id: 1 }]);
 
-      const sync = new LidarrMetadataProfileSync();
+      const sync = new LidarrMetadataProfileSync(mockApi);
       const result = await sync.calculateDiff([], serverCache);
 
       // Unmanaged profiles are not included in diff - deletion is handled separately
@@ -266,8 +257,8 @@ describe("LidarrMetadataProfileSync", () => {
     });
 
     it("should return null when config is null", async () => {
-      const sync = new LidarrMetadataProfileSync();
-      const result = await sync.calculateDiff(null as any, serverCache);
+      const sync = new LidarrMetadataProfileSync(mockApi);
+      const result = await sync.calculateDiff(null, serverCache);
 
       expect(result).toBeNull();
     });
@@ -285,7 +276,7 @@ describe("LidarrMetadataProfileSync", () => {
       };
       mockApi.getMetadataProfiles.mockResolvedValue([serverProfile]);
 
-      const sync = new LidarrMetadataProfileSync();
+      const sync = new LidarrMetadataProfileSync(mockApi);
       const config: InputConfigLidarrMetadataProfile = {
         name: "Test Profile",
         primary_types: ["Album"], // Only Album enabled
@@ -311,7 +302,7 @@ describe("LidarrMetadataProfileSync", () => {
       };
       mockApi.getMetadataProfiles.mockResolvedValue([serverProfile]);
 
-      const sync = new LidarrMetadataProfileSync();
+      const sync = new LidarrMetadataProfileSync(mockApi);
       const config: InputConfigLidarrMetadataProfile = {
         name: "Test Profile",
         primary_types: ["Album", "EP"], // EP should be enabled but is disabled on server

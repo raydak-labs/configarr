@@ -15,9 +15,8 @@ const mockClient = {
   updateAppProfile: vi.fn(async (_id: string, p: AppProfileResource) => p),
   deleteAppProfile: vi.fn(async () => undefined),
 };
-vi.mock("../clients/unified-client", () => ({
-  getSpecificClient: vi.fn(() => mockClient),
-  getUnifiedClient: vi.fn(() => ({ api: mockClient })),
+vi.mock("../clients/client", () => ({
+  getClient: vi.fn(() => mockClient),
 }));
 
 const standard: AppProfileResource = {

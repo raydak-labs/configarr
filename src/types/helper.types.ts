@@ -4,3 +4,7 @@ type OmitTyped<Obj extends object, Keys extends keyof Obj> = Omit<Obj, Keys>;
 type OmitTyped2<T, K extends keyof T | (string & {}) | (number & {}) | (symbol | {})> = { [P in Exclude<keyof T, K>]: T[P] };
 
 type Subset<K, T extends K> = T;
+
+type RequireAtLeastOne<T> = {
+  [K in keyof T]-?: Required<Pick<T, K>> & Partial<Pick<T, Exclude<keyof T, K>>>;
+}[keyof T];

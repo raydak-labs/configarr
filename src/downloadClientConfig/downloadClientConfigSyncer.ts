@@ -1,17 +1,14 @@
 import { ServerCache } from "../cache";
-import { RadarrClient } from "../clients/radarr-client";
-import { SonarrClient } from "../clients/sonarr-client";
-import { LidarrClient } from "../clients/lidarr-client";
-import { ReadarrClient } from "../clients/readarr-client";
-import { WhisparrClient } from "../clients/whisparr-client";
-import { getSpecificClient } from "../clients/unified-client";
+import type { ArrTypeToClient } from "../clients/client";
 import { DiffEntry } from "../diffReport/diffReport.types";
 import { logger } from "../logger";
-import { ArrType } from "../types/common.types";
+import { MediaArrType } from "../types/common.types";
 import { InputConfigDownloadClientConfig, MergedConfigInstance } from "../types/config.types";
 import { getEnvs } from "../env";
 import { camelToSnake, compareObjectsCarr, snakeToCamel } from "../util";
 import { DownloadClientConfigSyncResult } from "./downloadClientConfig.types";
+
+type DownloadClientConfigClient = Pick<ArrTypeToClient[MediaArrType], "getDownloadClientConfig" | "updateDownloadClientConfig">;
 
 /**
  * Normalize field names from snake_case (config) to camelCase (server)
@@ -33,7 +30,7 @@ function normalizeConfigFields(configFields: InputConfigDownloadClientConfig): R
  * Filter config fields based on arrType support
  * Returns only fields that are supported by the specific arrType
  */
-function filterFieldsByArrType(fields: Record<string, any>, arrType: ArrType): Record<string, any> {
+function filterFieldsByArrType(fields: Record<string, any>, arrType: MediaArrType): Record<string, any> {
   const filtered: Record<string, any> = {};
 
   // Common fields for all *arr types
@@ -74,7 +71,8 @@ function filterFieldsByArrType(fields: Record<string, any>, arrType: ArrType): R
  * Sync download client configuration for a specific *arr instance
  */
 export async function syncDownloadClientConfig(
-  arrType: ArrType,
+  client: DownloadClientConfigClient,
+  arrType: MediaArrType,
   config: MergedConfigInstance,
   serverCache: ServerCache,
 ): Promise<DownloadClientConfigSyncResult> {
@@ -86,9 +84,6 @@ export async function syncDownloadClientConfig(
   }
 
   try {
-    // Get specific client for this arrType - TypeScript infers the correct type
-    const client = getSpecificClient(arrType);
-
     // Fetch current server config
     logger.debug(`Fetching download client config from ${arrType}...`);
     const serverConfig = await client.getDownloadClientConfig();

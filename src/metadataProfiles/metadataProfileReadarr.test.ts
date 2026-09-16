@@ -1,17 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import type { Mocked } from "vitest";
+import type { MetadataProfilesClient } from "../clients/capabilities";
 import { ReadarrMetadataProfileSync } from "./metadataProfileReadarr";
 import { ServerCache } from "../cache";
 import { InputConfigReadarrMetadataProfile } from "../types/config.types";
-import { getUnifiedClient, getSpecificClient } from "../clients/unified-client";
-
-// Mock the unified client
-vi.mock("../clients/unified-client", () => ({
-  getUnifiedClient: vi.fn(),
-  getSpecificClient: vi.fn(),
-}));
+import type { MetadataProfileResource } from "../__generated__/readarr/data-contracts";
 
 describe("ReadarrMetadataProfileSync", () => {
-  const mockApi = {
+  const mockApi: Mocked<MetadataProfilesClient<MetadataProfileResource>> = {
     getMetadataProfiles: vi.fn(),
     createMetadataProfile: vi.fn(),
     updateMetadataProfile: vi.fn(),
@@ -22,16 +18,12 @@ describe("ReadarrMetadataProfileSync", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    (getUnifiedClient as any).mockReturnValue({
-      api: mockApi,
-    });
-    (getSpecificClient as any).mockReturnValue(mockApi);
-    serverCache = new ServerCache([], [], [], []);
+    serverCache = new ServerCache();
   });
 
   describe("resolveConfig", () => {
     it("should resolve basic Readarr config", async () => {
-      const sync = new ReadarrMetadataProfileSync();
+      const sync = new ReadarrMetadataProfileSync(mockApi);
       const config: InputConfigReadarrMetadataProfile = {
         name: "Test Profile",
       };
@@ -44,7 +36,7 @@ describe("ReadarrMetadataProfileSync", () => {
     });
 
     it("should resolve config with snake_case fields", async () => {
-      const sync = new ReadarrMetadataProfileSync();
+      const sync = new ReadarrMetadataProfileSync(mockApi);
       const config: InputConfigReadarrMetadataProfile = {
         name: "Test Profile",
         min_popularity: 50,
@@ -73,7 +65,7 @@ describe("ReadarrMetadataProfileSync", () => {
     });
 
     it("should normalize allowed languages array", async () => {
-      const sync = new ReadarrMetadataProfileSync();
+      const sync = new ReadarrMetadataProfileSync(mockApi);
       const config: InputConfigReadarrMetadataProfile = {
         name: "Test Profile",
         allowed_languages: ["eng", "fra", "deu"],
@@ -88,7 +80,7 @@ describe("ReadarrMetadataProfileSync", () => {
     });
 
     it("should normalize allowed languages array with multiple formats", async () => {
-      const sync = new ReadarrMetadataProfileSync();
+      const sync = new ReadarrMetadataProfileSync(mockApi);
       const config: InputConfigReadarrMetadataProfile = {
         name: "Test Profile",
         allowed_languages: ["eng", "fra", "deu", "spa"],
@@ -103,7 +95,7 @@ describe("ReadarrMetadataProfileSync", () => {
     });
 
     it("should handle null/undefined allowed languages", async () => {
-      const sync = new ReadarrMetadataProfileSync();
+      const sync = new ReadarrMetadataProfileSync(mockApi);
       const config: InputConfigReadarrMetadataProfile = {
         name: "Test Profile",
         allowed_languages: null,
@@ -117,7 +109,7 @@ describe("ReadarrMetadataProfileSync", () => {
     });
 
     it("should normalize ignored field to array", async () => {
-      const sync = new ReadarrMetadataProfileSync();
+      const sync = new ReadarrMetadataProfileSync(mockApi);
       const config: InputConfigReadarrMetadataProfile = {
         name: "Test Profile",
         must_not_contain: ["single,word"],
@@ -132,7 +124,7 @@ describe("ReadarrMetadataProfileSync", () => {
     });
 
     it("should handle ignored as array", async () => {
-      const sync = new ReadarrMetadataProfileSync();
+      const sync = new ReadarrMetadataProfileSync(mockApi);
       const config: InputConfigReadarrMetadataProfile = {
         name: "Test Profile",
         must_not_contain: ["word1", "word2"],
@@ -151,7 +143,7 @@ describe("ReadarrMetadataProfileSync", () => {
     it("should detect missing profiles", async () => {
       mockApi.getMetadataProfiles.mockResolvedValue([]);
 
-      const sync = new ReadarrMetadataProfileSync();
+      const sync = new ReadarrMetadataProfileSync(mockApi);
       const result = await sync.calculateDiff([{ name: "New Profile" }], serverCache);
 
       expect(result).toEqual({
@@ -164,7 +156,7 @@ describe("ReadarrMetadataProfileSync", () => {
     it("should return null when config is empty array", async () => {
       mockApi.getMetadataProfiles.mockResolvedValue([{ name: "Old Profile", id: 1 }]);
 
-      const sync = new ReadarrMetadataProfileSync();
+      const sync = new ReadarrMetadataProfileSync(mockApi);
       const result = await sync.calculateDiff([], serverCache);
 
       // Empty config means no management - return null instead of deleting everything
@@ -172,8 +164,8 @@ describe("ReadarrMetadataProfileSync", () => {
     });
 
     it("should return null when config is null", async () => {
-      const sync = new ReadarrMetadataProfileSync();
-      const result = await sync.calculateDiff(null as any, serverCache);
+      const sync = new ReadarrMetadataProfileSync(mockApi);
+      const result = await sync.calculateDiff(null, serverCache);
 
       expect(result).toBeNull();
     });
@@ -187,7 +179,7 @@ describe("ReadarrMetadataProfileSync", () => {
       };
       mockApi.getMetadataProfiles.mockResolvedValue([serverProfile]);
 
-      const sync = new ReadarrMetadataProfileSync();
+      const sync = new ReadarrMetadataProfileSync(mockApi);
       const config: InputConfigReadarrMetadataProfile = {
         name: "Test Profile",
         min_popularity: 75, // Different from server

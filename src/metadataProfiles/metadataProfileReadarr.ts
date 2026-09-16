@@ -1,7 +1,6 @@
 import { MetadataProfileResource } from "../__generated__/readarr/data-contracts";
 import { ServerCache } from "../cache";
-import { ReadarrClient } from "../clients/readarr-client";
-import { getSpecificClient } from "../clients/unified-client";
+import type { MetadataProfilesClient } from "../clients/capabilities";
 import { InputConfigReadarrMetadataProfile, InputConfigMetadataProfile } from "../types/config.types";
 import { compareObjectsCarr } from "../util";
 import { FieldChange } from "../diffReport/diffReport.types";
@@ -9,22 +8,12 @@ import { MetadataProfileDiff } from "./metadataProfile.types";
 import { BaseMetadataProfileSync } from "./metadataProfileBase";
 
 export class ReadarrMetadataProfileSync extends BaseMetadataProfileSync<MetadataProfileResource> {
-  protected api: ReadarrClient = getSpecificClient("READARR");
+  constructor(api: MetadataProfilesClient<MetadataProfileResource>) {
+    super(api);
+  }
 
   protected getArrType(): "READARR" {
     return "READARR";
-  }
-
-  protected createMetadataProfile(resolvedConfig: MetadataProfileResource): Promise<MetadataProfileResource> {
-    return this.api.createMetadataProfile(resolvedConfig);
-  }
-
-  protected updateMetadataProfile(id: string, resolvedConfig: MetadataProfileResource): Promise<MetadataProfileResource> {
-    return this.api.updateMetadataProfile(id, resolvedConfig);
-  }
-
-  protected deleteProfile(id: string): Promise<void> {
-    return this.api.deleteMetadataProfile(id);
   }
 
   private normalizeReadarrAllowedLanguages(value: string | string[] | null | undefined): string | null {
@@ -66,10 +55,6 @@ export class ReadarrMetadataProfileSync extends BaseMetadataProfileSync<Metadata
     }
 
     return unique.join(",");
-  }
-
-  protected async loadFromServer(): Promise<MetadataProfileResource[]> {
-    return await this.api.getMetadataProfiles();
   }
 
   public async resolveConfig(config: InputConfigMetadataProfile, serverCache: ServerCache): Promise<MetadataProfileResource> {
@@ -152,7 +137,7 @@ export class ReadarrMetadataProfileSync extends BaseMetadataProfileSync<Metadata
   }
 
   async calculateDiff(
-    profiles: InputConfigMetadataProfile[],
+    profiles: InputConfigMetadataProfile[] | null,
     serverCache: ServerCache,
   ): Promise<MetadataProfileDiff<MetadataProfileResource> | null> {
     if (profiles == null) {

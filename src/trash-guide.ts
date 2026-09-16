@@ -1,11 +1,11 @@
 import fs from "node:fs";
 import path from "node:path";
 import { z } from "zod";
-import { MergedCustomFormatResource } from "./types/merged.types";
+import { CFIDToConfigGroup, ConfigarrCF, CustomFormatRequest } from "./customFormats/customFormat.types";
 import { getConfig } from "./config";
 import { logger } from "./logger";
-import { interpolateSize } from "./quality-definitions";
-import { CFIDToConfigGroup, ConfigarrCF, QualityDefinitionsRadarr, QualityDefinitionsSonarr } from "./types/common.types";
+import { interpolateSize } from "./qualityDefinitions/qualityDefinition";
+import { QualityDefinitionsRadarr, QualityDefinitionsSonarr } from "./types/common.types";
 import {
   ConfigCustomFormat,
   ConfigQualityProfile,
@@ -119,7 +119,7 @@ export const loadTrashCFs = async (arrType: TrashArrSupported): Promise<CFIDToCo
     return cache[arrType].customFormats;
   }
 
-  const carrIdToObject = new Map<string, { carrConfig: ConfigarrCF; requestConfig: MergedCustomFormatResource }>();
+  const carrIdToObject = new Map<string, { carrConfig: ConfigarrCF; requestConfig: CustomFormatRequest }>();
 
   let pathForFiles: string;
 

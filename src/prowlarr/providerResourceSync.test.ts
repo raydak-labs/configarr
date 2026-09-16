@@ -18,9 +18,8 @@ const mockClient = {
   remove: vi.fn(),
   createTag: vi.fn(async (t: { label: string }) => ({ id: 42, label: t.label })),
 };
-vi.mock("../clients/unified-client", () => ({
-  getSpecificClient: vi.fn(() => mockClient),
-  getUnifiedClient: vi.fn(() => ({ api: mockClient })),
+vi.mock("../clients/client", () => ({
+  getClient: vi.fn(() => mockClient),
 }));
 
 /** Minimal concrete resource + config so the base class can be exercised directly. */

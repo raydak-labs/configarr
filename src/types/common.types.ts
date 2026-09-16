@@ -1,75 +1,6 @@
-import { z } from "zod";
-import { MergedCustomFormatResource, MergedCustomFormatSpecificationSchema } from "./merged.types";
 import { ConfigQualityProfile, InputConfigArrInstance } from "./config.types";
-import { TrashCF, TrashCFSpF } from "./trashguide.types";
 
 export type DynamicImportType<T> = { default: T };
-
-type RequireAtLeastOne<T> = {
-  [K in keyof T]-?: Required<Pick<T, K>> & Partial<Pick<T, Exclude<keyof T, K>>>;
-}[keyof T];
-
-/** Used in the UI of Sonarr/Radarr to import. Trash JSON are based on that so users can copy&paste stuff */
-export type UserFriendlyField = {
-  name?: string | null;
-  value?: any;
-} & Pick<MergedCustomFormatSpecificationSchema, "negate" | "required">;
-
-/*
-Language values:
-0 = Unknown
--2 = Original
-*/
-export type CustomFormatImportImplementation =
-  | "ReleaseTitleSpecification" // Value string
-  | "LanguageSpecification" // value number
-  | "SizeSpecification" // special
-  | "IndexerFlagSpecification" // value number
-  | "SourceSpecification" // value number
-  | "ResolutionSpecification" // value number
-  | "ReleaseGroupSpecification"; // value string
-
-export type TC1 = OmitTyped<MergedCustomFormatSpecificationSchema, "fields"> & {
-  implementation: "ReleaseTitleSpecification" | "LanguageSpecification";
-  fields?: RequireAtLeastOne<TrashCFSpF> | null;
-};
-
-export type TC2 = OmitTyped<MergedCustomFormatSpecificationSchema, "fields"> & {
-  implementation: "SizeSpecification";
-  fields?: RequireAtLeastOne<TrashCFSpF>;
-};
-
-export type TCM = TC1 | TC2;
-
-export type ImportCF = OmitTyped<MergedCustomFormatResource, "specifications"> & {
-  specifications?: TCM[] | null;
-} & Required<Pick<MergedCustomFormatResource, "name">>;
-
-export type ConfigarrCFMeta = {
-  configarr_id: string;
-  configarr_scores?: TrashCF["trash_scores"];
-};
-
-export type ConfigarrCF = ConfigarrCFMeta & ImportCF;
-
-export const ConfigarrCFSchema: z.ZodType<ConfigarrCF> = z
-  .any()
-  .refine((v) => v != null && typeof v === "object" && typeof v.configarr_id === "string" && typeof v.name === "string", {
-    message: "ConfigarrCF must be an object with 'configarr_id' and 'name' string fields",
-  });
-
-type CFConfigGroup = {
-  carrConfig: ConfigarrCF;
-  requestConfig: MergedCustomFormatResource;
-};
-
-export type CFIDToConfigGroup = Map<string, CFConfigGroup>;
-
-export type CFProcessing = {
-  carrIdMapping: CFIDToConfigGroup;
-  /** Last merge-order winner per CF `name` (same row Sonarr/Radarr); used by manageCf. */
-  cfNameToCarrConfig: Map<string, ConfigarrCF>;
-};
 
 export type MappedTemplates = Partial<
   Pick<
@@ -102,6 +33,7 @@ export type MappedMergedTemplates = MappedTemplates & Required<Pick<MappedTempla
 
 export const ArrTypeConst = ["RADARR", "SONARR", "WHISPARR", "READARR", "LIDARR", "PROWLARR"] as const;
 export type ArrType = (typeof ArrTypeConst)[number];
+export type MediaArrType = Exclude<ArrType, "PROWLARR">;
 
 export type QualityDefinitionsSonarr = "anime" | "series" | "custom";
 export type QualityDefinitionsRadarr = "movie" | "sqp-streaming" | "sqp-uhd" | "custom";
