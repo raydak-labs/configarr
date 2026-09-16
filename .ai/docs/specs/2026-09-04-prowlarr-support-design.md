@@ -1,13 +1,13 @@
 # Prowlarr support
 
-Status: implemented (PR #520, issue #519). Experimental.
+Status: implemented (PR #520, issue #519). Experimental. Sync profiles added later, see below.
 
 ## Why
 
 Prowlarr manages indexers for the \*arr stack and usually runs alongside the apps configarr
-already supports, but it needed a separate tool to configure. This adds sync for its tags,
-applications, indexers, indexer proxies and download clients, plus an optional trigger that
-makes Prowlarr push its indexers to the connected apps.
+already supports, but it needed a separate tool to configure. This adds sync for its tags, sync
+profiles, applications, indexers, indexer proxies and download clients, plus an optional trigger
+that makes Prowlarr push its indexers to the connected apps.
 
 Prowlarr is not a media manager. It has no quality profiles, custom formats, naming, root
 folders, metadata profiles or delay profiles, so it gets its own config block and its own
@@ -42,8 +42,20 @@ lookup, its identity key, a list of extra top-level props, and an optional `load
 | `IndexerSync`      | `name`                    | `definition`    | `enable`, `priority`, `appProfileId` |
 | `IndexerProxySync` | `name` + `implementation` | `type`          | none                                 |
 
-`syncProwlarrProviders` runs the sections in dependency order: tags, indexer proxies, indexers,
-applications. Tags come first so the rest can reference them by name.
+Sync profiles are not provider resources. They have no implementation schema, no `fields[]` and
+no tags, just a name and four settings, so `syncSyncProfiles` (`src/prowlarr/syncProfileSync.ts`)
+is a plain function in the shape of `syncTags` rather than another `ProviderResourceSync`
+subclass. Prowlarr's UI calls them Sync Profiles and its API calls them app profiles; the config
+uses the UI name.
+
+`syncProwlarrProviders` runs the sections in dependency order: tags, sync profiles, indexer
+proxies, indexers, applications. Tags and profiles come first so the rest can reference them by
+name.
+
+Sync profiles are also handed to `IndexerSync` through its constructor, as the list of profiles
+that will exist after this run. Refetching would be enough for a real run, since the profiles are
+already on the server by then, but a dry run creates nothing, so an indexer pointed at a new
+profile would fail to resolve it in exactly the run a user does to preview the change.
 
 `prowlarrPipeline` in `src/index.ts` checks system status, loads server tags, runs the providers,
 then the shared download client syncer, and returns an `InstanceDiffReport`.
@@ -57,20 +69,45 @@ Prowlarr UI. An explicit `tags: []` does clear them.
 The server returns `********` for `password` and `apikey` fields. That counts as unchanged when
 the config supplies a non-empty value, so secrets are not rewritten on every run.
 
-An indexer's `app_profile` must name a profile that exists on the server. An unknown name fails
-and lists what is available, because silently picking another profile would bind the indexer to
-the wrong sync rules. Without `app_profile`, an update keeps the existing profile and a create
-takes the first one on the server. A server with no profiles at all fails rather than guessing
-id 1.
+An indexer's `sync_profile` must name a profile that exists on the server or is listed under
+`sync_profiles`. An unknown name fails and lists what is available, because silently picking
+another profile would bind the indexer to the wrong sync rules. Without `sync_profile`, an update
+keeps the existing profile and a create takes the first one on the server. A server with no
+profiles at all fails rather than guessing id 1. `app_profile` was the original name for this key
+and is still accepted, since it shipped in 1.31.0.
+
+Sync profile names are matched case-insensitively. Indexers already resolved their profile
+reference that way, so matching exactly in the profile sync would let a config entry named
+`standard` create a second profile alongside `Standard` that an indexer reference could not then
+tell apart.
+
+A profile property the config leaves out keeps its value on the server, and takes Prowlarr's own
+default only when the profile is created. Omitting `minimum_seeders` therefore does not reset a
+value set in the UI, which matches how an omitted `tags` key behaves on the provider resources.
+
+In a dry run, a profile that would be created has no id yet. An indexer referencing it resolves
+to undefined, which drops `appProfileId` from that indexer's comparison rather than inventing an
+id and reporting a change that is not real.
+
+Tags work the same way. A dry run creates none, so a config tag that is not on the server has no
+id to compare, and the provider diff lists it by name alongside the ids it did resolve
+(`tags: [7] -> [7, "new-tag"]`). Dropping it instead would report an unchanged resource that a
+real run would go on to retag.
 
 Names are capped at 100 characters and duplicate identity keys within a section are rejected.
+
+An update payload starts from the server resource, not the schema template. Prowlarr's PUT
+replaces the whole resource, so any top-level prop left out is reset to its type default. Building
+the payload from the template alone reset an indexer's `added` timestamp to 0001-01-01 and cleared
+its `downloadClientId` on every update (issue #528).
 
 ## Error model
 
 Failures in the core Prowlarr resources are fatal for the instance, matching how the media
 pipeline treats quality profiles. The message is logged, then thrown, so `runProwlarr` counts
-the instance as failed and `STOP_ON_ERROR` works. That covers tag create and delete, any
-provider create, update or delete, a failed app profile fetch, and a rejected
+the instance as failed and `STOP_ON_ERROR` works. That covers tag create and delete, sync profile
+create, update and delete, any provider create, update or delete, a failed profile fetch, and a
+rejected
 `ApplicationIndexerSync`. The last one matters because the user opted in with
 `sync_indexers: true`, so reporting success would be misleading. Nothing is caught between
 sections either, so a broken tag sync cannot leave a half-configured indexer behind.
@@ -83,12 +120,15 @@ keep the media pipeline's catch-log-continue for parity with the other \*arrs.
 
 `delete_unmanaged` defaults off and is more dangerous here than on a media manager. Deleting
 unmanaged applications unlinks the arr stack and deleting indexers removes them from every
-connected app. The docs carry an explicit warning.
+connected app. Deleting a sync profile fails outright while an indexer still uses it, and
+Prowlarr requires at least one profile to exist, so a config that lists none while enabling
+`delete_unmanaged` cannot succeed. The docs carry an explicit warning.
 
 ## Out of scope
 
-App sync profiles as a managed resource, notifications, DNS and host config, TRaSH or recyclarr
-templates, per-arr telemetry counters, and an `arr-e2e` compose service.
+Notifications, DNS and host config, TRaSH or recyclarr templates, per-arr telemetry counters, and
+an `arr-e2e` compose service. Applications cannot carry a sync profile: `ApplicationResource` has
+no such field in the v1 API, only the `syncLevel` that is already supported.
 
 Tag handling is duplicated across the media syncers and this one, with drift in case sensitivity
 and creation semantics. Unifying it touches shipped media paths, so it belongs in its own change.

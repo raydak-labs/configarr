@@ -310,6 +310,17 @@ export type InputConfigMetadataProfile = z.infer<typeof InputConfigMetadataProfi
 // Prowlarr (experimental) is an indexer manager, not a media manager, so it gets a
 // dedicated instance schema instead of reusing InputConfigArrInstanceSchema.
 
+// "Sync Profiles" in the Prowlarr UI; `appprofile` in its API. Referenced by name from
+// indexers via `sync_profile`.
+export const InputConfigSyncProfileSchema = z.object({
+  name: z.string().min(1),
+  enable_rss: z.boolean().optional(),
+  enable_automatic_search: z.boolean().optional(),
+  enable_interactive_search: z.boolean().optional(),
+  minimum_seeders: z.number().int().nonnegative().optional(),
+});
+export type InputConfigSyncProfile = z.infer<typeof InputConfigSyncProfileSchema>;
+
 export const InputConfigApplicationSchema = z.object({
   name: z.string().min(1),
   // Prowlarr implementation name, e.g. "Sonarr", "Radarr", "LazyLibrarian".
@@ -325,8 +336,11 @@ export const InputConfigIndexerSchema = z.object({
   // Prowlarr schema `definitionName`, e.g. "1337x", "Nyaa.si", "The Pirate Bay".
   definition: z.string().min(1),
   enable: z.boolean().optional(),
-  // App profile name (resolved to id); must exist in Prowlarr. Defaults to the indexer's
-  // existing profile on update, otherwise the first profile on the server.
+  // Sync profile name (resolved to id); must exist in Prowlarr or be listed under
+  // `sync_profiles`. Defaults to the indexer's existing profile on update, otherwise the
+  // first profile on the server.
+  sync_profile: z.string().optional(),
+  /** @deprecated use `sync_profile`. */
   app_profile: z.string().optional(),
   priority: z.number().int().optional(),
   fields: z.record(z.string(), z.any()).optional(),
@@ -367,6 +381,12 @@ export const InputConfigProwlarrInstanceSchema = z.object({
       // After applications are synced, trigger Prowlarr's global "ApplicationIndexerSync"
       // command so it pushes its indexers to the configured applications.
       sync_indexers: z.boolean().optional(),
+    })
+    .optional(),
+  sync_profiles: z
+    .object({
+      data: z.array(InputConfigSyncProfileSchema).optional(),
+      delete_unmanaged: DeleteUnmanagedSchema.optional(),
     })
     .optional(),
   indexers: z

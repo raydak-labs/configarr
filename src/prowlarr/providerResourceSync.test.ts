@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ServerCache } from "../cache";
+import { getEnvs } from "../env";
 import { ExtraProp, ProviderResource, ProviderResourceSync } from "./providerResourceSync";
 
 vi.mock("../env", async (importOriginal) => {
@@ -25,6 +26,7 @@ vi.mock("../clients/client", () => ({
 interface ThingResource extends ProviderResource {
   mode?: string | null;
   extraFromTemplate?: string | null;
+  added?: string | null;
 }
 type ThingConfig = { name: string; type: string; mode?: string; fields?: Record<string, any>; tags?: (string | number)[] };
 
@@ -103,6 +105,8 @@ describe("ProviderResourceSync", () => {
     mockClient.update.mockImplementation(async (_id: string, p: ThingResource) => p);
     mockClient.remove.mockResolvedValue(undefined);
     mockClient.createTag.mockImplementation(async (t: { label: string }) => ({ id: 42, label: t.label }));
+    // mockReturnValue survives clearAllMocks, so the dry-run tests would leak into the rest.
+    vi.mocked(getEnvs).mockReturnValue({ DRY_RUN: false, LOG_LEVEL: "silent", CONFIGARR_VERSION: "test" } as any);
   });
   afterEach(() => vi.clearAllMocks());
 
@@ -174,6 +178,25 @@ describe("ProviderResourceSync", () => {
       const [, payload] = mockClient.update.mock.calls[0]!;
       expect(payload.mode).toBe("new");
       expect(payload.fields).toEqual([{ name: "host", value: "kept-from-server" }]);
+    });
+
+    it("keeps server props configarr does not manage, so Prowlarr cannot reset them", async () => {
+      mockClient.getAll.mockResolvedValue([
+        { id: 5, name: "W", implementation: "Widget", added: "2024-03-01T12:00:00Z", fields: [], tags: [] },
+      ]);
+
+      await sync().sync([{ name: "W", type: "Widget", mode: "new" }], undefined, cache());
+
+      const [, payload] = mockClient.update.mock.calls[0]!;
+      expect(payload.added).toBe("2024-03-01T12:00:00Z");
+    });
+
+    it("does not invent server props on a create", async () => {
+      await sync().sync([{ name: "W", type: "Widget", fields: { host: "h" } }], undefined, cache());
+
+      const [payload] = mockClient.create.mock.calls[0]!;
+      expect(payload).not.toHaveProperty("added");
+      expect(payload).not.toHaveProperty("id");
     });
 
     it("uses the schema fields as the base when field overrides are present", async () => {
@@ -276,9 +299,10 @@ describe("ProviderResourceSync", () => {
   });
 
   describe("dry run", () => {
+    const dryRun = () => vi.mocked(getEnvs).mockReturnValue({ DRY_RUN: true, LOG_LEVEL: "silent", CONFIGARR_VERSION: "test" } as any);
+
     it("reports the diff without calling the API", async () => {
-      const { getEnvs } = await import("../env");
-      vi.mocked(getEnvs).mockReturnValue({ DRY_RUN: true, LOG_LEVEL: "silent", CONFIGARR_VERSION: "test" } as any);
+      dryRun();
       mockClient.getAll.mockResolvedValue([{ id: 3, name: "Stale", implementation: "Widget", fields: [], tags: [] }]);
 
       const out = await sync().sync([{ name: "W", type: "Widget", fields: { host: "h" } }], { enabled: true }, cache());
@@ -289,6 +313,36 @@ describe("ProviderResourceSync", () => {
       expect(out.diffEntries).toEqual([
         { resourceType: "Thing", name: "W", action: "create" },
         { resourceType: "Thing", name: "Stale", action: "delete" },
+      ]);
+    });
+
+    it("does not create missing tags", async () => {
+      dryRun();
+
+      await sync().sync([{ name: "W", type: "Widget", tags: ["brand-new"] }], undefined, cache());
+
+      expect(mockClient.createTag).not.toHaveBeenCalled();
+    });
+
+    it("names a tag it would create instead of reporting the resource as unchanged", async () => {
+      dryRun();
+      mockClient.getAll.mockResolvedValue([{ id: 3, name: "W", implementation: "Widget", fields: [], tags: [7] }]);
+
+      const out = await sync().sync(
+        [{ name: "W", type: "Widget", tags: ["existing", "brand-new"] }],
+        undefined,
+        cache([{ id: 7, label: "existing" }]),
+      );
+
+      expect(mockClient.createTag).not.toHaveBeenCalled();
+      expect(mockClient.update).not.toHaveBeenCalled();
+      expect(out.diffEntries).toEqual([
+        {
+          resourceType: "Thing",
+          name: "W",
+          action: "update",
+          fieldChanges: [{ field: "tags", from: [7], to: [7, "brand-new"] }],
+        },
       ]);
     });
   });
