@@ -223,8 +223,11 @@ describe("whisparr (live)", () => {
     const payload = new StandardDelayProfileSync(client, DownloadProtocol).mapToServer(parsed, []);
     expect(payload).not.toHaveProperty("items");
 
+    // The default profile is not guaranteed to be id 1 on a server that already had one.
+    const defaultId = defaultDelayProfile(await client.getDelayProfiles())?.id;
+    expect(defaultId).toBeDefined();
     // The mapper returns the shared shape; the client wants this arr's generated resource.
-    await client.updateDelayProfile("1", payload as never);
+    await client.updateDelayProfile(String(defaultId), payload as never);
 
     expect(defaultDelayProfile(await client.getDelayProfiles())).toMatchObject({
       usenetDelay: 7,

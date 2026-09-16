@@ -225,7 +225,10 @@ describe("lidarr (live)", () => {
   });
 
   test("delay profile mapper writes items[] and Lidarr rejects the legacy payload (#481)", async () => {
-    await expect(client.updateDelayProfile("1", LEGACY_DELAY_PROFILE as never)).rejects.toThrow(/400/);
+    // The default profile is not guaranteed to be id 1 on a server that already had one.
+    const defaultId = defaultDelayProfile(await client.getDelayProfiles())?.id;
+    expect(defaultId).toBeDefined();
+    await expect(client.updateDelayProfile(String(defaultId), LEGACY_DELAY_PROFILE as never)).rejects.toThrow(/400/);
 
     const parsed = InputConfigDelayProfileSchema.parse({
       Items: [
@@ -239,7 +242,7 @@ describe("lidarr (live)", () => {
     const payload = new DelayProfileLidarrSync(client).mapToServer(parsed, []);
     expect(payload).not.toHaveProperty("enableUsenet");
 
-    await client.updateDelayProfile("1", payload);
+    await client.updateDelayProfile(String(defaultId), payload);
 
     const def = defaultDelayProfile((await client.getDelayProfiles()) as LidarrDelayProfile[]);
     expect(def?.items).toEqual([

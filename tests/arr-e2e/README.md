@@ -23,8 +23,8 @@ The suite only runs through its own config (`vitest.arr-e2e.config.ts`); `pnpm t
 
 One file per *arr, each owning its container end to end. That is also what makes the run parallel:
 
-- `pnpm test:e2e:arr:parallel` — the six per-*arr files, in parallel (~40s).
-- `pnpm test:e2e:arr:pipeline` — `pipeline.e2e.test.ts` alone, since it drives every container from one config.yml (~15s).
+- `pnpm test:e2e:arr:parallel` — the six per-*arr files, in parallel (~40s). Its config excludes the pipeline file, so a direct `vitest run --config vitest.arr-e2e.config.ts` cannot mix the two.
+- `pnpm test:e2e:arr:pipeline` — `pipeline.e2e.test.ts` alone through `vitest.arr-e2e.pipeline.config.ts`, since it drives every container from one config.yml (~15s).
 - `pnpm test:e2e:arr` — both, in that order.
 
 `globalSetup.ts` waits for all APIs once and warms the Recyclarr/TRaSH clone; each file then copies that clone, because configarr checks out its pinned revision on every run and two files sharing one clone would race on `.git/index.lock`.
