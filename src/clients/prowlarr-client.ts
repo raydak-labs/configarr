@@ -99,6 +99,18 @@ export class ProwlarrClient implements IArrClient {
     return this.api.v1AppprofileList();
   }
 
+  async createAppProfile(profile: AppProfileResource): Promise<AppProfileResource> {
+    return this.api.v1AppprofileCreate(profile);
+  }
+
+  async updateAppProfile(id: string, profile: AppProfileResource): Promise<AppProfileResource> {
+    return this.api.v1AppprofileUpdate(id, profile);
+  }
+
+  async deleteAppProfile(id: string): Promise<void> {
+    return this.api.v1AppprofileDelete(+id);
+  }
+
   async getIndexerProxySchema(): Promise<IndexerProxyResource[]> {
     return this.api.v1IndexerproxySchemaList();
   }

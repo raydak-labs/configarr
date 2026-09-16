@@ -155,12 +155,22 @@ prowlarr:
       - managed
     delete_unmanaged_tags:
       enabled: true
+    sync_profiles:
+      data:
+        - name: Seeded
+          enable_rss: true
+          enable_automatic_search: false
+          minimum_seeders: 5
+      delete_unmanaged:
+        enabled: true
+        ignore:
+          - Standard
     indexers:
       data:
         - name: 1337x
           definition: 1337x
           enable: true
-          app_profile: Standard
+          sync_profile: Seeded
           priority: 30
     indexer_proxies:
       data:
@@ -174,8 +184,32 @@ prowlarr:
     const instance = parsed.prowlarr!.main!;
     expect(instance.tags).toEqual(["managed"]);
     expect(instance.delete_unmanaged_tags?.enabled).toBe(true);
-    expect(instance.indexers?.data?.[0]).toMatchObject({ name: "1337x", definition: "1337x", app_profile: "Standard", priority: 30 });
+    expect(instance.indexers?.data?.[0]).toMatchObject({ name: "1337x", definition: "1337x", sync_profile: "Seeded", priority: 30 });
+    expect(instance.sync_profiles?.data?.[0]).toEqual({
+      name: "Seeded",
+      enable_rss: true,
+      enable_automatic_search: false,
+      minimum_seeders: 5,
+    });
+    expect(instance.sync_profiles?.delete_unmanaged).toEqual({ enabled: true, ignore: ["Standard"] });
     expect(instance.indexer_proxies?.data?.[0]).toMatchObject({ name: "flaresolverr", type: "FlareSolverr" });
+  });
+
+  test("rejects a fractional minimum_seeders", () => {
+    expect(() =>
+      InputConfigSchemaSchema.parse(
+        yaml.parse(`
+prowlarr:
+  main:
+    base_url: http://prowlarr:9696
+    api_key: test
+    sync_profiles:
+      data:
+        - name: Seeded
+          minimum_seeders: 1.5
+`),
+      ),
+    ).toThrow();
   });
 
   test("rejects an invalid application sync_level", () => {

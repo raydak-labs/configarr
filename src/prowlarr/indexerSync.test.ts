@@ -75,25 +75,25 @@ describe("IndexerSync", () => {
     expect(payload.appProfileId).toBe(1);
   });
 
-  it("fails when the configured app profile does not exist", async () => {
-    await expect(sync().sync([{ name: "1337x", definition: "1337x", app_profile: "Nope" }], undefined, cache())).rejects.toThrow(
-      "App profile 'Nope' not found for Indexer '1337x'. Available: Standard",
+  it("fails when the configured sync profile does not exist", async () => {
+    await expect(sync().sync([{ name: "1337x", definition: "1337x", sync_profile: "Nope" }], undefined, cache())).rejects.toThrow(
+      "Sync profile 'Nope' not found for Indexer '1337x'. Available: Standard",
     );
     expect(mockClient.createIndexer).not.toHaveBeenCalled();
   });
 
-  it("fails when the app profiles cannot be loaded", async () => {
+  it("fails when the sync profiles cannot be loaded", async () => {
     mockClient.getAppProfiles.mockRejectedValueOnce(new Error("connection refused"));
 
     await expect(sync().sync([{ name: "1337x", definition: "1337x" }], undefined, cache())).rejects.toThrow("connection refused");
     expect(mockClient.createIndexer).not.toHaveBeenCalled();
   });
 
-  it("fails instead of guessing an id when the server has no app profiles", async () => {
+  it("fails instead of guessing an id when the server has no sync profiles", async () => {
     mockClient.getAppProfiles.mockResolvedValue([]);
 
     await expect(sync().sync([{ name: "1337x", definition: "1337x" }], undefined, cache())).rejects.toThrow(
-      "No app profile available on Prowlarr for Indexer '1337x'",
+      "No sync profile available on Prowlarr for Indexer '1337x'",
     );
     expect(mockClient.createIndexer).not.toHaveBeenCalled();
   });
@@ -110,10 +110,73 @@ describe("IndexerSync", () => {
     expect(payload.priority).toBe(40);
   });
 
+  it("preserves the added timestamp and download client on update (#528)", async () => {
+    mockClient.getIndexers.mockResolvedValue([
+      {
+        id: 3,
+        name: "1337x",
+        implementation: "Cardigann",
+        added: "2024-05-04T09:30:00Z",
+        downloadClientId: 4,
+        appProfileId: 1,
+        fields: [],
+        tags: [],
+        enable: true,
+        priority: 25,
+      },
+    ]);
+
+    await sync().sync([{ name: "1337x", definition: "1337x", priority: 50 }], undefined, cache());
+
+    const [, payload] = mockClient.updateIndexer.mock.calls[0]!;
+    expect(payload.priority).toBe(50);
+    expect(payload.added).toBe("2024-05-04T09:30:00Z");
+    expect(payload.downloadClientId).toBe(4);
+  });
+
   it("deletes unmanaged indexers when enabled", async () => {
     mockClient.getIndexers.mockResolvedValue([{ id: 9, name: "Stale", implementation: "Cardigann", fields: [], tags: [] }]);
     const out = await sync().sync([], { enabled: true }, cache());
     expect(mockClient.deleteIndexer).toHaveBeenCalledWith("9");
     expect(out.removed).toBe(1);
+  });
+
+  it("accepts the released app_profile key as well as sync_profile", async () => {
+    await sync().sync([{ name: "1337x", definition: "1337x", app_profile: "standard" }], undefined, cache());
+
+    const [payload] = mockClient.createIndexer.mock.calls[0]!;
+    expect(payload.appProfileId).toBe(1);
+  });
+
+  describe("profiles synced in the same run", () => {
+    it("resolves against them instead of fetching", async () => {
+      const passed = new IndexerSync([{ id: 4, name: "Seeded" }]);
+
+      await passed.sync([{ name: "1337x", definition: "1337x", sync_profile: "Seeded" }], undefined, cache());
+
+      expect(mockClient.getAppProfiles).not.toHaveBeenCalled();
+      const [payload] = mockClient.createIndexer.mock.calls[0]!;
+      expect(payload.appProfileId).toBe(4);
+    });
+
+    it("does not compare appProfileId for a profile that does not exist yet", async () => {
+      mockClient.getIndexers.mockResolvedValue([
+        { id: 3, name: "1337x", implementation: "Cardigann", appProfileId: 2, fields: [], tags: [], enable: true, priority: 25 },
+      ]);
+      const passed = new IndexerSync([{ id: 2, name: "Standard" }, { name: "Pending" }]);
+
+      const out = await passed.sync([{ name: "1337x", definition: "1337x", sync_profile: "Pending" }], undefined, cache());
+
+      expect(out.diffEntries).toEqual([]);
+      expect(mockClient.updateIndexer).not.toHaveBeenCalled();
+    });
+
+    it("still rejects a name that is in neither the config nor the server", async () => {
+      const passed = new IndexerSync([{ id: 4, name: "Seeded" }]);
+
+      await expect(passed.sync([{ name: "1337x", definition: "1337x", sync_profile: "Nope" }], undefined, cache())).rejects.toThrow(
+        "Sync profile 'Nope' not found for Indexer '1337x'. Available: Seeded",
+      );
+    });
   });
 });
