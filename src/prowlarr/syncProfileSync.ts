@@ -1,4 +1,4 @@
-import { getSpecificClient } from "../clients/unified-client";
+import { getClient } from "../clients/client";
 import { DiffEntry, FieldChange } from "../diffReport/diffReport.types";
 import { getEnvs } from "../env";
 import { logger } from "../logger";
@@ -65,7 +65,7 @@ export async function syncSyncProfiles(section: InputConfigProwlarrInstance["syn
     return result;
   }
 
-  const api = getSpecificClient("PROWLARR");
+  const api = getClient("PROWLARR");
   const dryRun = getEnvs().DRY_RUN;
 
   const serverProfiles = await api.getAppProfiles();
