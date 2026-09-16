@@ -261,6 +261,11 @@ export const runMediaSyncToQualityProfiles = async <T extends MediaArrType>(
   }
   await qpSync.persist({ create, changedQPs, noChanges, changes: qpChanges }, writeQualityProfiles);
 
+  if (writeQualityProfiles && (create.length > 0 || changedQPs.length > 0)) {
+    // refresh cache: root-folder default-profile resolution (Lidarr/Readarr) needs profiles created this run
+    serverCache.qualityProfiles = await qpSync.loadFromServer();
+  }
+
   if (config.delete_unmanaged_quality_profiles?.enabled) {
     const unmanagedQPs = getUnmanagedQualityProfiles(serverCache.qualityProfiles, config.quality_profiles);
 
