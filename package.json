@@ -16,7 +16,9 @@
     "start": "tsx src/index.ts",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e:arr": "vitest run --config vitest.arr-e2e.config.ts",
+    "test:e2e:arr": "pnpm test:e2e:arr:parallel && pnpm test:e2e:arr:pipeline",
+    "test:e2e:arr:parallel": "vitest run --config vitest.arr-e2e.config.ts --exclude '**/pipeline.e2e.test.ts'",
+    "test:e2e:arr:pipeline": "vitest run --config vitest.arr-e2e.config.ts tests/arr-e2e/pipeline.e2e.test.ts",
     "typecheck": "tsc --noEmit",
     "release": "release-it"
   },

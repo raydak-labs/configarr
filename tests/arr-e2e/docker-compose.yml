@@ -1,5 +1,8 @@
-# Shared API key for all fixtures (must match helpers.ts DEFAULT_API_KEY)
-# Named volumes keep runtime DBs out of the repo; only config.xml is bind-mounted.
+# Shared API key for all fixtures (must match config.ts E2E_API_KEY).
+# Named volumes hold the DBs; only /data/e2e[-b] is bind-mounted, so PUID/PGID must be
+# the host user (`PUID=$(id -u) PGID=$(id -g)`) or *arr rejects the root folders.
+# Sonarr/Radarr/Readarr/Lidarr/Prowlarr take their API key from `<APP>__AUTH__*`.
+# Whisparr's eros base ignores env overrides, so it seeds a fixture config.xml instead.
 services:
   sonarr:
     image: lscr.io/linuxserver/sonarr:4.0.19
@@ -7,9 +10,14 @@ services:
       - PUID=${PUID:-1000}
       - PGID=${PGID:-1000}
       - TZ=Etc/UTC
+      - SONARR__APP__INSTANCENAME=Sonarr
+      - SONARR__AUTH__APIKEY=e2etestapikey0123456789abcdef012
+      - SONARR__AUTH__METHOD=External
+      - SONARR__AUTH__REQUIRED=DisabledForLocalAddresses
     volumes:
       - sonarr-data:/config
-      - ./fixtures/sonarr-config/config.xml:/config/config.xml
+      - ./fixtures/media/e2e:/data/e2e
+      - ./fixtures/media/e2e-b:/data/e2e-b
     ports:
       - "18989:8989"
 
@@ -19,14 +27,22 @@ services:
       - PUID=${PUID:-1000}
       - PGID=${PGID:-1000}
       - TZ=Etc/UTC
+      - RADARR__APP__INSTANCENAME=Radarr
+      - RADARR__AUTH__APIKEY=e2etestapikey0123456789abcdef012
+      - RADARR__AUTH__METHOD=External
+      - RADARR__AUTH__REQUIRED=DisabledForLocalAddresses
     volumes:
       - radarr-data:/config
-      - ./fixtures/radarr-config/config.xml:/config/config.xml
+      - ./fixtures/media/e2e:/data/e2e
+      - ./fixtures/media/e2e-b:/data/e2e-b
     ports:
       - "17878:7878"
 
+  # Whisparr v3 (eros) is the image upstream recommends. Its base predates the sectioned env
+  # overrides and generates a random API key, so the fixture config.xml is copied into the
+  # volume before the app starts. The v2 line (v2-2.2.0-release.231) passes this suite too.
   whisparr:
-    image: ghcr.io/hotio/whisparr:v3-3.0.0.695
+    image: ghcr.io/hotio/whisparr:v3-3.5.0-release.1585
     environment:
       - PUID=${PUID:-1000}
       - PGID=${PGID:-1000}
@@ -34,7 +50,10 @@ services:
       - TZ=Etc/UTC
     volumes:
       - whisparr-data:/config
-      - ./fixtures/whisparr-config/config.xml:/config/config.xml
+      - ./fixtures/whisparr-config/config.xml:/seed/config.xml:ro
+      - ./fixtures/media/e2e:/data/e2e
+      - ./fixtures/media/e2e-b:/data/e2e-b
+    entrypoint: ["/bin/sh", "-c", 'cp /seed/config.xml /config/config.xml && chown "$$PUID:$$PGID" /config/config.xml && exec /init']
     ports:
       - "16969:6969"
 
@@ -44,9 +63,14 @@ services:
       - PUID=${PUID:-1000}
       - PGID=${PGID:-1000}
       - TZ=Etc/UTC
+      - READARR__APP__INSTANCENAME=Readarr
+      - READARR__AUTH__APIKEY=e2etestapikey0123456789abcdef012
+      - READARR__AUTH__METHOD=External
+      - READARR__AUTH__REQUIRED=DisabledForLocalAddresses
     volumes:
       - readarr-data:/config
-      - ./fixtures/readarr-config/config.xml:/config/config.xml
+      - ./fixtures/media/e2e:/data/e2e
+      - ./fixtures/media/e2e-b:/data/e2e-b
     ports:
       - "18787:8787"
 
@@ -57,11 +81,42 @@ services:
       - PUID=${PUID:-1000}
       - PGID=${PGID:-1000}
       - TZ=Etc/UTC
+      - LIDARR__APP__INSTANCENAME=Lidarr
+      - LIDARR__AUTH__APIKEY=e2etestapikey0123456789abcdef012
+      - LIDARR__AUTH__METHOD=External
+      - LIDARR__AUTH__REQUIRED=DisabledForLocalAddresses
     volumes:
       - lidarr-data:/config
-      - ./fixtures/lidarr-config/config.xml:/config/config.xml
+      - ./fixtures/media/e2e:/data/e2e
+      - ./fixtures/media/e2e-b:/data/e2e-b
     ports:
       - "18686:8686"
+
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:2.5.2
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=Etc/UTC
+      - PROWLARR__APP__INSTANCENAME=Prowlarr
+      - PROWLARR__AUTH__APIKEY=e2etestapikey0123456789abcdef012
+      - PROWLARR__AUTH__METHOD=External
+      - PROWLARR__AUTH__REQUIRED=DisabledForLocalAddresses
+    volumes:
+      - prowlarr-data:/config
+      - ./fixtures/media/e2e:/data/e2e
+      - ./fixtures/media/e2e-b:/data/e2e-b
+    ports:
+      - "19696:9696"
+
+  # Indexer proxy for Prowlarr e2e (same image as examples/full). Not a download client.
+  flaresolverr:
+    image: ghcr.io/flaresolverr/flaresolverr:v3.3.21
+    environment:
+      - LOG_LEVEL=info
+      - TZ=Etc/UTC
+    ports:
+      - "18191:8191"
 
 volumes:
   sonarr-data:
@@ -69,3 +124,4 @@ volumes:
   whisparr-data:
   readarr-data:
   lidarr-data:
+  prowlarr-data:
