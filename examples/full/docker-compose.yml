@@ -35,7 +35,7 @@ services:
 
   # experimental
   whisparr:
-    image: ghcr.io/hotio/whisparr:v3-3.0.0.695
+    image: ghcr.io/hotio/whisparr:v3-3.5.0-release.1585
     networks:
       - configarr-full
     ports:

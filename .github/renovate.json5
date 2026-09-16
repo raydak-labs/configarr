@@ -15,8 +15,9 @@
     "**/vendor/**",
     "**/__tests__/**",
     "**/test/**",
-    "**/tests/**",
     "**/__fixtures__/**",
+    // `tests/**` is not ignored: tests/arr-e2e/docker-compose.yml pins the *arr images the
+    // live e2e suite runs against, and those need updates like any other dependency.
   ],
   labels: ["dependencies"],
   packageRules: [
@@ -50,5 +51,23 @@
       groupName: "all docker updates (without major)",
       groupSlug: "all-docker",
     },
+    {
+      // hotio tags are `v<branch>-<app version>[-release.<build>]`, e.g. v3-3.5.0-release.1585
+      // (older ones: v3-3.0.0.695). Default docker versioning treats everything after the
+      // first dash as a compatibility suffix and never bumps them. `compatibility` keeps the
+      // branch, so a v3 pin never jumps to v2 and vice versa.
+      matchDatasources: ["docker"],
+      matchPackageNames: ["ghcr.io/hotio/**"],
+      versioning: "regex:^v(?<compatibility>\\d+)-(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)(?:(?:\\.|-release\\.)(?<build>\\d+))?$",
+    },
+    {
+      // Readarr has no stable release, so it is pinned to a LinuxServer develop tag such as
+      // develop-0.4.3.2665-ls130. Matching only `develop-` keeps it on that branch.
+      matchDatasources: ["docker"],
+      matchPackageNames: ["lscr.io/linuxserver/readarr"],
+      versioning: "regex:^develop-(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)\\.(?<build>\\d+)-ls(?<revision>\\d+)$",
+    },
+    // Lidarr stays on the floating `nightly` tag: protocol items[] (#481) are not in a release
+    // yet. Nothing to version there, so Renovate leaves it alone.
   ],
 }
