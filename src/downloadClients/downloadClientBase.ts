@@ -516,7 +516,7 @@ export abstract class BaseDownloadClientSync<T extends DownloadClientShared> {
 
     if (configClients.length === 0 && !config.download_clients?.delete_unmanaged?.enabled) {
       this.logger.info("No download clients configured and delete_unmanaged not enabled, skipping");
-      return { added: 0, updated: 0, removed: 0, diffEntries: [] };
+      return { added: 0, updated: 0, removed: 0, failed: 0, diffEntries: [] };
     }
 
     // Get schema and server clients
@@ -531,6 +531,9 @@ export abstract class BaseDownloadClientSync<T extends DownloadClientShared> {
     // Validate configurations
     this.logger.debug("Validating download client configurations...");
     const { validClients } = await this.validateConfigClients(configClients, schema);
+    // A skipped client is a change that did not happen: it counts as failed so callers can see
+    // the server still holds whatever that entry was supposed to manage.
+    const skipped = configClients.length - validClients.length;
 
     // Create missing tags
     await this.createMissingTags(validClients, serverCache);
@@ -552,6 +555,7 @@ export abstract class BaseDownloadClientSync<T extends DownloadClientShared> {
         added: diff.create.length,
         updated: diff.update.length,
         removed: unmanagedToDelete.length,
+        failed: skipped,
         diffEntries: downloadClientDiffToDiffEntries(diff, unmanagedToDelete),
       };
     }
@@ -569,7 +573,7 @@ export abstract class BaseDownloadClientSync<T extends DownloadClientShared> {
     const failedCreates = diff.create.length - added;
     const failedUpdates = diff.update.length - updated;
     const failedDeletes = unmanagedToDelete.length - removed;
-    const failed = failedCreates + failedUpdates + failedDeletes;
+    const failed = skipped + failedCreates + failedUpdates + failedDeletes;
 
     if (added > 0 || updated > 0 || removed > 0) {
       this.logger.info(`Download client synchronization complete: +${added} ~${updated} -${removed}`);
@@ -584,6 +588,7 @@ export abstract class BaseDownloadClientSync<T extends DownloadClientShared> {
       added,
       updated,
       removed,
+      failed,
       diffEntries: downloadClientDiffToDiffEntries(
         { create: created, update: updatedItems, unchanged: diff.unchanged, deleted: [] },
         deletedItems,

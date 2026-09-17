@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getEnvs } from "../env";
 import type { AppProfileResource } from "./types";
-import { syncSyncProfiles } from "./syncProfileSync";
+import { deleteUnmanagedSyncProfiles, syncSyncProfiles } from "./syncProfileSync";
 
 vi.mock("../env", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../env")>();
@@ -115,10 +115,17 @@ describe("syncSyncProfiles", () => {
 
     const res = await syncSyncProfiles({ data: [{ name: "Standard" }], delete_unmanaged: { enabled: true, ignore: ["Ignored"] } });
 
+    expect(mockClient.deleteAppProfile).not.toHaveBeenCalled();
+    expect(res.removed).toBe(0);
+    expect(res.profiles?.map((p) => p.name)).toEqual(["Standard", "Ignored"]);
+
+    const deleted = await deleteUnmanagedSyncProfiles({
+      data: [{ name: "Standard" }],
+      delete_unmanaged: { enabled: true, ignore: ["Ignored"] },
+    });
     expect(mockClient.deleteAppProfile).toHaveBeenCalledTimes(1);
     expect(mockClient.deleteAppProfile).toHaveBeenCalledWith("3");
-    expect(res.removed).toBe(1);
-    expect(res.profiles?.map((p) => p.name)).toEqual(["Standard", "Ignored"]);
+    expect(deleted.removed).toBe(1);
   });
 
   it("leaves unmanaged profiles alone when delete_unmanaged is off", async () => {
@@ -142,8 +149,16 @@ describe("syncSyncProfiles", () => {
     expect(mockClient.createAppProfile).not.toHaveBeenCalled();
     expect(mockClient.updateAppProfile).not.toHaveBeenCalled();
     expect(mockClient.deleteAppProfile).not.toHaveBeenCalled();
-    expect(res).toMatchObject({ added: 1, updated: 1, removed: 1 });
-    expect(res.diffEntries.map((e) => e.action)).toEqual(["update", "create", "delete"]);
+    expect(res).toMatchObject({ added: 1, updated: 1, removed: 0 });
+    expect(res.diffEntries.map((e) => e.action)).toEqual(["update", "create"]);
+
+    const deleted = await deleteUnmanagedSyncProfiles({
+      data: [{ name: "Standard", minimum_seeders: 9 }, { name: "New" }],
+      delete_unmanaged: { enabled: true },
+    });
+    expect(mockClient.deleteAppProfile).not.toHaveBeenCalled();
+    expect(deleted.removed).toBe(1);
+    expect(deleted.diffEntries.map((e) => e.action)).toEqual(["delete"]);
   });
 
   it("leaves a profile it would delete out of the returned list in a dry run", async () => {
@@ -153,7 +168,7 @@ describe("syncSyncProfiles", () => {
     const res = await syncSyncProfiles({ data: [{ name: "Standard" }], delete_unmanaged: { enabled: true } });
 
     // Orphan is first in server order, so an indexer with no sync_profile would otherwise
-    // default to a profile the real run deletes before indexers sync.
+    // default to a profile this run still deletes after indexers.
     expect(mockClient.deleteAppProfile).not.toHaveBeenCalled();
     expect(res.profiles?.map((p) => p.name)).toEqual(["Standard"]);
   });
@@ -176,7 +191,7 @@ describe("syncSyncProfiles", () => {
     mockClient.getAppProfiles.mockResolvedValue([{ ...standard, id: 3, name: "InUse" }]);
     mockClient.deleteAppProfile.mockRejectedValueOnce(new Error("still in use"));
 
-    await expect(syncSyncProfiles({ data: [], delete_unmanaged: { enabled: true } })).rejects.toThrow(
+    await expect(deleteUnmanagedSyncProfiles({ data: [], delete_unmanaged: { enabled: true } })).rejects.toThrow(
       "Failed to delete sync profile 'InUse': still in use",
     );
   });

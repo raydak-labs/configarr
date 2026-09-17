@@ -18,7 +18,7 @@ import {
 } from "../__generated__/readarr/data-contracts";
 import { logger } from "../logger";
 import type { CustomFormatRequest } from "../customFormats/customFormat.types";
-import { logConnectionError, validateClientParams } from "./connection";
+import { forceSaveIfDisabled, logConnectionError, validateClientParams } from "./connection";
 import {
   CustomFormatsClient,
   DownloadClientsClient,
@@ -197,12 +197,12 @@ export class ReadarrClient
   }
 
   async createDownloadClient(client: DownloadClientResource): Promise<DownloadClientResource> {
-    return this.api.v1DownloadclientCreate(client);
+    return this.api.v1DownloadclientCreate(client, forceSaveIfDisabled(client.enable));
   }
 
   // Note: Readarr's v1 API expects string for update but number for delete
   async updateDownloadClient(id: string, client: DownloadClientResource): Promise<DownloadClientResource> {
-    return this.api.v1DownloadclientUpdate(id, client);
+    return this.api.v1DownloadclientUpdate(id, client, forceSaveIfDisabled(client.enable));
   }
 
   async deleteDownloadClient(id: string): Promise<void> {

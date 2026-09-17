@@ -18,7 +18,7 @@ import {
 import { logger } from "../logger";
 import type { CustomFormatRequest } from "../customFormats/customFormat.types";
 import { ANY_LANGUAGE_NAME, cloneWithJSON } from "../util";
-import { logConnectionError, validateClientParams } from "./connection";
+import { forceSaveIfDisabled, logConnectionError, validateClientParams } from "./connection";
 import {
   CustomFormatsClient,
   DownloadClientsClient,
@@ -200,12 +200,12 @@ export class WhisparrClient
   }
 
   async createDownloadClient(client: DownloadClientResource): Promise<DownloadClientResource> {
-    return this.api.v3DownloadclientCreate(client);
+    return this.api.v3DownloadclientCreate(client, forceSaveIfDisabled(client.enable));
   }
 
   // Note: Whisparr's v3 API expects string for update but number for delete
   async updateDownloadClient(id: string, client: DownloadClientResource): Promise<DownloadClientResource> {
-    return this.api.v3DownloadclientUpdate(id, client);
+    return this.api.v3DownloadclientUpdate(id, client, forceSaveIfDisabled(client.enable));
   }
 
   async deleteDownloadClient(id: string): Promise<void> {

@@ -63,5 +63,7 @@ export interface DownloadClientSyncResult {
   added: number;
   updated: number;
   removed: number;
+  /** Creates, updates and deletes that failed. Individual failures are logged, not thrown. */
+  failed: number;
   diffEntries: DiffEntry[];
 }

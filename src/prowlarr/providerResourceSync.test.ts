@@ -288,6 +288,38 @@ describe("ProviderResourceSync", () => {
       expect(out.removed).toBe(1);
     });
 
+    it("defers unmanaged deletes when asked, then deleteUnmanaged performs them", async () => {
+      mockClient.getAll.mockResolvedValue([
+        { id: 1, name: "Keep", implementation: "Widget", fields: [], tags: [] },
+        { id: 3, name: "Stale", implementation: "Widget", fields: [], tags: [] },
+      ]);
+
+      const handler = sync();
+      const out = await handler.sync([{ name: "Keep", type: "Widget" }], { enabled: true }, cache(), { deferDeletes: true });
+
+      expect(mockClient.remove).not.toHaveBeenCalled();
+      expect(out.removed).toBe(0);
+      expect(out.diffEntries.some((e) => e.action === "delete")).toBe(false);
+
+      const deleted = await handler.deleteUnmanaged([{ name: "Keep", type: "Widget" }], { enabled: true });
+      expect(mockClient.remove).toHaveBeenCalledExactlyOnceWith("3");
+      expect(deleted.removed).toBe(1);
+    });
+
+    it("deletes a server resource whose config item failed validation, deferred or not", async () => {
+      mockClient.getAll.mockResolvedValue([{ id: 3, name: "Broken", implementation: "Widget", fields: [], tags: [] }]);
+      // Empty type fails ThingConfigSchema, so "Broken" is not a managed name.
+      const invalid = [{ name: "Broken", type: "" }];
+
+      const handler = sync();
+      await handler.sync(invalid, { enabled: true }, cache(), { deferDeletes: true });
+      expect(mockClient.remove).not.toHaveBeenCalled();
+
+      const deleted = await handler.deleteUnmanaged(invalid, { enabled: true });
+      expect(mockClient.remove).toHaveBeenCalledExactlyOnceWith("3");
+      expect(deleted.removed).toBe(1);
+    });
+
     it("deletes nothing when disabled", async () => {
       mockClient.getAll.mockResolvedValue([{ id: 3, name: "Stale", implementation: "Widget", fields: [], tags: [] }]);
 

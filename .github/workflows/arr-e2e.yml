@@ -3,11 +3,6 @@ name: Arr E2E
 # Optional: run manually from Actions → Arr E2E → Run workflow
 on:
   workflow_dispatch:
-    inputs:
-      run_delay_profile_tests:
-        description: Also run focused delay-profile API tests
-        type: boolean
-        default: true
 
 permissions: {}
 
@@ -17,7 +12,7 @@ concurrency:
 
 jobs:
   arr-e2e:
-    name: Live *arr pipeline smoke
+    name: Live *arr e2e
     runs-on: ubuntu-latest
     timeout-minutes: 45
     permissions:
@@ -44,10 +39,11 @@ jobs:
 
       - name: Start *arr stack
         working-directory: tests/arr-e2e
-        env:
-          PUID: "1000"
-          PGID: "1000"
-        run: docker compose up -d
+        run: |
+          set -euo pipefail
+          # Containers must run as the runner user: /data/e2e is a bind mount from the
+          # checkout, and *arr rejects a root folder it cannot write to.
+          PUID="$(id -u)" PGID="$(id -g)" docker compose up -d
 
       - name: Wait for *arr APIs
         env:
@@ -76,18 +72,11 @@ jobs:
           wait_one whisparr http://127.0.0.1:16969 /api/v3/system/status
           wait_one readarr  http://127.0.0.1:18787 /api/v1/system/status
           wait_one lidarr   http://127.0.0.1:18686 /api/v1/system/status
+          wait_one prowlarr http://127.0.0.1:19696 /api/v1/system/status
+          wait_one flaresolverr http://127.0.0.1:18191 /
 
-      - name: Run full pipeline + delay-profile e2e
-        env:
-          ARR_E2E: "1"
-          RUN_DELAY_PROFILE_TESTS: ${{ inputs.run_delay_profile_tests }}
-        run: |
-          set -euo pipefail
-          if [ "${RUN_DELAY_PROFILE_TESTS}" = "true" ]; then
-            pnpm test:e2e:arr
-          else
-            pnpm exec vitest run --config vitest.arr-e2e.config.ts tests/arr-e2e/full-pipeline.e2e.test.ts
-          fi
+      - name: Run arr e2e suite
+        run: pnpm test:e2e:arr
 
       - name: Dump compose logs on failure
         if: failure()

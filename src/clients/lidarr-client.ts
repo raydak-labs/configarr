@@ -18,7 +18,7 @@ import {
 } from "../__generated__/lidarr/data-contracts";
 import { logger } from "../logger";
 import type { CustomFormatRequest } from "../customFormats/customFormat.types";
-import { logConnectionError, validateClientParams } from "./connection";
+import { forceSaveIfDisabled, logConnectionError, validateClientParams } from "./connection";
 import {
   CustomFormatsClient,
   DownloadClientsClient,
@@ -201,11 +201,11 @@ export class LidarrClient
   }
 
   async createDownloadClient(client: DownloadClientResource): Promise<DownloadClientResource> {
-    return this.api.v1DownloadclientCreate(client);
+    return this.api.v1DownloadclientCreate(client, forceSaveIfDisabled(client.enable));
   }
 
   async updateDownloadClient(id: string, client: DownloadClientResource): Promise<DownloadClientResource> {
-    return this.api.v1DownloadclientUpdate(+id, client);
+    return this.api.v1DownloadclientUpdate(+id, client, forceSaveIfDisabled(client.enable));
   }
 
   async deleteDownloadClient(id: string): Promise<void> {

@@ -27,19 +27,15 @@ function referencedTagNames(instance: InputConfigProwlarrInstance): Set<string> 
 }
 
 /**
- * Ensures the tag labels listed under `prowlarr.<instance>.tags` exist, and
- * (optionally) deletes server tags that are neither listed nor referenced by a
- * managed resource.
- *
- * A failed create or delete throws: provider resources reference tags by name, so
- * continuing would silently sync them with the wrong tags.
+ * Ensures the tag labels listed under `prowlarr.<instance>.tags` exist.
+ * Unmanaged deletes run later via `deleteUnmanagedTags` so tagged apps/indexers
+ * can be removed first (Prowlarr returns 409 while a tag is still in use).
  */
 export async function syncTags(instance: InputConfigProwlarrInstance, serverCache: ServerCache): Promise<TagSyncResult> {
   const desired = instance.tags ?? [];
-  const deleteConfig = instance.delete_unmanaged_tags;
   const result: TagSyncResult = { added: 0, removed: 0, diffEntries: [] };
 
-  if (desired.length === 0 && !deleteConfig?.enabled) {
+  if (desired.length === 0) {
     return result;
   }
 
@@ -74,38 +70,49 @@ export async function syncTags(instance: InputConfigProwlarrInstance, serverCach
     }
   }
 
-  if (deleteConfig?.enabled) {
-    const keep = new Set<string>([
-      ...desired.map((t) => t.toLowerCase()),
-      ...(deleteConfig.ignore ?? []).map((t) => t.toLowerCase()),
-      ...referencedTagNames(instance),
-    ]);
+  return result;
+}
 
-    const deletedIds = new Set<number>();
-    for (const tag of serverCache.tags) {
-      const label = tag.label ?? "";
-      if (!label || keep.has(label.toLowerCase()) || tag.id == null) continue;
-
-      if (dryRun) {
-        logger.info(`DryRun: Would delete unmanaged tag '${label}'.`);
-        result.diffEntries.push({ resourceType: "Tag", name: label, action: "delete" });
-        result.removed++;
-        continue;
-      }
-      try {
-        await api.deleteTag(tag.id.toString());
-        deletedIds.add(tag.id);
-        result.diffEntries.push({ resourceType: "Tag", name: label, action: "delete" });
-        result.removed++;
-        logger.info(`Deleted unmanaged tag: '${label}'`);
-      } catch (error: unknown) {
-        const message = `Failed to delete tag '${label}': ${error instanceof Error ? error.message : String(error)}`;
-        logger.error(message);
-        throw new Error(message);
-      }
-    }
-    serverCache.tags = serverCache.tags.filter((t) => t.id == null || !deletedIds.has(t.id));
+/** Deletes server tags that are neither listed, ignored, nor referenced by remaining YAML resources. */
+export async function deleteUnmanagedTags(instance: InputConfigProwlarrInstance, serverCache: ServerCache): Promise<TagSyncResult> {
+  const result: TagSyncResult = { added: 0, removed: 0, diffEntries: [] };
+  const deleteConfig = instance.delete_unmanaged_tags;
+  if (!deleteConfig?.enabled) {
+    return result;
   }
 
+  const api = getClient("PROWLARR");
+  const dryRun = getEnvs().DRY_RUN;
+  const desired = instance.tags ?? [];
+  const keep = new Set<string>([
+    ...desired.map((t) => t.toLowerCase()),
+    ...(deleteConfig.ignore ?? []).map((t) => t.toLowerCase()),
+    ...referencedTagNames(instance),
+  ]);
+
+  const deletedIds = new Set<number>();
+  for (const tag of serverCache.tags) {
+    const label = tag.label ?? "";
+    if (!label || keep.has(label.toLowerCase()) || tag.id == null) continue;
+
+    if (dryRun) {
+      logger.info(`DryRun: Would delete unmanaged tag '${label}'.`);
+      result.diffEntries.push({ resourceType: "Tag", name: label, action: "delete" });
+      result.removed++;
+      continue;
+    }
+    try {
+      await api.deleteTag(tag.id.toString());
+      deletedIds.add(tag.id);
+      result.diffEntries.push({ resourceType: "Tag", name: label, action: "delete" });
+      result.removed++;
+      logger.info(`Deleted unmanaged tag: '${label}'`);
+    } catch (error: unknown) {
+      const message = `Failed to delete tag '${label}': ${error instanceof Error ? error.message : String(error)}`;
+      logger.error(message);
+      throw new Error(message);
+    }
+  }
+  serverCache.tags = serverCache.tags.filter((t) => t.id == null || !deletedIds.has(t.id));
   return result;
 }
