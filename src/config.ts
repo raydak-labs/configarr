@@ -580,8 +580,6 @@ const includeTemplateOrderDefault = async (
           }
 
           break;
-        default:
-          warnOrThrowConfig(`Unknown source type for template requested: '${current.source}'. Ignoring.`);
       }
 
       return previous;
@@ -628,7 +626,6 @@ const includeTemplateOrderDefault = async (
 
     const resolvedTemplate = trash.get(e.template);
     if (resolvedTemplate == null) {
-      warnOrThrowConfig(`Unknown 'trash' template requested: '${e.template}'`);
       return;
     }
     includeTrashTemplate(resolvedTemplate, {
@@ -641,7 +638,6 @@ const includeTemplateOrderDefault = async (
   mappedIncludes.recyclarr.forEach((e) => {
     const resolvedTemplate = recyclarr.get(e.template);
     if (resolvedTemplate == null) {
-      warnOrThrowConfig(`Unknown 'recyclarr' template requested: '${e.template}'`);
       return;
     }
     includeRecyclarrTemplate(resolvedTemplate, { mergedTemplates, trashCFGroupMapping, cfGroupOptions });
@@ -649,7 +645,6 @@ const includeTemplateOrderDefault = async (
   mappedIncludes.local.forEach((e) => {
     const resolvedTemplate = local.get(e.template);
     if (resolvedTemplate == null) {
-      warnOrThrowConfig(`Unknown 'local' template requested: '${e.template}'`);
       return;
     }
     includeRecyclarrTemplate(resolvedTemplate, { mergedTemplates, trashCFGroupMapping, cfGroupOptions });

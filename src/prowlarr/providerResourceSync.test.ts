@@ -367,6 +367,19 @@ describe("ProviderResourceSync", () => {
       expect(deleted.removed).toBe(1);
     });
 
+    it("does not delete that resource when enforcement is enabled", async () => {
+      vi.mocked(getEnvs).mockReturnValue({
+        DRY_RUN: false,
+        LOG_LEVEL: "silent",
+        CONFIGARR_VERSION: "test",
+        CONFIGARR_ENFORCE_CONFIG_VALIDATION: true,
+      } as any);
+      mockClient.getAll.mockResolvedValue([{ id: 3, name: "Broken", implementation: "Widget", fields: [], tags: [] }]);
+
+      await expect(sync().deleteUnmanaged([{ name: "Broken", type: "" }], { enabled: true })).rejects.toBeInstanceOf(ConfigValidationError);
+      expect(mockClient.remove).not.toHaveBeenCalled();
+    });
+
     it("deletes nothing when disabled", async () => {
       mockClient.getAll.mockResolvedValue([{ id: 3, name: "Stale", implementation: "Widget", fields: [], tags: [] }]);
 

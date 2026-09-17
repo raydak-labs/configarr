@@ -6,7 +6,7 @@ import type { QualityDefinitionsClient } from "../clients/capabilities";
 import { MediaArrType } from "../types/common.types";
 import { TrashQualityDefinitionQuality } from "../types/trashguide.types";
 import { cloneWithJSON, loadJsonFile, roundToDecimal } from "../util";
-import { ConfigValidationError, warnOrThrowConfig } from "../validation";
+import { warnOrThrowConfig } from "../validation";
 import { QualityDefinitionShared } from "./qualityDefinition.types";
 
 export function applyPreferredSizeDiff(
