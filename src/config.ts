@@ -4,7 +4,7 @@ import fg from "fast-glob";
 import yaml from "yaml";
 import { NamingConfigResource as RadarrNamingConfigResource } from "./__generated__/radarr/data-contracts";
 import { NamingConfigResource as SonarrNamingConfigResource } from "./__generated__/sonarr/data-contracts";
-import { getHelpers } from "./env";
+import { getEnvs, getHelpers } from "./env";
 import { loadLocalRecyclarrTemplate } from "./local-importer";
 import { logger } from "./logger";
 import { filterInvalidQualityProfiles } from "./qualityProfiles/qualityProfileBase";
@@ -43,7 +43,7 @@ import {
   MergedConfigInstance,
 } from "./types/config.types";
 import { RemotePathConfigSchema } from "./remotePaths/remotePath.types";
-import { ConfigValidationError, validateConfig as validateConfigData } from "./validation";
+import { ConfigValidationError, validateConfig as validateConfigData, warnOrThrowConfig } from "./validation";
 import {
   TrashCFGroupMapping,
   TrashQP,
@@ -320,6 +320,9 @@ export const validateConfig = (input: InputConfigInstance): MergedConfigInstance
   const preferredRatio = input.quality_definition?.preferred_ratio;
 
   if (preferredRatio != null && (preferredRatio < 0 || preferredRatio > 1)) {
+    if (getEnvs().CONFIGARR_ENFORCE_CONFIG_VALIDATION) {
+      throw new ConfigValidationError("QualityDefinition: PreferredRatio must be between 0 and 1.");
+    }
     logger.warn(`QualityDefinition: PreferredRatio must be between 0 and 1. Ignoring`);
     delete input.quality_definition!["preferred_ratio"];
   }
@@ -542,7 +545,7 @@ const includeTemplateOrderDefault = async (
           if (trash.has(current.template) || trashQD.has(current.template)) {
             previous.trash.push(current);
           } else {
-            logger.warn(`Included 'TRASH' template: ${current.template} not found.`);
+            warnOrThrowConfig(`Included 'TRASH' template: ${current.template} not found.`);
           }
           break;
         case "RECYCLARR":
@@ -573,12 +576,12 @@ const includeTemplateOrderDefault = async (
           } else if (localFound === true) {
             previous.local.push(current);
           } else {
-            logger.warn(`No matching 'RECYCLARR' or 'LOCAL' template for '${current.template}'`);
+            warnOrThrowConfig(`No matching 'RECYCLARR' or 'LOCAL' template for '${current.template}'`);
           }
 
           break;
         default:
-          logger.warn(`Unknown source type for template requested: '${current.source}'. Ignoring.`);
+          warnOrThrowConfig(`Unknown source type for template requested: '${current.source}'. Ignoring.`);
       }
 
       return previous;
@@ -625,7 +628,7 @@ const includeTemplateOrderDefault = async (
 
     const resolvedTemplate = trash.get(e.template);
     if (resolvedTemplate == null) {
-      logger.warn(`Unknown 'trash' template requested: '${e.template}'`);
+      warnOrThrowConfig(`Unknown 'trash' template requested: '${e.template}'`);
       return;
     }
     includeTrashTemplate(resolvedTemplate, {
@@ -638,7 +641,7 @@ const includeTemplateOrderDefault = async (
   mappedIncludes.recyclarr.forEach((e) => {
     const resolvedTemplate = recyclarr.get(e.template);
     if (resolvedTemplate == null) {
-      logger.warn(`Unknown 'recyclarr' template requested: '${e.template}'`);
+      warnOrThrowConfig(`Unknown 'recyclarr' template requested: '${e.template}'`);
       return;
     }
     includeRecyclarrTemplate(resolvedTemplate, { mergedTemplates, trashCFGroupMapping, cfGroupOptions });
@@ -646,7 +649,7 @@ const includeTemplateOrderDefault = async (
   mappedIncludes.local.forEach((e) => {
     const resolvedTemplate = local.get(e.template);
     if (resolvedTemplate == null) {
-      logger.warn(`Unknown 'local' template requested: '${e.template}'`);
+      warnOrThrowConfig(`Unknown 'local' template requested: '${e.template}'`);
       return;
     }
     includeRecyclarrTemplate(resolvedTemplate, { mergedTemplates, trashCFGroupMapping, cfGroupOptions });

@@ -1,10 +1,11 @@
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { ServerCache } from "../cache";
 import * as log from "../logger";
 import { QualityDefinitionShared } from "../qualityDefinitions/qualityDefinition.types";
 import { QualityItem, QualityProfileShared } from "./qualityProfile.types";
 import {
   checkForConflictingCFs,
+  filterInvalidQualityProfiles,
   isOrderOfConfigQualitiesEqual,
   isOrderOfQualitiesEqual,
   mapQualities,
@@ -15,6 +16,7 @@ import { QualityProfileRadarrSync } from "./qualityProfileRadarr";
 import { CFProcessing } from "../customFormats/customFormat.types";
 import { ConfigQualityProfile, ConfigQualityProfileItem, MergedConfigInstance } from "../types/config.types";
 import { ConfigValidationError } from "../validation";
+import * as env from "../env";
 
 describe("qualityProfileBase", async () => {
   test("isOrderOfConfigQualitiesEqual - should match", async ({}) => {
@@ -810,6 +812,89 @@ describe("qualityProfileBase", async () => {
       const cfScore = profileScore?.get("Test CF");
 
       expect(cfScore?.score).toBe(25); // Should use default, ignoring score_set
+    });
+  });
+
+  describe("mapQualityProfiles - unknown custom format ids", () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    const config: MergedConfigInstance = {
+      custom_formats: [{ trash_ids: ["nope"], assign_scores_to: [{ name: "HD" }] }],
+      quality_profiles: [
+        {
+          name: "HD",
+          min_format_score: 0,
+          qualities: [],
+          quality_sort: "top",
+          upgrade: { allowed: true, until_quality: "HDTV-1080p", until_score: 1000 },
+          score_set: "default",
+        },
+      ],
+      customFormatDefinitions: [],
+      media_management: {},
+      media_naming: {},
+    };
+    const cfMap: CFProcessing = { carrIdMapping: new Map(), cfNameToCarrConfig: new Map() };
+
+    test("skips unknown ids when enforcement is off", () => {
+      expect(mapQualityProfiles(cfMap, config).size).toBe(0);
+    });
+
+    test("throws when enforcement is on", () => {
+      vi.spyOn(env, "getEnvs").mockReturnValue({ CONFIGARR_ENFORCE_CONFIG_VALIDATION: true } as ReturnType<typeof env.getEnvs>);
+      expect(() => mapQualityProfiles(cfMap, config)).toThrow(ConfigValidationError);
+      expect(() => mapQualityProfiles(cfMap, config)).toThrow("Unknown ID for CF. nope");
+    });
+  });
+
+  describe("filterInvalidQualityProfiles", () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    test("drops profiles missing name, qualities, or upgrade", () => {
+      expect(
+        filterInvalidQualityProfiles([
+          {
+            min_format_score: 0,
+            qualities: [{ name: "HDTV-1080p" }],
+            quality_sort: "top",
+            upgrade: { allowed: false },
+            score_set: "default",
+          } as ConfigQualityProfile,
+          {
+            name: "NoQualities",
+            min_format_score: 0,
+            quality_sort: "top",
+            upgrade: { allowed: false },
+            score_set: "default",
+          } as ConfigQualityProfile,
+          {
+            name: "NoUpgrade",
+            min_format_score: 0,
+            qualities: [{ name: "HDTV-1080p" }],
+            quality_sort: "top",
+            score_set: "default",
+          } as ConfigQualityProfile,
+        ]),
+      ).toEqual([]);
+    });
+
+    test("throws when enforcement is on", () => {
+      vi.spyOn(env, "getEnvs").mockReturnValue({ CONFIGARR_ENFORCE_CONFIG_VALIDATION: true } as ReturnType<typeof env.getEnvs>);
+      expect(() =>
+        filterInvalidQualityProfiles([
+          {
+            name: "NoQualities",
+            min_format_score: 0,
+            quality_sort: "top",
+            upgrade: { allowed: false },
+            score_set: "default",
+          } as ConfigQualityProfile,
+        ]),
+      ).toThrow(ConfigValidationError);
     });
   });
 

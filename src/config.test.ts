@@ -8,6 +8,7 @@ import {
   readConfigRaw,
   resetSecretsCache,
   transformConfig,
+  validateConfig as validateMergedConfig,
 } from "./config";
 import * as env from "./env";
 import * as localImporter from "./local-importer";
@@ -392,6 +393,71 @@ describe("mergeConfigsAndTemplates", () => {
 
     expect(result.config.custom_formats.length).toBe(0);
     expect(result.config.quality_profiles.length).toBe(0);
+  });
+
+  test("throws on unknown include templates when enforcement is enabled", async () => {
+    const envs = env.getEnvs();
+    const spy = vi.spyOn(env, "getEnvs").mockReturnValue({
+      ...envs,
+      CONFIGARR_ENFORCE_CONFIG_VALIDATION: true,
+    });
+
+    vi.spyOn(reclarrImporter, "loadRecyclarrTemplates").mockReturnValue(new Map());
+    vi.spyOn(localImporter, "loadLocalRecyclarrTemplate").mockReturnValue(new Map());
+    vi.spyOn(trashGuide, "loadQPFromTrash").mockReturnValue(Promise.resolve(new Map()));
+    vi.spyOn(trashGuide, "loadTrashCustomFormatGroups").mockReturnValue(Promise.resolve(new Map()));
+
+    const inputConfig: InputConfigArrInstance = {
+      include: [{ template: "unknown", source: "RECYCLARR" }],
+      custom_formats: [],
+      quality_profiles: [],
+      api_key: "test",
+      base_url: "http://sonarr:8989",
+    };
+
+    try {
+      await expect(mergeConfigsAndTemplates({}, inputConfig, "SONARR")).rejects.toThrow(ConfigValidationError);
+      await expect(mergeConfigsAndTemplates({}, inputConfig, "SONARR")).rejects.toThrow("No matching 'RECYCLARR' or 'LOCAL' template");
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  test("throws on preferred_ratio out of range when enforcement is enabled", () => {
+    const envs = env.getEnvs();
+    const spy = vi.spyOn(env, "getEnvs").mockReturnValue({
+      ...envs,
+      CONFIGARR_ENFORCE_CONFIG_VALIDATION: true,
+    });
+
+    try {
+      expect(() =>
+        validateMergedConfig({
+          custom_formats: [],
+          quality_profiles: [],
+          quality_definition: { preferred_ratio: 2 },
+        }),
+      ).toThrow(ConfigValidationError);
+      expect(() =>
+        validateMergedConfig({
+          custom_formats: [],
+          quality_profiles: [],
+          quality_definition: { preferred_ratio: 2 },
+        }),
+      ).toThrow("PreferredRatio must be between 0 and 1");
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  test("drops preferred_ratio out of range when enforcement is off", () => {
+    const result = validateMergedConfig({
+      custom_formats: [],
+      quality_profiles: [],
+      quality_definition: { preferred_ratio: 2 },
+    });
+
+    expect(result.quality_definition?.preferred_ratio).toBeUndefined();
   });
 
   test("should prioritize config values over template values", async () => {

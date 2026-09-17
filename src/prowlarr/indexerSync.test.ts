@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, test, vi } from "vitest";
 import type { ServerCache } from "../cache";
+import { ConfigValidationError } from "../validation";
 import { IndexerSync } from "./indexerSync";
 import type { IndexerResource } from "./types";
 
@@ -75,6 +76,9 @@ describe("IndexerSync", () => {
   });
 
   it("fails when the configured sync profile does not exist", async () => {
+    await expect(sync().sync([{ name: "1337x", definition: "1337x", sync_profile: "Nope" }], undefined, cache())).rejects.toBeInstanceOf(
+      ConfigValidationError,
+    );
     await expect(sync().sync([{ name: "1337x", definition: "1337x", sync_profile: "Nope" }], undefined, cache())).rejects.toThrow(
       "Sync profile 'Nope' not found for Indexer '1337x'. Available: Standard",
     );
@@ -91,6 +95,7 @@ describe("IndexerSync", () => {
   it("fails instead of guessing an id when the server has no sync profiles", async () => {
     mockClient.getAppProfiles.mockResolvedValue([]);
 
+    await expect(sync().sync([{ name: "1337x", definition: "1337x" }], undefined, cache())).rejects.toBeInstanceOf(ConfigValidationError);
     await expect(sync().sync([{ name: "1337x", definition: "1337x" }], undefined, cache())).rejects.toThrow(
       "No sync profile available on Prowlarr for Indexer '1337x'",
     );

@@ -1,4 +1,5 @@
 import { InputConfigIndexer, InputConfigIndexerSchema } from "../types/config.types";
+import { ConfigValidationError } from "../validation";
 import { ExtraProp, ProviderResourceSync } from "./providerResourceSync";
 import { AppProfileResource, IndexerResource } from "./types";
 
@@ -69,7 +70,7 @@ export class IndexerSync extends ProviderResourceSync<InputConfigIndexer, Indexe
     const match = ctx.appProfiles.find((p) => p.name?.toLowerCase() === wanted.toLowerCase());
     if (!match) {
       const available = ctx.appProfiles.map((p) => p.name).filter(Boolean);
-      throw new Error(
+      throw new ConfigValidationError(
         `Sync profile '${wanted}' not found for Indexer '${config.name}'. Available: ${available.length > 0 ? available.join(", ") : "none"}`,
       );
     }
@@ -83,7 +84,7 @@ export class IndexerSync extends ProviderResourceSync<InputConfigIndexer, Indexe
   private defaultAppProfileId(config: InputConfigIndexer, ctx: IndexerCtx): number {
     const id = ctx.appProfiles.find((p) => p.id != null)?.id;
     if (id == null) {
-      throw new Error(
+      throw new ConfigValidationError(
         `No sync profile available on Prowlarr for Indexer '${config.name}'. Add one under 'sync_profiles' or create one in Prowlarr.`,
       );
     }

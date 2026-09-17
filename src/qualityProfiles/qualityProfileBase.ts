@@ -8,7 +8,7 @@ import { MediaArrType } from "../types/common.types";
 import { ConfigQualityProfile, ConfigQualityProfileItem, MergedConfigInstance } from "../types/config.types";
 import type { TrashCFConflict } from "../types/trashguide.types";
 import { ANY_LANGUAGE_NAME, cloneWithJSON, loadJsonFile, zip } from "../util";
-import { ConfigValidationError } from "../validation";
+import { ConfigValidationError, warnOrThrowConfig } from "../validation";
 import { CustomFormatRef, FormatItem, QualityItem, QualityProfileLanguage, QualityProfileShared } from "./qualityProfile.types";
 import type { QualityDefinitionShared } from "../qualityDefinitions/qualityDefinition.types";
 
@@ -129,7 +129,7 @@ export const mapQualityProfiles = ({ carrIdMapping }: CFProcessing, { custom_for
         const carr = carrIdMapping.get(trashId);
 
         if (!carr) {
-          logger.warn(`Unknown ID for CF. ${trashId}`);
+          warnOrThrowConfig(`Unknown ID for CF. ${trashId}`);
           continue;
         }
 
@@ -383,15 +383,18 @@ export function qualityProfilesToDiffEntries<T extends QualityProfileShared>(
 export const filterInvalidQualityProfiles = (profiles: ConfigQualityProfile[]): ConfigQualityProfile[] => {
   return profiles.filter((p) => {
     if (p.name == null) {
+      if (getEnvs().CONFIGARR_ENFORCE_CONFIG_VALIDATION) {
+        throw new ConfigValidationError("QualityProfile filtered because no name provided");
+      }
       logger.warn(p, `QualityProfile filtered because no name provided`);
       return false;
     }
     if (p.qualities == null) {
-      logger.warn(`QualityProfile: '${p.name}' filtered because no qualities provided`);
+      warnOrThrowConfig(`QualityProfile: '${p.name}' filtered because no qualities provided`);
       return false;
     }
     if (p.upgrade == null) {
-      logger.warn(`QualityProfile: '${p.name}' filtered because no upgrade definition provided`);
+      warnOrThrowConfig(`QualityProfile: '${p.name}' filtered because no upgrade definition provided`);
       return false;
     }
 

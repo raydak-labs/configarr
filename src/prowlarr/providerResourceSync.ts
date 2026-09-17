@@ -576,6 +576,9 @@ export abstract class ProviderResourceSync<
   }
 
   private toError(message: string, error: unknown): Error {
+    if (error instanceof ConfigValidationError) {
+      return error;
+    }
     const errorMessage = error instanceof Error ? error.message : String(error);
     this.logger.error(`${message}: ${errorMessage}`);
     const httpError = error as any;

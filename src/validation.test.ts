@@ -1,6 +1,6 @@
 import { describe, expect, test, vi, beforeEach } from "vitest";
 import { z } from "zod";
-import { ConfigValidationError, validateData, validateConfig, validateExternal, ValidationError } from "./validation";
+import { ConfigValidationError, validateData, validateConfig, validateExternal, ValidationError, warnOrThrowConfig } from "./validation";
 import { InputConfigDelayProfileSchema } from "./types/config.types";
 
 // Mock env module
@@ -189,5 +189,29 @@ describe("validateExternal", () => {
     const valid = { name: "test", age: 25 };
     expect(validateConfig(testSchema, valid, "test")).toEqual(valid);
     expect(validateExternal(testSchema, valid, "test")).toEqual(valid);
+  });
+});
+
+describe("warnOrThrowConfig", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  test("should warn when enforcement is disabled", () => {
+    vi.mocked(getEnvs).mockReturnValue({
+      CONFIGARR_ENFORCE_CONFIG_VALIDATION: false,
+    } as any);
+
+    warnOrThrowConfig("oops");
+    expect(logger.warn).toHaveBeenCalledWith("oops");
+  });
+
+  test("should throw ConfigValidationError when enforcement is enabled", () => {
+    vi.mocked(getEnvs).mockReturnValue({
+      CONFIGARR_ENFORCE_CONFIG_VALIDATION: true,
+    } as any);
+
+    expect(() => warnOrThrowConfig("oops")).toThrow(ConfigValidationError);
+    expect(() => warnOrThrowConfig("oops")).toThrow("oops");
   });
 });

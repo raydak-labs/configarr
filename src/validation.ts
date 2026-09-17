@@ -19,6 +19,14 @@ export class ValidationError extends ConfigValidationError {
   }
 }
 
+/** Lenient: warn. Strict (`CONFIGARR_ENFORCE_CONFIG_VALIDATION`): throw. */
+export function warnOrThrowConfig(message: string): void {
+  if (getEnvs().CONFIGARR_ENFORCE_CONFIG_VALIDATION) {
+    throw new ConfigValidationError(message);
+  }
+  logger.warn(message);
+}
+
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null && !Array.isArray(value);
 
 const findStrippedConfigKeys = (input: unknown, parsed: unknown, path: Array<string | number> = []): string[] => {
