@@ -1063,8 +1063,7 @@ prowlarr:
 and matched to the server by display `name`. Extra keys: `enable`, `priority`, `sync_profile`
 (the name must exist in Prowlarr or be listed under `sync_profiles`, otherwise the sync fails).
 On a new indexer without `sync_profile` the first profile on the server is used; on an update the
-existing profile is kept. `app_profile` is the original name for this key and still works.
-`indexer_proxies` are matched by
+existing profile is kept. `indexer_proxies` are matched by
 `name` + `type` (implementation: `FlareSolverr`, `Http`, `Socks4`, `Socks5`).
 
 `tags` is a plain list of labels to ensure exist; `delete_unmanaged_tags: { enabled, ignore }`

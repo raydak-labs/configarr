@@ -6,9 +6,6 @@ type IndexerCtx = { appProfiles: AppProfileResource[] };
 
 const DEFAULT_PRIORITY = 25;
 
-/** `app_profile` was the original key for this and stays accepted. */
-const profileName = (config: InputConfigIndexer) => config.sync_profile ?? config.app_profile;
-
 /**
  * Syncs Prowlarr indexers. Config entries are based on a schema `definitionName`
  * (e.g. "1337x") and matched to the server by display `name`. Carries `enable`,
@@ -50,7 +47,7 @@ export class IndexerSync extends ProviderResourceSync<InputConfigIndexer, Indexe
     {
       serverKey: "appProfileId",
       fromConfig: (c, ctx) => this.resolveAppProfileId(c, ctx),
-      specified: (c) => profileName(c) !== undefined,
+      specified: (c) => c.sync_profile !== undefined,
       fallback: (c, ctx) => this.defaultAppProfileId(c, ctx),
     },
   ];
@@ -63,7 +60,7 @@ export class IndexerSync extends ProviderResourceSync<InputConfigIndexer, Indexe
    * leaves `appProfileId` out of the comparison rather than inventing an id it cannot know.
    */
   private resolveAppProfileId(config: InputConfigIndexer, ctx: IndexerCtx): number | undefined {
-    const wanted = profileName(config);
+    const wanted = config.sync_profile;
     if (!wanted) return undefined;
 
     const match = ctx.appProfiles.find((p) => p.name?.toLowerCase() === wanted.toLowerCase());
