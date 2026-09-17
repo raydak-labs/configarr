@@ -8,6 +8,7 @@ import { syncProwlarrProviders } from "../prowlarr/prowlarrSyncer";
 import { deleteUnmanagedTags } from "../prowlarr/tagSync";
 import { loadServerTags } from "../tags/tags";
 import { InputConfigProwlarrInstance } from "../types/config.types";
+import { ConfigValidationError } from "../validation";
 
 export class ProwlarrSyncer {
   async run(instance: InputConfigProwlarrInstance, instanceName: string): Promise<InstanceDiffReport> {
@@ -36,6 +37,9 @@ export class ProwlarrSyncer {
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : String(err);
         logger.error(`Failed to sync download clients: ${message}`);
+        if (err instanceof ConfigValidationError) {
+          throw err;
+        }
         downloadClientsFailed = true;
       }
     }

@@ -6,6 +6,7 @@ import type { QualityDefinitionsClient } from "../clients/capabilities";
 import { MediaArrType } from "../types/common.types";
 import { TrashQualityDefinitionQuality } from "../types/trashguide.types";
 import { cloneWithJSON, loadJsonFile, roundToDecimal } from "../util";
+import { warnOrThrowConfig } from "../validation";
 import { QualityDefinitionShared } from "./qualityDefinition.types";
 
 export function applyPreferredSizeDiff(
@@ -138,7 +139,7 @@ export function calculateQualityDefinitionDiffCore<T extends QualityDefinitionSh
         restData.push(serverQuality);
       }
     } else {
-      logger.warn(`QualityDefinition: Found definition which is not available in server '${clonedQuality.quality}'. Ignoring.`);
+      warnOrThrowConfig(`QualityDefinition: Found definition which is not available in server '${clonedQuality.quality}'. Ignoring.`);
     }
   }
 

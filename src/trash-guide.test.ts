@@ -5,6 +5,7 @@ import {
   loadNamingFromTrashRadarr,
   loadNamingFromTrashSonarr,
   loadQPFromTrash,
+  loadQualityDefinitionFromTrash,
   loadTrashCFConflicts,
   loadTrashCustomFormatGroups,
   transformTrashCFGroups,
@@ -16,7 +17,7 @@ import { TrashCFGroupMapping, TrashQualityDefinition, TrashQP } from "./types/tr
 import * as util from "./util";
 import { logger } from "./logger";
 import * as envModule from "./env";
-import { ValidationError } from "./validation";
+import { ConfigValidationError, ValidationError } from "./validation";
 
 describe("TrashGuide", async () => {
   beforeEach(() => {
@@ -99,6 +100,28 @@ describe("TrashGuide", async () => {
       expect(result.size).toBe(2);
       expect(result.get("id-movie")).toEqual(mockQD1);
       expect(result.get("id-anime")).toEqual(mockQD2);
+    });
+  });
+
+  describe("loadQualityDefinitionFromTrash", () => {
+    test("throws a plain Error when the type file is missing", async () => {
+      vi.spyOn(envModule, "getEnvs").mockReturnValue({
+        CONFIGARR_ENFORCE_CONFIG_VALIDATION: false,
+      } as any);
+      vi.spyOn(fs, "existsSync").mockReturnValue(false);
+
+      await expect(loadQualityDefinitionFromTrash("nope", "RADARR")).rejects.toSatisfy(
+        (e) => e instanceof Error && !(e instanceof ConfigValidationError),
+      );
+    });
+
+    test("throws ConfigValidationError when the type file is missing and enforcement is on", async () => {
+      vi.spyOn(envModule, "getEnvs").mockReturnValue({
+        CONFIGARR_ENFORCE_CONFIG_VALIDATION: true,
+      } as any);
+      vi.spyOn(fs, "existsSync").mockReturnValue(false);
+
+      await expect(loadQualityDefinitionFromTrash("nope", "RADARR")).rejects.toBeInstanceOf(ConfigValidationError);
     });
   });
 

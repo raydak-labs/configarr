@@ -9,6 +9,7 @@ import { ArrType } from "../types/common.types";
 import { InputConfigDownloadClient, MergedConfigInstance } from "../types/config.types";
 import { DownloadClientDiff, DownloadClientShared, DownloadClientSyncResult, ValidationResult } from "./downloadClient.types";
 import { camelToSnake, snakeToCamel } from "../util";
+import { ConfigValidationError } from "../validation";
 
 // Constants
 const PRIORITY_MIN = 1;
@@ -280,12 +281,21 @@ export abstract class BaseDownloadClientSync<T extends DownloadClientShared> {
         .join(", ");
       errors.push(`Unknown download client type '${config.type}'. Available types: ${availableTypes}`);
     } else {
-      // Validate potentially required fields
+      // Validate potentially required fields and configured field names.
       const requiredFields = (template.fields ?? []).filter((f) => f.value === undefined || f.value === null || f.value === "");
 
-      // Normalize config fields to check against schema field names
+      // Normalize config fields to check against schema field names.
       const arrType = this.getArrType();
       const normalizedFields = this.normalizeConfigFields(config.fields || {}, arrType);
+      const schemaFieldNames = new Set(
+        (template.fields ?? []).map((field) => field.name).filter((fieldName): fieldName is string => !!fieldName),
+      );
+
+      for (const fieldName of Object.keys(normalizedFields)) {
+        if (fieldName === snakeToCamel(fieldName) && !schemaFieldNames.has(fieldName)) {
+          errors.push(`Field '${fieldName}' does not exist for download client type '${config.type}'`);
+        }
+      }
 
       for (const field of requiredFields) {
         const fieldName = field.name;
@@ -530,7 +540,11 @@ export abstract class BaseDownloadClientSync<T extends DownloadClientShared> {
 
     // Validate configurations
     this.logger.debug("Validating download client configurations...");
-    const { validClients } = await this.validateConfigClients(configClients, schema);
+    const { validClients, hasErrors } = await this.validateConfigClients(configClients, schema);
+
+    if (hasErrors && getEnvs().CONFIGARR_ENFORCE_CONFIG_VALIDATION) {
+      throw new ConfigValidationError("Download client configuration validation failed.");
+    }
     // A skipped client is a change that did not happen: it counts as failed so callers can see
     // the server still holds whatever that entry was supposed to manage.
     const skipped = configClients.length - validClients.length;

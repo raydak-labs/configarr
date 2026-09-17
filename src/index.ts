@@ -20,6 +20,7 @@ import { getTelemetryInstance, Telemetry } from "./telemetry";
 import { cloneTrashRepo } from "./trash-guide";
 import { ArrType } from "./types/common.types";
 import { InputConfigArrInstance } from "./types/config.types";
+import { ConfigValidationError } from "./validation";
 
 /**
  * Shared instance loop: skip disabled instances, run `runInstance` against each one,
@@ -67,8 +68,8 @@ const runInstances = async <TInstance extends { base_url: string; api_key: strin
       if (getEnvs().LOG_STACKTRACE) {
         logger.error(err);
       }
-      if (getEnvs().STOP_ON_ERROR) {
-        throw new Error(`Stopping further execution because 'STOP_ON_ERROR' is enabled.`);
+      if (getEnvs().STOP_ON_ERROR || (err instanceof ConfigValidationError && getEnvs().CONFIGARR_ENFORCE_CONFIG_VALIDATION)) {
+        throw err;
       }
     } finally {
       unsetApi();

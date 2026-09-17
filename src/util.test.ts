@@ -12,6 +12,7 @@ import {
   toEnumOrThrow,
   zip,
 } from "./util";
+import { ConfigValidationError } from "./validation";
 
 const exampleCFImplementations = {
   name: "TestSpec",
@@ -402,5 +403,11 @@ describe("toEnumOrThrow", () => {
 
   test("throws on unknown values", () => {
     expect(() => toEnumOrThrow(Sample, "nope", "sample")).toThrow("Unknown sample value 'nope'");
+    try {
+      toEnumOrThrow(Sample, "nope", "sample");
+      expect.unreachable();
+    } catch (err) {
+      expect(err).toBeInstanceOf(ConfigValidationError);
+    }
   });
 });

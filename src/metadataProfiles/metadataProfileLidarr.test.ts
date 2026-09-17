@@ -3,6 +3,7 @@ import type { Mocked } from "vitest";
 import { LidarrMetadataProfileApi, LidarrMetadataProfileSync } from "./metadataProfileLidarr";
 import { ServerCache } from "../cache";
 import { InputConfigLidarrMetadataProfile } from "../types/config.types";
+import { ConfigValidationError } from "../validation";
 
 describe("LidarrMetadataProfileSync", () => {
   const mockApi: Mocked<LidarrMetadataProfileApi> = {
@@ -216,6 +217,8 @@ describe("LidarrMetadataProfileSync", () => {
       ];
 
       await expect(sync.calculateDiff(configs, serverCache)).rejects.toThrow("Metadata profile validation failed");
+
+      await expect(sync.calculateDiff(configs, serverCache)).rejects.toBeInstanceOf(ConfigValidationError);
     });
   });
 

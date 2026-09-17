@@ -8,6 +8,7 @@ import { MediaArrType } from "../types/common.types";
 import { ConfigQualityProfile, ConfigQualityProfileItem, MergedConfigInstance } from "../types/config.types";
 import type { TrashCFConflict } from "../types/trashguide.types";
 import { ANY_LANGUAGE_NAME, cloneWithJSON, loadJsonFile, zip } from "../util";
+import { ConfigValidationError, warnOrThrowConfig } from "../validation";
 import { CustomFormatRef, FormatItem, QualityItem, QualityProfileLanguage, QualityProfileShared } from "./qualityProfile.types";
 import type { QualityDefinitionShared } from "../qualityDefinitions/qualityDefinition.types";
 
@@ -128,7 +129,7 @@ export const mapQualityProfiles = ({ carrIdMapping }: CFProcessing, { custom_for
         const carr = carrIdMapping.get(trashId);
 
         if (!carr) {
-          logger.warn(`Unknown ID for CF. ${trashId}`);
+          warnOrThrowConfig(`Unknown ID for CF. ${trashId}`);
           continue;
         }
 
@@ -199,17 +200,22 @@ export const mapQualities = (qd_source: QualityDefinitionShared[], value_source:
             ?.map<QualityItem>((obj2) => {
               const qd = qdLookupWithTitle.get(obj2);
 
+              if (qd == null) {
+                logger.warn(`Unknown requested quality "${obj2}" for quality profile ${value.name}`);
+                throw new ConfigValidationError(`QualityProfile '${value.name}': unknown requested quality '${obj2}'`);
+              }
+
               const returnObject: QualityItem = {
                 quality: {
-                  id: qd?.quality?.id,
+                  id: qd.quality?.id,
                   name: obj2,
-                  resolution: qd?.quality?.resolution,
+                  resolution: qd.quality?.resolution,
                 },
                 allowed: obj.enabled ?? true,
                 items: [],
               };
 
-              qdMap.delete(qd?.quality?.name);
+              qdMap.delete(qd.quality?.name);
 
               return returnObject;
             })
@@ -220,7 +226,7 @@ export const mapQualities = (qd_source: QualityDefinitionShared[], value_source:
 
       if (serverQD == null) {
         logger.warn(`Unknown requested quality "${obj.name}" for quality profile ${value.name}`);
-        throw new Error(`Please correct your config.`);
+        throw new ConfigValidationError(`QualityProfile '${value.name}': unknown requested quality '${obj.name}'`);
       }
 
       qdMap.delete(serverQD.quality?.name);
@@ -339,7 +345,7 @@ const getDisabledUpgradeCutoff = (
   const fallbackId = fallback?.id ?? fallback?.quality?.id;
 
   if (fallbackId == null) {
-    throw new Error(`QualityProfile '${profileName}': no allowed quality found to use as cutoff when upgrade is disabled`);
+    throw new ConfigValidationError(`QualityProfile '${profileName}': no allowed quality found to use as cutoff when upgrade is disabled`);
   }
 
   if (untilQuality == null) {
@@ -377,15 +383,18 @@ export function qualityProfilesToDiffEntries<T extends QualityProfileShared>(
 export const filterInvalidQualityProfiles = (profiles: ConfigQualityProfile[]): ConfigQualityProfile[] => {
   return profiles.filter((p) => {
     if (p.name == null) {
+      if (getEnvs().CONFIGARR_ENFORCE_CONFIG_VALIDATION) {
+        throw new ConfigValidationError("QualityProfile filtered because no name provided");
+      }
       logger.warn(p, `QualityProfile filtered because no name provided`);
       return false;
     }
     if (p.qualities == null) {
-      logger.warn(`QualityProfile: '${p.name}' filtered because no qualities provided`);
+      warnOrThrowConfig(`QualityProfile: '${p.name}' filtered because no qualities provided`);
       return false;
     }
     if (p.upgrade == null) {
-      logger.warn(`QualityProfile: '${p.name}' filtered because no upgrade definition provided`);
+      warnOrThrowConfig(`QualityProfile: '${p.name}' filtered because no upgrade definition provided`);
       return false;
     }
 
@@ -638,10 +647,15 @@ export abstract class BaseQualityProfileSync<T extends QualityProfileShared> {
 
         if (value.upgrade.allowed) {
           if (value.upgrade.until_quality == null) {
-            throw new Error(`QualityProfile '${name}': upgrade.until_quality is required when upgrade.allowed is true`);
+            throw new ConfigValidationError(`QualityProfile '${name}': upgrade.until_quality is required when upgrade.allowed is true`);
           }
 
           newP.cutoff = qualityToId.get(value.upgrade.until_quality);
+          if (newP.cutoff == null) {
+            throw new ConfigValidationError(
+              `QualityProfile '${name}': configured upgrade.until_quality '${value.upgrade.until_quality}' was not found on the server`,
+            );
+          }
           newP.cutoffFormatScore = value.upgrade.until_score;
           newP.upgradeAllowed = true;
           this.attachMinUpgradeOnCreate(newP, value.upgrade.min_format_score ?? 1);
@@ -707,13 +721,15 @@ export abstract class BaseQualityProfileSync<T extends QualityProfileShared> {
         // Further diffs only necessary if upgrade is allowed
         if (value.upgrade.allowed) {
           if (value.upgrade.until_quality == null) {
-            throw new Error(`QualityProfile '${name}': upgrade.until_quality is required when upgrade.allowed is true`);
+            throw new ConfigValidationError(`QualityProfile '${name}': upgrade.until_quality is required when upgrade.allowed is true`);
           }
 
           const upgradeUntil = qualityToId.get(value.upgrade.until_quality);
 
           if (upgradeUntil == null) {
-            throw new Error(`Did not find expected Quality to upgrade until: ${value.upgrade.until_quality}`);
+            throw new ConfigValidationError(
+              `QualityProfile '${name}': configured upgrade.until_quality '${value.upgrade.until_quality}' was not found on the server`,
+            );
           }
 
           if (serverMatch.cutoff !== upgradeUntil) {

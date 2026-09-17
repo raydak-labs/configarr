@@ -1,6 +1,7 @@
 import { describe, expect, test, vi, beforeEach } from "vitest";
 import { z } from "zod";
-import { validateData, validateConfig, validateExternal, ValidationError } from "./validation";
+import { ConfigValidationError, validateData, validateConfig, validateExternal, ValidationError, warnOrThrowConfig } from "./validation";
+import { InputConfigDelayProfileSchema } from "./types/config.types";
 
 // Mock env module
 vi.mock("./env", () => ({
@@ -95,6 +96,53 @@ describe("validateConfig", () => {
     expect(() => validateConfig(testSchema, { name: 123 }, "test")).toThrow(ValidationError);
   });
 
+  test("classifies strict schema failures as configuration errors", () => {
+    vi.mocked(getEnvs).mockReturnValue({
+      CONFIGARR_ENFORCE_CONFIG_VALIDATION: true,
+      CONFIGARR_ENFORCE_EXTERNAL_VALIDATION: false,
+    } as any);
+
+    expect(() => validateConfig(z.object({ name: z.string() }), { name: "test", unknown_key: true }, "test")).toThrow(
+      ConfigValidationError,
+    );
+  });
+
+  test("accepts the delay profile Items alias in strict mode", () => {
+    const result = validateConfig(
+      InputConfigDelayProfileSchema,
+      { Items: [{ name: "Usenet", protocol: "UsenetDownloadProtocol", allowed: true, delay: 2 }] },
+      "delay profile",
+      true,
+    );
+
+    expect(result).toMatchObject({ items: [{ name: "Usenet" }] });
+  });
+
+  test("rejects unknown keys nested under the delay profile Items alias in strict mode", () => {
+    expect(() =>
+      validateConfig(
+        InputConfigDelayProfileSchema,
+        { Items: [{ name: "Usenet", protocol: "UsenetDownloadProtocol", allowed: true, delay: 2, extra_foo: 1 }] },
+        "delay profile",
+        true,
+      ),
+    ).toThrow(/extra_foo|unrecognized key/);
+  });
+
+  test("rejects conflicting delay profile Items and items keys in strict mode", () => {
+    expect(() =>
+      validateConfig(
+        InputConfigDelayProfileSchema,
+        {
+          items: [{ name: "Usenet", protocol: "UsenetDownloadProtocol", allowed: true, delay: 2 }],
+          Items: [{ name: "Torrent", protocol: "TorrentDownloadProtocol", allowed: true, delay: 3 }],
+        },
+        "delay profile",
+        true,
+      ),
+    ).toThrow("Items");
+  });
+
   test("should respect override over env flag", () => {
     vi.mocked(getEnvs).mockReturnValue({
       CONFIGARR_ENFORCE_CONFIG_VALIDATION: true,
@@ -141,5 +189,29 @@ describe("validateExternal", () => {
     const valid = { name: "test", age: 25 };
     expect(validateConfig(testSchema, valid, "test")).toEqual(valid);
     expect(validateExternal(testSchema, valid, "test")).toEqual(valid);
+  });
+});
+
+describe("warnOrThrowConfig", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  test("should warn when enforcement is disabled", () => {
+    vi.mocked(getEnvs).mockReturnValue({
+      CONFIGARR_ENFORCE_CONFIG_VALIDATION: false,
+    } as any);
+
+    warnOrThrowConfig("oops");
+    expect(logger.warn).toHaveBeenCalledWith("oops");
+  });
+
+  test("should throw ConfigValidationError when enforcement is enabled", () => {
+    vi.mocked(getEnvs).mockReturnValue({
+      CONFIGARR_ENFORCE_CONFIG_VALIDATION: true,
+    } as any);
+
+    expect(() => warnOrThrowConfig("oops")).toThrow(ConfigValidationError);
+    expect(() => warnOrThrowConfig("oops")).toThrow("oops");
   });
 });

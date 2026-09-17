@@ -8,6 +8,7 @@ import {
   readConfigRaw,
   resetSecretsCache,
   transformConfig,
+  validateConfig as validateMergedConfig,
 } from "./config";
 import * as env from "./env";
 import * as localImporter from "./local-importer";
@@ -30,6 +31,7 @@ import {
 import { TrashQP, TrashQualityDefinition } from "./types/trashguide.types";
 import { cloneWithJSON } from "./util";
 import { logger } from "./logger";
+import { ConfigValidationError, validateConfig } from "./validation";
 
 // Mock ky for URL template tests
 const mockKyGet = vi.hoisted(() => vi.fn());
@@ -391,6 +393,71 @@ describe("mergeConfigsAndTemplates", () => {
 
     expect(result.config.custom_formats.length).toBe(0);
     expect(result.config.quality_profiles.length).toBe(0);
+  });
+
+  test("throws on unknown include templates when enforcement is enabled", async () => {
+    const envs = env.getEnvs();
+    const spy = vi.spyOn(env, "getEnvs").mockReturnValue({
+      ...envs,
+      CONFIGARR_ENFORCE_CONFIG_VALIDATION: true,
+    });
+
+    vi.spyOn(reclarrImporter, "loadRecyclarrTemplates").mockReturnValue(new Map());
+    vi.spyOn(localImporter, "loadLocalRecyclarrTemplate").mockReturnValue(new Map());
+    vi.spyOn(trashGuide, "loadQPFromTrash").mockReturnValue(Promise.resolve(new Map()));
+    vi.spyOn(trashGuide, "loadTrashCustomFormatGroups").mockReturnValue(Promise.resolve(new Map()));
+
+    const inputConfig: InputConfigArrInstance = {
+      include: [{ template: "unknown", source: "RECYCLARR" }],
+      custom_formats: [],
+      quality_profiles: [],
+      api_key: "test",
+      base_url: "http://sonarr:8989",
+    };
+
+    try {
+      await expect(mergeConfigsAndTemplates({}, inputConfig, "SONARR")).rejects.toThrow(ConfigValidationError);
+      await expect(mergeConfigsAndTemplates({}, inputConfig, "SONARR")).rejects.toThrow("No matching 'RECYCLARR' or 'LOCAL' template");
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  test("throws on preferred_ratio out of range when enforcement is enabled", () => {
+    const envs = env.getEnvs();
+    const spy = vi.spyOn(env, "getEnvs").mockReturnValue({
+      ...envs,
+      CONFIGARR_ENFORCE_CONFIG_VALIDATION: true,
+    });
+
+    try {
+      expect(() =>
+        validateMergedConfig({
+          custom_formats: [],
+          quality_profiles: [],
+          quality_definition: { preferred_ratio: 2 },
+        }),
+      ).toThrow(ConfigValidationError);
+      expect(() =>
+        validateMergedConfig({
+          custom_formats: [],
+          quality_profiles: [],
+          quality_definition: { preferred_ratio: 2 },
+        }),
+      ).toThrow("PreferredRatio must be between 0 and 1");
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  test("drops preferred_ratio out of range when enforcement is off", () => {
+    const result = validateMergedConfig({
+      custom_formats: [],
+      quality_profiles: [],
+      quality_definition: { preferred_ratio: 2 },
+    });
+
+    expect(result.quality_definition?.preferred_ratio).toBeUndefined();
   });
 
   test("should prioritize config values over template values", async () => {
@@ -1900,6 +1967,57 @@ describe("InputConfigSchemaSchema (regression)", () => {
       path: "/app",
       monitor_new_items: "all",
     });
+
+    expect(() => validateConfig(InputConfigSchemaSchema, rawConfig, "config file", true)).not.toThrow();
+  });
+
+  test("rejects unknown static configuration keys only when enforcement is enabled", () => {
+    const config = {
+      unknown_root_key: true,
+      radarr: {
+        main: {
+          base_url: "http://radarr:7878",
+          api_key: "key",
+          unknown_instance_key: true,
+          quality_profiles: [{ name: "HD", unknown_profile_key: true }],
+        },
+      },
+    };
+
+    const lenientResult = validateConfig(InputConfigSchemaSchema, config, "config file", false);
+    expect(lenientResult).not.toHaveProperty("unknown_root_key");
+
+    expect(() => validateConfig(InputConfigSchemaSchema, config, "config file", true)).toThrow(ConfigValidationError);
+    try {
+      validateConfig(InputConfigSchemaSchema, config, "config file", true);
+      expect.unreachable();
+    } catch (err) {
+      expect((err as Error).message).toContain("unknown_root_key");
+      expect((err as Error).message).toContain("unknown_instance_key");
+      expect((err as Error).message).toMatch(/unknown_profile_key|quality_profiles\.0\.unknown_profile_key/);
+    }
+  });
+
+  test("allows dynamic fields that require server-specific validation", () => {
+    const config = {
+      radarr: {
+        main: {
+          base_url: "http://radarr:7878",
+          api_key: "key",
+          media_management: { renameMovies: true },
+          ui_config: { movieInfoLanguage: 1 },
+          media_naming_api: { standardMovieFormat: "{Movie Title}" },
+          download_clients: {
+            data: [{ name: "ruTorrent movies", type: "rtorrent", fields: { movie_imported_category: "movies" } }],
+          },
+        },
+      },
+    };
+
+    const result = InputConfigSchemaSchema.safeParse(config);
+
+    expect(result.success).toBe(true);
+    expect(() => validateConfig(InputConfigSchemaSchema, config, "config file", true)).not.toThrow();
   });
 
   // Zod object schemas silently strip keys they don't recognize on a *successful* parse -

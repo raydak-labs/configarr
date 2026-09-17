@@ -7,6 +7,7 @@ import { getEnvs } from "../env";
 import { logger } from "../logger";
 import type { Tag } from "../tags/tag.types";
 import { camelToSnake, snakeToCamel } from "../util";
+import { ConfigValidationError } from "../validation";
 
 export type { Tag };
 
@@ -199,6 +200,15 @@ export abstract class ProviderResourceSync<
           warnings.push(`Field '${camelToSnake(fieldName)}' may be required for ${this.templateHint(config)}`);
         }
       }
+
+      const schemaFieldNames = new Set(
+        (template.fields ?? []).map((field) => field.name).filter((fieldName): fieldName is string => !!fieldName),
+      );
+      for (const key of Object.keys(normalizedFields)) {
+        if (key === snakeToCamel(key) && !schemaFieldNames.has(key)) {
+          errors.push(`Field '${key}' does not exist for ${this.label} type '${this.templateHint(config)}'`);
+        }
+      }
     }
 
     if (config.name && config.name.length > NAME_MAX_LENGTH) {
@@ -259,7 +269,6 @@ export abstract class ProviderResourceSync<
       if (key !== snakeToCamel(key)) continue;
       if (!serverFieldNames.has(key) && normalizedConfigFields[key] !== undefined) {
         this.logger.warn(`Config field '${key}' does not exist on server`);
-        changes.push({ field: `fields.${key}`, from: undefined, to: normalizedConfigFields[key] });
       }
     }
 
@@ -397,6 +406,15 @@ export abstract class ProviderResourceSync<
     }
   }
 
+  /** Schema-valid unique items; throws in ENFORCE when any config item is dropped. */
+  private requireValidItems(configItems: TConfig[], schema: TResource[], report: boolean): TConfig[] {
+    const valid = this.selectValidItems(configItems, schema, report);
+    if (valid.length < configItems.length && getEnvs().CONFIGARR_ENFORCE_CONFIG_VALIDATION) {
+      throw new ConfigValidationError(`${this.label} configuration validation failed.`);
+    }
+    return valid;
+  }
+
   /**
    * Config items that pass schema validation and are not duplicate names. Create, update and
    * unmanaged-delete all work off this set, so a rejected item never counts as managed.
@@ -461,7 +479,7 @@ export abstract class ProviderResourceSync<
     ]);
     this.logger.info(`Found ${serverItems.length} ${this.label}(s) on server`);
 
-    const valid = this.selectValidItems(configItems, schema, true);
+    const valid = this.requireValidItems(configItems, schema, true);
     await this.createMissingTags(valid, serverCache);
 
     const diff = this.calculateDiff(valid, serverItems, serverCache.tags, ctx);
@@ -535,7 +553,8 @@ export abstract class ProviderResourceSync<
       this.fetchServer(),
       configItems.length > 0 ? this.getSchema() : Promise.resolve([] as TResource[]),
     ]);
-    const unmanagedToDelete = this.filterUnmanaged(serverItems, this.selectValidItems(configItems, schema, false), deleteUnmanaged);
+    const valid = this.requireValidItems(configItems, schema, false);
+    const unmanagedToDelete = this.filterUnmanaged(serverItems, valid, deleteUnmanaged);
     const diffEntries = unmanagedToDelete.map((c) => ({
       resourceType: this.label,
       name: c.name ?? "unknown",
@@ -564,6 +583,9 @@ export abstract class ProviderResourceSync<
   }
 
   private toError(message: string, error: unknown): Error {
+    if (error instanceof ConfigValidationError) {
+      return error;
+    }
     const errorMessage = error instanceof Error ? error.message : String(error);
     this.logger.error(`${message}: ${errorMessage}`);
     const httpError = error as any;

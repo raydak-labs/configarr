@@ -1,7 +1,9 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 import { QualityDefinitionShared } from "./qualityDefinition.types";
 import { interpolateSize, qualityDefinitionsToDiffEntries, calculateQualityDefinitionDiff } from "./qualityDefinition";
 import { TrashQualityDefinition } from "../types/trashguide.types";
+import * as env from "../env";
+import { ConfigValidationError } from "../validation";
 
 describe("QualityDefinitions", async () => {
   const server: QualityDefinitionShared[] = [
@@ -93,6 +95,18 @@ describe("QualityDefinitions", async () => {
 
     expect(result.changeMap.size).toBe(0);
     expect(result.restData.length).toBe(2);
+  });
+
+  test("calculateQualityDefinitionDiff - throws for unknown qualities when enforcement is on", () => {
+    const spy = vi.spyOn(env, "getEnvs").mockReturnValue({ CONFIGARR_ENFORCE_CONFIG_VALIDATION: true } as ReturnType<typeof env.getEnvs>);
+    const clone: TrashQualityDefinition = JSON.parse(JSON.stringify(client));
+    clone.qualities[0]!.quality = "New";
+
+    try {
+      expect(() => calculateQualityDefinitionDiff("SONARR", server, clone.qualities)).toThrow(ConfigValidationError);
+    } finally {
+      spy.mockRestore();
+    }
   });
 
   test("calculateQualityDefinitionDiff - min size diff produces a structured FieldChange", async ({}) => {
