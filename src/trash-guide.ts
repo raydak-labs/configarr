@@ -3,6 +3,7 @@ import path from "node:path";
 import { z } from "zod";
 import { CFIDToConfigGroup, ConfigarrCF, CustomFormatRequest } from "./customFormats/customFormat.types";
 import { getConfig } from "./config";
+import { getEnvs } from "./env";
 import { logger } from "./logger";
 import { interpolateSize } from "./qualityDefinitions/qualityDefinition";
 import { QualityDefinitionsRadarr, QualityDefinitionsSonarr } from "./types/common.types";
@@ -208,7 +209,11 @@ export const loadQualityDefinitionFromTrash = async (
   const filePath = path.resolve(`${trashPath}/${qdType}.json`);
 
   if (!fs.existsSync(filePath)) {
-    throw new ConfigValidationError(`(${arrType}) QualityDefinition type not found: '${qdType}' for '${arrType}'`);
+    const message = `(${arrType}) QualityDefinition type not found: '${qdType}' for '${arrType}'`;
+    if (getEnvs().CONFIGARR_ENFORCE_CONFIG_VALIDATION) {
+      throw new ConfigValidationError(message);
+    }
+    throw new Error(message);
   }
 
   const rawQd = loadJsonFile(filePath);
