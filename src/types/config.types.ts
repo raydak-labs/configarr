@@ -340,8 +340,6 @@ export const InputConfigIndexerSchema = z.object({
   // `sync_profiles`. Defaults to the indexer's existing profile on update, otherwise the
   // first profile on the server.
   sync_profile: z.string().optional(),
-  /** @deprecated use `sync_profile`. */
-  app_profile: z.string().optional(),
   priority: z.number().int().optional(),
   fields: z.record(z.string(), z.any()).optional(),
   tags: z.array(z.union([z.string(), z.number()])).optional(),

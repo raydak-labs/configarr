@@ -63,7 +63,7 @@ describe("IndexerSync", () => {
   });
 
   it("creates an indexer with resolved defaults", async () => {
-    const out = await sync().sync([{ name: "1337x", definition: "1337x", app_profile: "Standard", priority: 10 }], undefined, cache());
+    const out = await sync().sync([{ name: "1337x", definition: "1337x", sync_profile: "Standard", priority: 10 }], undefined, cache());
     expect(out.added).toBe(1);
     const payload = mockClient.createIndexer.mock.calls[0]![0];
     expect(payload.name).toBe("1337x");
@@ -138,13 +138,6 @@ describe("IndexerSync", () => {
     const out = await sync().sync([], { enabled: true }, cache());
     expect(mockClient.deleteIndexer).toHaveBeenCalledWith("9");
     expect(out.removed).toBe(1);
-  });
-
-  it("accepts the released app_profile key as well as sync_profile", async () => {
-    await sync().sync([{ name: "1337x", definition: "1337x", app_profile: "standard" }], undefined, cache());
-
-    const [payload] = mockClient.createIndexer.mock.calls[0]!;
-    expect(payload.appProfileId).toBe(1);
   });
 
   describe("profiles synced in the same run", () => {
