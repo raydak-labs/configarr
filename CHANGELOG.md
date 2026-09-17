@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.32.0](https://github.com/raydak-labs/configarr/compare/v1.31.0...v1.32.0) (2026-09-17)
+
+### Features
+
+- **prowlarr:** add sync profile support ([d5632dd](https://github.com/raydak-labs/configarr/commit/d5632ddc5ed84cfebfc94e27f82fa9e66b368184))
+
+### Bug Fixes
+
+- chown Whisparr's library folder to the container's runtime user ([d542c81](https://github.com/raydak-labs/configarr/commit/d542c813d37b737c888205975650cb7cd88941b4))
+- **prowlarr:** exclude profiles pending deletion from the dry-run handoff ([0452ab5](https://github.com/raydak-labs/configarr/commit/0452ab5445cd665df089e932b9c99170f6c3d8a5))
+- **prowlarr:** keep unmanaged server props when updating a resource ([0e8da70](https://github.com/raydak-labs/configarr/commit/0e8da70195fe28640bf21ca150ba51fbfc59dceb))
+- **prowlarr:** stop dry run creating tags ([dbf7ff7](https://github.com/raydak-labs/configarr/commit/dbf7ff7cc68b5ecb8dfb026165e8d9ffbdebf323))
+- refresh quality-profile cache before Lidarr/Readarr root folders sync ([28ccc15](https://github.com/raydak-labs/configarr/commit/28ccc1579b75839cc003904d775457ee27cd6d17))
+- stop reporting Prowlarr's indexer-sync trigger as a config change ([a1d6828](https://github.com/raydak-labs/configarr/commit/a1d682805b3ad49f6e4a0cbd8405d24d212f0523))
+
+### (internal) Refactorings
+
+- replace unified client with typed per-arr clients and syncers ([1518cc8](https://github.com/raydak-labs/configarr/commit/1518cc869e4ab828ecaa6184474aabc6f1493e43))
+
 ## [1.31.0](https://github.com/raydak-labs/configarr/compare/v1.30.2...v1.31.0) (2026-09-14)
 
 ### Features
