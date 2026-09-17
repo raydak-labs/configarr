@@ -7,6 +7,7 @@ This example contains every feature provided by configarr.
    - Creates sonarr instance
    - Creates radarr instance
    - API keys are provided with environment variables (e.g. `SONARR__AUTH__APIKEY`)
+   - Whisparr still seeds `whisparr.xml` because its image ignores those env vars
 2. Run configarr with `docker-compose -f docker-compose.jobs.yml run --rm configarr`
 
 URLs:

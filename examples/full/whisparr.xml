@@ -1,17 +1,17 @@
 <Config>
   <BindAddress>*</BindAddress>
-  <Port>9696</Port>
-  <SslPort>6969</SslPort>
+  <Port>6969</Port>
+  <SslPort>9898</SslPort>
   <EnableSsl>False</EnableSsl>
   <LaunchBrowser>True</LaunchBrowser>
-  <ApiKey>a1b2c3d4e5f6470891234567890abcde</ApiKey>
+  <ApiKey>2ebd18db81e14c2d98d06ef4b865aaa8</ApiKey>
   <AuthenticationMethod>Basic</AuthenticationMethod>
   <AuthenticationRequired>DisabledForLocalAddresses</AuthenticationRequired>
-  <Branch>master</Branch>
+  <Branch>eros</Branch>
   <LogLevel>info</LogLevel>
   <SslCertPath></SslCertPath>
   <SslCertPassword></SslCertPassword>
   <UrlBase></UrlBase>
-  <InstanceName>Prowlarr</InstanceName>
+  <InstanceName>Whisparr</InstanceName>
   <UpdateMechanism>Docker</UpdateMechanism>
 </Config>

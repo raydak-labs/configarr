@@ -40,6 +40,8 @@ services:
     restart: unless-stopped
 
   # experimental
+  # Whisparr's eros base ignores env overrides and generates a random API key, so
+  # whisparr.xml is copied into the volume before the app starts.
   whisparr:
     image: ghcr.io/hotio/whisparr:v3-3.5.0-release.1585
     networks:
@@ -51,15 +53,17 @@ services:
       - PGID=1000
       - UMASK=002
       - TZ=Etc/UTC
-      - WHISPARR__APP__INSTANCENAME=Whisparr
-      - WHISPARR__AUTH__APIKEY=2ebd18db81e14c2d98d06ef4b865aaa8
-      - WHISPARR__AUTH__REQUIRED=DisabledForLocalAddresses
-      - WHISPARR__AUTH__METHOD=Forms
     volumes:
       - whisparr:/config
       - whisparr-download1:/downloads/1
       - whisparr-download2:/downloads/2
-    entrypoint: ["/bin/sh", "-c", "mkdir -p /config/library && chown 1000:1000 /config/library && exec /init"]
+      - ./whisparr.xml:/seed/config.xml:ro
+    entrypoint:
+      [
+        "/bin/sh",
+        "-c",
+        "cp /seed/config.xml /config/config.xml && chown 1000:1000 /config/config.xml && mkdir -p /config/library && chown 1000:1000 /config/library && exec /init",
+      ]
     restart: unless-stopped
 
   # experimental
@@ -113,9 +117,12 @@ services:
       - PUID=1000
       - PGID=1000
       - TZ=Etc/UTC
+      - PROWLARR__APP__INSTANCENAME=Prowlarr
+      - PROWLARR__AUTH__APIKEY=a1b2c3d4e5f6470891234567890abcde
+      - PROWLARR__AUTH__REQUIRED=DisabledForLocalAddresses
+      - PROWLARR__AUTH__METHOD=Forms
     volumes:
       - prowlarr:/config
-      - ${PWD}/prowlarr.xml:/config/config.xml:rw
     ports:
       - 6505:9696
     restart: unless-stopped
