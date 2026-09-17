@@ -7,11 +7,14 @@ services:
       - PUID=1000
       - PGID=1000
       - TZ=Etc/UTC
+      - SONARR__APP__INSTANCENAME=Sonarr
+      - SONARR__AUTH__APIKEY=5e792b7e0fe14f58b8e92bf0902d4a44
+      - SONARR__AUTH__REQUIRED=DisabledForLocalAddresses
+      - SONARR__AUTH__METHOD=Forms
     volumes:
       - sonarr:/config
       - sonarr-download1:/downloads/1
       - sonarr-download2:/downloads/2
-      - ${PWD}/sonarr.xml:/config/config.xml:rw
     ports:
       - 6500:8989
     restart: unless-stopped
@@ -24,16 +27,21 @@ services:
       - PUID=1000
       - PGID=1000
       - TZ=Etc/UTC
+      - RADARR__APP__INSTANCENAME=Radarr
+      - RADARR__AUTH__APIKEY=0daa3a2b940f4e08bac991e9a30e9e12
+      - RADARR__AUTH__REQUIRED=DisabledForLocalAddresses
+      - RADARR__AUTH__METHOD=Forms
     volumes:
       - radarr:/config
       - radarr-download1:/downloads/1
       - radarr-download2:/downloads/2
-      - ${PWD}/radarr.xml:/config/config.xml:rw
     ports:
       - 6501:7878
     restart: unless-stopped
 
   # experimental
+  # Whisparr's eros base ignores env overrides and generates a random API key, so
+  # whisparr.xml is copied into the volume before the app starts.
   whisparr:
     image: ghcr.io/hotio/whisparr:v3-3.5.0-release.1585
     networks:
@@ -49,8 +57,13 @@ services:
       - whisparr:/config
       - whisparr-download1:/downloads/1
       - whisparr-download2:/downloads/2
-      - ${PWD}/whisparr.xml:/config/config.xml:rw
-    entrypoint: ["/bin/sh", "-c", "mkdir -p /config/library && chown 1000:1000 /config/library && exec /init"]
+      - ./whisparr.xml:/seed/config.xml:ro
+    entrypoint:
+      [
+        "/bin/sh",
+        "-c",
+        "cp /seed/config.xml /config/config.xml && chown 1000:1000 /config/config.xml && mkdir -p /config/library && chown 1000:1000 /config/library && exec /init",
+      ]
     restart: unless-stopped
 
   # experimental
@@ -62,11 +75,14 @@ services:
       - PUID=1000
       - PGID=1000
       - TZ=Etc/UTC
+      - READARR__APP__INSTANCENAME=Readarr
+      - READARR__AUTH__APIKEY=e001718ba38a424d8aae7cb391b5d27a
+      - READARR__AUTH__REQUIRED=DisabledForLocalAddresses
+      - READARR__AUTH__METHOD=Forms
     volumes:
       - readarr:/config
       - readarr-download1:/downloads/1
       - readarr-download2:/downloads/2
-      - ${PWD}/readarr.xml:/config/config.xml:rw
     ports:
       - 6503:8787
     restart: unless-stopped
@@ -80,11 +96,14 @@ services:
       - PUID=1000
       - PGID=1000
       - TZ=Etc/UTC
+      - LIDARR__APP__INSTANCENAME=Lidarr
+      - LIDARR__AUTH__APIKEY=713067b7319045df9c7fa6847d8ce717
+      - LIDARR__AUTH__REQUIRED=DisabledForLocalAddresses
+      - LIDARR__AUTH__METHOD=Forms
     volumes:
       - lidarr:/config
       - lidarr-download1:/downloads/1
       - lidarr-download2:/downloads/2
-      - ${PWD}/lidarr.xml:/config/config.xml:rw
     ports:
       - 6504:8686
     restart: unless-stopped
@@ -98,9 +117,12 @@ services:
       - PUID=1000
       - PGID=1000
       - TZ=Etc/UTC
+      - PROWLARR__APP__INSTANCENAME=Prowlarr
+      - PROWLARR__AUTH__APIKEY=a1b2c3d4e5f6470891234567890abcde
+      - PROWLARR__AUTH__REQUIRED=DisabledForLocalAddresses
+      - PROWLARR__AUTH__METHOD=Forms
     volumes:
       - prowlarr:/config
-      - ${PWD}/prowlarr.xml:/config/config.xml:rw
     ports:
       - 6505:9696
     restart: unless-stopped
