@@ -105,6 +105,9 @@ describe("TrashGuide", async () => {
 
   describe("loadQualityDefinitionFromTrash", () => {
     test("throws a plain Error when the type file is missing", async () => {
+      vi.spyOn(envModule, "getEnvs").mockReturnValue({
+        CONFIGARR_ENFORCE_CONFIG_VALIDATION: false,
+      } as any);
       vi.spyOn(fs, "existsSync").mockReturnValue(false);
 
       await expect(loadQualityDefinitionFromTrash("nope", "RADARR")).rejects.toSatisfy(
