@@ -648,6 +648,11 @@ export abstract class BaseQualityProfileSync<T extends QualityProfileShared> {
           }
 
           newP.cutoff = qualityToId.get(value.upgrade.until_quality);
+          if (newP.cutoff == null) {
+            throw new ConfigValidationError(
+              `QualityProfile '${name}': configured upgrade.until_quality '${value.upgrade.until_quality}' was not found on the server`,
+            );
+          }
           newP.cutoffFormatScore = value.upgrade.until_score;
           newP.upgradeAllowed = true;
           this.attachMinUpgradeOnCreate(newP, value.upgrade.min_format_score ?? 1);

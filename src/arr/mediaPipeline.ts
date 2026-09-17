@@ -175,6 +175,9 @@ export const runMediaSyncToQualityProfiles = async <T extends MediaArrType>(
         try {
           mergedQDs.push(...(await trash.loadQdType(qualityDefinitionType, config.quality_definition?.preferred_ratio)));
         } catch (e: unknown) {
+          if (e instanceof ConfigValidationError) {
+            throw e;
+          }
           if (e instanceof Error) {
             logger.error(e.message);
           } else {

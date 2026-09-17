@@ -118,6 +118,17 @@ describe("validateConfig", () => {
     expect(result).toMatchObject({ items: [{ name: "Usenet" }] });
   });
 
+  test("rejects unknown keys nested under the delay profile Items alias in strict mode", () => {
+    expect(() =>
+      validateConfig(
+        InputConfigDelayProfileSchema,
+        { Items: [{ name: "Usenet", protocol: "UsenetDownloadProtocol", allowed: true, delay: 2, extra_foo: 1 }] },
+        "delay profile",
+        true,
+      ),
+    ).toThrow(/extra_foo|unrecognized key/);
+  });
+
   test("rejects conflicting delay profile Items and items keys in strict mode", () => {
     expect(() =>
       validateConfig(

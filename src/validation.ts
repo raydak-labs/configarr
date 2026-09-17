@@ -33,6 +33,7 @@ const findStrippedConfigKeys = (input: unknown, parsed: unknown, path: Array<str
   const keys: string[] = [];
   for (const [key, value] of Object.entries(input)) {
     if (key === "Items" && input.items === undefined && "items" in parsed) {
+      keys.push(...findStrippedConfigKeys(value, parsed.items, [...path, "items"]));
       continue;
     }
 

@@ -1922,10 +1922,18 @@ describe("InputConfigSchemaSchema (regression)", () => {
     expect(lenientResult).not.toHaveProperty("unknown_root_key");
 
     expect(() => validateConfig(InputConfigSchemaSchema, config, "config file", true)).toThrow(ConfigValidationError);
+    try {
+      validateConfig(InputConfigSchemaSchema, config, "config file", true);
+      expect.unreachable();
+    } catch (err) {
+      expect((err as Error).message).toContain("unknown_root_key");
+      expect((err as Error).message).toContain("unknown_instance_key");
+      expect((err as Error).message).toMatch(/unknown_profile_key|quality_profiles\.0\.unknown_profile_key/);
+    }
   });
 
   test("allows dynamic fields that require server-specific validation", () => {
-    const result = InputConfigSchemaSchema.safeParse({
+    const config = {
       radarr: {
         main: {
           base_url: "http://radarr:7878",
@@ -1938,9 +1946,12 @@ describe("InputConfigSchemaSchema (regression)", () => {
           },
         },
       },
-    });
+    };
+
+    const result = InputConfigSchemaSchema.safeParse(config);
 
     expect(result.success).toBe(true);
+    expect(() => validateConfig(InputConfigSchemaSchema, config, "config file", true)).not.toThrow();
   });
 
   // Zod object schemas silently strip keys they don't recognize on a *successful* parse -

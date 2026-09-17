@@ -200,6 +200,15 @@ export abstract class ProviderResourceSync<
           warnings.push(`Field '${camelToSnake(fieldName)}' may be required for ${this.templateHint(config)}`);
         }
       }
+
+      const schemaFieldNames = new Set(
+        (template.fields ?? []).map((field) => field.name).filter((fieldName): fieldName is string => !!fieldName),
+      );
+      for (const key of Object.keys(normalizedFields)) {
+        if (key === snakeToCamel(key) && !schemaFieldNames.has(key)) {
+          errors.push(`Field '${key}' does not exist for ${this.label} type '${this.templateHint(config)}'`);
+        }
+      }
     }
 
     if (config.name && config.name.length > NAME_MAX_LENGTH) {
@@ -259,9 +268,6 @@ export abstract class ProviderResourceSync<
     for (const key of Object.keys(normalizedConfigFields)) {
       if (key !== snakeToCamel(key)) continue;
       if (!serverFieldNames.has(key) && normalizedConfigFields[key] !== undefined) {
-        if (getEnvs().CONFIGARR_ENFORCE_CONFIG_VALIDATION) {
-          throw new ConfigValidationError(`Config field '${key}' does not exist on server`);
-        }
         this.logger.warn(`Config field '${key}' does not exist on server`);
       }
     }
@@ -465,6 +471,9 @@ export abstract class ProviderResourceSync<
     this.logger.info(`Found ${serverItems.length} ${this.label}(s) on server`);
 
     const valid = this.selectValidItems(configItems, schema, true);
+    if (valid.length < configItems.length && getEnvs().CONFIGARR_ENFORCE_CONFIG_VALIDATION) {
+      throw new ConfigValidationError(`${this.label} configuration validation failed.`);
+    }
     await this.createMissingTags(valid, serverCache);
 
     const diff = this.calculateDiff(valid, serverItems, serverCache.tags, ctx);

@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
+import { ServerCache } from "../cache";
 import * as log from "../logger";
 import { QualityDefinitionShared } from "../qualityDefinitions/qualityDefinition.types";
 import { QualityItem, QualityProfileShared } from "./qualityProfile.types";
@@ -10,6 +11,7 @@ import {
   mapQualityProfiles,
   qualityProfilesToDiffEntries,
 } from "./qualityProfileBase";
+import { QualityProfileRadarrSync } from "./qualityProfileRadarr";
 import { CFProcessing } from "../customFormats/customFormat.types";
 import { ConfigQualityProfile, ConfigQualityProfileItem, MergedConfigInstance } from "../types/config.types";
 import { ConfigValidationError } from "../validation";
@@ -1113,6 +1115,34 @@ describe("qualityProfileBase", async () => {
 
       expect(logSpy).not.toHaveBeenCalled();
     });
+  });
+
+  test("calculateQualityProfilesDiff - create throws when until_quality is missing on the server", async () => {
+    const cfMap: CFProcessing = { carrIdMapping: new Map(), cfNameToCarrConfig: new Map() };
+    const resources: QualityDefinitionShared[] = [{ id: 1, title: "HDTV-1080p", weight: 2, quality: { id: 1, name: "HDTV-1080p" } }];
+    const config: MergedConfigInstance = {
+      custom_formats: [],
+      quality_profiles: [
+        {
+          name: "New Profile",
+          min_format_score: 0,
+          qualities: [{ name: "HDTV-1080p" }],
+          quality_sort: "top",
+          upgrade: { allowed: true, until_quality: "DoesNotExist", until_score: 1000 },
+          score_set: "default",
+        },
+      ],
+      customFormatDefinitions: [],
+      media_management: {},
+      media_naming: {},
+    };
+
+    await expect(
+      new QualityProfileRadarrSync().calculateQualityProfilesDiff(cfMap, config, new ServerCache({ qualityDefinitions: resources })),
+    ).rejects.toThrow(ConfigValidationError);
+    await expect(
+      new QualityProfileRadarrSync().calculateQualityProfilesDiff(cfMap, config, new ServerCache({ qualityDefinitions: resources })),
+    ).rejects.toThrow("QualityProfile 'New Profile': configured upgrade.until_quality 'DoesNotExist' was not found on the server");
   });
 
   test("qualityProfilesToDiffEntries - builds create and update entries with field changes", () => {

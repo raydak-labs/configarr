@@ -2,11 +2,15 @@ import { z } from "zod";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ServerCache } from "../cache";
 import { getEnvs } from "../env";
+import { ConfigValidationError } from "../validation";
 import { ExtraProp, ProviderResource, ProviderResourceSync } from "./providerResourceSync";
 
 vi.mock("../env", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../env")>();
-  return { ...actual, getEnvs: vi.fn(() => ({ DRY_RUN: false, LOG_LEVEL: "silent", CONFIGARR_VERSION: "test" })) };
+  return {
+    ...actual,
+    getEnvs: vi.fn(() => ({ DRY_RUN: false, LOG_LEVEL: "silent", CONFIGARR_VERSION: "test", CONFIGARR_ENFORCE_CONFIG_VALIDATION: false })),
+  };
 });
 vi.mock("../logger", () => ({ logger: { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
 
@@ -106,7 +110,12 @@ describe("ProviderResourceSync", () => {
     mockClient.remove.mockResolvedValue(undefined);
     mockClient.createTag.mockImplementation(async (t: { label: string }) => ({ id: 42, label: t.label }));
     // mockReturnValue survives clearAllMocks, so the dry-run tests would leak into the rest.
-    vi.mocked(getEnvs).mockReturnValue({ DRY_RUN: false, LOG_LEVEL: "silent", CONFIGARR_VERSION: "test" } as any);
+    vi.mocked(getEnvs).mockReturnValue({
+      DRY_RUN: false,
+      LOG_LEVEL: "silent",
+      CONFIGARR_VERSION: "test",
+      CONFIGARR_ENFORCE_CONFIG_VALIDATION: false,
+    } as any);
   });
   afterEach(() => vi.clearAllMocks());
 
@@ -144,6 +153,44 @@ describe("ProviderResourceSync", () => {
 
       expect(res.valid).toBe(true);
       expect(res.warnings.join()).toContain("host");
+    });
+
+    it("rejects unknown fields on create when enforcement is enabled", async () => {
+      vi.mocked(getEnvs).mockReturnValue({
+        DRY_RUN: false,
+        LOG_LEVEL: "silent",
+        CONFIGARR_VERSION: "test",
+        CONFIGARR_ENFORCE_CONFIG_VALIDATION: true,
+      } as any);
+
+      await expect(sync().sync([{ name: "W", type: "Widget", fields: { asd: 1 } }], undefined, cache())).rejects.toBeInstanceOf(
+        ConfigValidationError,
+      );
+      expect(mockClient.create).not.toHaveBeenCalled();
+    });
+
+    it("skips unknown fields on create when enforcement is disabled", async () => {
+      const out = await sync().sync([{ name: "W", type: "Widget", fields: { asd: 1 } }], undefined, cache());
+
+      expect(mockClient.create).not.toHaveBeenCalled();
+      expect(out.added).toBe(0);
+    });
+
+    it("accepts snake_case aliases of schema fields", async () => {
+      mockClient.getSchema.mockResolvedValue([
+        {
+          implementation: "Widget",
+          implementationName: "Widget",
+          configContract: "WidgetSettings",
+          extraFromTemplate: "from-template",
+          fields: [{ name: "movieImportedCategory", value: "" }],
+          tags: [],
+        },
+      ]);
+
+      await sync().sync([{ name: "W", type: "Widget", fields: { movie_imported_category: "movies" } }], undefined, cache());
+
+      expect(mockClient.create).toHaveBeenCalled();
     });
   });
 
@@ -331,7 +378,13 @@ describe("ProviderResourceSync", () => {
   });
 
   describe("dry run", () => {
-    const dryRun = () => vi.mocked(getEnvs).mockReturnValue({ DRY_RUN: true, LOG_LEVEL: "silent", CONFIGARR_VERSION: "test" } as any);
+    const dryRun = () =>
+      vi.mocked(getEnvs).mockReturnValue({
+        DRY_RUN: true,
+        LOG_LEVEL: "silent",
+        CONFIGARR_VERSION: "test",
+        CONFIGARR_ENFORCE_CONFIG_VALIDATION: false,
+      } as any);
 
     it("reports the diff without calling the API", async () => {
       dryRun();

@@ -14,7 +14,7 @@ import {
   InputConfigCustomFormatGroup,
   InputConfigIncludeItem,
 } from "./types/config.types";
-import { ValidationError, validateExternal } from "./validation";
+import { ConfigValidationError, ValidationError, validateExternal } from "./validation";
 import {
   TrashArrSupported,
   TrashCache,
@@ -208,7 +208,7 @@ export const loadQualityDefinitionFromTrash = async (
   const filePath = path.resolve(`${trashPath}/${qdType}.json`);
 
   if (!fs.existsSync(filePath)) {
-    throw new Error(`(${arrType}) QualityDefinition type not found: '${qdType}' for '${arrType}'`);
+    throw new ConfigValidationError(`(${arrType}) QualityDefinition type not found: '${qdType}' for '${arrType}'`);
   }
 
   const rawQd = loadJsonFile(filePath);

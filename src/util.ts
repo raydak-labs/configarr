@@ -6,6 +6,7 @@ import { getHelpers } from "./env";
 import { logger } from "./logger";
 import { TrashCF } from "./types/trashguide.types";
 import { FieldChange } from "./diffReport/diffReport.types";
+import { ConfigValidationError } from "./validation";
 
 const recyclarrConfigPath = `${getHelpers().repoPath}/recyclarr-config`;
 const recyclarrSonarrRoot = `${recyclarrConfigPath}/sonarr`;
@@ -414,7 +415,7 @@ export function toEnumOrThrow<T extends Record<string, string>>(enumObj: T, valu
   const members = Object.values(enumObj);
   const match = members.find((member) => member === value);
   if (match === undefined) {
-    throw new Error(`Unknown ${label} value '${value}'. Expected: ${members.join(", ")}`);
+    throw new ConfigValidationError(`Unknown ${label} value '${value}'. Expected: ${members.join(", ")}`);
   }
   return match as T[keyof T];
 }
