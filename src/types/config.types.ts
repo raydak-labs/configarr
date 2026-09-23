@@ -232,6 +232,32 @@ export const InputConfigDelayProfileSchema = z.preprocess(
 );
 export type InputConfigDelayProfile = z.infer<typeof InputConfigDelayProfileSchema>;
 
+export const InputConfigReleaseProfileSchema = z.object({
+  name: z.string().optional(),
+  enabled: z.boolean().optional(),
+  required: z.array(z.string()).optional(),
+  ignored: z.array(z.string()).optional(),
+  indexer: z.string().optional(),
+  tags: z.array(z.string()).optional(),
+});
+export type InputConfigReleaseProfile = z.infer<typeof InputConfigReleaseProfileSchema>;
+
+function dropRecyclarrReleaseProfiles(raw: unknown): unknown {
+  if (!Array.isArray(raw)) {
+    return raw;
+  }
+  const kept = raw.filter((item) => !(item && typeof item === "object" && !Array.isArray(item) && "trash_ids" in item));
+  if (kept.length === 0 && raw.length > 0) {
+    return undefined;
+  }
+  return kept;
+}
+
+export const InputConfigReleaseProfilesSchema = z.preprocess(
+  dropRecyclarrReleaseProfiles,
+  z.array(InputConfigReleaseProfileSchema).optional(),
+);
+
 export const InputConfigDownloadClientSchema = z.object({
   name: z.string(),
   type: z.string(),
@@ -441,6 +467,7 @@ export const InputConfigArrInstanceSchema = z.object({
       additional: z.array(InputConfigDelayProfileSchema).optional(),
     })
     .optional(),
+  release_profiles: InputConfigReleaseProfilesSchema,
   download_clients: z
     .object({
       data: z.array(InputConfigDownloadClientSchema).optional(),

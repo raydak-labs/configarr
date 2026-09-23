@@ -14,6 +14,7 @@ import {
   QualityDefinitionResource,
   QualityProfileResource,
   RemotePathMappingResource,
+  ReleaseProfileResource,
   UiConfigResource,
 } from "../__generated__/readarr/data-contracts";
 import { logger } from "../logger";
@@ -177,6 +178,26 @@ export class ReadarrClient
 
   async deleteDelayProfile(id: string): Promise<void> {
     return this.api.v1DelayprofileDelete(+id);
+  }
+
+  async getReleaseProfiles(): Promise<ReleaseProfileResource[]> {
+    return this.api.v1ReleaseprofileList();
+  }
+
+  async createReleaseProfile(profile: ReleaseProfileResource): Promise<ReleaseProfileResource> {
+    return this.api.v1ReleaseprofileCreate(profile);
+  }
+
+  async updateReleaseProfile(id: string, data: ReleaseProfileResource): Promise<ReleaseProfileResource> {
+    return this.api.v1ReleaseprofileUpdate(id, data);
+  }
+
+  async deleteReleaseProfile(id: string): Promise<void> {
+    return this.api.v1ReleaseprofileDelete(+id);
+  }
+
+  async getIndexers() {
+    return this.api.v1IndexerList();
   }
 
   async getTags(): Promise<TagResource[]> {

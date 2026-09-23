@@ -1,5 +1,6 @@
 import type { CustomFormatRequest } from "../customFormats/customFormat.types";
 import type { DelayProfileShared } from "../delayProfiles/delayProfile.types";
+import type { ReleaseProfileShared } from "../releaseProfiles/releaseProfile.types";
 import type { Tag } from "../tags/tag.types";
 
 export type { Tag };
@@ -53,6 +54,23 @@ export interface DelayProfilesWriter {
 export interface DelayProfilesClient<DelayProfile extends DelayProfileShared = DelayProfileShared> extends DelayProfilesWriter {
   getDelayProfiles(): Promise<DelayProfile[]>;
 }
+
+export interface ReleaseProfilesClient<ReleaseProfile extends ReleaseProfileShared = ReleaseProfileShared> {
+  getReleaseProfiles(): Promise<ReleaseProfile[]>;
+  createReleaseProfile(profile: ReleaseProfileShared): Promise<unknown>;
+  updateReleaseProfile(id: string, profile: ReleaseProfileShared): Promise<unknown>;
+  deleteReleaseProfile(id: string): Promise<void>;
+}
+
+export type IndexerListItem = { id?: number; name?: string | null };
+
+export interface IndexersClient {
+  getIndexers(): Promise<IndexerListItem[]>;
+}
+
+export type ReleaseProfilesApi<T extends ReleaseProfileShared = ReleaseProfileShared> = ReleaseProfilesClient<T> &
+  TagsClient &
+  IndexersClient;
 
 export interface RootFoldersClient<RootFolder extends { id?: number; path?: string | null } = { id?: number; path?: string | null }> {
   getRootfolders(): Promise<RootFolder[]>;

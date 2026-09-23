@@ -6,6 +6,7 @@ import { WhisparrDownloadClientSync } from "../downloadClients/downloadClientWhi
 import { MediaManagementSync } from "../mediaManagement/mediaManagement";
 import { QualityDefinitionPreferredSync } from "../qualityDefinitions/qualityDefinition";
 import { QualityProfileWhisparrSync } from "../qualityProfiles/qualityProfileWhisparr";
+import { ReleaseProfileWhisparrSync } from "../releaseProfiles/releaseProfileWhisparr";
 import { PathRootFolderSync } from "../rootFolder/rootFolderBase";
 import { InputConfigArrInstance, InputConfigSchema } from "../types/config.types";
 import { completeMediaSync, runMediaSyncToQualityProfiles } from "./mediaPipeline";
@@ -26,6 +27,7 @@ export class WhisparrSyncer {
         mm: new MediaManagementSync(client),
         qp: new QualityProfileWhisparrSync(client),
         delay: new StandardDelayProfileSync(client, DownloadProtocol),
+        releaseProfiles: new ReleaseProfileWhisparrSync(client),
         root: new PathRootFolderSync(client),
         downloadClients: new WhisparrDownloadClientSync(client),
       },

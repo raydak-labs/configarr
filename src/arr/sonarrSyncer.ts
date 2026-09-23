@@ -6,6 +6,7 @@ import { SonarrDownloadClientSync } from "../downloadClients/downloadClientSonar
 import { MediaManagementSync } from "../mediaManagement/mediaManagement";
 import { QualityDefinitionPreferredSync } from "../qualityDefinitions/qualityDefinition";
 import { QualityProfileSonarrSync } from "../qualityProfiles/qualityProfileSonarr";
+import { ReleaseProfileSonarrSync } from "../releaseProfiles/releaseProfileSonarr";
 import { PathRootFolderSync } from "../rootFolder/rootFolderBase";
 import { InputConfigArrInstance, InputConfigSchema } from "../types/config.types";
 import { completeMediaSync, runMediaSyncToQualityProfiles } from "./mediaPipeline";
@@ -27,6 +28,7 @@ export class SonarrSyncer {
         mm: new MediaManagementSync(client),
         qp: new QualityProfileSonarrSync(client),
         delay: new StandardDelayProfileSync(client, DownloadProtocol),
+        releaseProfiles: new ReleaseProfileSonarrSync(client),
         root: new PathRootFolderSync(client),
         downloadClients: new SonarrDownloadClientSync(client),
       },

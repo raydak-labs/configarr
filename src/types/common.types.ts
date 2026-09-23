@@ -20,6 +20,7 @@ export type MappedTemplates = Partial<
     | "metadata_profiles"
     | "root_folders"
     | "delay_profiles"
+    | "release_profiles"
     | "download_clients"
   >
 > & {
