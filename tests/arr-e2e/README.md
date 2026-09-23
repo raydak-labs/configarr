@@ -75,6 +75,7 @@ Feature × arr × create / update / delete / idempotent (second run Diff Report 
 | Root folders                   | CDI      | CDI      | CDI      | CUDI     | CUDI     | —        |
 | Media settings (MM/naming/UI)  | CUI      | CUI      | CUI      | CUI      | CUI      | —        |
 | Delay profiles                 | CUDI     | CUDI     | CUDI     | CUDI     | CUDI     | —        |
+| Release profiles               | CUDI     | CUDI     | CUDI     | CUDI     | CUDI     | —        |
 | Download clients (blackhole)   | CUDI     | CUDI     | CUDI     | CUDI     | CUDI     | CUDI     |
 | DC config / remote paths       | CUI / CD | CUI / CD | CUI / CD | CUI / CD | CUI / CD | —        |
 | Metadata profiles              | —        | —        | —        | CUDI     | CUDI     | —        |

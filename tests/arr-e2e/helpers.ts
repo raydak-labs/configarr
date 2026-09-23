@@ -371,13 +371,24 @@ export async function cleanupMediaE2e(client: MediaArrClient): Promise<void> {
     }
   }
 
-  const delayTag = (await client.getTags()).find((t) => t.label === "e2e-delay");
+  const tags = await client.getTags();
+  const delayTag = tags.find((t) => t.label === "e2e-delay");
   if (delayTag?.id != null) {
     const delays = await client.getDelayProfiles();
     for (const profile of delays) {
       if (profile.id != null && Array.isArray(profile.tags) && profile.tags.includes(delayTag.id)) {
         await tryDelete(errors, "delay", () => client.deleteDelayProfile(String(profile.id)));
       }
+    }
+  }
+
+  const releaseTag = tags.find((t) => t.label === "e2e-release");
+  const releases = await client.getReleaseProfiles();
+  for (const profile of releases) {
+    const tagged = releaseTag?.id != null && Array.isArray(profile.tags) && profile.tags.includes(releaseTag.id);
+    const named = "name" in profile && isE2eName((profile as { name?: string | null }).name);
+    if (profile.id != null && (tagged || named)) {
+      await tryDelete(errors, "release", () => client.deleteReleaseProfile(String(profile.id)));
     }
   }
 

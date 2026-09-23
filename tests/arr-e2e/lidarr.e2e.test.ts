@@ -227,6 +227,33 @@ describe("lidarr (live)", () => {
     expect(await tagged()).toHaveLength(0);
   });
 
+  test("release profiles", async () => {
+    const yaml = (required: string[], include: boolean) =>
+      mediaConfig("LIDARR", {
+        release_profiles: include ? [{ required, ignored: ["xvid"], tags: ["e2e-release"] }] : [],
+      });
+    const managed = async () => {
+      const tag = (await client.getTags()).find((t) => t.label === "e2e-release");
+      return (await client.getReleaseProfiles()).filter((p) => tag?.id != null && p.tags?.includes(tag.id));
+    };
+
+    const created = await syncConfig(yaml(["hevc"], true));
+    assertPipelineSucceeded(created.result, ["LIDARR"]);
+    expect(await managed()).toHaveLength(1);
+
+    const second = await syncConfig(yaml(["hevc"], true), created.workspace);
+    assertPipelineSucceeded(second.result, ["LIDARR"]);
+    assertDiffUpToDate(second.result, ["LIDARR"]);
+
+    const updated = await syncConfig(yaml(["hevc", "x265"], true), created.workspace);
+    assertPipelineSucceeded(updated.result, ["LIDARR"]);
+    expect((await managed())[0]?.required).toEqual(expect.arrayContaining(["hevc", "x265"]));
+
+    const removed = await syncConfig(yaml(["hevc"], false), created.workspace);
+    assertPipelineSucceeded(removed.result, ["LIDARR"]);
+    expect(await managed()).toHaveLength(0);
+  });
+
   test("delay profile mapper writes items[] and Lidarr rejects the legacy payload (#481)", async () => {
     // The default profile is not guaranteed to be id 1 on a server that already had one.
     const defaultId = defaultDelayProfile(await client.getDelayProfiles())?.id;
