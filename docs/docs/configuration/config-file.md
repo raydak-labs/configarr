@@ -906,6 +906,39 @@ Notes:
 
 See example [Radarr API DelayProfile](https://radarr.video/docs/api/#/DelayProfile) for legacy fields. Lidarr nightly uses `items` instead.
 
+## Release Profiles
+
+Sync Servarr [Release Profiles](https://wiki.servarr.com/sonarr/settings#release-profiles) (`Must Contain` / `Must Not Contain`, indexer scope, tags). Preferred words inside release profiles were replaced by Custom Formats; this block covers the remaining required/ignored terms.
+
+If `release_profiles` is omitted, Configarr does not touch them. If it is present, the list is the complete desired state: missing profiles are created, matching ones updated, and any server profile not in the list is deleted. An empty list (`[]`) deletes all of them.
+
+```yaml
+yourarr:
+  instance1:
+    release_profiles:
+      - name: HEVC only # optional; ignored on Lidarr/Readarr
+        enabled: true # default true
+        required: # Must Contain
+          - hevc
+          - x265
+          - /h\.?265/i
+        ignored: # Must Not Contain
+          - xvid
+        indexer: MyIndexer # optional indexer name; omitted = any indexer
+        tags:
+          - hevc # tag labels; created if missing. Empty = all series/movies
+```
+
+Notes:
+
+- **experimental**
+- Supported for Sonarr, Radarr, Whisparr, Lidarr, and Readarr
+- Match by `name` when the *arr API has that field and you set one. Otherwise match by content (`enabled`, `required`, `ignored`, indexer, tags). A nameless config entry matches a named server profile with the same content and leaves the name in place.
+- Lidarr and Readarr have no name field, so a change to required/ignored/tags/indexer is treated as a new profile (delete + create).
+- Duplicate names (or duplicate nameless content) in the list fail validation
+- Unknown indexer names fail validation
+- Preferred-word scoring still belongs in `custom_formats` / `quality_profiles`
+
 ## Download Clients <span className="theme-doc-version-badge badge badge--secondary configarr-badge">1.19.0</span>
 
 Configarr can (experimentally) manage the **Download Clients** configured in your \*Arr
