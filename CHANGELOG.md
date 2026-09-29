@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.33.0](https://github.com/raydak-labs/configarr/compare/v1.32.0...v1.33.0) (2026-09-29)
+
+### Features
+
+- **prowlarr:** drop deprecated app_profile alias (soft-breaking) ([d044d31](https://github.com/raydak-labs/configarr/commit/d044d31450ea4d93f2ae8b53aec1a0bf0149959a))
+- support release profiles ([#542](https://github.com/raydak-labs/configarr/issues/542)) ([2fe8f2c](https://github.com/raydak-labs/configarr/commit/2fe8f2cedbe5412fe5fcc8e56bbca8014e5e8f16))
+
+### Bug Fixes
+
+- count skipped download clients as failed changes ([40eaae0](https://github.com/raydak-labs/configarr/commit/40eaae01703613b3721b26f5f24c82230ae73f71))
+- delete unmanaged Prowlarr resources after their dependents ([cb28f5e](https://github.com/raydak-labs/configarr/commit/cb28f5e00fb504b314d25d6a7da60f2e44f0f148))
+- enforce configuration validation ([#509](https://github.com/raydak-labs/configarr/issues/509)) ([c905849](https://github.com/raydak-labs/configarr/commit/c9058492b390e54478ad1f4d7c35170041b5db3b))
+- **nix:** correct pnpmDeps hash for 1.32.0 ([153cd10](https://github.com/raydak-labs/configarr/commit/153cd10bf046aef9cc1d574865966dc6c57f2bc2))
+- persist disabled *arr providers without connection tests ([4131e71](https://github.com/raydak-labs/configarr/commit/4131e71ee19abe099497ff0d0738337e8db0e0d6))
+
 ## [1.32.0](https://github.com/raydak-labs/configarr/compare/v1.31.0...v1.32.0) (2026-09-17)
 
 ### Features
