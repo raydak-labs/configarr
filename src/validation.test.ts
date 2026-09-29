@@ -160,19 +160,14 @@ describe("validateConfig", () => {
     });
   });
 
-  test("drops Recyclarr trash_ids release profiles so the feature stays skipped", () => {
-    expect(validateConfig(InputConfigReleaseProfilesSchema, [{ trash_ids: ["abc"] }], "release profiles", true)).toBeUndefined();
-    expect(validateConfig(InputConfigReleaseProfilesSchema, [{ trash_ids: ["abc"] }], "release profiles", false)).toBeUndefined();
+  test("accepts Recyclarr trash_ids release profiles in strict mode", () => {
+    const input = [{ trash_ids: ["abc"], strict_negative_scores: true }];
+    expect(validateConfig(InputConfigReleaseProfilesSchema, input, "release profiles", true)).toEqual(input);
   });
 
-  test("keeps configarr release profiles next to Recyclarr ones", () => {
-    const result = validateConfig(
-      InputConfigReleaseProfilesSchema,
-      [{ trash_ids: ["abc"] }, { name: "HEVC", required: ["hevc"] }],
-      "release profiles",
-      false,
-    );
-    expect(result).toEqual([{ name: "HEVC", required: ["hevc"] }]);
+  test("accepts mixed Recyclarr and configarr release profiles in strict mode", () => {
+    const input = [{ trash_ids: ["abc"] }, { name: "HEVC", required: ["hevc"] }];
+    expect(validateConfig(InputConfigReleaseProfilesSchema, input, "release profiles", true)).toEqual(input);
   });
 
   test("should respect override over env flag", () => {

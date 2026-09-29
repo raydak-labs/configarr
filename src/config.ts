@@ -36,6 +36,7 @@ import {
   InputConfigIncludeItem,
   InputConfigInstance,
   InputConfigMetadataProfile,
+  InputConfigRecyclarrReleaseProfile,
   InputConfigReleaseProfile,
   InputConfigRemotePath,
   InputConfigSchema,
@@ -344,6 +345,7 @@ export const validateConfig = (input: InputConfigInstance): MergedConfigInstance
     // combination is assumed complete enough - see the TODO above, this isn't independently
     // verified field-by-field.
     quality_profiles: (input.quality_profiles ?? []) as ConfigQualityProfile[],
+    release_profiles: input.release_profiles && filterConfigarrReleaseProfiles(input.release_profiles),
   };
 };
 
@@ -361,12 +363,16 @@ const expandAndAppendCustomFormatGroups = (
   }
 };
 
-function isRecyclarrReleaseProfile(profile: unknown): boolean {
-  return typeof profile === "object" && profile !== null && "trash_ids" in profile;
+function isRecyclarrReleaseProfile(
+  profile: InputConfigReleaseProfile | InputConfigRecyclarrReleaseProfile,
+): profile is InputConfigRecyclarrReleaseProfile {
+  return "trash_ids" in profile;
 }
 
-function filterConfigarrReleaseProfiles(profiles: InputConfigReleaseProfile[]): InputConfigReleaseProfile[] | undefined {
-  const ours = profiles.filter((profile) => !isRecyclarrReleaseProfile(profile));
+function filterConfigarrReleaseProfiles(
+  profiles: (InputConfigReleaseProfile | InputConfigRecyclarrReleaseProfile)[],
+): InputConfigReleaseProfile[] | undefined {
+  const ours = profiles.filter((profile): profile is InputConfigReleaseProfile => !isRecyclarrReleaseProfile(profile));
   const skipped = profiles.length - ours.length;
   if (skipped > 0) {
     logger.warn(`Ignoring ${skipped} Recyclarr-style release_profiles (trash_ids). Use custom_formats instead.`);

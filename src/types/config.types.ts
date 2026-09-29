@@ -242,21 +242,12 @@ export const InputConfigReleaseProfileSchema = z.object({
 });
 export type InputConfigReleaseProfile = z.infer<typeof InputConfigReleaseProfileSchema>;
 
-function dropRecyclarrReleaseProfiles(raw: unknown): unknown {
-  if (!Array.isArray(raw)) {
-    return raw;
-  }
-  const kept = raw.filter((item) => !(item && typeof item === "object" && !Array.isArray(item) && "trash_ids" in item));
-  if (kept.length === 0 && raw.length > 0) {
-    return undefined;
-  }
-  return kept;
-}
+export const InputConfigRecyclarrReleaseProfileSchema = z.looseObject({ trash_ids: z.unknown() });
+export type InputConfigRecyclarrReleaseProfile = z.infer<typeof InputConfigRecyclarrReleaseProfileSchema>;
 
-export const InputConfigReleaseProfilesSchema = z.preprocess(
-  dropRecyclarrReleaseProfiles,
-  z.array(InputConfigReleaseProfileSchema).optional(),
-);
+export const InputConfigReleaseProfilesSchema = z
+  .array(z.union([InputConfigRecyclarrReleaseProfileSchema, InputConfigReleaseProfileSchema]))
+  .optional();
 
 export const InputConfigDownloadClientSchema = z.object({
   name: z.string(),
@@ -535,11 +526,15 @@ export type ConfigCustomFormat = Pick<InputConfigCustomFormat, "trash_ids"> & Pi
 
 export type ConfigCustomFormatList = Pick<ConfigArrInstance, "custom_formats">;
 
-export type ConfigArrInstance = OmitTyped<InputConfigArrInstance, "custom_formats" | "include" | "quality_profiles"> & {
+export type ConfigArrInstance = OmitTyped<
+  InputConfigArrInstance,
+  "custom_formats" | "include" | "quality_profiles" | "release_profiles"
+> & {
   include?: ConfigIncludeItem[];
   custom_formats: ConfigCustomFormat[];
   quality_profiles: ConfigQualityProfile[];
   metadata_profiles?: InputConfigMetadataProfile[];
+  release_profiles?: InputConfigReleaseProfile[];
 };
 
 export type ConfigQualityProfile = OmitTyped<
