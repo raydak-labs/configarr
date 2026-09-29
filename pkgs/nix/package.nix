@@ -47,7 +47,7 @@ pkgs.stdenvNoCC.mkDerivation (finalAttrs: {
 
   pnpmDeps = pkgs.fetchPnpmDeps {
     fetcherVersion = 4;
-    hash = "sha256-KPCJJPqHwLPmQoPLqae3huAiX/OeJneD8CxIBV9wjZU=";
+    hash = "sha256-H7NPWuBkuDoDU6IKTD+gl6sUqEYJ6XhpULNQFY1Ifos=";
     inherit (finalAttrs) pname src version;
   };
 
@@ -55,8 +55,8 @@ pkgs.stdenvNoCC.mkDerivation (finalAttrs: {
     owner = "raydak-labs";
     repo = "configarr";
     rev = "v${finalAttrs.version}";
-    hash = "sha256-SVirTU+zdIeavOFPuZW09BEzV1N+ZfYD/YJuHwtlr1Q=";
+    hash = "sha256-cK6OX+BjeT2cl7NEi+cL8qBWtPEKtfV4IZyIIUWtYII=";
   };
 
-  version = "1.30.1";
+  version = "1.32.0";
 })
