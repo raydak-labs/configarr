@@ -52,3 +52,21 @@ jobs:
       - run: pnpm release-it --ci
         env:
           GITHUB_TOKEN: ${{ steps.generate_token.outputs.token }}
+
+      # The src hash covers the tagged tarball (which contains package.nix), so the
+      # Nix package can only be bumped in a follow-up commit after the tag exists.
+      - name: Install Nix
+        if: env.RELEASED_VERSION != ''
+        uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24 # v31.11.1
+
+      - name: Update Nix package
+        if: env.RELEASED_VERSION != ''
+        run: |
+          nix run nixpkgs#nix-update -- --flake --version "${RELEASED_VERSION}" default
+          if git diff --quiet -- pkgs/nix; then
+            echo "Nix package already up to date"
+            exit 0
+          fi
+          git add pkgs/nix
+          git commit -m "chore(nix): update package to ${RELEASED_VERSION}"
+          git push origin HEAD:main
