@@ -53,6 +53,9 @@ export interface TelemetryData {
   // Delay profiles
   delay_profiles: boolean;
 
+  // Release profiles
+  release_profiles: boolean;
+
   // Experimental features
   enable_full_git_clone: boolean;
 
@@ -245,6 +248,10 @@ export class Telemetry {
     if (!this.telemetryData.delay_profiles && instanceConfig.delay_profiles) {
       this.telemetryData.delay_profiles = true;
     }
+
+    if (!this.telemetryData.release_profiles && instanceConfig.release_profiles) {
+      this.telemetryData.release_profiles = true;
+    }
   }
 
   private collectTelemetryData(
@@ -326,6 +333,8 @@ export class Telemetry {
       root_folders: allInstances.some((i) => i.root_folders && i.root_folders.length > 0),
 
       delay_profiles: allInstances.some((i) => i.delay_profiles !== undefined),
+
+      release_profiles: allInstances.some((i) => i.release_profiles !== undefined),
 
       enable_full_git_clone: globalConfig.enableFullGitClone === true,
 

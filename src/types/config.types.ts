@@ -232,6 +232,23 @@ export const InputConfigDelayProfileSchema = z.preprocess(
 );
 export type InputConfigDelayProfile = z.infer<typeof InputConfigDelayProfileSchema>;
 
+export const InputConfigReleaseProfileSchema = z.object({
+  name: z.string().optional(),
+  enabled: z.boolean().optional(),
+  required: z.array(z.string()).optional(),
+  ignored: z.array(z.string()).optional(),
+  indexer: z.string().optional(),
+  tags: z.array(z.string()).optional(),
+});
+export type InputConfigReleaseProfile = z.infer<typeof InputConfigReleaseProfileSchema>;
+
+export const InputConfigRecyclarrReleaseProfileSchema = z.looseObject({ trash_ids: z.unknown() });
+export type InputConfigRecyclarrReleaseProfile = z.infer<typeof InputConfigRecyclarrReleaseProfileSchema>;
+
+export const InputConfigReleaseProfilesSchema = z
+  .array(z.union([InputConfigRecyclarrReleaseProfileSchema, InputConfigReleaseProfileSchema]))
+  .optional();
+
 export const InputConfigDownloadClientSchema = z.object({
   name: z.string(),
   type: z.string(),
@@ -441,6 +458,7 @@ export const InputConfigArrInstanceSchema = z.object({
       additional: z.array(InputConfigDelayProfileSchema).optional(),
     })
     .optional(),
+  release_profiles: InputConfigReleaseProfilesSchema,
   download_clients: z
     .object({
       data: z.array(InputConfigDownloadClientSchema).optional(),
@@ -508,11 +526,15 @@ export type ConfigCustomFormat = Pick<InputConfigCustomFormat, "trash_ids"> & Pi
 
 export type ConfigCustomFormatList = Pick<ConfigArrInstance, "custom_formats">;
 
-export type ConfigArrInstance = OmitTyped<InputConfigArrInstance, "custom_formats" | "include" | "quality_profiles"> & {
+export type ConfigArrInstance = OmitTyped<
+  InputConfigArrInstance,
+  "custom_formats" | "include" | "quality_profiles" | "release_profiles"
+> & {
   include?: ConfigIncludeItem[];
   custom_formats: ConfigCustomFormat[];
   quality_profiles: ConfigQualityProfile[];
   metadata_profiles?: InputConfigMetadataProfile[];
+  release_profiles?: InputConfigReleaseProfile[];
 };
 
 export type ConfigQualityProfile = OmitTyped<

@@ -354,6 +354,25 @@ describe("mergeConfigsAndTemplates", () => {
     expect(result.config.quality_profiles.length).toBe(3);
   });
 
+  test("filters Recyclarr release profiles and warns", async () => {
+    vi.spyOn(reclarrImporter, "loadRecyclarrTemplates").mockReturnValue(new Map());
+    vi.spyOn(localImporter, "loadLocalRecyclarrTemplate").mockReturnValue(new Map());
+    vi.spyOn(trashGuide, "loadQPFromTrash").mockReturnValue(Promise.resolve(new Map()));
+    vi.spyOn(trashGuide, "loadTrashCustomFormatGroups").mockReturnValue(Promise.resolve(new Map()));
+    const loggerWarnSpy = vi.spyOn(logger, "warn");
+
+    const inputConfig: InputConfigArrInstance = {
+      release_profiles: [{ trash_ids: ["abc"] }, { name: "HEVC", required: ["hevc"] }],
+      api_key: "test",
+      base_url: "http://sonarr:8989",
+    };
+
+    const result = await mergeConfigsAndTemplates({}, inputConfig, "SONARR");
+
+    expect(result.config.release_profiles).toEqual([{ name: "HEVC", required: ["hevc"] }]);
+    expect(loggerWarnSpy.mock.calls.some((call) => String(call[0]).includes("Recyclarr-style release_profiles"))).toBe(true);
+  });
+
   test("should handle missing templates gracefully", async () => {
     const fromConfig: ConfigQualityProfileItem[] = [{ name: "HDTV-1080p", enabled: false }];
 

@@ -213,6 +213,30 @@ describe("radarr (live)", () => {
     expect(await tagged()).toHaveLength(0);
   });
 
+  test("release profiles", async () => {
+    const yaml = (required: string[], include: boolean) =>
+      mediaConfig("RADARR", {
+        release_profiles: include ? [{ name: "e2e-hevc", required, ignored: ["xvid"], tags: ["e2e-release"] }] : [],
+      });
+    const managed = async () => (await client.getReleaseProfiles()).filter((p) => p.name === "e2e-hevc");
+
+    const created = await syncConfig(yaml(["hevc"], true));
+    assertPipelineSucceeded(created.result, ["RADARR"]);
+    expect(await managed()).toHaveLength(1);
+
+    const second = await syncConfig(yaml(["hevc"], true), created.workspace);
+    assertPipelineSucceeded(second.result, ["RADARR"]);
+    assertDiffUpToDate(second.result, ["RADARR"]);
+
+    const updated = await syncConfig(yaml(["hevc", "x265"], true), created.workspace);
+    assertPipelineSucceeded(updated.result, ["RADARR"]);
+    expect((await managed())[0]?.required).toEqual(expect.arrayContaining(["hevc", "x265"]));
+
+    const removed = await syncConfig(yaml(["hevc"], false), created.workspace);
+    assertPipelineSucceeded(removed.result, ["RADARR"]);
+    expect(await managed()).toHaveLength(0);
+  });
+
   test("delay profile mapper writes the legacy payload", async () => {
     const parsed = InputConfigDelayProfileSchema.parse({
       enableUsenet: true,

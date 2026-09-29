@@ -224,6 +224,33 @@ describe("readarr (live)", () => {
     expect(await tagged()).toHaveLength(0);
   });
 
+  test("release profiles", async () => {
+    const yaml = (required: string[], include: boolean) =>
+      mediaConfig("READARR", {
+        release_profiles: include ? [{ required, ignored: ["xvid"], tags: ["e2e-release"] }] : [],
+      });
+    const managed = async () => {
+      const tag = (await client.getTags()).find((t) => t.label === "e2e-release");
+      return (await client.getReleaseProfiles()).filter((p) => tag?.id != null && p.tags?.includes(tag.id));
+    };
+
+    const created = await syncConfig(yaml(["hevc"], true));
+    assertPipelineSucceeded(created.result, ["READARR"]);
+    expect(await managed()).toHaveLength(1);
+
+    const second = await syncConfig(yaml(["hevc"], true), created.workspace);
+    assertPipelineSucceeded(second.result, ["READARR"]);
+    assertDiffUpToDate(second.result, ["READARR"]);
+
+    const updated = await syncConfig(yaml(["hevc", "x265"], true), created.workspace);
+    assertPipelineSucceeded(updated.result, ["READARR"]);
+    expect((await managed())[0]?.required).toEqual(expect.arrayContaining(["hevc", "x265"]));
+
+    const removed = await syncConfig(yaml(["hevc"], false), created.workspace);
+    assertPipelineSucceeded(removed.result, ["READARR"]);
+    expect(await managed()).toHaveLength(0);
+  });
+
   test("delay profile mapper writes the legacy payload", async () => {
     const parsed = InputConfigDelayProfileSchema.parse({
       enableUsenet: true,

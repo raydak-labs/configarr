@@ -174,6 +174,7 @@ describe("Telemetry", () => {
             media_management: {},
             root_folders: ["folder1"],
             delay_profiles: { default: {} },
+            release_profiles: [{ required: ["x265"] }],
             include: [
               { template: "recyclarr-template", source: "RECYCLARR" },
               { template: "trash-template", source: "TRASH" },
@@ -216,6 +217,7 @@ describe("Telemetry", () => {
         media_naming_api: false,
         root_folders: true,
         delay_profiles: true,
+        release_profiles: true,
         enable_full_git_clone: true,
 
         sonarr_instances: 0,

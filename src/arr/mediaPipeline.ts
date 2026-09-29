@@ -24,6 +24,8 @@ import { QualityDefinitionSync, qualityDefinitionsToDiffEntries } from "../quali
 import { QualityDefinitionShared } from "../qualityDefinitions/qualityDefinition.types";
 import { BaseQualityProfileSync, getUnmanagedQualityProfiles, qualityProfilesToDiffEntries } from "../qualityProfiles/qualityProfileBase";
 import { QualityProfileShared } from "../qualityProfiles/qualityProfile.types";
+import { BaseReleaseProfileSync } from "../releaseProfiles/releaseProfileBase";
+import { ReleaseProfileShared } from "../releaseProfiles/releaseProfile.types";
 import { syncRemotePaths } from "../remotePaths/remotePathSyncer";
 import { BaseRootFolderSync } from "../rootFolder/rootFolderBase";
 import { loadServerTags } from "../tags/tags";
@@ -39,6 +41,7 @@ export type MediaFeatureSyncs = {
   mm: MediaManagementSync<{ id?: number }, { id?: number }>;
   qp: BaseQualityProfileSync<QualityProfileShared>;
   delay: BaseDelayProfileSync<DelayProfileShared>;
+  releaseProfiles: BaseReleaseProfileSync<ReleaseProfileShared>;
   root: BaseRootFolderSync;
   downloadClients: BaseDownloadClientSync<MediaDownloadClientResource>;
 };
@@ -354,6 +357,13 @@ export const completeMediaSync = async <T extends MediaArrType>(ctx: MediaSyncCo
         logger.info(`Successfully synched delay profiles.`);
       }
     }
+  }
+
+  if (config.release_profiles === undefined) {
+    logger.debug(`Config 'release_profiles' not specified. Ignoring.`);
+  } else {
+    const releaseProfilesResult = await syncs.releaseProfiles.sync(config.release_profiles, serverCache);
+    collector.add(releaseProfilesResult.diffEntries);
   }
 
   // Download Clients

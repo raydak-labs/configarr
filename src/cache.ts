@@ -1,4 +1,5 @@
 import { logger } from "./logger";
+import type { IndexerListItem } from "./clients/capabilities";
 import type { CustomFormatRequest } from "./customFormats/customFormat.types";
 import type { QualityDefinitionShared } from "./qualityDefinitions/qualityDefinition.types";
 import type { QualityProfileLanguage, QualityProfileShared } from "./qualityProfiles/qualityProfile.types";
@@ -10,6 +11,7 @@ export type ServerCacheInit = {
   customFormats?: CustomFormatRequest[];
   languages?: QualityProfileLanguage[];
   tags?: Tag[];
+  indexers?: IndexerListItem[];
 };
 
 export class ServerCache {
@@ -18,6 +20,8 @@ export class ServerCache {
   private _customFormats: CustomFormatRequest[];
   private _tags: Tag[];
   private _languages: QualityProfileLanguage[];
+  private _indexers: IndexerListItem[] | undefined;
+  private _indexersLoad: Promise<IndexerListItem[]> | undefined;
 
   constructor(init: ServerCacheInit = {}) {
     this._qualityDefinitions = init.qualityDefinitions ?? [];
@@ -25,6 +29,7 @@ export class ServerCache {
     this._customFormats = init.customFormats ?? [];
     this._languages = init.languages ?? [];
     this._tags = init.tags ?? [];
+    this._indexers = init.indexers;
   }
 
   public get qualityDefinitions() {
@@ -81,5 +86,23 @@ export class ServerCache {
       logger.debug(`No Tags received from server.`);
     }
     this._tags = newTags;
+  }
+
+  async getIndexers(loader: () => Promise<IndexerListItem[]>): Promise<IndexerListItem[]> {
+    if (this._indexers !== undefined) {
+      return this._indexers;
+    }
+
+    this._indexersLoad ??= loader()
+      .then((items) => {
+        this._indexers = items;
+        return items;
+      })
+      .catch((err: unknown) => {
+        this._indexersLoad = undefined;
+        throw err;
+      });
+
+    return this._indexersLoad;
   }
 }

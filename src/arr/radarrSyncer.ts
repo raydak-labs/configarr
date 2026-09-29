@@ -6,6 +6,7 @@ import { RadarrDownloadClientSync } from "../downloadClients/downloadClientRadar
 import { MediaManagementSync } from "../mediaManagement/mediaManagement";
 import { QualityDefinitionPreferredSync } from "../qualityDefinitions/qualityDefinition";
 import { QualityProfileRadarrSync } from "../qualityProfiles/qualityProfileRadarr";
+import { ReleaseProfileRadarrSync } from "../releaseProfiles/releaseProfileRadarr";
 import { PathRootFolderSync } from "../rootFolder/rootFolderBase";
 import { InputConfigArrInstance, InputConfigSchema } from "../types/config.types";
 import { completeMediaSync, runMediaSyncToQualityProfiles } from "./mediaPipeline";
@@ -27,6 +28,7 @@ export class RadarrSyncer {
         mm: new MediaManagementSync(client),
         qp: new QualityProfileRadarrSync(client),
         delay: new StandardDelayProfileSync(client, DownloadProtocol),
+        releaseProfiles: new ReleaseProfileRadarrSync(client),
         root: new PathRootFolderSync(client),
         downloadClients: new RadarrDownloadClientSync(client),
       },

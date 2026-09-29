@@ -120,6 +120,19 @@ sonarr:
     #       tags:
     #         - delayprofiletest
 
+    # experimental. Optional. Defined list is complete desired state; unmatched server profiles are deleted.
+    # release_profiles:
+    #   - name: HEVC only
+    #     enabled: true
+    #     required:
+    #       - hevc
+    #       - x265
+    #     ignored:
+    #       - xvid
+    #     # indexer: MyIndexer
+    #     tags:
+    #       - hevc
+
     quality_definition:
       type: series # Quality definition type for Sonarr
 

@@ -36,6 +36,8 @@ import {
   InputConfigIncludeItem,
   InputConfigInstance,
   InputConfigMetadataProfile,
+  InputConfigRecyclarrReleaseProfile,
+  InputConfigReleaseProfile,
   InputConfigRemotePath,
   InputConfigSchema,
   InputConfigSchemaSchema,
@@ -343,6 +345,7 @@ export const validateConfig = (input: InputConfigInstance): MergedConfigInstance
     // combination is assumed complete enough - see the TODO above, this isn't independently
     // verified field-by-field.
     quality_profiles: (input.quality_profiles ?? []) as ConfigQualityProfile[],
+    release_profiles: input.release_profiles && filterConfigarrReleaseProfiles(input.release_profiles),
   };
 };
 
@@ -359,6 +362,26 @@ const expandAndAppendCustomFormatGroups = (
     mergedTemplates.custom_formats.push(...expanded);
   }
 };
+
+function isRecyclarrReleaseProfile(
+  profile: InputConfigReleaseProfile | InputConfigRecyclarrReleaseProfile,
+): profile is InputConfigRecyclarrReleaseProfile {
+  return "trash_ids" in profile;
+}
+
+function filterConfigarrReleaseProfiles(
+  profiles: (InputConfigReleaseProfile | InputConfigRecyclarrReleaseProfile)[],
+): InputConfigReleaseProfile[] | undefined {
+  const ours = profiles.filter((profile): profile is InputConfigReleaseProfile => !isRecyclarrReleaseProfile(profile));
+  const skipped = profiles.length - ours.length;
+  if (skipped > 0) {
+    logger.warn(`Ignoring ${skipped} Recyclarr-style release_profiles (trash_ids). Use custom_formats instead.`);
+  }
+  if (ours.length === 0 && skipped > 0) {
+    return undefined;
+  }
+  return ours;
+}
 
 const includeRecyclarrTemplate = (
   template: MappedTemplates,
@@ -433,6 +456,13 @@ const includeRecyclarrTemplate = (
 
   if (template.delay_profiles) {
     mergedTemplates.delay_profiles = template.delay_profiles;
+  }
+
+  if (template.release_profiles) {
+    const filtered = filterConfigarrReleaseProfiles(template.release_profiles);
+    if (filtered !== undefined) {
+      mergedTemplates.release_profiles = filtered;
+    }
   }
 
   // TODO Ignore recursive include for now
@@ -1045,6 +1075,13 @@ export const mergeConfigsAndTemplates = async (
   // Overwrite delay_profiles if defined in instanceConfig
   if (instanceConfig.delay_profiles) {
     mergedTemplates.delay_profiles = instanceConfig.delay_profiles;
+  }
+
+  if (instanceConfig.release_profiles) {
+    const filtered = filterConfigarrReleaseProfiles(instanceConfig.release_profiles);
+    if (filtered !== undefined) {
+      mergedTemplates.release_profiles = filtered;
+    }
   }
 
   // Merge download_clients if defined in instanceConfig

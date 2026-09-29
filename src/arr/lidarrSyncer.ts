@@ -6,6 +6,7 @@ import { MediaManagementSync } from "../mediaManagement/mediaManagement";
 import { LidarrMetadataProfileSync } from "../metadataProfiles/metadataProfileLidarr";
 import { QualityDefinitionPreferredSync } from "../qualityDefinitions/qualityDefinition";
 import { QualityProfileLidarrSync } from "../qualityProfiles/qualityProfileLidarr";
+import { ReleaseProfileLidarrSync } from "../releaseProfiles/releaseProfileLidarr";
 import { LidarrRootFolderSync } from "../rootFolder/rootFolderLidarr";
 import { InputConfigArrInstance, InputConfigSchema } from "../types/config.types";
 import { completeMediaSync, runMediaSyncToQualityProfiles } from "./mediaPipeline";
@@ -26,6 +27,7 @@ export class LidarrSyncer {
         mm: new MediaManagementSync(client),
         qp: new QualityProfileLidarrSync(client),
         delay: new DelayProfileLidarrSync(client),
+        releaseProfiles: new ReleaseProfileLidarrSync(client),
         root: new LidarrRootFolderSync(client),
         downloadClients: new LidarrDownloadClientSync(client),
       },

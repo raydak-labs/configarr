@@ -1,7 +1,7 @@
 import { describe, expect, test, vi, beforeEach } from "vitest";
 import { z } from "zod";
 import { ConfigValidationError, validateData, validateConfig, validateExternal, ValidationError, warnOrThrowConfig } from "./validation";
-import { InputConfigDelayProfileSchema } from "./types/config.types";
+import { InputConfigDelayProfileSchema, InputConfigReleaseProfileSchema, InputConfigReleaseProfilesSchema } from "./types/config.types";
 
 // Mock env module
 vi.mock("./env", () => ({
@@ -141,6 +141,33 @@ describe("validateConfig", () => {
         true,
       ),
     ).toThrow("Items");
+  });
+
+  test("accepts a release profile in strict mode", () => {
+    const result = validateConfig(
+      InputConfigReleaseProfileSchema,
+      { name: "HEVC", required: ["hevc"], ignored: ["xvid"], indexer: "MyIndexer", tags: ["hevc"] },
+      "release profile",
+      true,
+    );
+
+    expect(result).toEqual({
+      name: "HEVC",
+      required: ["hevc"],
+      ignored: ["xvid"],
+      indexer: "MyIndexer",
+      tags: ["hevc"],
+    });
+  });
+
+  test("accepts Recyclarr trash_ids release profiles in strict mode", () => {
+    const input = [{ trash_ids: ["abc"], strict_negative_scores: true }];
+    expect(validateConfig(InputConfigReleaseProfilesSchema, input, "release profiles", true)).toEqual(input);
+  });
+
+  test("accepts mixed Recyclarr and configarr release profiles in strict mode", () => {
+    const input = [{ trash_ids: ["abc"] }, { name: "HEVC", required: ["hevc"] }];
+    expect(validateConfig(InputConfigReleaseProfilesSchema, input, "release profiles", true)).toEqual(input);
   });
 
   test("should respect override over env flag", () => {

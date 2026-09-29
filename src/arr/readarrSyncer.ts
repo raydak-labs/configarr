@@ -7,6 +7,7 @@ import { MediaManagementSync } from "../mediaManagement/mediaManagement";
 import { ReadarrMetadataProfileSync } from "../metadataProfiles/metadataProfileReadarr";
 import { QualityDefinitionSync } from "../qualityDefinitions/qualityDefinition";
 import { QualityProfileReadarrSync } from "../qualityProfiles/qualityProfileReadarr";
+import { ReleaseProfileReadarrSync } from "../releaseProfiles/releaseProfileReadarr";
 import { ReadarrRootFolderSync } from "../rootFolder/rootFolderReadarr";
 import { InputConfigArrInstance, InputConfigSchema } from "../types/config.types";
 import { completeMediaSync, runMediaSyncToQualityProfiles } from "./mediaPipeline";
@@ -27,6 +28,7 @@ export class ReadarrSyncer {
         mm: new MediaManagementSync(client),
         qp: new QualityProfileReadarrSync(client),
         delay: new StandardDelayProfileSync(client, DownloadProtocol),
+        releaseProfiles: new ReleaseProfileReadarrSync(client),
         root: new ReadarrRootFolderSync(client),
         downloadClients: new ReadarrDownloadClientSync(client),
       },
