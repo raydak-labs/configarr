@@ -28,7 +28,7 @@ import { BaseReleaseProfileSync } from "../releaseProfiles/releaseProfileBase";
 import { ReleaseProfileShared } from "../releaseProfiles/releaseProfile.types";
 import { syncRemotePaths } from "../remotePaths/remotePathSyncer";
 import { BaseRootFolderSync } from "../rootFolder/rootFolderBase";
-import { collectTagIds, collectTagLabels, deleteUnmanagedTags, ensureTags, loadServerTags } from "../tags/tags";
+import { collectTagIds, collectTagLabels, deleteUnmanagedTags, ensureTags, loadServerTags, syncInstanceTags } from "../tags/tags";
 import { getTelemetryInstance, Telemetry } from "../telemetry";
 import { MediaArrType } from "../types/common.types";
 import { InputConfigArrInstance, InputConfigSchema, MergedConfigInstance } from "../types/config.types";
@@ -168,12 +168,7 @@ export const runMediaSyncToQualityProfiles = async <T extends MediaArrType>(
 
   // Instance-level `tags:` is a declarative spelling of what the per-feature syncers below
   // create anyway; running it here means every feature sees the tags by the time it resolves ids.
-  if (config.tags?.length) {
-    const instanceTagsResult = await ensureTags(client, serverCache, config.tags);
-    // A dry run creates nothing, so report the labels it would have created.
-    const instanceTagLabels = getEnvs().DRY_RUN ? instanceTagsResult.missing : instanceTagsResult.created;
-    collector.add(instanceTagLabels.map((label) => ({ resourceType: "Tag", name: label, action: "create" as const })));
-  }
+  collector.add((await syncInstanceTags(client, serverCache, config.tags)).diffEntries);
 
   if (config.quality_definition != null) {
     const mergedQDs: TrashQualityDefinitionQuality[] = [];
