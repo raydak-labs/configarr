@@ -28,7 +28,7 @@ import { BaseReleaseProfileSync } from "../releaseProfiles/releaseProfileBase";
 import { ReleaseProfileShared } from "../releaseProfiles/releaseProfile.types";
 import { syncRemotePaths } from "../remotePaths/remotePathSyncer";
 import { BaseRootFolderSync } from "../rootFolder/rootFolderBase";
-import { deleteUnmanagedInstanceTags, syncInstanceTags } from "../tags/tagSync";
+import { deleteUnmanagedInstanceTags, syncInstanceTags } from "../tags/tags";
 import { ensureTags, loadServerTags } from "../tags/tags";
 import { getTelemetryInstance, Telemetry } from "../telemetry";
 import { MediaArrType } from "../types/common.types";

@@ -36,7 +36,7 @@ const applicationSync = vi.fn(async () => ({
 
 const indexerSyncCtor = vi.fn();
 
-vi.mock("../tags/tagSync", () => ({ syncInstanceTags: (...args: unknown[]) => syncInstanceTags(...(args as [])) }));
+vi.mock("../tags/tags", () => ({ syncInstanceTags: (...args: unknown[]) => syncInstanceTags(...(args as [])) }));
 vi.mock("./syncProfileSync", () => ({
   syncSyncProfiles: (...args: unknown[]) => syncProfileSync(...(args as [])),
   deleteUnmanagedSyncProfiles: (...args: unknown[]) => deleteUnmanagedProfiles(...(args as [])),

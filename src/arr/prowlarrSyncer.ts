@@ -5,7 +5,7 @@ import { InstanceDiffReport } from "../diffReport/diffReport.types";
 import { ProwlarrDownloadClientSync } from "../downloadClients/downloadClientProwlarr";
 import { logger } from "../logger";
 import { syncProwlarrProviders } from "../prowlarr/prowlarrSyncer";
-import { deleteUnmanagedInstanceTags } from "../tags/tagSync";
+import { deleteUnmanagedInstanceTags } from "../tags/tags";
 import { loadServerTags } from "../tags/tags";
 import { InputConfigProwlarrInstance } from "../types/config.types";
 import { ConfigValidationError } from "../validation";

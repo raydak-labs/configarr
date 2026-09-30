@@ -6,7 +6,7 @@ import { ApplicationSync } from "./applicationSync";
 import { IndexerProxySync } from "./indexerProxySync";
 import { IndexerSync } from "./indexerSync";
 import { deleteUnmanagedSyncProfiles, syncSyncProfiles } from "./syncProfileSync";
-import { syncInstanceTags } from "../tags/tagSync";
+import { syncInstanceTags } from "../tags/tags";
 
 /**
  * Runs the Prowlarr provider-resource syncs for one instance, in dependency order:

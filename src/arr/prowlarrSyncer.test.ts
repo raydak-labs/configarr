@@ -16,10 +16,10 @@ const prowlarrClient = { getSystemStatus: vi.fn(async () => ({ version: "1" })) 
 vi.mock("../logger", () => ({ logger: { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
 vi.mock("../clients/client", () => ({ getClient: vi.fn(() => prowlarrClient) }));
 vi.mock("../prowlarr/prowlarrSyncer", () => ({ syncProwlarrProviders: (...args: unknown[]) => syncProviders(...(args as [])) }));
-vi.mock("../tags/tagSync", () => ({
+vi.mock("../tags/tags", () => ({
+  loadServerTags: (...args: unknown[]) => loadServerTags(...(args as [])),
   deleteUnmanagedInstanceTags: (...args: unknown[]) => deleteUnmanagedInstanceTags(...(args as [])),
 }));
-vi.mock("../tags/tags", () => ({ loadServerTags: (...args: unknown[]) => loadServerTags(...(args as [])) }));
 vi.mock("../downloadClients/downloadClientProwlarr", () => ({
   ProwlarrDownloadClientSync: class {
     syncDownloadClients = syncDownloadClients;
