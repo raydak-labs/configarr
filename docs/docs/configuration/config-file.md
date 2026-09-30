@@ -714,7 +714,7 @@ Notes:
 - available since `v1.34.0` for Sonarr, Radarr, Lidarr, Readarr and Whisparr. Prowlarr has the same block, see [Prowlarr](/docs/configuration/experimental-support#prowlarr-v1)
 - Tag labels are matched **case-insensitively**: a label that only differs in casing resolves to the existing server tag instead of creating a second one
 - `tags` is optional. The tags referenced by your managed features (`delay_profiles`, `release_profiles`, `root_folders`, `download_clients`) are created as well, so listing them here is a declarative way to see and keep all your labels in one place
-- `delete_unmanaged_tags` deletes every server tag which is neither listed under `tags`, nor listed under `ignore`, nor referenced by one of the managed features listed above
+- `delete_unmanaged_tags` deletes every server tag which is neither listed under `tags`, nor listed under `ignore`, nor referenced by one of the managed features listed above. If it stops part-way (a server error after some tags were already deleted), the report still lists the deletions that went through
 - A tag that is still in use by something configarr does not manage (for example an import list, notification or indexer) cannot be deleted. On media \*arrs the tag is left alone and a warning is logged, so the rest of the instance still syncs. On Prowlarr every tag-bearing resource is managed, so this case fails the Prowlarr instance instead
 - Prowlarr keeps its own set of referencing features: its tags are also read from `applications`, `indexers` and `indexer_proxies`
 - A dry run (`DRY_RUN=true`) never creates or deletes tags; it only reports what it would do

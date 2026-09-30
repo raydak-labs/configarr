@@ -2,8 +2,10 @@ import type { ServerCache } from "../cache";
 import type { TagsClient } from "../clients/capabilities";
 import { getEnvs } from "../env";
 import { logger } from "../logger";
+import { TagDeletionError } from "./tag.types";
 import type { DeleteUnmanagedTagsOptions, EnsureTagsResult, Tag, TagResolveOptions, TagSyncResult } from "./tag.types";
 
+/** Reads the server's current tags into the shared cache shape every feature resolves against. */
 export const loadServerTags = async (client: TagsClient): Promise<Tag[]> => {
   if (getEnvs().LOAD_LOCAL_SAMPLES) {
     throw new Error("Local sample loading for tags is not implemented yet.");
@@ -87,7 +89,7 @@ export const buildTagPlaceholders = (tagNames: readonly string[], serverTags: re
 };
 
 /** Folds config tag lists into one lowercased set of labels, skipping raw numeric ids. */
-export const collectTagLabels = (...tagLists: readonly ((string | number)[] | undefined)[]): Set<string> => {
+const collectTagLabels = (...tagLists: readonly (readonly (string | number)[] | undefined)[]): Set<string> => {
   const labels = new Set<string>();
   for (const tags of tagLists) {
     for (const tag of tags ?? []) {
@@ -103,7 +105,7 @@ export const collectTagLabels = (...tagLists: readonly ((string | number)[] | un
  * Collects the raw server ids from config tag entries. Numeric entries are deprecated but still
  * accepted in the per-feature blocks, and such a tag must survive an unmanaged-tag prune.
  */
-export const collectTagIds = (...tagLists: readonly ((string | number)[] | undefined)[]): number[] => {
+const collectTagIds = (...tagLists: readonly (readonly (string | number)[] | undefined)[]): number[] => {
   const ids: number[] = [];
   for (const tags of tagLists) {
     for (const tag of tags ?? []) {
@@ -196,7 +198,7 @@ const isInUseError = (error: unknown): boolean => {
  * `onInUse` decides what happens when the server answers 409 because a resource configarr does
  * not manage still holds the tag: "skip" leaves it and carries on, "throw" fails the instance.
  */
-export const deleteUnmanagedTags = async (
+const deleteUnmanagedTags = async (
   client: TagsClient,
   serverCache: ServerCache,
   options: DeleteUnmanagedTagsOptions,
@@ -233,7 +235,9 @@ export const deleteUnmanagedTags = async (
       }
       const message = `Failed to delete tag '${label}': ${error instanceof Error ? error.message : String(error)}`;
       logger.error(message);
-      throw new Error(message);
+      // Deletions before this one already happened on the server, so hand their diff entries
+      // back to the caller rather than losing them.
+      throw new TagDeletionError(message, result);
     }
 
     deletedIds.add(tag.id);
@@ -252,8 +256,13 @@ type TagDeleteConfig = { enabled: boolean; ignore?: string[] };
 interface DeleteUnmanagedInstanceTagsOptions {
   /** Only prunes when `enabled` is set. */
   deleteConfig?: TagDeleteConfig;
+  /**
+   * The instance-level `tags` labels. Always kept: they are what `syncInstanceTags` was asked
+   * to ensure exist, so pruning them would make each run create a tag and then delete it.
+   */
+  instanceLabels?: readonly string[];
   /** Every `tags` list in the instance config, so a tag a managed resource uses is never pruned. */
-  referencedTagLists: readonly ((string | number)[] | undefined)[];
+  referencedTagLists?: readonly (readonly (string | number)[] | undefined)[];
   /**
    * What to do when the server answers 409 because a resource configarr does not manage still
    * holds the tag. Media *arrs skip it and carry on; Prowlarr manages every tag-bearing
@@ -305,8 +314,8 @@ export async function deleteUnmanagedInstanceTags(
   }
 
   return deleteUnmanagedTags(client, serverCache, {
-    keep: collectTagLabels(options.deleteConfig.ignore, ...options.referencedTagLists),
-    keepIds: collectTagIds(...options.referencedTagLists),
+    keep: collectTagLabels(options.instanceLabels, options.deleteConfig.ignore, ...(options.referencedTagLists ?? [])),
+    keepIds: collectTagIds(...(options.referencedTagLists ?? [])),
     onInUse: options.onInUse,
   });
 }

@@ -56,6 +56,7 @@ export class ProwlarrSyncer {
           (
             await deleteUnmanagedInstanceTags(client, serverCache, {
               deleteConfig: instance.delete_unmanaged_tags,
+              instanceLabels: instance.tags,
               referencedTagLists: [
                 instance.applications?.data?.flatMap((application) => application.tags ?? []),
                 instance.indexers?.data?.flatMap((indexer) => indexer.tags ?? []),

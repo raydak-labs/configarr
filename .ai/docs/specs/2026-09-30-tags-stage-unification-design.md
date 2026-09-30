@@ -30,7 +30,16 @@ of stage functions that the pipeline calls.
   - mechanics: `loadServerTags`, `resolveTagNames`, `ensureTags`, `deleteUnmanagedTags`,
     `collectTagLabels`, `collectTagIds`, `buildTagPlaceholders`;
   - stage, called by both pipelines: `syncInstanceTags(client, serverCache, labels)` and
-    `deleteUnmanagedInstanceTags(client, serverCache, { deleteConfig, referencedTagLists, onInUse })`.
+    `deleteUnmanagedInstanceTags(client, serverCache, { deleteConfig, instanceLabels, referencedTagLists, onInUse })`.
+    `instanceLabels` is kept unconditionally — it is what `syncInstanceTags` just ensured exists,
+    so pruning it would make every run create a tag and then delete it.
+
+Only the six functions callers actually use are exported (`loadServerTags`, `resolveTagNames`,
+`buildTagPlaceholders`, `ensureTags`, `syncInstanceTags`, `deleteUnmanagedInstanceTags`).
+`collectTagLabels`, `collectTagIds` and the raw `deleteUnmanagedTags` are module-private: they
+had no caller outside this file, and a public `deleteUnmanagedTags` next to
+`deleteUnmanagedInstanceTags` invited confusion about which one to call.
+
 - `src/tags/tag.types.ts` holds the shared types, mirroring `customFormat.types.ts`.
 - `src/prowlarr/tagSync.ts` is **deleted**. `syncProwlarrProviders` and `ProwlarrSyncer` call the
   shared stage directly and pass their own `referencedTagLists` (applications, indexers,

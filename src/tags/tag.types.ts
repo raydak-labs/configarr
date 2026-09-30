@@ -1,10 +1,12 @@
 import type { DiffEntry } from "../diffReport/diffReport.types";
 
+/** A server tag: its id and label. Labels are matched case-insensitively. */
 export interface Tag {
   id?: number;
   label?: string | null;
 }
 
+/** Counts plus the diff entries a tag stage produced for the instance report. */
 export interface TagSyncResult {
   added: number;
   removed: number;
@@ -21,6 +23,7 @@ export interface TagResolveOptions {
   placeholders?: Map<string, number>;
 }
 
+/** What `ensureTags` resolved, created, and still found missing. */
 export interface EnsureTagsResult {
   /** Resolved server ids, in the order the input was given. */
   ids: number[];
@@ -34,6 +37,7 @@ export interface EnsureTagsResult {
   missing: string[];
 }
 
+/** Keep-set, in-use policy and id-retention inputs for a tag prune. */
 export interface DeleteUnmanagedTagsOptions {
   /** Lowercased labels to keep. */
   keep: Iterable<string>;
@@ -47,4 +51,18 @@ export interface DeleteUnmanagedTagsOptions {
    * Every other failure throws either way.
    */
   onInUse: "throw" | "skip";
+}
+
+/**
+ * Raised when a tag delete fails part-way through a prune. Carries the deletions that already
+ * succeeded, so a caller that continues on error can still report them.
+ */
+export class TagDeletionError extends Error {
+  constructor(
+    message: string,
+    readonly partial: TagSyncResult,
+  ) {
+    super(message);
+    this.name = "TagDeletionError";
+  }
 }

@@ -236,6 +236,25 @@ describe("completeMediaSync unmanaged tag cleanup", () => {
     expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining("download client sync reported failures"));
   });
 
+  test("reports the tag deletions that succeeded before a later one failed", async () => {
+    serverTags.push({ id: 1, label: "orphan-a" }, { id: 2, label: "orphan-b" });
+    const ctx = buildContext(
+      config({
+        delete_unmanaged_tags: { enabled: true },
+        root_folders: [{ path: "/data", name: "data", metadata_profile: "m", quality_profile: "q" }],
+      }),
+      makeSyncs(),
+    );
+    // First delete succeeds, second fails.
+    (ctx.client.deleteTag as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce(undefined).mockRejectedValue(new Error("500 boom"));
+
+    const report = await completeMediaSync(ctx);
+
+    // The first deletion really happened, so it must appear in the report.
+    expect(report.entries).toContainEqual({ resourceType: "Tag", name: "orphan-a", action: "delete" });
+    expect(report.entries).not.toContainEqual({ resourceType: "Tag", name: "orphan-b", action: "delete" });
+  });
+
   test("keeps the instance report when a tag delete fails for a non-409 reason", async () => {
     serverTags.push({ id: 1, label: "orphan" });
     const syncs = makeSyncs();

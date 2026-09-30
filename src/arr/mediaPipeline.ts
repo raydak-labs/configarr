@@ -28,8 +28,8 @@ import { BaseReleaseProfileSync } from "../releaseProfiles/releaseProfileBase";
 import { ReleaseProfileShared } from "../releaseProfiles/releaseProfile.types";
 import { syncRemotePaths } from "../remotePaths/remotePathSyncer";
 import { BaseRootFolderSync } from "../rootFolder/rootFolderBase";
-import { deleteUnmanagedInstanceTags, syncInstanceTags } from "../tags/tags";
-import { ensureTags, loadServerTags } from "../tags/tags";
+import { TagDeletionError } from "../tags/tag.types";
+import { deleteUnmanagedInstanceTags, ensureTags, loadServerTags, syncInstanceTags } from "../tags/tags";
 import { getTelemetryInstance, Telemetry } from "../telemetry";
 import { MediaArrType } from "../types/common.types";
 import { InputConfigArrInstance, InputConfigSchema, MergedConfigInstance } from "../types/config.types";
@@ -426,8 +426,8 @@ export const completeMediaSync = async <T extends MediaArrType>(ctx: MediaSyncCo
       try {
         const tagResult = await deleteUnmanagedInstanceTags(client, serverCache, {
           deleteConfig: config.delete_unmanaged_tags,
+          instanceLabels: config.tags,
           referencedTagLists: [
-            config.tags,
             config.delay_profiles?.default?.tags,
             config.delay_profiles?.additional?.flatMap((profile) => profile.tags ?? []),
             config.release_profiles?.flatMap((profile) => profile.tags ?? []),
@@ -447,6 +447,10 @@ export const completeMediaSync = async <T extends MediaArrType>(ctx: MediaSyncCo
         logger.error(`Failed to delete unmanaged tags: ${message}`);
         if (err instanceof ConfigValidationError) {
           throw err;
+        }
+        // Deletions that succeeded before the failure really happened, so still report them.
+        if (err instanceof TagDeletionError) {
+          collector.add(err.partial.diffEntries);
         }
       }
     }

@@ -2,16 +2,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ServerCache } from "../cache";
 import type { TagsClient } from "../clients/capabilities";
 import type { Tag } from "./tag.types";
-import {
-  buildTagPlaceholders,
-  collectTagIds,
-  collectTagLabels,
-  deleteUnmanagedInstanceTags,
-  deleteUnmanagedTags,
-  ensureTags,
-  resolveTagNames,
-  syncInstanceTags,
-} from "./tags";
+import { TagDeletionError } from "./tag.types";
+import { buildTagPlaceholders, deleteUnmanagedInstanceTags, ensureTags, resolveTagNames, syncInstanceTags } from "./tags";
 
 // Hoisted so `vi.resetModules()` + a fresh `import("./tags")` still sees these same spies.
 const { getEnvsMock, loggerMock } = vi.hoisted(() => ({
@@ -126,28 +118,6 @@ describe("buildTagPlaceholders", () => {
   });
 });
 
-describe("collectTagLabels", () => {
-  it("lowercases labels, skips numeric entries and tolerates undefined lists", () => {
-    const labels = collectTagLabels(["Movies", 4, "TV"], undefined, ["ANIME"]);
-
-    expect([...labels]).toEqual(["movies", "tv", "anime"]);
-  });
-
-  it("returns an empty set when nothing is configured", () => {
-    expect([...collectTagLabels(undefined, [])]).toEqual([]);
-  });
-});
-
-describe("collectTagIds", () => {
-  it("collects numeric entries, deduplicated, and ignores labels", () => {
-    expect(collectTagIds(["a", 3, 7], undefined, [3])).toEqual([3, 7]);
-  });
-
-  it("returns an empty list when there are no numeric entries", () => {
-    expect(collectTagIds(["a", "b"], undefined)).toEqual([]);
-  });
-});
-
 describe("ensureTags", () => {
   it("creates only the missing labels and returns ids in input order plus the created labels", async () => {
     const cache = makeCache([{ id: 1, label: "known" }]);
@@ -242,39 +212,47 @@ describe("ensureTags", () => {
   });
 });
 
-it("keeps tags referenced by a raw numeric config entry", async () => {
-  const cache = makeCache([
-    { id: 3, label: "by-id" },
-    { id: 9, label: "orphan" },
-  ]);
-
-  const result = await deleteUnmanagedTags(client(), cache, { keep: [], keepIds: [3], onInUse: "skip" });
-
-  expect(mockClient.deleteTag).toHaveBeenCalledExactlyOnceWith("9");
-  expect(result.removed).toBe(1);
-});
-
-describe("deleteUnmanagedTags", () => {
-  it("keeps listed labels case-insensitively, deletes the rest and drops them from the cache", async () => {
+describe("deleteUnmanagedInstanceTags", () => {
+  // The keep-set is assembled internally from instanceLabels + ignore + referencedTagLists, so
+  // case folding and numeric-id retention are exercised through the public entry point.
+  it("keeps listed, ignored and referenced labels case-insensitively and prunes the rest", async () => {
     const cache = makeCache([
       { id: 1, label: "Keep-Listed" },
-      { id: 2, label: "keep-referenced" },
-      { id: 3, label: "orphan" },
+      { id: 2, label: "KEEP-REFERENCED" },
+      { id: 3, label: "keep-ignored" },
+      { id: 4, label: "orphan" },
     ]);
 
-    const result = await deleteUnmanagedTags(client(), cache, {
-      keep: collectTagLabels(["keep-listed", "KEEP-REFERENCED"]),
+    const result = await deleteUnmanagedInstanceTags(client(), cache, {
+      deleteConfig: { enabled: true, ignore: ["Keep-Ignored"] },
+      instanceLabels: ["keep-listed"],
+      referencedTagLists: [["keep-referenced"]],
       onInUse: "skip",
     });
 
-    expect(mockClient.deleteTag).toHaveBeenCalledExactlyOnceWith("3");
+    expect(mockClient.deleteTag).toHaveBeenCalledExactlyOnceWith("4");
     expect(result.removed).toBe(1);
-    expect(result.added).toBe(0);
     expect(result.diffEntries).toEqual([{ resourceType: "Tag", name: "orphan", action: "delete" }]);
     expect(cache.tags).toEqual([
       { id: 1, label: "Keep-Listed" },
-      { id: 2, label: "keep-referenced" },
+      { id: 2, label: "KEEP-REFERENCED" },
+      { id: 3, label: "keep-ignored" },
     ]);
+  });
+
+  it("keeps a tag referenced only by a raw numeric config entry", async () => {
+    const cache = makeCache([
+      { id: 4, label: "by-id" },
+      { id: 9, label: "orphan" },
+    ]);
+
+    await deleteUnmanagedInstanceTags(client(), cache, {
+      deleteConfig: { enabled: true },
+      referencedTagLists: [[4]],
+      onInUse: "skip",
+    });
+
+    expect(mockClient.deleteTag).toHaveBeenCalledExactlyOnceWith("9");
   });
 
   it("records one diff entry per deleted label", async () => {
@@ -284,7 +262,11 @@ describe("deleteUnmanagedTags", () => {
       { id: 3, label: "orphan-b" },
     ]);
 
-    const result = await deleteUnmanagedTags(client(), cache, { keep: collectTagLabels(["keep"]), onInUse: "skip" });
+    const result = await deleteUnmanagedInstanceTags(client(), cache, {
+      deleteConfig: { enabled: true },
+      instanceLabels: ["keep"],
+      onInUse: "skip",
+    });
 
     expect(result.diffEntries).toEqual([
       { resourceType: "Tag", name: "orphan-a", action: "delete" },
@@ -300,7 +282,11 @@ describe("deleteUnmanagedTags", () => {
       { id: 2, label: "orphan" },
     ]);
 
-    const result = await deleteUnmanagedTags(client(), cache, { keep: collectTagLabels(["keep"]), onInUse: "skip" });
+    const result = await deleteUnmanagedInstanceTags(client(), cache, {
+      deleteConfig: { enabled: true },
+      instanceLabels: ["keep"],
+      onInUse: "skip",
+    });
 
     expect(mockClient.deleteTag).not.toHaveBeenCalled();
     expect(result.removed).toBe(1);
@@ -315,7 +301,10 @@ describe("deleteUnmanagedTags", () => {
       { id: 2, label: "orphan" },
     ]);
 
-    const result = await deleteUnmanagedTags(client(), cache, { keep: new Set<string>(), onInUse: "skip" });
+    const result = await deleteUnmanagedInstanceTags(client(), cache, {
+      deleteConfig: { enabled: true },
+      onInUse: "skip",
+    });
 
     expect(mockClient.deleteTag).toHaveBeenCalledTimes(2);
     expect(loggerMock.warn).toHaveBeenCalledWith(expect.stringContaining("Skipping unmanaged tag 'in-use'"));
@@ -327,7 +316,10 @@ describe("deleteUnmanagedTags", () => {
     mockClient.deleteTag.mockRejectedValueOnce(inUse());
 
     await expect(
-      deleteUnmanagedTags(client(), makeCache([{ id: 1, label: "in-use" }]), { keep: new Set<string>(), onInUse: "throw" }),
+      deleteUnmanagedInstanceTags(client(), makeCache([{ id: 1, label: "in-use" }]), {
+        deleteConfig: { enabled: true },
+        onInUse: "throw",
+      }),
     ).rejects.toThrow("Failed to delete tag 'in-use': Tag is in use");
   });
 
@@ -335,8 +327,40 @@ describe("deleteUnmanagedTags", () => {
     mockClient.deleteTag.mockRejectedValueOnce(serverError());
 
     await expect(
-      deleteUnmanagedTags(client(), makeCache([{ id: 1, label: "orphan" }]), { keep: new Set<string>(), onInUse }),
+      deleteUnmanagedInstanceTags(client(), makeCache([{ id: 1, label: "orphan" }]), {
+        deleteConfig: { enabled: true },
+        onInUse,
+      }),
     ).rejects.toThrow("Failed to delete tag 'orphan': 500 Server Error");
+  });
+
+  it("carries the deletions that already succeeded when a later one fails", async () => {
+    // First delete succeeds, second fails.
+    mockClient.deleteTag.mockResolvedValueOnce(undefined).mockRejectedValueOnce(serverError());
+    const cache = makeCache([
+      { id: 1, label: "orphan-a" },
+      { id: 2, label: "orphan-b" },
+    ]);
+
+    const error = await deleteUnmanagedInstanceTags(client(), cache, { deleteConfig: { enabled: true }, onInUse: "skip" }).catch(
+      (err: unknown) => err,
+    );
+
+    expect(error).toBeInstanceOf(TagDeletionError);
+    // The first delete really happened on the server, so its diff entry must not be lost.
+    expect((error as TagDeletionError).partial.diffEntries).toEqual([{ resourceType: "Tag", name: "orphan-a", action: "delete" }]);
+  });
+
+  it("no-ops when delete_unmanaged_tags is absent or disabled", async () => {
+    for (const deleteConfig of [undefined, { enabled: false }]) {
+      const result = await deleteUnmanagedInstanceTags(client(), makeCache([{ id: 4, label: "orphan" }]), {
+        deleteConfig,
+        onInUse: "skip",
+      });
+
+      expect(result).toEqual({ added: 0, removed: 0, diffEntries: [] });
+    }
+    expect(mockClient.deleteTag).not.toHaveBeenCalled();
   });
 });
 
@@ -374,99 +398,5 @@ describe("syncInstanceTags", () => {
       expect(result).toEqual({ added: 0, removed: 0, diffEntries: [] });
     }
     expect(mockClient.createTag).not.toHaveBeenCalled();
-  });
-});
-
-describe("deleteUnmanagedInstanceTags", () => {
-  it("keeps configured, ignored and referenced labels and prunes the rest", async () => {
-    const cache = makeCache([
-      { id: 1, label: "listed" },
-      { id: 2, label: "referenced" },
-      { id: 3, label: "ignored" },
-      { id: 4, label: "orphan" },
-    ]);
-
-    const result = await deleteUnmanagedInstanceTags(client(), cache, {
-      deleteConfig: { enabled: true, ignore: ["ignored"] },
-      referencedTagLists: [["listed"], ["referenced"], undefined],
-      onInUse: "skip",
-    });
-
-    expect(mockClient.deleteTag).toHaveBeenCalledExactlyOnceWith("4");
-    expect(result.removed).toBe(1);
-    expect(result.diffEntries).toEqual([{ resourceType: "Tag", name: "orphan", action: "delete" }]);
-    expect(cache.tags).toHaveLength(3);
-  });
-
-  it("keeps a tag referenced by a raw numeric config entry", async () => {
-    const result = await deleteUnmanagedInstanceTags(
-      client(),
-      makeCache([
-        { id: 4, label: "by-id" },
-        { id: 9, label: "orphan" },
-      ]),
-      {
-        deleteConfig: { enabled: true },
-        referencedTagLists: [[4]],
-        onInUse: "skip",
-      },
-    );
-
-    expect(mockClient.deleteTag).toHaveBeenCalledExactlyOnceWith("9");
-    expect(result.removed).toBe(1);
-  });
-
-  it("skips a tag that is still in use when onInUse is skip", async () => {
-    mockClient.deleteTag.mockRejectedValueOnce(inUse());
-    const cache = makeCache([
-      { id: 4, label: "in-use" },
-      { id: 5, label: "orphan" },
-    ]);
-
-    const result = await deleteUnmanagedInstanceTags(client(), cache, {
-      deleteConfig: { enabled: true },
-      referencedTagLists: [],
-      onInUse: "skip",
-    });
-
-    expect(result.removed).toBe(1);
-    expect(loggerMock.warn).toHaveBeenCalledWith(expect.stringContaining("still in use"));
-  });
-
-  it("fails the run when onInUse is throw", async () => {
-    mockClient.deleteTag.mockRejectedValueOnce(inUse());
-
-    await expect(
-      deleteUnmanagedInstanceTags(client(), makeCache([{ id: 4, label: "in-use" }]), {
-        deleteConfig: { enabled: true },
-        referencedTagLists: [],
-        onInUse: "throw",
-      }),
-    ).rejects.toThrow("Failed to delete tag 'in-use'");
-  });
-
-  it("fails the run on any other delete failure, even with onInUse skip", async () => {
-    mockClient.deleteTag.mockRejectedValueOnce(new Error("500 Server Error"));
-
-    await expect(
-      deleteUnmanagedInstanceTags(client(), makeCache([{ id: 4, label: "orphan" }]), {
-        deleteConfig: { enabled: true },
-        referencedTagLists: [],
-        onInUse: "skip",
-      }),
-    ).rejects.toThrow("Failed to delete tag 'orphan': 500 Server Error");
-  });
-
-  it("no-ops when delete_unmanaged_tags is absent or disabled", async () => {
-    for (const deleteConfig of [undefined, { enabled: false }]) {
-      const result = await deleteUnmanagedInstanceTags(client(), makeCache([{ id: 4, label: "orphan" }]), {
-        deleteConfig,
-        referencedTagLists: [],
-        onInUse: "skip",
-      });
-
-      expect(result).toEqual({ added: 0, removed: 0, diffEntries: [] });
-    }
-    expect(mockClient.deleteTag).not.toHaveBeenCalled();
   });
 });

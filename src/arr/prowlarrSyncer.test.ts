@@ -55,6 +55,14 @@ describe("ProwlarrSyncer", () => {
     expect(report.entries.map((e) => e.resourceType)).toEqual(["Indexer", "Tag"]);
   });
 
+  it("keeps an instance tag that no provider references", async () => {
+    // A tag listed under `tags:` is created up front; cleanup must not then delete it, or every
+    // run would create and delete the same tag.
+    await new ProwlarrSyncer().run(instance({ tags: ["declared"] }), "e2e");
+
+    expect(deleteUnmanagedInstanceTags.mock.calls[0]![2]).toMatchObject({ instanceLabels: ["declared"] });
+  });
+
   it("skips tag cleanup when a download client change failed", async () => {
     syncDownloadClients.mockResolvedValue({ added: 0, updated: 0, removed: 0, failed: 1, diffEntries: [] });
 
