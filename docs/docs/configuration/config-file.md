@@ -687,6 +687,39 @@ Notes:
 
 - **experimental**, available since `v1.18.0`
 
+## Tags <span className="theme-doc-version-badge badge badge--secondary configarr-badge">1.34.0</span> {#tags}
+
+Every instance can manage **Tags** directly. The `tags` block is a plain list of tag labels which are
+created on the server when they do not exist yet, and `delete_unmanaged_tags` prunes the server tags
+that are not managed by your config.
+
+```yml
+# ...
+sonarr:
+  instance1:
+    # ...
+    # since v1.34.0. Optional
+    tags:
+      - configarr
+      - vip
+    # since v1.34.0. Optional
+    delete_unmanaged_tags:
+      enabled: true
+      ignore: # optional
+        - some-tag
+```
+
+Notes:
+
+- available since `v1.34.0` for Sonarr, Radarr, Lidarr, Readarr and Whisparr. Prowlarr has the same block, see [Prowlarr](/docs/configuration/experimental-support#prowlarr-v1)
+- Tag labels are matched **case-insensitively**: a label that only differs in casing resolves to the existing server tag instead of creating a second one
+- `tags` is optional. The tags referenced by your managed features (`delay_profiles`, `release_profiles`, `root_folders`, `download_clients`) are created as well, so listing them here is a declarative way to see and keep all your labels in one place
+- `delete_unmanaged_tags` deletes every server tag which is neither listed under `tags`, nor listed under `ignore`, nor referenced by one of the managed features listed above
+- A tag that is still in use by something configarr does not manage (for example an import list, notification or indexer) cannot be deleted. On media \*arrs the tag is left alone and a warning is logged, so the rest of the instance still syncs. On Prowlarr every tag-bearing resource is managed, so this case fails the Prowlarr instance instead
+- Prowlarr keeps its own set of referencing features: its tags are also read from `applications`, `indexers` and `indexer_proxies`
+- A dry run (`DRY_RUN=true`) never creates or deletes tags; it only reports what it would do
+- The instance-level `tags` list takes labels only. Inside the per-feature blocks (`download_clients`, Prowlarr `applications` / `indexers` / `indexer_proxies`) a raw server id is still accepted but is **deprecated** — it logs a warning and may be removed in a future release. Use labels everywhere
+
 ## CustomFormatGroups <span className="theme-doc-version-badge badge badge--secondary configarr-badge">1.12.0</span> {#custom-format-groups}
 
 Support has been added to allow using the TRaSH-Guide custom format groups: [see here](https://github.com/TRaSH-Guides/Guides/tree/master/docs/json/sonarr/cf-groups).
@@ -1100,7 +1133,8 @@ existing profile is kept. `indexer_proxies` are matched by
 `name` + `type` (implementation: `FlareSolverr`, `Http`, `Socks4`, `Socks5`).
 
 `tags` is a plain list of labels to ensure exist; `delete_unmanaged_tags: { enabled, ignore }`
-prunes server tags that are neither listed nor referenced by a managed resource.
+prunes server tags that are neither listed nor referenced by a managed resource. See
+[Tags](#tags) for the shared description of both blocks.
 
 `delete_unmanaged` is off by default for every Prowlarr section and should stay that way unless
 your config is the full source of truth. See the

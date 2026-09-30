@@ -1,10 +1,10 @@
 import { z } from "zod";
 import { ServerCache } from "../cache";
 import type { DownloadClientsClient, TagsClient } from "../clients/capabilities";
-import type { Tag } from "../tags/tag.types";
 import { DiffEntry, FieldChange } from "../diffReport/diffReport.types";
 import { getEnvs } from "../env";
 import { logger } from "../logger";
+import { buildTagPlaceholders, ensureTags, resolveTagNames } from "../tags/tags";
 import { ArrType } from "../types/common.types";
 import { InputConfigDownloadClient, MergedConfigInstance } from "../types/config.types";
 import { DownloadClientDiff, DownloadClientShared, DownloadClientSyncResult, ValidationResult } from "./downloadClient.types";
@@ -105,26 +105,6 @@ export abstract class BaseDownloadClientSync<T extends DownloadClientShared> {
     return normalized;
   }
 
-  public resolveTagNamesToIds(tagNames: (string | number)[], serverTags: Tag[]): { ids: number[]; missingTags: string[] } {
-    const ids: number[] = [];
-    const missingTags: string[] = [];
-
-    for (const tag of tagNames) {
-      if (typeof tag === "number") {
-        ids.push(tag);
-      } else {
-        const serverTag = serverTags.find((t) => t.label?.toLowerCase() === tag.toLowerCase());
-        if (serverTag?.id) {
-          ids.push(serverTag.id);
-        } else {
-          missingTags.push(tag);
-        }
-      }
-    }
-
-    return { ids, missingTags };
-  }
-
   protected collectSharedFieldChanges(
     config: InputConfigDownloadClient,
     server: T,
@@ -187,7 +167,7 @@ export abstract class BaseDownloadClientSync<T extends DownloadClientShared> {
 
     const configTags = config.tags;
     if (configTags !== undefined) {
-      const { ids: resolvedTagIds } = this.resolveTagNamesToIds(configTags, cache.tags);
+      const { ids: resolvedTagIds } = resolveTagNames(configTags, cache.tags, { placeholders: this.tagPlaceholders(configTags, cache) });
       const serverTags = server.tags ?? [];
 
       const sortedConfigTagIds = [...resolvedTagIds].sort();
@@ -206,13 +186,7 @@ export abstract class BaseDownloadClientSync<T extends DownloadClientShared> {
       return serverClient?.tags ?? [];
     }
 
-    const { ids, missingTags } = this.resolveTagNamesToIds(config.tags, cache.tags);
-    if (missingTags.length > 0) {
-      this.logger.warn(
-        `Missing tags for download client '${config.name}': ${missingTags.join(", ")}. ` +
-          `These should have been created during batch tag creation.`,
-      );
-    }
+    const { ids } = resolveTagNames(config.tags, cache.tags, { placeholders: this.tagPlaceholders(config.tags, cache) });
     return ids;
   }
 
@@ -408,33 +382,31 @@ export abstract class BaseDownloadClientSync<T extends DownloadClientShared> {
     return { validClients, hasErrors };
   }
 
+  /**
+   * A dry run never creates the tags, so their ids would resolve to nothing and the client would
+   * diff as unchanged. Synthetic ids keep the tags field visible in a dry-run diff instead.
+   */
+  private tagPlaceholders(tagNames: (string | number)[], cache: ServerCache): Map<string, number> | undefined {
+    if (!getEnvs().DRY_RUN) {
+      return undefined;
+    }
+    return buildTagPlaceholders(
+      tagNames.filter((tag): tag is string => typeof tag === "string"),
+      cache.tags,
+    );
+  }
+
   private async createMissingTags(configClients: InputConfigDownloadClient[], serverCache: ServerCache): Promise<void> {
     const allMissingTags = new Set<string>();
 
     for (const config of configClients) {
       if (config.tags) {
-        const { missingTags } = this.resolveTagNamesToIds(config.tags, serverCache.tags);
-        missingTags.forEach((tag) => allMissingTags.add(tag));
+        const { missing } = resolveTagNames(config.tags, serverCache.tags);
+        missing.forEach((tag) => allMissingTags.add(tag));
       }
     }
 
-    if (allMissingTags.size === 0) {
-      return;
-    }
-
-    this.logger.info(`Creating missing tags for download clients: ${Array.from(allMissingTags).join(", ")}`);
-
-    for (const tagName of allMissingTags) {
-      try {
-        const newTag = await this.getApi().createTag({ label: tagName });
-        serverCache.tags.push(newTag);
-        this.logger.debug(`Created tag: '${tagName}' (ID: ${newTag.id})`);
-      } catch (error: unknown) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        this.logger.error(`Failed to create tag '${tagName}': ${errorMessage}`);
-        throw new Error("Tag creation failed. Cannot proceed with download client sync.");
-      }
-    }
+    await ensureTags(this.getApi(), serverCache, [...allMissingTags]);
   }
 
   private async createClients(configs: InputConfigDownloadClient[], serverCache: ServerCache): Promise<InputConfigDownloadClient[]> {

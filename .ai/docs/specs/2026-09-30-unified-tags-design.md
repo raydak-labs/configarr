@@ -1,6 +1,6 @@
 # Unified tag handling — design
 
-Status: planned
+Status: implemented (2026-09-30)
 Related issue: [#524 Unify tag creation logic](https://github.com/raydak-labs/configarr/issues/524)
 Origin: review thread on PR #520 (`src/prowlarr/tagSync.ts:37`) — "This could potentially be extracted and logic unified between all apps but not in scope of this PR as potential breaking changes might occur."
 
@@ -10,21 +10,21 @@ Plan: [`.ai/docs/plans/2026-09-30-unified-tags.md`](../plans/2026-09-30-unified-
 
 Tag labels are resolved and created independently in six places:
 
-| Location | Resolve | Create | Matching |
-| --- | --- | --- | --- |
-| `src/downloadClients/downloadClientBase.ts:108` | `resolveTagNamesToIds` (public method) | `createMissingTags` (`:411`) | case-insensitive, numbers passthrough |
-| `src/prowlarr/providerResourceSync.ts:149` | `resolveTagNamesToIds` (verbatim copy) | `createMissingTags` (`:379`) | case-insensitive, numbers passthrough |
-| `src/releaseProfiles/releaseProfileBase.ts:105` | local `resolveTagIds` | `createMissingTags` (`:172`) | exact match, dry-run placeholder ids |
-| `src/arr/mediaPipeline.ts:329` | inline `createTag` loop for delay profiles | inline | n/a |
-| `src/rootFolder/rootFolderLidarr.ts:59` / `rootFolderReadarr.ts:59` | inline per-tag `find` + create | inline | exact match |
-| `src/delayProfiles/delayProfileBase.ts:46,143,174` | three inline exact-match lookups | (via the media pipeline) | exact match |
-| `src/prowlarr/tagSync.ts:47` | own lowercased `Map` | own loop, plus `delete_unmanaged_tags` | case-insensitive |
+| Location                                                            | Resolve                                    | Create                                 | Matching                              |
+| ------------------------------------------------------------------- | ------------------------------------------ | -------------------------------------- | ------------------------------------- |
+| `src/downloadClients/downloadClientBase.ts:108`                     | `resolveTagNamesToIds` (public method)     | `createMissingTags` (`:411`)           | case-insensitive, numbers passthrough |
+| `src/prowlarr/providerResourceSync.ts:149`                          | `resolveTagNamesToIds` (verbatim copy)     | `createMissingTags` (`:379`)           | case-insensitive, numbers passthrough |
+| `src/releaseProfiles/releaseProfileBase.ts:105`                     | local `resolveTagIds`                      | `createMissingTags` (`:172`)           | exact match, dry-run placeholder ids  |
+| `src/arr/mediaPipeline.ts:329`                                      | inline `createTag` loop for delay profiles | inline                                 | n/a                                   |
+| `src/rootFolder/rootFolderLidarr.ts:59` / `rootFolderReadarr.ts:59` | inline per-tag `find` + create             | inline                                 | exact match                           |
+| `src/delayProfiles/delayProfileBase.ts:46,143,174`                  | three inline exact-match lookups           | (via the media pipeline)               | exact match                           |
+| `src/prowlarr/tagSync.ts:47`                                        | own lowercased `Map`                       | own loop, plus `delete_unmanaged_tags` | case-insensitive                      |
 
 The two `resolveTagNamesToIds` copies are byte-for-byte identical. Each copy differs in log wording, error type, dry-run handling and whether it pushes onto `ServerCache.tags`.
 
 ## Decisions
 
-1. **Tags are Pattern B.** AGENTS.md already classifies tags as "same method set and same field set (custom formats, tags): one module". `src/tags/` becomes the single owner of *tag mechanics*: plain functions taking the injected client as first parameter, no `getClient(arrType)` inside, no per-*arr* tag classes, no new factory. Config-schema knowledge (which features reference tags) stays with the pipeline that owns the config.
+1. **Tags are Pattern B.** AGENTS.md already classifies tags as "same method set and same field set (custom formats, tags): one module". `src/tags/` becomes the single owner of _tag mechanics_: plain functions taking the injected client as first parameter, no `getClient(arrType)` inside, no per-_arr_ tag classes, no new factory. Config-schema knowledge (which features reference tags) stays with the pipeline that owns the config.
 2. **Unify matching to case-insensitive.** Today `release_profiles`, `delay_profiles` and root folders match labels exactly, so `tags: [Foo]` against a server tag `foo` creates a second tag. After this change it resolves to the existing one. Intentional behavior change; it removes duplicates rather than creating them.
 3. **Strings are the default and recommended form; numeric ids stay supported but discouraged.** `tags: [1, 2]` keeps pushing the raw id straight into the resolved id list, but the shared resolver logs a deprecation warning naming the offending entry, and the docs recommend labels. No schema change; the new instance-level `tags:` block is `z.array(z.string())`.
 4. **Promote the Prowlarr `tags:` / `delete_unmanaged_tags:` block to media \*arrs.** Same schema. `tags:` is deliberately redundant with per-feature creation: on a media \*arr every managed feature already creates the tags it references through `ensureTags`, so the block is a declarative spelling of the same effect, kept for parity with Prowlarr and so users have one obvious place to see their labels. `delete_unmanaged_tags:` is the half that is genuinely new — a keep-set over managed features did not exist for media.
@@ -47,7 +47,8 @@ The two `resolveTagNamesToIds` copies are byte-for-byte identical. Each copy dif
 Callers keep their existing signatures and pass `client` / `serverCache`; no caller constructs a second handler. `TagSyncResult` moves to `src/tags/tag.types.ts`.
 
 Two invariants the refactor must not break:
-- **Release profiles keep resolving before they create.** `sync()` runs a placeholder-backed `calculateDiff` first so duplicate-profile and indexer validation throws *before* any tag is written to the server (`releaseProfileBase.ts:236`). The local resolver is therefore *replaced* by `resolveTagNames`, not deleted in favor of `ensureTags` — `calculateDiff` resolves twice, once with placeholders and once for real.
+
+- **Release profiles keep resolving before they create.** `sync()` runs a placeholder-backed `calculateDiff` first so duplicate-profile and indexer validation throws _before_ any tag is written to the server (`releaseProfileBase.ts:236`). The local resolver is therefore _replaced_ by `resolveTagNames`, not deleted in favor of `ensureTags` — `calculateDiff` resolves twice, once with placeholders and once for real.
 - **The numeric-id deprecation warning fires once per run per label**, not once per resolve call. The resolver is called per config item, so a module-level `Set` in `src/tags/tags.ts` guards it.
 
 ## Capability change
@@ -77,6 +78,6 @@ Prowlarr pipeline is unchanged in behavior: `src/prowlarr/tagSync.ts` keeps its 
 ## Out of scope
 
 - No standalone `tags:` resource CRUD, no tag rename, no import/export of tags.
-- A server-side "which resources hold this tag" sweep. Until that exists, media `delete_unmanaged_tags` can only see tags referenced by *managed* config; anything else is handled by the `onInUse: "skip"` policy rather than prevented.
+- A server-side "which resources hold this tag" sweep. Until that exists, media `delete_unmanaged_tags` can only see tags referenced by _managed_ config; anything else is handled by the `onInUse: "skip"` policy rather than prevented.
 - Dropping numeric tag ids (decision 3). They are deprecated in docs and warned about in logs, not removed.
 - Custom format / quality profile tag fields (none exist).

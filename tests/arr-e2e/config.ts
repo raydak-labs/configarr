@@ -94,3 +94,37 @@ export function mediaConfig(
     ...mediaInstance(kind, instance),
   };
 }
+
+/** Tag labels the instance-level `tags:` block and the tag-keep assertions share. */
+export const E2E_TAG_LISTED = "e2e-tag-listed";
+/** Referenced by a managed delay profile, so `delete_unmanaged_tags` must keep it. */
+export const E2E_TAG_REFERENCED = "e2e-tag-referenced";
+/** Listed nowhere and referenced by nothing, so `delete_unmanaged_tags` must drop it. */
+export const E2E_TAG_ORPHAN = "e2e-tag-orphan";
+
+const e2eDelayDefault = {
+  enableUsenet: true,
+  enableTorrent: true,
+  preferredProtocol: "usenet",
+  usenetDelay: 1,
+  torrentDelay: 0,
+  bypassIfHighestQuality: true,
+  bypassIfAboveCustomFormatScore: false,
+  minimumCustomFormatScore: 0,
+};
+
+/**
+ * Instance-level `tags:` plus a tagged `delay_profiles.additional` entry. The delay profile is
+ * what makes `e2e-tag-referenced` survive `delete_unmanaged_tags`: it is neither in `tags` nor
+ * in `ignore`, only referenced by a managed feature.
+ */
+export function instanceTagBlock(keepLabels: string[]): Record<string, unknown> {
+  return {
+    tags: [E2E_TAG_LISTED],
+    delay_profiles: {
+      default: e2eDelayDefault,
+      additional: [{ ...e2eDelayDefault, order: 1, tags: [E2E_TAG_REFERENCED] }],
+    },
+    delete_unmanaged_tags: { enabled: true, ignore: keepLabels },
+  };
+}

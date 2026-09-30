@@ -12,7 +12,6 @@ import type { InputConfigDownloadClient } from "../types/config.types";
 import type { ServerCache } from "../cache";
 import type { DownloadClientsClient, TagsClient } from "../clients/capabilities";
 import { getClient } from "../clients/client";
-import type { TagResource } from "../__generated__/radarr/data-contracts";
 import { DownloadProtocol } from "../__generated__/radarr/data-contracts";
 import { ArrType } from "../types/common.types";
 import { MediaDownloadClientResource } from "./downloadClient.types";
@@ -26,10 +25,6 @@ class MockDownloadClientSync extends BaseDownloadClientSync<MediaDownloadClientR
 
   public testValidateDownloadClient(config: InputConfigDownloadClient, schema: MediaDownloadClientResource[]) {
     return this.validateDownloadClient(config, schema);
-  }
-
-  public testResolveTagNamesToIds(tagNames: (string | number)[], serverTags: TagResource[]) {
-    return this.resolveTagNamesToIds(tagNames, serverTags);
   }
 
   public testNormalizeConfigFields(configFields: Record<string, any>, arrType: ArrType) {
@@ -97,6 +92,7 @@ describe("BaseDownloadClientSync – sync accounting", () => {
     getDownloadClients: vi.fn(async () => []),
     getTags: vi.fn(async () => []),
     createTag: vi.fn(),
+    deleteTag: vi.fn(),
   };
 
   class SyncingMock extends MockDownloadClientSync {
@@ -137,6 +133,19 @@ describe("BaseDownloadClientSync – sync accounting", () => {
     );
 
     expect(result.failed).toBe(0);
+  });
+
+  test("does not create missing tags during a dry run", async () => {
+    vi.mocked(getEnvs).mockReturnValue({ DRY_RUN: true, LOG_LEVEL: "fatal" } as ReturnType<typeof getEnvs>);
+    api.createTag.mockResolvedValue({ id: 5, label: "brand-new" });
+
+    const result = await new SyncingMock().syncDownloadClients(
+      { download_clients: { data: [{ name: "bh", type: "TorrentBlackhole", fields: { watchFolder: "/data" }, tags: ["brand-new"] }] } },
+      cache(),
+    );
+
+    expect(api.createTag).not.toHaveBeenCalled();
+    expect(result).toMatchObject({ added: 0, updated: 0, removed: 0, failed: 0 });
   });
 
   test("stops download client synchronization on invalid fields", async () => {
@@ -209,49 +218,6 @@ describe("BaseDownloadClientSync – utility methods", () => {
       expect(result).toHaveProperty("nestedObj");
       expect(result.nestedObj).toEqual({ inner_field: "value" });
       expect(result).toHaveProperty("nested_obj");
-    });
-  });
-
-  describe("tag resolution", () => {
-    test("resolves tag names to IDs (case-insensitive)", () => {
-      const serverTags: TagResource[] = [
-        { id: 1, label: "movies" },
-        { id: 2, label: "4K" },
-        { id: 3, label: "Test-Tag" },
-      ];
-
-      const { ids, missingTags } = sync.testResolveTagNamesToIds(["Movies", "4k", "test-tag"], serverTags);
-
-      expect(ids).toEqual([1, 2, 3]);
-      expect(missingTags).toEqual([]);
-    });
-
-    test("handles numeric tag IDs", () => {
-      const serverTags: TagResource[] = [
-        { id: 1, label: "movies" },
-        { id: 2, label: "4K" },
-      ];
-
-      const { ids, missingTags } = sync.testResolveTagNamesToIds([1, 2, 999], serverTags);
-
-      expect(ids).toEqual([1, 2, 999]);
-      expect(missingTags).toEqual([]);
-    });
-
-    test("identifies missing tags", () => {
-      const serverTags: TagResource[] = [{ id: 1, label: "movies" }];
-
-      const { ids, missingTags } = sync.testResolveTagNamesToIds(["movies", "missing1", "missing2"], serverTags);
-
-      expect(ids).toEqual([1]);
-      expect(missingTags).toEqual(["missing1", "missing2"]);
-    });
-
-    test("handles empty tag list", () => {
-      const { ids, missingTags } = sync.testResolveTagNamesToIds([], []);
-
-      expect(ids).toEqual([]);
-      expect(missingTags).toEqual([]);
     });
   });
 

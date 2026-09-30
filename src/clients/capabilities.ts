@@ -13,6 +13,7 @@ export interface SystemClient {
 export interface TagsClient<T extends Tag = Tag> {
   getTags(): Promise<T[]>;
   createTag(tag: T): Promise<T>;
+  deleteTag(id: string): Promise<void>;
 }
 
 export interface DownloadClientsClient<

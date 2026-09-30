@@ -8,63 +8,6 @@ import { RadarrDownloadClientSync } from "./downloadClientRadarr";
 
 const getTestSync = () => new RadarrDownloadClientSync({} as any);
 
-describe("RadarrDownloadClientSync – tag resolution", () => {
-  test("resolves tag names to IDs (case-insensitive)", () => {
-    const serverTags: Tag[] = [
-      { id: 1, label: "movies" },
-      { id: 2, label: "4K" },
-      { id: 3, label: "Test-Tag" },
-    ];
-
-    const { ids, missingTags } = getTestSync().resolveTagNamesToIds(["Movies", "4k", "test-tag"], serverTags);
-
-    expect(ids).toEqual([1, 2, 3]);
-    expect(missingTags).toEqual([]);
-  });
-
-  test("resolves numeric tag IDs directly", () => {
-    const serverTags: Tag[] = [
-      { id: 1, label: "movies" },
-      { id: 2, label: "4K" },
-    ];
-
-    const { ids, missingTags } = getTestSync().resolveTagNamesToIds([1, 2, 999], serverTags);
-
-    expect(ids).toEqual([1, 2, 999]);
-    expect(missingTags).toEqual([]);
-  });
-
-  test("identifies missing tags", () => {
-    const serverTags: Tag[] = [{ id: 1, label: "movies" }];
-
-    const { ids, missingTags } = getTestSync().resolveTagNamesToIds(["movies", "missing1", "missing2"], serverTags);
-
-    expect(ids).toEqual([1]);
-    expect(missingTags).toEqual(["missing1", "missing2"]);
-  });
-
-  test("handles mixed tag names and IDs", () => {
-    const serverTags: Tag[] = [
-      { id: 1, label: "movies" },
-      { id: 2, label: "4K" },
-    ];
-
-    const { ids, missingTags } = getTestSync().resolveTagNamesToIds(["movies", 2, "new-tag", 999], serverTags);
-
-    expect(ids).toEqual([1, 2, 999]);
-    expect(missingTags).toEqual(["new-tag"]);
-  });
-
-  test("handles empty tag list", () => {
-    const serverTags: Tag[] = [];
-
-    const { ids, missingTags } = getTestSync().resolveTagNamesToIds([], serverTags);
-
-    expect(ids).toEqual([]);
-    expect(missingTags).toEqual([]);
-  });
-});
-
 describe("RadarrDownloadClientSync – field normalization", () => {
   test("converts snake_case to camelCase", () => {
     const result = getTestSync().normalizeConfigFields({ use_ssl: true, api_key: "test123", recent_priority: 5 }, "RADARR");

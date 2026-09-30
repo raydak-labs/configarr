@@ -1,29 +1,25 @@
-import { ServerCache } from "../cache";
-import { getClient } from "../clients/client";
-import { DiffEntry } from "../diffReport/diffReport.types";
+import type { ServerCache } from "../cache";
+import type { TagsClient } from "../clients/capabilities";
 import { getEnvs } from "../env";
 import { logger } from "../logger";
-import { InputConfigProwlarrInstance } from "../types/config.types";
-
-export interface TagSyncResult {
-  added: number;
-  removed: number;
-  diffEntries: DiffEntry[];
-}
+import type { TagSyncResult } from "../tags/tag.types";
+import {
+  collectTagIds,
+  collectTagLabels,
+  deleteUnmanagedTags as deleteUnmanagedTagsOnServer,
+  ensureTags,
+  resolveTagNames,
+} from "../tags/tags";
+import type { InputConfigProwlarrInstance } from "../types/config.types";
 
 /** Tag labels referenced by any managed Prowlarr resource in the instance config. */
 function referencedTagNames(instance: InputConfigProwlarrInstance): Set<string> {
-  const names = new Set<string>();
-  const collect = (tags?: (string | number)[]) => {
-    for (const t of tags ?? []) {
-      if (typeof t === "string") names.add(t.toLowerCase());
-    }
-  };
-  instance.applications?.data?.forEach((a) => collect(a.tags));
-  instance.indexers?.data?.forEach((i) => collect(i.tags));
-  instance.indexer_proxies?.data?.forEach((p) => collect(p.tags));
-  instance.download_clients?.data?.forEach((d) => collect(d.tags));
-  return names;
+  return collectTagLabels(
+    instance.applications?.data?.flatMap((application) => application.tags ?? []),
+    instance.indexers?.data?.flatMap((indexer) => indexer.tags ?? []),
+    instance.indexer_proxies?.data?.flatMap((proxy) => proxy.tags ?? []),
+    instance.download_clients?.data?.flatMap((downloadClient) => downloadClient.tags ?? []),
+  );
 }
 
 /**
@@ -31,88 +27,56 @@ function referencedTagNames(instance: InputConfigProwlarrInstance): Set<string> 
  * Unmanaged deletes run later via `deleteUnmanagedTags` so tagged apps/indexers
  * can be removed first (Prowlarr returns 409 while a tag is still in use).
  */
-export async function syncTags(instance: InputConfigProwlarrInstance, serverCache: ServerCache): Promise<TagSyncResult> {
-  const desired = instance.tags ?? [];
+export async function syncTags(
+  client: TagsClient,
+  instance: InputConfigProwlarrInstance,
+  serverCache: ServerCache,
+): Promise<TagSyncResult> {
   const result: TagSyncResult = { added: 0, removed: 0, diffEntries: [] };
+  const desired = instance.tags ?? [];
 
   if (desired.length === 0) {
     return result;
   }
 
-  const api = getClient("PROWLARR");
-  const dryRun = getEnvs().DRY_RUN;
+  const { missing } = resolveTagNames(desired, serverCache.tags);
+  const { created } = await ensureTags(client, serverCache, desired);
 
-  const existingByLabel = new Map<string, { id?: number; label?: string | null }>();
-  for (const tag of serverCache.tags) {
-    if (tag.label) existingByLabel.set(tag.label.toLowerCase(), tag);
+  for (const label of created) {
+    logger.info(`Created tag: '${label}'`);
   }
 
-  for (const label of desired) {
-    if (existingByLabel.has(label.toLowerCase())) continue;
-
-    if (dryRun) {
-      logger.info(`DryRun: Would create tag '${label}'.`);
-      result.diffEntries.push({ resourceType: "Tag", name: label, action: "create" });
-      result.added++;
-      continue;
-    }
-    try {
-      const created = await api.createTag({ label });
-      serverCache.tags.push(created);
-      existingByLabel.set(label.toLowerCase(), created);
-      result.diffEntries.push({ resourceType: "Tag", name: label, action: "create" });
-      result.added++;
-      logger.info(`Created tag: '${label}' (ID: ${created.id})`);
-    } catch (error: unknown) {
-      const message = `Failed to create tag '${label}': ${error instanceof Error ? error.message : String(error)}`;
-      logger.error(message);
-      throw new Error(message);
-    }
+  // A dry run creates nothing, so the report still lists the labels it would have created.
+  // Dedupe case-insensitively so the dry run lists the same labels the real run would create.
+  const createdLabels = getEnvs().DRY_RUN ? [...collectTagLabels(missing)] : created;
+  for (const label of createdLabels) {
+    result.diffEntries.push({ resourceType: "Tag", name: label, action: "create" });
+    result.added++;
   }
 
   return result;
 }
 
 /** Deletes server tags that are neither listed, ignored, nor referenced by remaining YAML resources. */
-export async function deleteUnmanagedTags(instance: InputConfigProwlarrInstance, serverCache: ServerCache): Promise<TagSyncResult> {
-  const result: TagSyncResult = { added: 0, removed: 0, diffEntries: [] };
+export async function deleteUnmanagedTags(
+  client: TagsClient,
+  instance: InputConfigProwlarrInstance,
+  serverCache: ServerCache,
+): Promise<TagSyncResult> {
   const deleteConfig = instance.delete_unmanaged_tags;
   if (!deleteConfig?.enabled) {
-    return result;
+    return { added: 0, removed: 0, diffEntries: [] };
   }
 
-  const api = getClient("PROWLARR");
-  const dryRun = getEnvs().DRY_RUN;
-  const desired = instance.tags ?? [];
-  const keep = new Set<string>([
-    ...desired.map((t) => t.toLowerCase()),
-    ...(deleteConfig.ignore ?? []).map((t) => t.toLowerCase()),
-    ...referencedTagNames(instance),
-  ]);
-
-  const deletedIds = new Set<number>();
-  for (const tag of serverCache.tags) {
-    const label = tag.label ?? "";
-    if (!label || keep.has(label.toLowerCase()) || tag.id == null) continue;
-
-    if (dryRun) {
-      logger.info(`DryRun: Would delete unmanaged tag '${label}'.`);
-      result.diffEntries.push({ resourceType: "Tag", name: label, action: "delete" });
-      result.removed++;
-      continue;
-    }
-    try {
-      await api.deleteTag(tag.id.toString());
-      deletedIds.add(tag.id);
-      result.diffEntries.push({ resourceType: "Tag", name: label, action: "delete" });
-      result.removed++;
-      logger.info(`Deleted unmanaged tag: '${label}'`);
-    } catch (error: unknown) {
-      const message = `Failed to delete tag '${label}': ${error instanceof Error ? error.message : String(error)}`;
-      logger.error(message);
-      throw new Error(message);
-    }
-  }
-  serverCache.tags = serverCache.tags.filter((t) => t.id == null || !deletedIds.has(t.id));
-  return result;
+  // Every tag-bearing Prowlarr resource is managed, so a tag still in use is a real error.
+  return deleteUnmanagedTagsOnServer(client, serverCache, {
+    keep: new Set<string>([...collectTagLabels(instance.tags, deleteConfig.ignore), ...referencedTagNames(instance)]),
+    keepIds: collectTagIds(
+      instance.applications?.data?.flatMap((application) => application.tags ?? []),
+      instance.indexers?.data?.flatMap((indexer) => indexer.tags ?? []),
+      instance.indexer_proxies?.data?.flatMap((proxy) => proxy.tags ?? []),
+      instance.download_clients?.data?.flatMap((downloadClient) => downloadClient.tags ?? []),
+    ),
+    onInUse: "throw",
+  });
 }

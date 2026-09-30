@@ -22,7 +22,7 @@ export class ProwlarrSyncer {
     const serverCache = new ServerCache();
     serverCache.tags = await loadServerTags(client);
 
-    diffCollector.add(await syncProwlarrProviders(instance, serverCache));
+    diffCollector.add(await syncProwlarrProviders(client, instance, serverCache));
 
     let downloadClientsFailed = false;
     if (instance.download_clients?.data || instance.download_clients?.delete_unmanaged?.enabled) {
@@ -51,7 +51,7 @@ export class ProwlarrSyncer {
         logger.warn(`Skipping unmanaged tag cleanup: download client sync reported failures.`);
       } else {
         serverCache.tags = await loadServerTags(client);
-        diffCollector.add((await deleteUnmanagedTags(instance, serverCache)).diffEntries);
+        diffCollector.add((await deleteUnmanagedTags(client, instance, serverCache)).diffEntries);
       }
     }
 

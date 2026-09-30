@@ -248,6 +248,60 @@ prowlarr:
   });
 });
 
+describe("media instance tags", () => {
+  test("parses the media `tags` and `delete_unmanaged_tags` block", () => {
+    const parsed = InputConfigSchemaSchema.parse(
+      yaml.parse(`
+sonarr:
+  main:
+    base_url: http://sonarr:8989
+    api_key: test
+    tags:
+      - managed
+    delete_unmanaged_tags:
+      enabled: true
+      ignore:
+        - Standard
+`),
+    );
+
+    const instance = parsed.sonarr!.main!;
+    expect(instance.tags).toEqual(["managed"]);
+    expect(instance.delete_unmanaged_tags).toEqual({ enabled: true, ignore: ["Standard"] });
+  });
+
+  test("rejects a non-string media `tags` entry", () => {
+    expect(() =>
+      InputConfigSchemaSchema.parse(
+        yaml.parse(`
+sonarr:
+  main:
+    base_url: http://sonarr:8989
+    api_key: test
+    tags:
+      - 1
+`),
+      ),
+    ).toThrow();
+  });
+
+  test("rejects a media `delete_unmanaged_tags` without `enabled`", () => {
+    expect(() =>
+      InputConfigSchemaSchema.parse(
+        yaml.parse(`
+sonarr:
+  main:
+    base_url: http://sonarr:8989
+    api_key: test
+    delete_unmanaged_tags:
+      ignore:
+        - Standard
+`),
+      ),
+    ).toThrow();
+  });
+});
+
 describe("mergeConfigsAndTemplates", () => {
   beforeEach(() => {
     // Reset mocks before each test

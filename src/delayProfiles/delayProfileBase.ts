@@ -1,4 +1,5 @@
 import { Tag } from "../tags/tag.types";
+import { resolveTagNames } from "../tags/tags";
 import { DiffEntry, FieldChange } from "../diffReport/diffReport.types";
 import { logger } from "../logger";
 import { InputConfigDelayProfile } from "../types/config.types";
@@ -43,7 +44,7 @@ export function splitServerDelayProfiles<T extends { tags?: number[] | null }>(
 }
 
 export function mapDelayProfileTags(profile: InputConfigDelayProfile, serverTags: Tag[]): number[] {
-  return profile.tags?.map((tagName) => serverTags.find((t) => t.label === tagName)?.id).filter((t) => t !== undefined) || [];
+  return resolveTagNames(profile.tags ?? [], serverTags).ids;
 }
 
 export function delayProfileSharedFields(profile: InputConfigDelayProfile, mappedTags: number[]) {
@@ -140,7 +141,7 @@ export async function calculateDelayProfilesDiffFor<T extends DelayProfileShared
   let additionalProfilesChanged = configAdditional.length !== serverAdditional.length;
 
   const additionalComparisons: Array<{ equal: boolean; changes: FieldChange[] }> = configAdditional.map((config, i) => {
-    const mappedTags = config.tags?.map((tagName) => tags.find((t) => t.label === tagName)?.id).filter((t) => t !== undefined);
+    const mappedTags = resolveTagNames(config.tags ?? [], tags).ids;
     const serverProfile = serverAdditional[i];
 
     if (!serverProfile) {
@@ -150,8 +151,8 @@ export async function calculateDelayProfilesDiffFor<T extends DelayProfileShared
 
     const changes = compareProfileFields(config, serverProfile);
 
-    if (!areTagsEqual(mappedTags || [], getProfileTags(serverProfile))) {
-      changes.push({ field: "tags", from: getProfileTags(serverProfile), to: mappedTags || [] });
+    if (!areTagsEqual(mappedTags, getProfileTags(serverProfile))) {
+      changes.push({ field: "tags", from: getProfileTags(serverProfile), to: mappedTags });
     }
 
     return { equal: changes.length === 0, changes };
@@ -170,8 +171,7 @@ export async function calculateDelayProfilesDiffFor<T extends DelayProfileShared
 
   logger.info(`DelayProfiles changes detected - default: ${defaultProfileChanged}, additional: ${additionalProfilesChanged}`);
 
-  const missingFrom = (profile?: InputConfigDelayProfile) =>
-    profile?.tags?.filter((tagName) => !tags.some((t) => t.label === tagName)) ?? [];
+  const missingFrom = (profile?: InputConfigDelayProfile) => (profile?.tags ? resolveTagNames(profile.tags, tags).missing : []);
   const missingTags = [...missingFrom(configDefault), ...configAdditional.flatMap((profile) => missingFrom(profile))];
 
   return {

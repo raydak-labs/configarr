@@ -1,4 +1,5 @@
 import { ServerCache } from "../cache";
+import type { TagsClient } from "../clients/capabilities";
 import { DiffEntry } from "../diffReport/diffReport.types";
 import { InputConfigProwlarrInstance } from "../types/config.types";
 import { ApplicationSync } from "./applicationSync";
@@ -19,13 +20,17 @@ import { syncTags } from "./tagSync";
  * Failures are fatal: these resources are the whole Prowlarr run, so an error here
  * must fail the instance (and honour `STOP_ON_ERROR`) instead of being logged away.
  */
-export async function syncProwlarrProviders(instance: InputConfigProwlarrInstance, serverCache: ServerCache): Promise<DiffEntry[]> {
+export async function syncProwlarrProviders(
+  client: TagsClient,
+  instance: InputConfigProwlarrInstance,
+  serverCache: ServerCache,
+): Promise<DiffEntry[]> {
   const { sync_profiles: syncProfiles, indexer_proxies: proxies, indexers, applications } = instance;
   const diffEntries: DiffEntry[] = [];
 
   const collect = (result: { diffEntries: DiffEntry[] }) => diffEntries.push(...result.diffEntries);
 
-  collect(await syncTags(instance, serverCache));
+  collect(await syncTags(client, instance, serverCache));
 
   const profileResult = await syncSyncProfiles(syncProfiles);
   collect(profileResult);

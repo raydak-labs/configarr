@@ -4,7 +4,7 @@ import { ProwlarrSyncer } from "./prowlarrSyncer";
 
 const providerEntries = [{ resourceType: "Indexer", name: "i", action: "create" as const }];
 const syncProviders = vi.fn(async () => providerEntries);
-const deleteUnmanagedTags = vi.fn(async () => ({
+const deleteUnmanagedTags = vi.fn(async (..._args: unknown[]) => ({
   added: 0,
   removed: 1,
   diffEntries: [{ resourceType: "Tag", name: "t", action: "delete" as const }],
@@ -12,8 +12,9 @@ const deleteUnmanagedTags = vi.fn(async () => ({
 const syncDownloadClients = vi.fn(async () => ({ added: 0, updated: 0, removed: 0, failed: 0, diffEntries: [] }));
 const loadServerTags = vi.fn(async () => [{ id: 1, label: "keep" }]);
 
+const prowlarrClient = { getSystemStatus: vi.fn(async () => ({ version: "1" })) };
 vi.mock("../logger", () => ({ logger: { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
-vi.mock("../clients/client", () => ({ getClient: vi.fn(() => ({ getSystemStatus: vi.fn(async () => ({ version: "1" })) })) }));
+vi.mock("../clients/client", () => ({ getClient: vi.fn(() => prowlarrClient) }));
 vi.mock("../prowlarr/prowlarrSyncer", () => ({ syncProwlarrProviders: (...args: unknown[]) => syncProviders(...(args as [])) }));
 vi.mock("../prowlarr/tagSync", () => ({ deleteUnmanagedTags: (...args: unknown[]) => deleteUnmanagedTags(...(args as [])) }));
 vi.mock("../tags/tags", () => ({ loadServerTags: (...args: unknown[]) => loadServerTags(...(args as [])) }));
@@ -45,6 +46,8 @@ describe("ProwlarrSyncer", () => {
 
     expect(syncDownloadClients).toHaveBeenCalledTimes(1);
     expect(deleteUnmanagedTags).toHaveBeenCalledTimes(1);
+    // The wrapper no longer resolves its own client, so the syncer hands its own down.
+    expect(deleteUnmanagedTags.mock.calls[0]![0]).toBe(prowlarrClient);
     // Reloaded once up front and once before the tag cleanup, so provider-created tags are seen.
     expect(loadServerTags).toHaveBeenCalledTimes(2);
     expect(report.entries.map((e) => e.resourceType)).toEqual(["Indexer", "Tag"]);

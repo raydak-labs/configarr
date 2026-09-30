@@ -17,11 +17,13 @@ Tooling: `pnpm` is not on `PATH` here; use `mise x pnpm@11.25.0 -- <cmd>` (verif
 Steps 1–4 are the issue (#524). Steps 5–7 are the feature built on top. They are separable: nothing in steps 2–4 reads `InputConfigArrInstanceSchema`, and `deleteTag` (step 1) is consumed only by `deleteUnmanagedTags`. Two things in step 4 exist only for step 5 — the `"skip"` arm of `onInUse` and the `deleteTag` implementations on the five media clients — so if the feature were dropped, steps 2–3 plus the Prowlarr-side half of step 4 would stand alone.
 
 ### 1. `deleteTag` on the tags capability
+
 - `src/clients/capabilities.ts`: add `deleteTag(id: string): Promise<void>` to `TagsClient`.
 - `src/clients/{sonarr,radarr,lidarr,readarr,whisparr}-client.ts`: implement against the already-generated `v3TagDelete` / `v1TagDelete`, with the `+id` coercion Prowlarr already uses.
 - This widens two composite aliases transitively — `ReleaseProfilesApi` (`capabilities.ts:71`) and the `DownloadClientsClient<T> & TagsClient` constructor parameter (`downloadClientBase.ts:65`) — so it also breaks the hand-rolled api mocks in `src/releaseProfiles/releaseProfileBase.test.ts`, `src/releaseProfiles/releaseProfileLidarr.test.ts`, `src/downloadClients/downloadClientBase.test.ts` and `src/prowlarr/*.test.ts`. Use `pnpm typecheck` as the checklist; it is authoritative.
 
 ### 2. Shared resolver
+
 - `src/tags/tags.ts`: add `resolveTagNames(tagNames, serverTags, opts?)` returning `{ ids, missing }` — case-insensitive label lookup, numeric passthrough, optional `placeholders: Map<string, number>` (keyed by **lowercased** label) for dry-run id synthesis.
 - Numeric entries log a deprecation warning once per run naming the entry (strings are the default and recommended form; removal is a future change).
 - Delete `resolveTagNamesToIds` from `src/downloadClients/downloadClientBase.ts:108` and `src/prowlarr/providerResourceSync.ts:149` (the duplicate). No shim: the only external caller is `downloadClientRadarr.test.ts`. The internal callers switch to `resolveTagNames` in the same pass: `downloadClientBase.ts:190` (`collectSharedFieldChanges`), `:209` (`resolveDownloadClientTags` — its "should have been created during batch tag creation" warning becomes unreachable once creation is guaranteed, so drop it and the assertions on it in `downloadClientMedia.test.ts` / `downloadClientProwlarr.test.ts`), `:416`, and `providerResourceSync.ts:278` (`isEqual`, which deliberately mixes missing labels into the diff — `{ ids, missing }` gives that for free), `:338`, `:383`.
@@ -31,6 +33,7 @@ Steps 1–4 are the issue (#524). Steps 5–7 are the feature built on top. They
 - Behavior change for the commit message: release profiles, delay profiles and root folders now match labels case-insensitively.
 
 ### 3. Shared creation
+
 - `src/tags/tags.ts`: add
   ```ts
   ensureTags(client: TagsClient, serverCache: ServerCache, tagNames: (string | number)[], opts?: { placeholders?: Map<string, number> /* keyed by lowercased label */ }): Promise<{ ids: number[]; created: string[] }>
@@ -38,12 +41,13 @@ Steps 1–4 are the issue (#524). Steps 5–7 are the feature built on top. They
   Dedupe case-insensitively, skip labels already on the server, create the rest, push created tags onto `serverCache.tags`, honor `DRY_RUN` (create nothing; synthesize ids only if the caller passed a `placeholders` map), throw one consistent error naming the label on failure. `ids` is in input order; `created` is the labels it actually wrote, so callers can record diff entries.
 - Replace the three `createMissingTags` copies (`downloadClientBase.ts:411`, `providerResourceSync.ts:379`, `releaseProfileBase.ts:172`) and the two inline loops (`mediaPipeline.ts:329`, `rootFolder{Lidarr,Readarr}.ts:59`).
 - Widen `LidarrRootFolderApi` / `ReadarrRootFolderApi` from `Pick<TagsClient, "createTag">` to `TagsClient`, or `ensureTags` will not typecheck at the root-folder call site.
-- **Release profiles: replace the local resolver with `resolveTagNames`, do not delete it.** Both call sites switch — `releaseProfileBase.ts:200` (the placeholder-backed resolve inside `calculateDiff`) and `:175` (inside `createMissingTags`) — and `createMissingTags` itself is replaced by `ensureTags`, keeping the same position in `sync()`: `calculateDiff(configs, serverCache, true)` validates duplicate profiles and indexer names *before* any tag is written (`:236`), then tags are created, then the real re-diff runs. `calculateDiff` resolves twice, so the shared resolver's `placeholders` option earns its keep here.
+- **Release profiles: replace the local resolver with `resolveTagNames`, do not delete it.** Both call sites switch — `releaseProfileBase.ts:200` (the placeholder-backed resolve inside `calculateDiff`) and `:175` (inside `createMissingTags`) — and `createMissingTags` itself is replaced by `ensureTags`, keeping the same position in `sync()`: `calculateDiff(configs, serverCache, true)` validates duplicate profiles and indexer names _before_ any tag is written (`:236`), then tags are created, then the real re-diff runs. `calculateDiff` resolves twice, so the shared resolver's `placeholders` option earns its keep here.
 - **Delay-profile tags keep being created by the media pipeline, not by the diff.** The inline loop at `mediaPipeline.ts:329` becomes `ensureTags(client, serverCache, delayProfilesDiff.missingTags)` in the same `if (delayProfilesDiff.missingTags.length > 0)` branch, preserving the existing log line and error behavior.
 - **Prowlarr's provider base keeps its label-in-the-diff dry-run rendering.** It passes no `placeholders`, so in a dry run `missing` stays populated and `isEqual` still names not-yet-created tags by label (`providerResourceSync.ts:279-281`) instead of showing a negative id. Synthetic ids are never pushed to `serverCache.tags`.
 - Dry-run behavior change for the commit message: a dry run no longer creates tags for download clients or Lidarr/Readarr root folders. Dry-run reports for release profiles, root folders and download clients may show synthetic negative tag ids.
 
 ### 4. Shared deletion, Prowlarr migration
+
 - `src/tags/tags.ts`: add
   ```ts
   deleteUnmanagedTags(client: TagsClient, serverCache: ServerCache, opts: { keep: Iterable<string>; onInUse: "throw" | "skip" }): Promise<TagSyncResult>
@@ -55,6 +59,7 @@ Steps 1–4 are the issue (#524). Steps 5–7 are the feature built on top. They
 - `src/tags/tags.test.ts` (new) covers the module directly.
 
 ### 5. Media instance config block
+
 - `src/types/config.types.ts`: add to `InputConfigArrInstanceSchema`, carrying over the Prowlarr comments:
   ```ts
   // Ensure these tag labels exist on the server (created if missing).
@@ -71,13 +76,15 @@ Steps 1–4 are the issue (#524). Steps 5–7 are the feature built on top. They
   - Diff entries flow into the existing `DiffCollector`; `DiffEntry.resourceType` is a plain string with no formatter switch, so no report plumbing is needed.
 
 ### 6. Tests
+
 - `src/tags/tags.test.ts` (new): resolver case-insensitivity, numeric passthrough + once-per-run deprecation warning, placeholder ids keyed by lowercased label, `ensureTags` create / dedupe / dry-run / failure and its `created` return, `collectTagLabels` skipping numeric entries, `deleteUnmanagedTags` keep-set, `onInUse` skip vs throw, non-409 failures still throwing under `skip`, cache updates.
-- `src/arr/mediaPipeline.test.ts` (new, no precedent file today): tag sync placement before feature syncs, one diff entry per created label, delete pass last, skip-on-`failed > 0`, and skip when the download-client sync *throws*. Mirrors what `src/arr/prowlarrSyncer.test.ts:43-59` does for Prowlarr.
+- `src/arr/mediaPipeline.test.ts` (new, no precedent file today): tag sync placement before feature syncs, one diff entry per created label, delete pass last, skip-on-`failed > 0`, and skip when the download-client sync _throws_. Mirrors what `src/arr/prowlarrSyncer.test.ts:43-59` does for Prowlarr.
 - `src/config.test.ts`: parse the new media `tags` / `delete_unmanaged_tags` block.
 - Update existing suites that assert the old inline behavior: `src/downloadClients/downloadClientBase.test.ts`, `downloadClientMedia.test.ts`, `downloadClientRadarr.test.ts` (its `resolveTagNamesToIds` tests move to `src/tags/tags.test.ts`), `downloadClientProwlarr.test.ts`, `src/prowlarr/tagSync.test.ts`, `providerResourceSync.test.ts`, `applicationSync.test.ts`, `indexerSync.test.ts`, `indexerProxySync.test.ts`, `src/arr/prowlarrSyncer.test.ts` (its `../tags/tags` mock must export the new symbols too), `src/releaseProfiles/releaseProfileBase.test.ts`, `releaseProfileLidarr.test.ts`, `src/delayProfiles/delayProfileBase.test.ts`, `delayProfileLidarr.test.ts`, `src/rootFolder/rootFolderLidarr.test.ts`, `rootFolderReadarr.test.ts`, `src/clients/prowlarr-client.test.ts`.
 - e2e (`tests/arr-e2e/`): the block is cross-cutting, so its assertions go in `tests/arr-e2e/pipeline.e2e.test.ts` (one config, every instance) rather than being duplicated into five per-\*arr files: an instance with `tags:` plus a tagged download client, and a `delete_unmanaged_tags` run that keeps a tag referenced by a managed feature and drops an orphan. Update the `Tags` row in `tests/arr-e2e/README.md` and add the fragments to `tests/arr-e2e/config.ts`. The "in-use tag is left alone" case is **not** an e2e assertion — producing a 409 needs a tag held by a resource configarr does not manage (import list / notification), which no client in this repo exposes; it is covered in `src/tags/tags.test.ts` instead. Note that the `nonE2eNames(...)` ignore-list helper (`helpers.ts:307`) keys on `name`; tags have `label`, so the tag e2e needs a label-based equivalent. Prowlarr e2e must keep passing unchanged.
 
 ### 7. Docs
+
 - `docs/docs/configuration/config-file.md`: new section for the media-instance `tags:` / `delete_unmanaged_tags:` next to the other media cleanup blocks (`:646`, `:669`), following that file's conventions — version badge in the heading, a `# since vX.Y.Z` comment inside the YAML block, a `Notes:` line, and an explicit per-\*arr applicability note. **Not** labelled experimental: the schema keys carry no `@experimental` marker, so the neighbouring sections' `# (experimental) since vX.Y.Z` phrasing must not be copied.
 - `docs/docs/configuration/experimental-support.md`: the Prowlarr section keeps its tag prose but points at the shared `config-file.md` section. It stays per-\*arr organized — no new shared section there, and nothing stable gets labelled experimental.
 - `config.yml.template`: the `# Experimental: Prowlarr (tags, applications, ...)` heading needs rewording now that tags are not Prowlarr-only; add a commented media-instance example.
