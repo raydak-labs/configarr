@@ -28,7 +28,8 @@ import { BaseReleaseProfileSync } from "../releaseProfiles/releaseProfileBase";
 import { ReleaseProfileShared } from "../releaseProfiles/releaseProfile.types";
 import { syncRemotePaths } from "../remotePaths/remotePathSyncer";
 import { BaseRootFolderSync } from "../rootFolder/rootFolderBase";
-import { collectTagIds, collectTagLabels, deleteUnmanagedTags, ensureTags, loadServerTags, syncInstanceTags } from "../tags/tags";
+import { deleteUnmanagedInstanceTags, syncInstanceTags } from "../tags/tagSync";
+import { ensureTags, loadServerTags } from "../tags/tags";
 import { getTelemetryInstance, Telemetry } from "../telemetry";
 import { MediaArrType } from "../types/common.types";
 import { InputConfigArrInstance, InputConfigSchema, MergedConfigInstance } from "../types/config.types";
@@ -422,28 +423,22 @@ export const completeMediaSync = async <T extends MediaArrType>(ctx: MediaSyncCo
         `Skipping unmanaged tag cleanup: download client sync reported failures. A download client may still hold a tag this run would delete.`,
       );
     } else {
-      const keep = collectTagLabels(
-        config.tags,
-        config.delete_unmanaged_tags.ignore,
-        config.delay_profiles?.default?.tags,
-        config.delay_profiles?.additional?.flatMap((profile) => profile.tags ?? []),
-        config.release_profiles?.flatMap((profile) => profile.tags ?? []),
-        // Only the object form of `root_folders` carries tags; the plain string form does not.
-        config.root_folders?.filter((folder) => typeof folder !== "string").flatMap((folder) => folder.tags ?? []),
-        config.download_clients?.data?.flatMap((client) => client.tags ?? []),
-      );
-
-      // Config tag entries may be raw server ids (deprecated); those must survive the prune too.
-      const keepIds = collectTagIds(
-        config.download_clients?.data?.flatMap((dc) => dc.tags ?? []),
-        config.release_profiles?.flatMap((profile) => profile.tags ?? []),
-        config.delay_profiles?.default?.tags,
-        config.delay_profiles?.additional?.flatMap((profile) => profile.tags ?? []),
-        config.root_folders?.filter((folder) => typeof folder !== "string").flatMap((folder) => folder.tags ?? []),
-      );
-
       try {
-        const tagResult = await deleteUnmanagedTags(client, serverCache, { keep, keepIds, onInUse: "skip" });
+        const tagResult = await deleteUnmanagedInstanceTags(client, serverCache, {
+          deleteConfig: config.delete_unmanaged_tags,
+          referencedTagLists: [
+            config.tags,
+            config.delay_profiles?.default?.tags,
+            config.delay_profiles?.additional?.flatMap((profile) => profile.tags ?? []),
+            config.release_profiles?.flatMap((profile) => profile.tags ?? []),
+            // Only the object form of `root_folders` carries tags; the plain string form does not.
+            config.root_folders?.filter((folder) => typeof folder !== "string").flatMap((folder) => folder.tags ?? []),
+            config.download_clients?.data?.flatMap((downloadClient) => downloadClient.tags ?? []),
+          ],
+          // A media *arr also has tag-holding resources configarr does not manage (import
+          // lists, notifications, indexers), so an in-use tag is skipped rather than fatal.
+          onInUse: "skip",
+        });
         collector.add(tagResult.diffEntries);
       } catch (err: unknown) {
         // Every other feature of this instance has already been applied at this point, so a

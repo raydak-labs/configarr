@@ -6,7 +6,7 @@ import { ApplicationSync } from "./applicationSync";
 import { IndexerProxySync } from "./indexerProxySync";
 import { IndexerSync } from "./indexerSync";
 import { deleteUnmanagedSyncProfiles, syncSyncProfiles } from "./syncProfileSync";
-import { syncTags } from "./tagSync";
+import { syncInstanceTags } from "../tags/tagSync";
 
 /**
  * Runs the Prowlarr provider-resource syncs for one instance, in dependency order:
@@ -30,7 +30,7 @@ export async function syncProwlarrProviders(
 
   const collect = (result: { diffEntries: DiffEntry[] }) => diffEntries.push(...result.diffEntries);
 
-  collect(await syncTags(client, instance, serverCache));
+  collect(await syncInstanceTags(client, serverCache, instance.tags));
 
   const profileResult = await syncSyncProfiles(syncProfiles);
   collect(profileResult);

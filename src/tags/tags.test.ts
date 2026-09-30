@@ -2,15 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ServerCache } from "../cache";
 import type { TagsClient } from "../clients/capabilities";
 import type { Tag } from "./tag.types";
-import {
-  buildTagPlaceholders,
-  collectTagIds,
-  collectTagLabels,
-  deleteUnmanagedTags,
-  ensureTags,
-  resolveTagNames,
-  syncInstanceTags,
-} from "./tags";
+import { buildTagPlaceholders, collectTagIds, collectTagLabels, deleteUnmanagedTags, ensureTags, resolveTagNames } from "./tags";
 
 // Hoisted so `vi.resetModules()` + a fresh `import("./tags")` still sees these same spies.
 const { getEnvsMock, loggerMock } = vi.hoisted(() => ({
@@ -336,42 +328,5 @@ describe("deleteUnmanagedTags", () => {
     await expect(
       deleteUnmanagedTags(client(), makeCache([{ id: 1, label: "orphan" }]), { keep: new Set<string>(), onInUse }),
     ).rejects.toThrow("Failed to delete tag 'orphan': 500 Server Error");
-  });
-});
-
-describe("syncInstanceTags", () => {
-  it("creates the configured labels and reports one create entry each", async () => {
-    const cache = makeCache([{ id: 1, label: "known" }]);
-
-    const result = await syncInstanceTags(client(), cache, ["known", "fresh"]);
-
-    expect(mockClient.createTag).toHaveBeenCalledExactlyOnceWith({ label: "fresh" });
-    expect(result.added).toBe(1);
-    expect(result.diffEntries).toEqual([{ resourceType: "Tag", name: "fresh", action: "create" }]);
-  });
-
-  it("reports the labels it would create during a dry run without touching the server", async () => {
-    setDryRun(true);
-
-    const result = await syncInstanceTags(client(), makeCache([]), ["would-be"]);
-
-    expect(mockClient.createTag).not.toHaveBeenCalled();
-    expect(result.diffEntries).toEqual([{ resourceType: "Tag", name: "would-be", action: "create" }]);
-  });
-
-  it("reports case-differing labels once, matching what the real run would create", async () => {
-    setDryRun(true);
-
-    const result = await syncInstanceTags(client(), makeCache([]), ["Movie", "movie"]);
-
-    expect(result.diffEntries).toEqual([{ resourceType: "Tag", name: "Movie", action: "create" }]);
-  });
-
-  it("does nothing when no labels are configured", async () => {
-    for (const labels of [undefined, []]) {
-      const result = await syncInstanceTags(client(), makeCache([]), labels);
-      expect(result).toEqual({ added: 0, removed: 0, diffEntries: [] });
-    }
-    expect(mockClient.createTag).not.toHaveBeenCalled();
   });
 });

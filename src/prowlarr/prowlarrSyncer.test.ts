@@ -5,7 +5,7 @@ import type { InputConfigProwlarrInstance } from "../types/config.types";
 
 vi.mock("../logger", () => ({ logger: { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
 
-const syncTags = vi.fn(async () => ({ added: 0, removed: 0, diffEntries: [{ resourceType: "Tag", name: "t", action: "create" }] }));
+const syncInstanceTags = vi.fn(async () => ({ added: 0, removed: 0, diffEntries: [{ resourceType: "Tag", name: "t", action: "create" }] }));
 const syncProfileSync = vi.fn(async () => ({
   added: 0,
   updated: 0,
@@ -36,7 +36,7 @@ const applicationSync = vi.fn(async () => ({
 
 const indexerSyncCtor = vi.fn();
 
-vi.mock("./tagSync", () => ({ syncTags: (...args: unknown[]) => syncTags(...(args as [])) }));
+vi.mock("../tags/tagSync", () => ({ syncInstanceTags: (...args: unknown[]) => syncInstanceTags(...(args as [])) }));
 vi.mock("./syncProfileSync", () => ({
   syncSyncProfiles: (...args: unknown[]) => syncProfileSync(...(args as [])),
   deleteUnmanagedSyncProfiles: (...args: unknown[]) => deleteUnmanagedProfiles(...(args as [])),
@@ -83,6 +83,7 @@ describe("syncProwlarrProviders", () => {
     const entries = await syncProwlarrProviders(client, fullInstance, cache());
 
     expect(entries.map((e) => e.resourceType)).toEqual(["Tag", "SyncProfile", "IndexerProxy", "Indexer", "Application"]);
+    expect(syncInstanceTags).toHaveBeenCalledWith(client, expect.anything(), ["managed"]);
     expect(proxySync).toHaveBeenCalledWith([{ name: "flare", type: "FlareSolverr" }], undefined, expect.anything(), {
       deferDeletes: true,
     });
@@ -108,7 +109,8 @@ describe("syncProwlarrProviders", () => {
   it("passes empty sections straight through, letting each sync no-op", async () => {
     await syncProwlarrProviders(client, { base_url: "http://p", api_key: "k" }, cache());
 
-    expect(syncTags).toHaveBeenCalledWith(client, expect.anything(), expect.anything());
+    // The shared stage takes the label list, not the whole instance.
+    expect(syncInstanceTags).toHaveBeenCalledWith(client, expect.anything(), undefined);
     expect(syncProfileSync).toHaveBeenCalledWith(undefined);
     expect(proxySync).toHaveBeenCalledWith([], undefined, expect.anything(), { deferDeletes: true });
     expect(indexerSync).toHaveBeenCalledWith([], undefined, expect.anything());
@@ -118,7 +120,7 @@ describe("syncProwlarrProviders", () => {
   });
 
   it("fails the whole run when tag sync fails, without touching later sections", async () => {
-    syncTags.mockRejectedValueOnce(new Error("tag boom"));
+    syncInstanceTags.mockRejectedValueOnce(new Error("tag boom"));
 
     await expect(syncProwlarrProviders(client, fullInstance, cache())).rejects.toThrow("tag boom");
     expect(syncProfileSync).not.toHaveBeenCalled();

@@ -246,33 +246,3 @@ export const deleteUnmanagedTags = async (
 
   return result;
 };
-
-/**
- * Ensures the instance-level `tags` labels exist and reports them as a diff.
- *
- * The general half of the tag stage, shared by every pipeline: a dry run creates nothing, so
- * the labels it would have created are reported instead.
- */
-export const syncInstanceTags = async (
-  client: TagsClient,
-  serverCache: ServerCache,
-  labels: readonly string[] | undefined,
-): Promise<TagSyncResult> => {
-  const result: TagSyncResult = { added: 0, removed: 0, diffEntries: [] };
-  if (!labels?.length) {
-    return result;
-  }
-
-  const { created, missing } = await ensureTags(client, serverCache, labels);
-  for (const label of created) {
-    logger.info(`Created tag: '${label}'`);
-  }
-
-  const reported = getEnvs().DRY_RUN ? missing : created;
-  for (const label of reported) {
-    result.diffEntries.push({ resourceType: "Tag", name: label, action: "create" });
-    result.added++;
-  }
-
-  return result;
-};
