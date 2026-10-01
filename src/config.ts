@@ -824,6 +824,21 @@ export const mergeConfigsAndTemplates = async (
     mergedTemplates.delete_unmanaged_quality_profiles = instanceConfig.delete_unmanaged_quality_profiles;
   }
 
+  // Instance labels win over a template's, matching delay_profiles.
+  if (instanceConfig.tags) {
+    mergedTemplates.tags = instanceConfig.tags;
+  }
+
+  // Unions the ignore lists: a template's protected tags stay protected when an instance adds its own.
+  if (instanceConfig.delete_unmanaged_tags) {
+    mergedTemplates.delete_unmanaged_tags = {
+      enabled: instanceConfig.delete_unmanaged_tags.enabled,
+      ignore: [
+        ...new Set([...(mergedTemplates.delete_unmanaged_tags?.ignore ?? []), ...(instanceConfig.delete_unmanaged_tags.ignore ?? [])]),
+      ],
+    };
+  }
+
   if (instanceConfig.quality_profiles) {
     // Boundary assertion: user-authored quality_profiles are documented/conventionally expected
     // to be fully specified (see examples/full), unlike template-sourced profiles which start

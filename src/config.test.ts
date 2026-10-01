@@ -408,6 +408,28 @@ describe("mergeConfigsAndTemplates", () => {
     expect(result.config.quality_profiles.length).toBe(3);
   });
 
+  test("carries instance tags and delete_unmanaged_tags through the merge", async () => {
+    // Regression: the merge copies instance keys one by one, and these two were missing, so the
+    // block silently did nothing for any config file or template. The e2e caught it; a unit test
+    // that builds the config by hand would not, because it bypasses this merge.
+    vi.spyOn(reclarrImporter, "loadRecyclarrTemplates").mockReturnValue(new Map());
+    vi.spyOn(localImporter, "loadLocalRecyclarrTemplate").mockReturnValue(new Map());
+    vi.spyOn(trashGuide, "loadQPFromTrash").mockReturnValue(Promise.resolve(new Map()));
+    vi.spyOn(trashGuide, "loadTrashCustomFormatGroups").mockReturnValue(Promise.resolve(new Map()));
+
+    const inputConfig: InputConfigArrInstance = {
+      api_key: "test",
+      base_url: "http://sonarr:8989",
+      tags: ["listed"],
+      delete_unmanaged_tags: { enabled: true, ignore: ["keep-me"] },
+    };
+
+    const result = await mergeConfigsAndTemplates({}, inputConfig, "SONARR");
+
+    expect(result.config.tags).toEqual(["listed"]);
+    expect(result.config.delete_unmanaged_tags).toEqual({ enabled: true, ignore: ["keep-me"] });
+  });
+
   test("filters Recyclarr release profiles and warns", async () => {
     vi.spyOn(reclarrImporter, "loadRecyclarrTemplates").mockReturnValue(new Map());
     vi.spyOn(localImporter, "loadLocalRecyclarrTemplate").mockReturnValue(new Map());
