@@ -103,11 +103,6 @@ function compareFields(mapped: ReleaseProfileShared, server: ReleaseProfileShare
   return changes;
 }
 
-/**
- * Dry-run only: stable synthetic negative ids for configured labels the server does not have yet,
- * keyed by LOWERCASED label. Never written to the server, they only keep the `tags` field of a
- * dry-run diff comparable across configs.
- */
 export function resolveIndexerId(indexerName: string | undefined, indexers: IndexerListItem[]): number {
   if (indexerName == null || indexerName === "") {
     return 0;
@@ -152,7 +147,7 @@ export class BaseReleaseProfileSync<T extends ReleaseProfileShared> {
   private async createMissingTags(configs: InputConfigReleaseProfile[], serverCache: ServerCache): Promise<void> {
     const missingTags = new Set<string>();
     for (const config of configs) {
-      // Keep the configured casing: this is the label that ends up on the server.
+      // Configured casing wins: this is the label the server gets.
       resolveTagNames(config.tags ?? [], serverCache.tags).missing.forEach((tag) => missingTags.add(tag));
     }
 

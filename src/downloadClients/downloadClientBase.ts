@@ -382,10 +382,7 @@ export abstract class BaseDownloadClientSync<T extends DownloadClientShared> {
     return { validClients, hasErrors };
   }
 
-  /**
-   * A dry run never creates the tags, so their ids would resolve to nothing and the client would
-   * diff as unchanged. Synthetic ids keep the tags field visible in a dry-run diff instead.
-   */
+  /** Dry runs create nothing, so synthetic ids keep `tags` visible in the diff. */
   private tagPlaceholders(tagNames: (string | number)[], cache: ServerCache): Map<string, number> | undefined {
     if (!getEnvs().DRY_RUN) {
       return undefined;

@@ -57,8 +57,7 @@ export class LidarrRootFolderSync extends BaseRootFolderSync<InputConfigRootFold
       throw new ConfigValidationError(`Quality profile '${config.quality_profile}' not found on Lidarr server`);
     }
 
-    // Resolve tag names to IDs, creating tags if they don't exist. This also runs on a dry run,
-    // where a placeholder id keeps `defaultTags` comparable instead of dropping the new tag.
+    // Also runs on a dry run, where a placeholder id keeps `defaultTags` comparable.
     const tagNames = config.tags ?? [];
     const placeholders = getEnvs().DRY_RUN ? buildTagPlaceholders(tagNames, serverCache.tags) : undefined;
     const { ids: defaultTags } = await ensureTags(this.api, serverCache, tagNames, { placeholders });

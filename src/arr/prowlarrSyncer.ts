@@ -51,7 +51,7 @@ export class ProwlarrSyncer {
         logger.warn(`Skipping unmanaged tag cleanup: download client sync reported failures.`);
       } else {
         serverCache.tags = await loadServerTags(client);
-        // Every tag-bearing Prowlarr resource is managed, so a tag still in use is a real error.
+        // Every tag-bearing Prowlarr resource is managed, so a 409 is a real error.
         diffCollector.add(
           (
             await deleteUnmanagedInstanceTags(client, serverCache, {

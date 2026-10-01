@@ -167,8 +167,7 @@ export const runMediaSyncToQualityProfiles = async <T extends MediaArrType>(
   const serverTags = await loadServerTags(client);
   serverCache.tags = serverTags;
 
-  // Instance-level `tags:` is a declarative spelling of what the per-feature syncers below
-  // create anyway; running it here means every feature sees the tags by the time it resolves ids.
+  // Up front so every feature below can resolve tags by the time it runs.
   collector.add((await syncInstanceTags(client, serverCache, config.tags)).diffEntries);
 
   if (config.quality_definition != null) {
@@ -431,24 +430,21 @@ export const completeMediaSync = async <T extends MediaArrType>(ctx: MediaSyncCo
             config.delay_profiles?.default?.tags,
             config.delay_profiles?.additional?.flatMap((profile) => profile.tags ?? []),
             config.release_profiles?.flatMap((profile) => profile.tags ?? []),
-            // Only the object form of `root_folders` carries tags; the plain string form does not.
+            // Only the object form of `root_folders` carries tags.
             config.root_folders?.filter((folder) => typeof folder !== "string").flatMap((folder) => folder.tags ?? []),
             config.download_clients?.data?.flatMap((downloadClient) => downloadClient.tags ?? []),
           ],
-          // A media *arr also has tag-holding resources configarr does not manage (import
-          // lists, notifications, indexers), so an in-use tag is skipped rather than fatal.
           onInUse: "skip",
         });
         collector.add(tagResult.diffEntries);
       } catch (err: unknown) {
-        // Every other feature of this instance has already been applied at this point, so a
-        // prune failure must not throw away the diff report the user needs to see them.
+        // Everything else is already applied, so keep the report instead of throwing.
         const message = err instanceof Error ? err.message : String(err);
         logger.error(`Failed to delete unmanaged tags: ${message}`);
         if (err instanceof ConfigValidationError) {
           throw err;
         }
-        // Deletions that succeeded before the failure really happened, so still report them.
+        // Deletions before the failure really happened; still report them.
         if (err instanceof TagDeletionError) {
           collector.add(err.partial.diffEntries);
         }

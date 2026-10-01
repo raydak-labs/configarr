@@ -16,13 +16,7 @@ export const loadServerTags = async (client: TagsClient): Promise<Tag[]> => {
 /** Numeric tag entries are deprecated: labels are the default and recommended form. Warn once per label per run. */
 const warnedNumericTags = new Set<string>();
 
-/**
- * Resolves configured tag entries to server tag ids.
- *
- * Labels match case-insensitively. Numeric entries are passed through as raw server ids and
- * reported as deprecated. Labels that do not exist on the server land in `missing`; a caller
- * that passes `placeholders` additionally gets a synthetic id for them (see TagResolveOptions).
- */
+/** Resolves config tag entries to ids. Case-insensitive; numbers pass through as raw ids. */
 export const resolveTagNames = (
   tagNames: readonly (string | number)[],
   serverTags: readonly Tag[],
@@ -69,11 +63,7 @@ export const resolveTagNames = (
   return { ids, missing };
 };
 
-/**
- * Builds a synthetic-id map for labels the server does not have yet, so a dry run can diff tag
- * fields against something stable. Keys are lowercased labels; labels the server already knows
- * are skipped so they do not consume synthetic ids.
- */
+/** Synthetic ids for missing labels, so a dry run diffs stably. Keyed by lowercased label. */
 export const buildTagPlaceholders = (tagNames: readonly string[], serverTags: readonly Tag[]): Map<string, number> => {
   const known = new Set(serverTags.map((tag) => tag.label?.toLowerCase()).filter((label) => label != null));
   const placeholders = new Map<string, number>();
@@ -117,12 +107,7 @@ const collectTagIds = (...tagLists: readonly (readonly (string | number)[] | und
   return ids;
 };
 
-/**
- * Resolves configured tag entries and creates the ones the server does not have yet.
- *
- * Created tags are pushed onto `serverCache.tags`. A dry run creates nothing: labels without a
- * server tag get a synthetic id only if the caller passed `placeholders`.
- */
+/** Creates the labels the server lacks. Pushes them to the cache; a dry run creates nothing. */
 export const ensureTags = async (
   client: TagsClient,
   serverCache: ServerCache,
@@ -169,12 +154,7 @@ export const ensureTags = async (
   return { ids, created, missing: toCreate };
 };
 
-/**
- * True when the server rejected the delete because the tag is still referenced.
- *
- * The API client wraps every failure as `new Error(message, { cause })` where the cause is ky's
- * HTTPError, so the status lives on `cause.response.status` - not on the thrown error itself.
- */
+/** 409 = tag still referenced. The status sits on `cause`, not the error ky-client rethrows. */
 const isInUseError = (error: unknown): boolean => {
   const seen = new Set<unknown>();
   let current: unknown = error;
@@ -192,12 +172,7 @@ const isInUseError = (error: unknown): boolean => {
   return false;
 };
 
-/**
- * Deletes server tags that are not in `keep`.
- *
- * `onInUse` decides what happens when the server answers 409 because a resource configarr does
- * not manage still holds the tag: "skip" leaves it and carries on, "throw" fails the instance.
- */
+/** Prunes tags outside `keep`. A mid-run failure throws TagDeletionError with the partial result. */
 const deleteUnmanagedTags = async (
   client: TagsClient,
   serverCache: ServerCache,
@@ -256,26 +231,15 @@ type TagDeleteConfig = { enabled: boolean; ignore?: string[] };
 interface DeleteUnmanagedInstanceTagsOptions {
   /** Only prunes when `enabled` is set. */
   deleteConfig?: TagDeleteConfig;
-  /**
-   * The instance-level `tags` labels. Always kept: they are what `syncInstanceTags` was asked
-   * to ensure exist, so pruning them would make each run create a tag and then delete it.
-   */
+  /** Instance-level `tags`. Always kept: pruning them would create-then-delete each run. */
   instanceLabels?: readonly string[];
   /** Every `tags` list in the instance config, so a tag a managed resource uses is never pruned. */
   referencedTagLists?: readonly (readonly (string | number)[] | undefined)[];
-  /**
-   * What to do when the server answers 409 because a resource configarr does not manage still
-   * holds the tag. Media *arrs skip it and carry on; Prowlarr manages every tag-bearing
-   * resource, so a conflict there fails the instance.
-   */
+  /** Media *arrs have unmanaged tag holders, so a 409 skips; Prowlarr fails the instance. */
   onInUse: "throw" | "skip";
 }
 
-/**
- * Ensures the instance-level `tags` labels exist on the server.
- *
- * A dry run creates nothing, so it reports the labels it would have created instead.
- */
+/** Ensures the instance-level `tags` labels exist, reporting one diff entry each. */
 export async function syncInstanceTags(
   client: TagsClient,
   serverCache: ServerCache,
@@ -300,10 +264,7 @@ export async function syncInstanceTags(
   return result;
 }
 
-/**
- * Prunes server tags that are neither listed under `tags`/`ignore` nor referenced by a
- * managed resource in the instance config.
- */
+/** Prunes tags outside `instanceLabels` + `ignore` + everything the config references. */
 export async function deleteUnmanagedInstanceTags(
   client: TagsClient,
   serverCache: ServerCache,
