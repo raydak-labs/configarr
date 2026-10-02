@@ -490,6 +490,35 @@ describe("mergeConfigsAndTemplates", () => {
     expect(result.config.delete_unmanaged_tags).toEqual({ enabled: true, ignore: ["template-protected"] });
   });
 
+  test("accumulates tag settings across multiple templates", async () => {
+    // A later include must not drop what an earlier one contributed, least of all an ignore
+    // list, which is a protection rather than a preference.
+    const templates: Map<string, MappedTemplates> = new Map([
+      ["first", { tags: ["a", "shared"], delete_unmanaged_tags: { enabled: true, ignore: ["keep-a"] } } as MappedTemplates],
+      ["second", { tags: ["b", "shared"], delete_unmanaged_tags: { enabled: false, ignore: ["keep-b"] } } as MappedTemplates],
+    ]);
+    vi.spyOn(reclarrImporter, "loadRecyclarrTemplates").mockReturnValue(templates);
+    vi.spyOn(localImporter, "loadLocalRecyclarrTemplate").mockReturnValue(new Map());
+    vi.spyOn(trashGuide, "loadQPFromTrash").mockReturnValue(Promise.resolve(new Map()));
+    vi.spyOn(trashGuide, "loadTrashCustomFormatGroups").mockReturnValue(Promise.resolve(new Map()));
+
+    const result = await mergeConfigsAndTemplates(
+      {},
+      {
+        api_key: "test",
+        base_url: "http://sonarr:8989",
+        include: [
+          { template: "first", source: "RECYCLARR" },
+          { template: "second", source: "RECYCLARR" },
+        ],
+      },
+      "SONARR",
+    );
+
+    expect(result.config.tags).toEqual(["a", "shared", "b"]);
+    expect(result.config.delete_unmanaged_tags).toEqual({ enabled: false, ignore: ["keep-a", "keep-b"] });
+  });
+
   test("filters Recyclarr release profiles and warns", async () => {
     vi.spyOn(reclarrImporter, "loadRecyclarrTemplates").mockReturnValue(new Map());
     vi.spyOn(localImporter, "loadLocalRecyclarrTemplate").mockReturnValue(new Map());

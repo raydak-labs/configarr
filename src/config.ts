@@ -426,12 +426,17 @@ const includeRecyclarrTemplate = (
     mergedTemplates.delete_unmanaged_metadata_profiles = template.delete_unmanaged_metadata_profiles;
   }
 
+  // Collectives accumulate across templates so a later include cannot drop what an earlier one
+  // contributed; the instance config still overrides, since it runs last.
   if (template.tags) {
-    mergedTemplates.tags = template.tags;
+    mergedTemplates.tags = [...new Set([...(mergedTemplates.tags ?? []), ...template.tags])];
   }
 
   if (template.delete_unmanaged_tags) {
-    mergedTemplates.delete_unmanaged_tags = template.delete_unmanaged_tags;
+    mergedTemplates.delete_unmanaged_tags = {
+      enabled: template.delete_unmanaged_tags.enabled,
+      ignore: [...new Set([...(mergedTemplates.delete_unmanaged_tags?.ignore ?? []), ...(template.delete_unmanaged_tags.ignore ?? [])])],
+    };
   }
 
   if (template.media_management) {
