@@ -430,16 +430,15 @@ describe("mergeConfigsAndTemplates", () => {
     expect(result.config.delete_unmanaged_tags).toEqual({ enabled: true, ignore: ["keep-me"] });
   });
 
-  test("merges a template's tag labels and ignore list, but never lets it enable cleanup", async () => {
-    // A template may protect labels but not switch on deletion: an imported Recyclarr/URL
-    // template must not be able to enable tag deletion. Dropping its ignore list the other way
-    // would let an instance delete labels the template reserved.
+  test("merges template tag settings, with the instance taking the lead", async () => {
+    // Mirrors delete_unmanaged_metadata_profiles: a template may set the block, the instance runs
+    // last so its `enabled` wins, and the ignore lists union rather than replace.
     const templates: Map<string, MappedTemplates> = new Map([
       [
         "tagged",
         {
           tags: ["from-template"],
-          delete_unmanaged_tags: { enabled: true, ignore: ["template-protected"] },
+          delete_unmanaged_tags: { enabled: false, ignore: ["template-protected"] },
         } as MappedTemplates,
       ],
     ]);
@@ -454,21 +453,41 @@ describe("mergeConfigsAndTemplates", () => {
       include: [{ template: "tagged", source: "RECYCLARR" }],
     };
 
-    // The template's own `enabled: true` is ignored; only its labels and ignore survive.
+    // Template-only: its labels and ignore survive.
     const templateOnly = await mergeConfigsAndTemplates({}, base, "SONARR");
     expect(templateOnly.config.tags).toEqual(["from-template"]);
     expect(templateOnly.config.delete_unmanaged_tags).toEqual({ enabled: false, ignore: ["template-protected"] });
 
-    // The instance enables cleanup; the template's protected label is still kept.
+    // The instance enables cleanup and overrides the template's labels; both ignores are kept.
     const withInstance = await mergeConfigsAndTemplates(
       {},
-      { ...base, delete_unmanaged_tags: { enabled: true, ignore: ["instance-protected"] } },
+      { ...base, tags: ["from-instance"], delete_unmanaged_tags: { enabled: true, ignore: ["instance-protected"] } },
       "SONARR",
     );
+    expect(withInstance.config.tags).toEqual(["from-instance"]);
     expect(withInstance.config.delete_unmanaged_tags).toEqual({
       enabled: true,
       ignore: ["template-protected", "instance-protected"],
     });
+  });
+
+  test("a template can enable cleanup when the instance does not override it", async () => {
+    // Same authority as delete_unmanaged_metadata_profiles: the block is opt-in wherever it is set.
+    const templates: Map<string, MappedTemplates> = new Map([
+      ["tagged", { delete_unmanaged_tags: { enabled: true, ignore: ["template-protected"] } } as MappedTemplates],
+    ]);
+    vi.spyOn(reclarrImporter, "loadRecyclarrTemplates").mockReturnValue(templates);
+    vi.spyOn(localImporter, "loadLocalRecyclarrTemplate").mockReturnValue(new Map());
+    vi.spyOn(trashGuide, "loadQPFromTrash").mockReturnValue(Promise.resolve(new Map()));
+    vi.spyOn(trashGuide, "loadTrashCustomFormatGroups").mockReturnValue(Promise.resolve(new Map()));
+
+    const result = await mergeConfigsAndTemplates(
+      {},
+      { api_key: "test", base_url: "http://sonarr:8989", include: [{ template: "tagged", source: "RECYCLARR" }] },
+      "SONARR",
+    );
+
+    expect(result.config.delete_unmanaged_tags).toEqual({ enabled: true, ignore: ["template-protected"] });
   });
 
   test("filters Recyclarr release profiles and warns", async () => {

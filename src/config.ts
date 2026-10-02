@@ -430,14 +430,8 @@ const includeRecyclarrTemplate = (
     mergedTemplates.tags = template.tags;
   }
 
-  // A template may only protect labels, never enable deletion: an imported Recyclarr/URL
-  // template must not be able to turn on tag deletion. Its ignore list still has to survive,
-  // or an instance that enables cleanup would delete labels the template reserved.
-  if (template.delete_unmanaged_tags?.ignore) {
-    mergedTemplates.delete_unmanaged_tags = {
-      enabled: mergedTemplates.delete_unmanaged_tags?.enabled ?? false,
-      ignore: [...new Set([...(mergedTemplates.delete_unmanaged_tags?.ignore ?? []), ...template.delete_unmanaged_tags.ignore])],
-    };
+  if (template.delete_unmanaged_tags) {
+    mergedTemplates.delete_unmanaged_tags = template.delete_unmanaged_tags;
   }
 
   if (template.media_management) {
