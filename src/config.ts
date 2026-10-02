@@ -426,6 +426,19 @@ const includeRecyclarrTemplate = (
     mergedTemplates.delete_unmanaged_metadata_profiles = template.delete_unmanaged_metadata_profiles;
   }
 
+  // Collectives accumulate across templates so a later include cannot drop what an earlier one
+  // contributed; the instance config still overrides, since it runs last.
+  if (template.tags) {
+    mergedTemplates.tags = [...new Set([...(mergedTemplates.tags ?? []), ...template.tags])];
+  }
+
+  if (template.delete_unmanaged_tags) {
+    mergedTemplates.delete_unmanaged_tags = {
+      enabled: template.delete_unmanaged_tags.enabled,
+      ignore: [...new Set([...(mergedTemplates.delete_unmanaged_tags?.ignore ?? []), ...(template.delete_unmanaged_tags.ignore ?? [])])],
+    };
+  }
+
   if (template.media_management) {
     mergedTemplates.media_management = { ...mergedTemplates.media_management, ...template.media_management };
   }
@@ -822,6 +835,21 @@ export const mergeConfigsAndTemplates = async (
 
   if (instanceConfig.delete_unmanaged_quality_profiles) {
     mergedTemplates.delete_unmanaged_quality_profiles = instanceConfig.delete_unmanaged_quality_profiles;
+  }
+
+  // Instance labels win over a template's, matching delay_profiles.
+  if (instanceConfig.tags) {
+    mergedTemplates.tags = instanceConfig.tags;
+  }
+
+  // Unions the ignore lists: a template's protected tags stay protected when an instance adds its own.
+  if (instanceConfig.delete_unmanaged_tags) {
+    mergedTemplates.delete_unmanaged_tags = {
+      enabled: instanceConfig.delete_unmanaged_tags.enabled,
+      ignore: [
+        ...new Set([...(mergedTemplates.delete_unmanaged_tags?.ignore ?? []), ...(instanceConfig.delete_unmanaged_tags.ignore ?? [])]),
+      ],
+    };
   }
 
   if (instanceConfig.quality_profiles) {

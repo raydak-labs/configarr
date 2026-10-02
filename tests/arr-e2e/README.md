@@ -47,19 +47,19 @@ Override with `SONARR_BASE_URL`, `SONARR_API_KEY`, …, `PROWLARR_BASE_URL`, `PR
 
 ## File map
 
-| File                   | Role                                                                     |
-| ---------------------- | ------------------------------------------------------------------------ |
-| `docker-compose.yml`   | Five media *arr + Prowlarr + FlareSolverr                                |
-| `globalSetup.ts`       | Wait for every API, warm the template repo clone                         |
-| `helpers.ts`           | Clients, configarr runner, assertions, cleanup, snapshot/restore         |
-| `config.ts`            | Only the config fragments that are identical for every *arr              |
-| `sonarr.e2e.test.ts`   | All Sonarr features + Recyclarr `WEB-1080p` include                      |
-| `radarr.e2e.test.ts`   | All Radarr features + Recyclarr `HD Bluray + WEB` include                |
-| `whisparr.e2e.test.ts` | All Whisparr features                                                    |
-| `readarr.e2e.test.ts`  | All Readarr features + metadata profiles, object root folders            |
-| `lidarr.e2e.test.ts`   | All Lidarr features + metadata profiles, `items[]` delay profiles (#481) |
-| `prowlarr.e2e.test.ts` | Tags, sync profiles, proxies, indexers, applications, download clients   |
-| `pipeline.e2e.test.ts` | All six instances in one config.yml, twice                               |
+| File                   | Role                                                                                                                 |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `docker-compose.yml`   | Five media *arr + Prowlarr + FlareSolverr                                                                            |
+| `globalSetup.ts`       | Wait for every API, warm the template repo clone                                                                     |
+| `helpers.ts`           | Clients, configarr runner, assertions, cleanup, snapshot/restore                                                     |
+| `config.ts`            | Only the config fragments that are identical for every *arr                                                          |
+| `sonarr.e2e.test.ts`   | All Sonarr features + Recyclarr `WEB-1080p` include                                                                  |
+| `radarr.e2e.test.ts`   | All Radarr features + Recyclarr `HD Bluray + WEB` include                                                            |
+| `whisparr.e2e.test.ts` | All Whisparr features                                                                                                |
+| `readarr.e2e.test.ts`  | All Readarr features + metadata profiles, object root folders                                                        |
+| `lidarr.e2e.test.ts`   | All Lidarr features + metadata profiles, `items[]` delay profiles (#481)                                             |
+| `prowlarr.e2e.test.ts` | Tags, sync profiles, proxies, indexers, applications, download clients                                               |
+| `pipeline.e2e.test.ts` | All six instances in one config.yml, twice, plus the cross-cutting instance `tags:` / `delete_unmanaged_tags:` block |
 
 Per-*arr files are deliberately duplicated instead of generated from a shared factory: the payloads differ per app, and `if (kind === …)` in a test hides which app is actually being asserted. Only *arr-agnostic code is shared (`helpers.ts`, `config.ts`).
 
@@ -79,14 +79,14 @@ Feature × arr × create / update / delete / idempotent (second run Diff Report 
 | Download clients (blackhole)   | CUDI     | CUDI     | CUDI     | CUDI     | CUDI     | CUDI     |
 | DC config / remote paths       | CUI / CD | CUI / CD | CUI / CD | CUI / CD | CUI / CD | —        |
 | Metadata profiles              | —        | —        | —        | CUDI     | CUDI     | —        |
-| Tags                           | —        | —        | —        | —        | —        | CDI      |
+| Tags                           | CDI      | —        | —        | —        | —        | CDI      |
 | Sync profiles                  | —        | —        | —        | —        | —        | CUDI     |
 | Applications                   | —        | —        | —        | —        | —        | CUDI     |
 | Indexer proxies (FlareSolverr) | —        | —        | —        | —        | —        | CUDI     |
 | Indexers                       | —        | —        | —        | —        | —        | CUDI     |
 | TRaSH/Recyclarr templates      | C        | C        | —        | —        | —        | —        |
 
-Letters = asserted GET after a configarr write/omit. Root-folder **update** for Sonarr/Radarr/Whisparr is N/A (path identity). Lidarr/Readarr update the folder `name` via YAML. Tags have no update API. Download clients and indexers stay `enable: false` (configuration only; no live download/search). DC **U** is `priority`. The delay-profile mapper is additionally exercised directly per *arr (legacy payload, or `items[]` for Lidarr).
+Letters = asserted GET after a configarr write/omit. Root-folder **update** for Sonarr/Radarr/Whisparr is N/A (path identity). Lidarr/Readarr update the folder `name` via YAML. Tags have no update API. Media-arr **CD** is the instance `tags:` / `delete_unmanaged_tags:` block, asserted once on Sonarr in `pipeline.e2e.test.ts` rather than duplicated per \*arr: it drops a seeded orphan tag while keeping a label listed in `tags` and a label referenced only by a managed delay profile. It is the same schema on all five, so the other four are not re-asserted. Download clients and indexers stay `enable: false` (configuration only; no live download/search). DC **U** is `priority`. The delay-profile mapper is additionally exercised directly per *arr (legacy payload, or `items[]` for Lidarr).
 
 ## Rules for new sync features
 
@@ -105,3 +105,4 @@ Letters = asserted GET after a configarr write/omit. Root-folder **update** for 
 - **TRaSH/Recyclarr templates** are a Sonarr/Radarr create-only smoke (`WEB-1080p` / `HD Bluray + WEB`). No CUDI.
 - **Whisparr 3.5.0 rejects its own default naming config** (`movieFolderFormat` / `sceneFolderFormat` must start with a literal subfolder, `sceneImportFolderFormat` must not be empty). A `PUT /config/naming` that carries those defaults 400s, so `media_naming_api` on Whisparr needs valid folder formats in the YAML. `restoreMediaBaseline` therefore skips writes that would not change anything.
 - **Prowlarr applications** point at the Sonarr and Radarr containers. Prowlarr may create indexers there; nothing in those files manages indexers, so it does not affect their assertions.
+- **In-use tags are never asserted against a live server.** A `delete_unmanaged_tags` run that hits a 409 needs a tag held by a resource configarr does not manage (import list, notification, indexer), and no client in this repo exposes those endpoints. The `onInUse: "skip"` and `onInUse: "throw"` policies are covered in `src/tags/tags.test.ts` instead.

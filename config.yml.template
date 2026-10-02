@@ -31,11 +31,22 @@ sonarr:
     # Custom Formats: https://recyclarr.dev/wiki/yaml/config-reference/custom-formats/
     custom_formats: []
 
+    # Tags: labels are created on the server when missing
+    # tags:
+    #   - configarr
+
+    # Delete server tags which are not listed in `tags` and not referenced by a managed feature
+    # delete_unmanaged_tags:
+    #   enabled: true
+    #   ignore:
+    #     - some-tag
+
 radarr:
   instance1:
     define: true
 
-# Experimental: Prowlarr (tags, applications, indexers, indexer proxies, download clients)
+# Experimental: Prowlarr (applications, indexers, indexer proxies, sync profiles, download clients)
+# Prowlarr instances also support the same tags/delete_unmanaged_tags block as the media instances.
 # See https://configarr.de/docs/configuration/experimental-support#prowlarr-v1
 #prowlarr:
 #  main:

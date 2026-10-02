@@ -3,7 +3,16 @@ import type { Mocked } from "vitest";
 import { MonitorTypes, NewItemMonitorTypes } from "../__generated__/lidarr/data-contracts";
 import { LidarrRootFolderApi, LidarrRootFolderSync } from "./rootFolderLidarr";
 import { ServerCache } from "../cache";
+import { getEnvs } from "../env";
 import { InputConfigRootFolderLidarr } from "../types/config.types";
+
+vi.mock("../env", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../env")>();
+  return {
+    ...actual,
+    getEnvs: vi.fn(() => ({ DRY_RUN: false, LOG_LEVEL: "fatal", CONFIGARR_VERSION: "test" })),
+  };
+});
 
 describe("LidarrRootFolderSync", () => {
   const mockApi: Mocked<LidarrRootFolderApi> = {
@@ -13,13 +22,16 @@ describe("LidarrRootFolderSync", () => {
     deleteRootFolder: vi.fn(),
     getMetadataProfiles: vi.fn(),
     getQualityProfiles: vi.fn(),
+    getTags: vi.fn(),
     createTag: vi.fn(),
+    deleteTag: vi.fn(),
   };
 
   let serverCache: ServerCache;
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(getEnvs).mockReturnValue({ DRY_RUN: false, LOG_LEVEL: "fatal", CONFIGARR_VERSION: "test" } as never);
     serverCache = new ServerCache();
     serverCache.tags = [];
     mockApi.getQualityProfiles.mockResolvedValue([
@@ -208,6 +220,68 @@ describe("LidarrRootFolderSync", () => {
         { id: 300, label: "nonexistent" },
       ]);
     });
+
+    it("should match existing tags case-insensitively", async () => {
+      serverCache.tags = [{ id: 100, label: "Existing" }];
+
+      const sync = new LidarrRootFolderSync(mockApi);
+      const result = await sync.resolveRootFolderConfig(
+        {
+          path: "/music",
+          name: "My Music",
+          metadata_profile: "Standard",
+          quality_profile: "Any",
+          tags: ["eXISTING"],
+        },
+        serverCache,
+      );
+
+      expect(mockApi.createTag).not.toHaveBeenCalled();
+      expect(result.defaultTags).toEqual([100]);
+    });
+
+    it("should not create tags on a dry run and resolve placeholder ids", async () => {
+      vi.mocked(getEnvs).mockReturnValue({ DRY_RUN: true, LOG_LEVEL: "fatal", CONFIGARR_VERSION: "test" } as never);
+      serverCache.tags = [{ id: 100, label: "existing" }];
+
+      const sync = new LidarrRootFolderSync(mockApi);
+      const result = await sync.resolveRootFolderConfig(
+        {
+          path: "/music",
+          name: "My Music",
+          metadata_profile: "Standard",
+          quality_profile: "Any",
+          tags: ["existing", "new-tag"],
+        },
+        serverCache,
+      );
+
+      expect(mockApi.createTag).not.toHaveBeenCalled();
+      expect(result.defaultTags).toEqual([100, -1]);
+      // The synthetic id must never reach the server cache.
+      expect(serverCache.tags).toEqual([{ id: 100, label: "existing" }]);
+    });
+
+    it("should keep a placeholder id stable across resolves on a dry run", async () => {
+      vi.mocked(getEnvs).mockReturnValue({ DRY_RUN: true, LOG_LEVEL: "fatal", CONFIGARR_VERSION: "test" } as never);
+      serverCache.tags = [{ id: 100, label: "other" }];
+
+      const sync = new LidarrRootFolderSync(mockApi);
+      const config: InputConfigRootFolderLidarr = {
+        path: "/music",
+        name: "My Music",
+        metadata_profile: "Standard",
+        quality_profile: "Any",
+        tags: ["new-tag"],
+      };
+
+      const first = await sync.resolveRootFolderConfig(config, serverCache);
+      const second = await sync.resolveRootFolderConfig({ ...config, path: "/music2" }, serverCache);
+
+      expect(mockApi.createTag).not.toHaveBeenCalled();
+      expect(first.defaultTags).toEqual([-1]);
+      expect(second.defaultTags).toEqual([-1]);
+    });
   });
 
   describe("calculateDiff", () => {
@@ -302,6 +376,22 @@ describe("LidarrRootFolderSync", () => {
       );
 
       expect(result).toBeNull();
+    });
+
+    it("does not create tags while calculating a dry-run diff", async () => {
+      vi.mocked(getEnvs).mockReturnValue({ DRY_RUN: true, LOG_LEVEL: "fatal", CONFIGARR_VERSION: "test" } as never);
+      mockApi.getRootfolders.mockResolvedValue([
+        { path: "/music", id: 1, name: "My Music", defaultMetadataProfileId: 10, defaultQualityProfileId: 1, defaultTags: [100] },
+      ]);
+
+      const sync = new LidarrRootFolderSync(mockApi);
+      await sync.calculateDiff(
+        [{ path: "/music", name: "My Music", metadata_profile: "Standard", quality_profile: "Any", tags: ["new-tag"] }],
+        serverCache,
+      );
+
+      expect(mockApi.createTag).not.toHaveBeenCalled();
+      expect(serverCache.tags).toEqual([]);
     });
   });
 });

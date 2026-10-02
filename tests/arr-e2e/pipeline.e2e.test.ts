@@ -13,10 +13,14 @@ import { SonarrClient } from "../../src/clients/sonarr-client";
 import { WhisparrClient } from "../../src/clients/whisparr-client";
 import {
   E2E_API_KEY,
+  E2E_TAG_LISTED,
+  E2E_TAG_ORPHAN,
+  E2E_TAG_REFERENCED,
   arrConnection,
   cfAssignBlock,
   e2eCustomFormatDefinition,
   e2eMediaSettings,
+  instanceTagBlock,
   mediaInstance,
   prowlarrConnection,
 } from "./config";
@@ -30,6 +34,7 @@ import {
   cleanupProwlarrE2e,
   createProwlarrClient,
   findNamed,
+  nonE2eLabels,
   restoreMediaBaseline,
   snapshotMediaBaseline,
   syncConfig,
@@ -180,5 +185,49 @@ describe("configarr full pipeline (live)", () => {
 
     expect((await prowlarr.getTags()).some((t) => t.label === "e2e-tag")).toBe(true);
     expect(findNamed(await prowlarr.getApplications(), "e2e-sonarr")).toBeTruthy();
+  }, 600_000);
+
+  // The instance-level `tags:` / `delete_unmanaged_tags:` block is cross-cutting, so it is
+  // asserted here once instead of in all five per-*arr files. The 409 case (a tag held by a
+  // resource configarr does not manage) is deliberately not attempted: no client in this repo
+  // exposes import lists or notifications, so it cannot be set up. See src/tags/tags.test.ts.
+  test("instance tags: block creates listed labels and delete_unmanaged_tags keeps referenced ones", async () => {
+    // Seed the orphan directly so the delete pass has something that is neither listed nor
+    // referenced by any managed feature.
+    await sonarr.createTag({ label: E2E_TAG_ORPHAN });
+
+    const keepLabels = nonE2eLabels(await sonarr.getTags());
+    const config = {
+      telemetry: false,
+      ...mediaInstance("SONARR", {
+        ...e2eMediaSettings(),
+        ...instanceTagBlock(keepLabels),
+      }),
+    };
+
+    const first = await syncConfig(config);
+    assertPipelineSucceeded(first.result, ["SONARR"]);
+
+    const afterFirst = await sonarr.getTags();
+    const labels = afterFirst.map((t) => t.label);
+    expect(labels).toContain(E2E_TAG_LISTED);
+    // Referenced only by the managed delay profile, never by `tags` or `ignore`.
+    expect(labels).toContain(E2E_TAG_REFERENCED);
+    expect(labels).not.toContain(E2E_TAG_ORPHAN);
+    for (const kept of keepLabels) {
+      expect(labels).toContain(kept);
+    }
+
+    // The delay profile carrying the referenced tag is the reason it survived the delete pass.
+    const delayTagId = afterFirst.find((t) => t.label === E2E_TAG_REFERENCED)?.id;
+    if (delayTagId == null) {
+      throw new Error(`Tag '${E2E_TAG_REFERENCED}' was not created`);
+    }
+    const profiles = await sonarr.getDelayProfiles();
+    expect(profiles.some((p) => Array.isArray(p.tags) && p.tags.includes(delayTagId))).toBe(true);
+
+    const second = await syncConfig(config, first.workspace);
+    assertPipelineSucceeded(second.result, ["SONARR"]);
+    assertDiffUpToDate(second.result, ["SONARR"]);
   }, 600_000);
 });

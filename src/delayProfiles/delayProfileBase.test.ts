@@ -1,6 +1,12 @@
 import { describe, expect, test, vi } from "vitest";
 import { DownloadProtocol } from "../__generated__/sonarr/data-contracts";
-import { areTagsEqual, delayProfilesToDiffEntries, StandardDelayProfile, StandardDelayProfileSync } from "./delayProfileBase";
+import {
+  areTagsEqual,
+  delayProfilesToDiffEntries,
+  mapDelayProfileTags,
+  StandardDelayProfile,
+  StandardDelayProfileSync,
+} from "./delayProfileBase";
 
 const delayApi = {
   getDelayProfiles: vi.fn(),
@@ -336,5 +342,99 @@ describe("areTagsEqual", () => {
     expect(areTagsEqual(left, right)).toBe(true);
     expect(left).toEqual([3, 1, 2]);
     expect(right).toEqual([2, 3, 1]);
+  });
+});
+
+describe("tag matching", () => {
+  test("mapDelayProfileTags matches labels case-insensitively", () => {
+    expect(mapDelayProfileTags({ tags: ["Test", "other"] }, [{ id: 1, label: "test" }])).toEqual([1]);
+  });
+
+  test("mapDelayProfileTags drops labels the server does not have", () => {
+    expect(mapDelayProfileTags({ tags: ["test", "missing"] }, [{ id: 1, label: "test" }])).toEqual([1]);
+  });
+
+  test("a case-variant label is not reported as missing", async () => {
+    const configProfiles = {
+      default: {
+        enableUsenet: true,
+        enableTorrent: false,
+        preferredProtocol: "usenet",
+        usenetDelay: 20,
+        torrentDelay: 0,
+        tags: ["Test"],
+      },
+    };
+
+    delayApi.getDelayProfiles.mockResolvedValue([
+      {
+        id: 7,
+        enableUsenet: true,
+        enableTorrent: false,
+        preferredProtocol: "usenet" as any,
+        usenetDelay: 10,
+        torrentDelay: 0,
+        bypassIfHighestQuality: false,
+        bypassIfAboveCustomFormatScore: false,
+        minimumCustomFormatScore: 0,
+        order: 1,
+        tags: [],
+      },
+    ]);
+
+    const diff = await sonarrDelay().calculateDiff(configProfiles, [{ id: 1, label: "test" }]);
+
+    expect(diff?.missingTags).toEqual([]);
+  });
+
+  test("a case-variant label in an additional profile does not report a tag change", async () => {
+    const configProfiles = {
+      additional: [
+        {
+          enableUsenet: true,
+          enableTorrent: false,
+          preferredProtocol: "usenet",
+          usenetDelay: 10,
+          torrentDelay: 0,
+          bypassIfHighestQuality: false,
+          bypassIfAboveCustomFormatScore: false,
+          minimumCustomFormatScore: 0,
+          order: 2,
+          tags: ["Test"],
+        },
+      ],
+    };
+
+    delayApi.getDelayProfiles.mockResolvedValue([
+      {
+        enableUsenet: true,
+        enableTorrent: false,
+        preferredProtocol: "usenet" as any,
+        usenetDelay: 10,
+        torrentDelay: 0,
+        bypassIfHighestQuality: false,
+        bypassIfAboveCustomFormatScore: false,
+        minimumCustomFormatScore: 0,
+        order: 1,
+        tags: [],
+      },
+      {
+        id: 1,
+        enableUsenet: true,
+        enableTorrent: false,
+        preferredProtocol: "usenet" as any,
+        usenetDelay: 10,
+        torrentDelay: 0,
+        bypassIfHighestQuality: false,
+        bypassIfAboveCustomFormatScore: false,
+        minimumCustomFormatScore: 0,
+        order: 2,
+        tags: [1],
+      },
+    ]);
+
+    const diff = await sonarrDelay().calculateDiff(configProfiles, [{ id: 1, label: "test" }]);
+
+    expect(diff).toBeNull();
   });
 });

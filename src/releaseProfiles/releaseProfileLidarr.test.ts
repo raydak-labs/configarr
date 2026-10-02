@@ -11,6 +11,7 @@ const api = {
   deleteReleaseProfile: vi.fn(),
   getTags: vi.fn(),
   createTag: vi.fn(),
+  deleteTag: vi.fn(),
   getIndexers: vi.fn(),
 };
 

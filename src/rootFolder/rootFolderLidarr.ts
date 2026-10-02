@@ -1,7 +1,9 @@
-import { MonitorTypes, NewItemMonitorTypes, RootFolderResource, TagResource } from "../__generated__/lidarr/data-contracts";
+import { MonitorTypes, NewItemMonitorTypes, RootFolderResource } from "../__generated__/lidarr/data-contracts";
 import { ServerCache } from "../cache";
 import type { MetadataProfilesClient, QualityProfilesClient, RootFoldersClient, TagsClient } from "../clients/capabilities";
 import { FieldChange } from "../diffReport/diffReport.types";
+import { getEnvs } from "../env";
+import { buildTagPlaceholders, ensureTags } from "../tags/tags";
 import { InputConfigRootFolderLidarr } from "../types/config.types";
 import { compareObjectsCarr, toEnumOrThrow } from "../util";
 import { RootFolderDiff } from "./rootFolder.types";
@@ -13,7 +15,7 @@ type NamedProfile = { name?: string | null; id?: number };
 export type LidarrRootFolderApi = RootFoldersClient<RootFolderResource> &
   Pick<QualityProfilesClient<NamedProfile>, "getQualityProfiles"> &
   Pick<MetadataProfilesClient<NamedProfile>, "getMetadataProfiles"> &
-  Pick<TagsClient, "createTag">;
+  TagsClient;
 
 export class LidarrRootFolderSync extends BaseRootFolderSync<InputConfigRootFolderLidarr> {
   private profileIdMaps: { quality: Map<string, number>; metadata: Map<string, number> } | null = null;
@@ -55,36 +57,17 @@ export class LidarrRootFolderSync extends BaseRootFolderSync<InputConfigRootFold
       throw new ConfigValidationError(`Quality profile '${config.quality_profile}' not found on Lidarr server`);
     }
 
-    // Resolve tag names to IDs, creating tags if they don't exist
-    const newTags: TagResource[] = [];
-    const defaultTags = config.tags
-      ? await Promise.all(
-          config.tags.map(async (tagName) => {
-            const existingTag = serverCache.tags.find((tag) => tag.label === tagName);
-            if (existingTag) {
-              return existingTag.id;
-            } else {
-              // Tag doesn't exist, create it
-              const newTag = await this.api.createTag({ label: tagName });
-              newTags.push(newTag);
-              this.logger.info(`Created new tag '${tagName}' with ID ${newTag.id}`);
-              return newTag.id!;
-            }
-          }),
-        )
-      : [];
-
-    // Update serverCache with new tags
-    if (newTags.length > 0) {
-      serverCache.tags.push(...newTags);
-    }
+    // Also runs on a dry run, where a placeholder id keeps `defaultTags` comparable.
+    const tagNames = config.tags ?? [];
+    const placeholders = getEnvs().DRY_RUN ? buildTagPlaceholders(tagNames, serverCache.tags) : undefined;
+    const { ids: defaultTags } = await ensureTags(this.api, serverCache, tagNames, { placeholders });
 
     const result: RootFolderResource = {
       path: config.path,
       name,
       defaultMetadataProfileId: metadataProfileId,
       defaultQualityProfileId: qualityProfileId,
-      defaultTags: defaultTags.filter((id: number | undefined): id is number => id !== undefined),
+      defaultTags,
     };
 
     if (config.monitor) {

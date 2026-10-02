@@ -28,7 +28,8 @@ import { BaseReleaseProfileSync } from "../releaseProfiles/releaseProfileBase";
 import { ReleaseProfileShared } from "../releaseProfiles/releaseProfile.types";
 import { syncRemotePaths } from "../remotePaths/remotePathSyncer";
 import { BaseRootFolderSync } from "../rootFolder/rootFolderBase";
-import { loadServerTags } from "../tags/tags";
+import { TagDeletionError } from "../tags/tag.types";
+import { deleteUnmanagedInstanceTags, ensureTags, loadServerTags, syncInstanceTags } from "../tags/tags";
 import { getTelemetryInstance, Telemetry } from "../telemetry";
 import { MediaArrType } from "../types/common.types";
 import { InputConfigArrInstance, InputConfigSchema, MergedConfigInstance } from "../types/config.types";
@@ -165,6 +166,9 @@ export const runMediaSyncToQualityProfiles = async <T extends MediaArrType>(
   // load tags
   const serverTags = await loadServerTags(client);
   serverCache.tags = serverTags;
+
+  // Up front so every feature below can resolve tags by the time it runs.
+  collector.add((await syncInstanceTags(client, serverCache, config.tags)).diffEntries);
 
   if (config.quality_definition != null) {
     const mergedQDs: TrashQualityDefinitionQuality[] = [];
@@ -327,12 +331,8 @@ export const completeMediaSync = async <T extends MediaArrType>(ctx: MediaSyncCo
         logger.info("DryRun: Would update DelayProfiles.");
       } else {
         if (delayProfilesDiff.missingTags.length > 0) {
-          logger.info(`Creating missing tags on server: ${delayProfilesDiff.missingTags.join(", ")}`);
           try {
-            for (const tagName of delayProfilesDiff.missingTags) {
-              const newTag = await client.createTag({ label: tagName });
-              serverCache.tags.push(newTag);
-            }
+            await ensureTags(client, serverCache, delayProfilesDiff.missingTags);
           } catch (err: unknown) {
             const message = err instanceof Error ? err.message : String(err);
             logger.error(`Failed creating tags: ${message}`);
@@ -367,16 +367,19 @@ export const completeMediaSync = async <T extends MediaArrType>(ctx: MediaSyncCo
   }
 
   // Download Clients
+  let downloadClientsFailed = false;
   if (config.download_clients?.data || config.download_clients?.delete_unmanaged?.enabled) {
     try {
       const downloadClientsResult = await syncs.downloadClients.syncDownloadClients(config, serverCache);
       collector.add(downloadClientsResult.diffEntries);
+      downloadClientsFailed = downloadClientsResult.failed > 0;
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
       logger.error(`Failed to sync download clients: ${message}`);
       if (err instanceof ConfigValidationError) {
         throw err;
       }
+      downloadClientsFailed = true;
     }
   }
 
@@ -410,6 +413,43 @@ export const completeMediaSync = async <T extends MediaArrType>(ctx: MediaSyncCo
     }
   } else {
     logger.debug(`[DEBUG] No remote paths to sync for ${arrType}. download_clients: ${JSON.stringify(config.download_clients)}`);
+  }
+
+  // Tag cleanup runs last, after every resource that can hold a tag has been synced.
+  if (config.delete_unmanaged_tags?.enabled) {
+    if (downloadClientsFailed) {
+      logger.warn(
+        `Skipping unmanaged tag cleanup: download client sync reported failures. A download client may still hold a tag this run would delete.`,
+      );
+    } else {
+      try {
+        const tagResult = await deleteUnmanagedInstanceTags(client, serverCache, {
+          deleteConfig: config.delete_unmanaged_tags,
+          instanceLabels: config.tags,
+          referencedTagLists: [
+            config.delay_profiles?.default?.tags,
+            config.delay_profiles?.additional?.flatMap((profile) => profile.tags ?? []),
+            config.release_profiles?.flatMap((profile) => profile.tags ?? []),
+            // Only the object form of `root_folders` carries tags.
+            config.root_folders?.filter((folder) => typeof folder !== "string").flatMap((folder) => folder.tags ?? []),
+            config.download_clients?.data?.flatMap((downloadClient) => downloadClient.tags ?? []),
+          ],
+          onInUse: "skip",
+        });
+        collector.add(tagResult.diffEntries);
+      } catch (err: unknown) {
+        // Everything else is already applied, so keep the report instead of throwing.
+        const message = err instanceof Error ? err.message : String(err);
+        logger.error(`Failed to delete unmanaged tags: ${message}`);
+        if (err instanceof ConfigValidationError) {
+          throw err;
+        }
+        // Deletions before the failure really happened; still report them.
+        if (err instanceof TagDeletionError) {
+          collector.add(err.partial.diffEntries);
+        }
+      }
+    }
   }
 
   return { arrType, instanceName, entries: collector.getEntries() };

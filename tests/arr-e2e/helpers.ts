@@ -308,6 +308,11 @@ export function nonE2eNames<T extends { name?: string | null }>(items: T[]): str
   return items.map((item) => item.name).filter((name): name is string => !!name && !isE2eName(name));
 }
 
+/** `nonE2eNames` for tags, which are keyed by `label` rather than `name`. */
+export function nonE2eLabels<T extends { label?: string | null }>(items: T[]): string[] {
+  return items.map((item) => item.label).filter((label): label is string => !!label && !isE2eName(label));
+}
+
 function isNotFoundError(err: unknown): boolean {
   const status = (err as { response?: { status?: number } }).response?.status;
   if (status === 404) return true;

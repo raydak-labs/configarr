@@ -21,6 +21,7 @@ const api = {
   deleteReleaseProfile: vi.fn(),
   getTags: vi.fn(),
   createTag: vi.fn(),
+  deleteTag: vi.fn(),
   getIndexers: vi.fn(),
 };
 
@@ -35,6 +36,7 @@ beforeEach(() => {
   api.createReleaseProfile.mockResolvedValue({});
   api.updateReleaseProfile.mockResolvedValue({});
   api.deleteReleaseProfile.mockResolvedValue(undefined);
+  api.deleteTag.mockResolvedValue(undefined);
   api.createTag.mockImplementation(async (tag: { label: string }) => ({ id: 50, label: tag.label }));
   api.getIndexers.mockResolvedValue([{ id: 7, name: "MyIndexer" }]);
 });
@@ -135,6 +137,27 @@ describe("ReleaseProfiles", () => {
     expect(api.createReleaseProfile).toHaveBeenCalledWith(expect.objectContaining({ tags: [1, 50] }));
   });
 
+  test("matches tag labels case-insensitively", async () => {
+    api.getReleaseProfiles.mockResolvedValue([]);
+
+    const serverCache = cache([{ id: 1, label: "Existing" }]);
+    await namedSync().sync([{ name: "HEVC", required: ["hevc"], tags: ["eXISTING"] }], serverCache);
+
+    expect(api.createTag).not.toHaveBeenCalled();
+    expect(api.createReleaseProfile).toHaveBeenCalledWith(expect.objectContaining({ tags: [1] }));
+  });
+
+  test("creates a new tag with the label exactly as configured", async () => {
+    api.getReleaseProfiles.mockResolvedValue([]);
+
+    const serverCache = cache();
+    await namedSync().sync([{ name: "HEVC", required: ["hevc"], tags: ["MyTag"] }], serverCache);
+
+    // Casing must survive: the label the user wrote is the label the server gets.
+    expect(api.createTag).toHaveBeenCalledWith({ label: "MyTag" });
+    expect(api.createReleaseProfile).toHaveBeenCalledWith(expect.objectContaining({ tags: [expect.any(Number)] }));
+  });
+
   test("resolves indexer name from a single cached load", async () => {
     api.getReleaseProfiles.mockResolvedValue([]);
     const serverCache = cache();
@@ -178,6 +201,34 @@ describe("ReleaseProfiles", () => {
         cache(),
       ),
     ).rejects.toBeInstanceOf(ConfigValidationError);
+    expect(api.createTag).not.toHaveBeenCalled();
+  });
+
+  test("validates duplicate profiles before creating any tag", async () => {
+    api.getReleaseProfiles.mockResolvedValue([]);
+
+    const sync = namedSync();
+    await expect(
+      sync.sync(
+        [
+          { name: "HEVC", required: ["hevc"], tags: ["dup-a"] },
+          { name: "HEVC", required: ["hevc"], tags: ["dup-b"] },
+        ],
+        cache(),
+      ),
+    ).rejects.toBeInstanceOf(ConfigValidationError);
+
+    expect(api.createTag).not.toHaveBeenCalled();
+    expect(api.createReleaseProfile).not.toHaveBeenCalled();
+  });
+
+  test("validates unknown indexer names before creating any tag", async () => {
+    api.getReleaseProfiles.mockResolvedValue([]);
+
+    await expect(namedSync().sync([{ name: "HEVC", indexer: "Missing", tags: ["new-tag"] }], cache())).rejects.toBeInstanceOf(
+      ConfigValidationError,
+    );
+
     expect(api.createTag).not.toHaveBeenCalled();
   });
 
