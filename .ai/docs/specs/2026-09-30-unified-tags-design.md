@@ -67,6 +67,14 @@ Prowlarr: same two stage functions, called from `syncProwlarrProviders` and `Pro
 its own `referencedTagLists` and `onInUse: "throw"`. The client is threaded in rather than
 resolved; the pre-prune tag reload stays in `prowlarrSyncer.ts`.
 
+## Templates
+
+A template may contribute `tags` labels and `delete_unmanaged_tags.ignore`, but never
+`delete_unmanaged_tags.enabled`: an imported Recyclarr/URL template must not be able to turn on tag
+deletion. Ignore lists union across templates and the instance. Both keys must be carried by
+`mergeConfigsAndTemplates` on the template _and_ the instance side, plus `MappedTemplates` — adding
+the Zod key alone leaves the feature silently inert for any config file or template.
+
 ## Out of scope
 
 Tag CRUD beyond ensure/prune, a server-side "what holds this tag" sweep, removing numeric ids,

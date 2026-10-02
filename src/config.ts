@@ -426,6 +426,20 @@ const includeRecyclarrTemplate = (
     mergedTemplates.delete_unmanaged_metadata_profiles = template.delete_unmanaged_metadata_profiles;
   }
 
+  if (template.tags) {
+    mergedTemplates.tags = template.tags;
+  }
+
+  // A template may only protect labels, never enable deletion: an imported Recyclarr/URL
+  // template must not be able to turn on tag deletion. Its ignore list still has to survive,
+  // or an instance that enables cleanup would delete labels the template reserved.
+  if (template.delete_unmanaged_tags?.ignore) {
+    mergedTemplates.delete_unmanaged_tags = {
+      enabled: mergedTemplates.delete_unmanaged_tags?.enabled ?? false,
+      ignore: [...new Set([...(mergedTemplates.delete_unmanaged_tags?.ignore ?? []), ...template.delete_unmanaged_tags.ignore])],
+    };
+  }
+
   if (template.media_management) {
     mergedTemplates.media_management = { ...mergedTemplates.media_management, ...template.media_management };
   }

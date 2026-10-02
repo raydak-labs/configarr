@@ -430,6 +430,47 @@ describe("mergeConfigsAndTemplates", () => {
     expect(result.config.delete_unmanaged_tags).toEqual({ enabled: true, ignore: ["keep-me"] });
   });
 
+  test("merges a template's tag labels and ignore list, but never lets it enable cleanup", async () => {
+    // A template may protect labels but not switch on deletion: an imported Recyclarr/URL
+    // template must not be able to enable tag deletion. Dropping its ignore list the other way
+    // would let an instance delete labels the template reserved.
+    const templates: Map<string, MappedTemplates> = new Map([
+      [
+        "tagged",
+        {
+          tags: ["from-template"],
+          delete_unmanaged_tags: { enabled: true, ignore: ["template-protected"] },
+        } as MappedTemplates,
+      ],
+    ]);
+    vi.spyOn(reclarrImporter, "loadRecyclarrTemplates").mockReturnValue(templates);
+    vi.spyOn(localImporter, "loadLocalRecyclarrTemplate").mockReturnValue(new Map());
+    vi.spyOn(trashGuide, "loadQPFromTrash").mockReturnValue(Promise.resolve(new Map()));
+    vi.spyOn(trashGuide, "loadTrashCustomFormatGroups").mockReturnValue(Promise.resolve(new Map()));
+
+    const base: InputConfigArrInstance = {
+      api_key: "test",
+      base_url: "http://sonarr:8989",
+      include: [{ template: "tagged", source: "RECYCLARR" }],
+    };
+
+    // The template's own `enabled: true` is ignored; only its labels and ignore survive.
+    const templateOnly = await mergeConfigsAndTemplates({}, base, "SONARR");
+    expect(templateOnly.config.tags).toEqual(["from-template"]);
+    expect(templateOnly.config.delete_unmanaged_tags).toEqual({ enabled: false, ignore: ["template-protected"] });
+
+    // The instance enables cleanup; the template's protected label is still kept.
+    const withInstance = await mergeConfigsAndTemplates(
+      {},
+      { ...base, delete_unmanaged_tags: { enabled: true, ignore: ["instance-protected"] } },
+      "SONARR",
+    );
+    expect(withInstance.config.delete_unmanaged_tags).toEqual({
+      enabled: true,
+      ignore: ["template-protected", "instance-protected"],
+    });
+  });
+
   test("filters Recyclarr release profiles and warns", async () => {
     vi.spyOn(reclarrImporter, "loadRecyclarrTemplates").mockReturnValue(new Map());
     vi.spyOn(localImporter, "loadLocalRecyclarrTemplate").mockReturnValue(new Map());
