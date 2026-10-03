@@ -387,4 +387,41 @@ describe("ReadarrRootFolderSync", () => {
       expect(result).toBeNull();
     });
   });
+
+  describe("syncRootFolders", () => {
+    it("updates changed folders by their server id with the resolved config", async () => {
+      mockApi.getRootfolders.mockResolvedValue([
+        {
+          path: "/books",
+          id: 1,
+          name: "Old Name",
+          defaultMetadataProfileId: 10,
+          defaultQualityProfileId: 1,
+          defaultMonitorOption: MonitorTypes.All,
+          defaultNewItemMonitorOption: NewItemMonitorTypes.All,
+          defaultTags: [],
+        },
+      ]);
+      mockApi.updateRootFolder.mockResolvedValue(undefined);
+
+      const result = await new ReadarrRootFolderSync(mockApi).syncRootFolders(
+        [{ path: "/books", name: "New Name", metadata_profile: "Standard", quality_profile: "eBook" }],
+        serverCache,
+      );
+
+      expect(mockApi.updateRootFolder).toHaveBeenCalledTimes(1);
+      expect(mockApi.updateRootFolder).toHaveBeenCalledWith("1", {
+        path: "/books",
+        name: "New Name",
+        defaultMetadataProfileId: 10,
+        defaultQualityProfileId: 1,
+        defaultTags: [],
+      });
+      expect(result.updated).toBe(1);
+      expect(result.added).toBe(0);
+      expect(result.removed).toBe(0);
+      expect(result.diffEntries).toHaveLength(1);
+      expect(result.diffEntries[0]).toMatchObject({ resourceType: "RootFolder", name: "/books", action: "update" });
+    });
+  });
 });
