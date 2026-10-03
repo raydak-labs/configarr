@@ -3,7 +3,19 @@ import type { Mocked } from "vitest";
 import { MonitorTypes, NewItemMonitorTypes } from "../__generated__/readarr/data-contracts";
 import { ReadarrRootFolderApi, ReadarrRootFolderSync } from "./rootFolderReadarr";
 import { ServerCache } from "../cache";
+import { getEnvs } from "../env";
 import { InputConfigRootFolderReadarr } from "../types/config.types";
+
+vi.mock("../env", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../env")>();
+  return {
+    ...actual,
+    getEnvs: vi.fn(() => ({ DRY_RUN: false, LOG_LEVEL: "silent", CONFIGARR_VERSION: "test" })),
+  };
+});
+
+const setDryRun = (dryRun: boolean) =>
+  vi.mocked(getEnvs).mockReturnValue({ DRY_RUN: dryRun, LOG_LEVEL: "silent", CONFIGARR_VERSION: "test" } as never);
 
 describe("ReadarrRootFolderSync", () => {
   const mockApi: Mocked<ReadarrRootFolderApi> = {
@@ -20,6 +32,7 @@ describe("ReadarrRootFolderSync", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    setDryRun(false);
     serverCache = new ServerCache();
     serverCache.tags = [];
     mockApi.getQualityProfiles.mockResolvedValue([
@@ -208,9 +221,8 @@ describe("ReadarrRootFolderSync", () => {
       );
     });
 
-    it("should create missing tags", async () => {
+    it("does not create tags while resolving, it uses placeholder ids", async () => {
       serverCache.tags = [{ id: 100, label: "existing" }];
-      mockApi.createTag.mockResolvedValue({ id: 300, label: "nonexistent" });
 
       const sync = new ReadarrRootFolderSync(mockApi);
       const config: InputConfigRootFolderReadarr = {
@@ -223,18 +235,73 @@ describe("ReadarrRootFolderSync", () => {
 
       const result = await sync.resolveRootFolderConfig(config, serverCache);
 
+      expect(mockApi.createTag).not.toHaveBeenCalled();
+      expect(serverCache.tags).toEqual([{ id: 100, label: "existing" }]);
+      expect(result.defaultTags?.[0]).toBe(100);
+      // Placeholder ids are negative so they can never match a real server id.
+      expect(result.defaultTags?.[1]).toBeLessThan(0);
+    });
+  });
+
+  describe("syncRootFolders", () => {
+    it("creates missing tags before persisting the folder", async () => {
+      serverCache.tags = [{ id: 100, label: "existing" }];
+      mockApi.createTag.mockResolvedValue({ id: 300, label: "nonexistent" });
+      mockApi.getRootfolders.mockResolvedValue([]);
+
+      const sync = new ReadarrRootFolderSync(mockApi);
+      const result = await sync.syncRootFolders(
+        [
+          {
+            path: "/books",
+            name: "My Books",
+            metadata_profile: "Standard",
+            quality_profile: "eBook",
+            tags: ["existing", "nonexistent"],
+          },
+        ],
+        serverCache,
+      );
+
       expect(mockApi.createTag).toHaveBeenCalledWith({ label: "nonexistent" });
-      expect(result).toEqual({
-        path: "/books",
-        name: "My Books",
-        defaultMetadataProfileId: 10,
-        defaultQualityProfileId: 1,
-        defaultTags: [100, 300],
-      });
-      expect(serverCache.tags).toEqual([
-        { id: 100, label: "existing" },
-        { id: 300, label: "nonexistent" },
+      expect(mockApi.addRootFolder).toHaveBeenCalledWith(expect.objectContaining({ defaultTags: [100, 300] }));
+      expect(result.added).toBe(1);
+    });
+
+    it("creates no tags during a dry run", async () => {
+      setDryRun(true);
+      serverCache.tags = [{ id: 100, label: "existing" }];
+      mockApi.getRootfolders.mockResolvedValue([
+        {
+          path: "/books",
+          id: 1,
+          name: "My Books",
+          defaultMetadataProfileId: 10,
+          defaultQualityProfileId: 1,
+          defaultTags: [100],
+        },
       ]);
+
+      const sync = new ReadarrRootFolderSync(mockApi);
+      const result = await sync.syncRootFolders(
+        [
+          {
+            path: "/books",
+            name: "My Books",
+            metadata_profile: "Standard",
+            quality_profile: "eBook",
+            tags: ["existing", "nonexistent"],
+          },
+        ],
+        serverCache,
+      );
+
+      expect(mockApi.createTag).not.toHaveBeenCalled();
+      expect(mockApi.addRootFolder).not.toHaveBeenCalled();
+      expect(mockApi.updateRootFolder).not.toHaveBeenCalled();
+      expect(serverCache.tags).toEqual([{ id: 100, label: "existing" }]);
+      // The missing tag still shows up as a change so the dry run reports the work it would do.
+      expect(result.updated).toBe(1);
     });
   });
 
