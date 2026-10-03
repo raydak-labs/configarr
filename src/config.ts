@@ -1111,7 +1111,9 @@ export const mergeConfigsAndTemplates = async (
   }
 
   const validatedConfig = validateConfig(mergedTemplates);
-  logger.debug(`Merged config: '${JSON.stringify(validatedConfig)}'`);
+  // Log the shape only: the merged config carries download client `fields`, which hold
+  // plaintext passwords and API keys, and debug output routinely ends up in bug reports.
+  logger.debug(`Merged config sections: '${Object.keys(validatedConfig).join(", ")}'`);
 
   /*
   TODO: do we want to load all available local templates or only the included ones in the instance?

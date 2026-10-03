@@ -409,7 +409,10 @@ export const completeMediaSync = async <T extends MediaArrType>(ctx: MediaSyncCo
       }
     }
   } else {
-    logger.debug(`[DEBUG] No remote paths to sync for ${arrType}. download_clients: ${JSON.stringify(config.download_clients)}`);
+    // Keys only: `config.download_clients.data[].fields` holds plaintext secrets.
+    logger.debug(
+      `[DEBUG] No remote paths to sync for ${arrType}. download_clients keys: '${Object.keys(config.download_clients ?? {}).join(", ")}'`,
+    );
   }
 
   return { arrType, instanceName, entries: collector.getEntries() };

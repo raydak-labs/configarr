@@ -373,6 +373,32 @@ describe("mergeConfigsAndTemplates", () => {
     expect(loggerWarnSpy.mock.calls.some((call) => String(call[0]).includes("Recyclarr-style release_profiles"))).toBe(true);
   });
 
+  test("logs the merged config shape without leaking download client secrets", async () => {
+    vi.spyOn(reclarrImporter, "loadRecyclarrTemplates").mockReturnValue(new Map());
+    vi.spyOn(localImporter, "loadLocalRecyclarrTemplate").mockReturnValue(new Map());
+    vi.spyOn(trashGuide, "loadQPFromTrash").mockReturnValue(Promise.resolve(new Map()));
+    vi.spyOn(trashGuide, "loadTrashCustomFormatGroups").mockReturnValue(Promise.resolve(new Map()));
+    const loggerDebugSpy = vi.spyOn(logger, "debug").mockImplementation(() => undefined);
+
+    const inputConfig: InputConfigArrInstance = {
+      custom_formats: [],
+      quality_profiles: [],
+      api_key: "test",
+      base_url: "http://sonarr:8989",
+      download_clients: {
+        data: [{ name: "qBit", type: "qbittorrent", fields: { host: "qbittorrent", password: "SUPERSECRET123" } }],
+      },
+    };
+
+    await mergeConfigsAndTemplates({}, inputConfig, "SONARR");
+
+    const logged = loggerDebugSpy.mock.calls.map((call) => String(call[0])).join("\n");
+    expect(logged).toContain("download_clients");
+    expect(logged).not.toContain("SUPERSECRET123");
+
+    loggerDebugSpy.mockRestore();
+  });
+
   test("should handle missing templates gracefully", async () => {
     const fromConfig: ConfigQualityProfileItem[] = [{ name: "HDTV-1080p", enabled: false }];
 
