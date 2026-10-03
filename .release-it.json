@@ -2,7 +2,7 @@
   "npm": false,
   "git": {
     "commitMessage": "chore: release ${version}",
-    "requireCleanWorkingDir": false
+    "requireCleanWorkingDir": true
   },
   "github": {
     "release": true,

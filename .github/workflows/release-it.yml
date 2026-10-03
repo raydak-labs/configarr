@@ -2,11 +2,54 @@ name: release-it
 
 on:
   workflow_dispatch:
+    branches:
+      - main
 
 permissions: {}
 
 jobs:
+  # The tag pushed below immediately triggers the binary and Docker image releases,
+  # so the exact tree that is about to be tagged has to pass the repo's own gates first.
+  # This job runs without the releaser token on purpose: only `release` needs write access.
+  quality-gates:
+    name: Quality Gates
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Ensure release is cut from main
+        run: |
+          if [ "${GITHUB_REF}" != "refs/heads/main" ]; then
+            echo "::error::Releases may only be dispatched from main, got ${GITHUB_REF}"
+            exit 1
+          fi
+
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+        with:
+          version: latest
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: lts/*
+          cache: pnpm
+
+      - run: pnpm install
+
+      - run: pnpm typecheck
+
+      - run: pnpm lint
+
+      - run: pnpm test
+
+      - run: pnpm build
+
   release:
+    needs: quality-gates
     runs-on: ubuntu-latest
     permissions:
       contents: write
