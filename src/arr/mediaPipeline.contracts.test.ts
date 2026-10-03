@@ -20,6 +20,8 @@ describe("MediaFeatureSyncs", () => {
     // Sonarr and Radarr quality-profile resources differ (`Quality.source`), so a wrong-arr sync is rejected.
     expectTypeOf<QualityProfileRadarrSync>().not.toMatchTypeOf<MediaFeatureSyncs<"SONARR">["qp"]>();
 
+    // The remaining slots have no negative case on purpose: their generated resources are structurally
+    // identical across arrs, so a negative assertion here would be false. See MediaArrResources in mediaPipeline.
     expectTypeOf<SonarrDownloadClientSync>().toMatchTypeOf<MediaFeatureSyncs<"SONARR">["downloadClients"]>();
     expectTypeOf<ReleaseProfileSonarrSync>().toMatchTypeOf<MediaFeatureSyncs<"SONARR">["releaseProfiles"]>();
     expectTypeOf<QualityDefinitionPreferredSync<SonarrQualityDefinitionResource>>().toMatchTypeOf<MediaFeatureSyncs<"SONARR">["qd"]>();

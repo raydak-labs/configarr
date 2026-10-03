@@ -74,7 +74,13 @@ import type {
 
 /**
  * The generated resource each *arr client returns for a feature. This is what binds a
- * `MediaFeatureSyncs` bag to one *arr: a syncs object built for a different *arr no longer typechecks.
+ * `MediaFeatureSyncs` bag to one *arr.
+ *
+ * What it actually buys: a wrong-arr bag is rejected wherever two *arrs' generated resources are mutually
+ * non-assignable, for example Sonarr and Radarr quality profiles (`Quality.source`). It is not a complete
+ * barrier - the generated resources are field-for-field identical for release profiles and for Sonarr/Radarr
+ * download clients, so those slots accept a sync built for either arr. Adding a nominal brand to the bag would
+ * close that, at the cost of a hand-written marker type per feature.
  */
 type MediaArrResources = {
   LIDARR: {
