@@ -16,10 +16,14 @@ export function isSecretFieldName(fieldName: string): boolean {
 }
 
 /**
- * Mask secret-named keys anywhere inside a value.
+ * Mask secret-named keys anywhere inside a value, and mask the `value` of an object whose
+ * own `name` is secret-named.
  *
  * Used for object/array field values (e.g. a whole `fields` bag reported as one change),
  * where the secret is nested under a key rather than being the changed field itself.
+ * The named case is not hypothetical: custom-format comparison reports a reordered
+ * `specifications[].fields` array as a single change, and its elements are `{ name, value }`
+ * pairs, so the key alone never says the value is a secret.
  */
 export function redactSecrets(value: unknown): unknown {
   if (Array.isArray(value)) {
@@ -30,8 +34,14 @@ export function redactSecrets(value: unknown): unknown {
     return value;
   }
 
+  const record = value as Record<string, unknown>;
+  const namedSecret = typeof record.name === "string" && isSecretFieldName(record.name);
+
   return Object.fromEntries(
-    Object.entries(value).map(([key, nested]) => [key, isSecretFieldName(key) ? SECRET_MASK : redactSecrets(nested)]),
+    Object.entries(record).map(([key, nested]) => [
+      key,
+      isSecretFieldName(key) || (namedSecret && key === "value") ? SECRET_MASK : redactSecrets(nested),
+    ]),
   );
 }
 

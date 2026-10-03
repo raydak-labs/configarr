@@ -34,6 +34,20 @@ describe("redactSecrets", () => {
       list: [{ token: SECRET_MASK }],
     });
   });
+
+  test("masks the value of a name/value pair whose name is secret-named", () => {
+    // Custom-format comparison reports a reordered specifications[].fields array as one
+    // change, so its { name, value } elements arrive here rather than as separate field paths.
+    const fields = [
+      { name: "release_group", value: "ARR" },
+      { name: "api_key", value: "SUPERSECRET123" },
+    ];
+
+    expect(redactSecrets(fields)).toEqual([
+      { name: "release_group", value: "ARR" },
+      { name: "api_key", value: SECRET_MASK },
+    ]);
+  });
 });
 
 describe("redactDiffEntry", () => {
@@ -57,6 +71,32 @@ describe("redactDiffEntry", () => {
     };
 
     expect(redactDiffEntry(entry).fieldChanges).toEqual([{ field: "fields.host", from: "old", to: "new" }]);
+  });
+
+  test("masks a secret value inside a reordered custom-format fields change", () => {
+    const entry: DiffEntry = {
+      resourceType: "CustomFormat",
+      name: "WEB-DL",
+      action: "update",
+      fieldChanges: [
+        {
+          field: "specifications[0].fields",
+          from: [
+            { name: "release_group", value: "ARR" },
+            { name: "api_key", value: "********" },
+          ],
+          to: [
+            { name: "api_key", value: "SUPERSECRET123" },
+            { name: "release_group", value: "ARR" },
+          ],
+        },
+      ],
+    };
+
+    expect(redactDiffEntry(entry).fieldChanges![0]!.to).toEqual([
+      { name: "api_key", value: SECRET_MASK },
+      { name: "release_group", value: "ARR" },
+    ]);
   });
 
   test("returns entries without field changes unchanged", () => {
