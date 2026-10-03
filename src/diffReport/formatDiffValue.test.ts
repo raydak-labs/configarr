@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { formatDiffValue } from "./formatDiffValue";
+import { SECRET_MASK } from "./redactSecrets";
 
 describe("formatDiffValue", () => {
   test("renders scalars directly", () => {
@@ -28,5 +29,9 @@ describe("formatDiffValue", () => {
   test("truncates objects with more than 5 top-level keys", () => {
     const value = { a: 1, b: 2, c: 3, d: 4, e: 5, f: 6, g: 7 };
     expect(formatDiffValue(value)).toBe("{a: 1, b: 2, c: 3, d: 4, e: 5, (+2 more)}");
+  });
+
+  test("masks secret-named keys of an object value", () => {
+    expect(formatDiffValue({ host: "qbittorrent", password: "SUPERSECRET123" })).toBe(`{host: "qbittorrent", password: "${SECRET_MASK}"}`);
   });
 });

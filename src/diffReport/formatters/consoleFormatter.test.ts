@@ -1,7 +1,8 @@
 import { describe, expect, test, vi, afterEach } from "vitest";
 import { logger } from "../../logger";
 import { ConsoleDiffFormatter } from "./consoleFormatter";
-import { InstanceDiffReport } from "../diffReport.types";
+import { DiffCollector } from "../diffCollector";
+import { DiffEntry, InstanceDiffReport } from "../diffReport.types";
 
 describe("ConsoleDiffFormatter", () => {
   afterEach(() => {
@@ -58,5 +59,29 @@ describe("ConsoleDiffFormatter", () => {
 
     const output = infoSpy.mock.calls[0]![0] as string;
     expect(output).toContain("up to date");
+  });
+
+  test("never prints a download client secret", () => {
+    const infoSpy = vi.spyOn(logger, "info").mockImplementation(() => undefined as any);
+
+    const collector = new DiffCollector();
+    collector.add([
+      {
+        resourceType: "DownloadClient",
+        name: "qBit",
+        action: "update",
+        fieldChanges: [
+          { field: "fields.host", from: "old-host", to: "new-host" },
+          { field: "fields.password", from: "********", to: "SUPERSECRET123" },
+        ],
+      },
+    ]);
+
+    new ConsoleDiffFormatter().format({ arrType: "RADARR", instanceName: "main", entries: collector.getEntries() });
+
+    const output = infoSpy.mock.calls[0]![0] as string;
+    expect(output).toContain("fields.password: ******** -> ********");
+    expect(output).toContain("fields.host: old-host -> new-host");
+    expect(output).not.toContain("SUPERSECRET123");
   });
 });
