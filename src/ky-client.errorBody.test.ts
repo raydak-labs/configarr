@@ -51,6 +51,18 @@ describe("HttpClient error body (real ky + local server)", () => {
         res.write(JSON.stringify({ message: "x".repeat(1024 * 1024) }));
         return;
       }
+      if (req.url === "/api/v3/huge-chunked") {
+        // No Content-Length: a header check alone cannot bound this one.
+        res.writeHead(400, { "Content-Type": "application/json" });
+        res.write('{"message":"');
+        res.write("x".repeat(64 * 1024));
+        // Several chunks, so the limit has to be hit while reading rather than up front.
+        for (let i = 0; i < 16; i++) {
+          res.write("y".repeat(64 * 1024));
+        }
+        res.end('"}');
+        return;
+      }
       if (req.url === "/api/v3/stalled") {
         // Headers say it failed, the body never finishes: the capture must not wait for it.
         res.writeHead(400, { "Content-Type": "application/json" });
@@ -112,6 +124,15 @@ describe("HttpClient error body (real ky + local server)", () => {
 
     expect(thrown.message).toContain("empty body");
     expect(thrown.message).not.toContain("xxxx");
+  });
+
+  test("does not buffer an oversized error body that declares no length", async () => {
+    const client = createClient();
+
+    const thrown = await client.request({ path: "/api/v3/huge-chunked", method: "POST", type: undefined, body: {} }).catch((e: Error) => e);
+
+    expect(thrown.message).toContain("empty body");
+    expect(thrown.message).not.toContain("yyyy");
   });
 
   test("settles when the server sends error headers and never finishes the body", async () => {

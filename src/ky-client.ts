@@ -18,40 +18,72 @@ const ERROR_BODY_CAPTURE_TIMEOUT_MS = 5_000;
 /**
  * Read a response body for diagnostics only, bounded in both time and size.
  *
- * Returns `undefined` when the body is unusable, too large, or too slow; the caller reports an empty body
- * in that case. The clone is cancelled once we stop waiting, so a stalled server cannot keep a stream open.
+ * Reads through a reader instead of `response.text()`: the text helpers buffer the whole body before any
+ * limit applies, and a body without a `Content-Length` would slip past a header check. Chunks are counted as
+ * they arrive and the reader is cancelled the moment either limit is hit, so a stalled or oversized body
+ * stops being read instead of lingering in memory. Returns `undefined` when the body is unusable; the
+ * caller then reports an empty body.
  */
 async function readErrorBodyBounded(response: Response): Promise<string | undefined> {
-  const declaredBytes = Number(response.headers.get("content-length") ?? Number.NaN);
-
-  if (Number.isFinite(declaredBytes) && declaredBytes > MAX_ERROR_BODY_BYTES) {
+  if (!response.body) {
     return undefined;
   }
 
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let received = 0;
   let timer: NodeJS.Timeout | undefined;
 
-  try {
-    const text = await Promise.race([
-      response.text(),
-      new Promise<undefined>((resolve) => {
-        timer = setTimeout(() => resolve(undefined), ERROR_BODY_CAPTURE_TIMEOUT_MS);
-        timer.unref?.();
-      }),
-    ]);
+  const timedOut = new Promise<typeof TIMED_OUT>((resolve) => {
+    timer = setTimeout(() => resolve(TIMED_OUT), ERROR_BODY_CAPTURE_TIMEOUT_MS);
+    timer.unref?.();
+  });
 
-    if (text === undefined) {
-      void response.body?.cancel().catch(() => {});
-      return undefined;
+  try {
+    for (;;) {
+      const step = await Promise.race([reader.read(), timedOut]);
+
+      if (step === TIMED_OUT) {
+        void reader.cancel().catch(() => {});
+        return undefined;
+      }
+
+      if (step.done) {
+        break;
+      }
+
+      received += step.value.byteLength;
+
+      if (received > MAX_ERROR_BODY_BYTES) {
+        // Fire and forget: awaiting a cancel on a tee branch can stay pending forever.
+        void reader.cancel().catch(() => {});
+        return undefined;
+      }
+
+      chunks.push(step.value);
     }
 
-    return text.length > MAX_ERROR_BODY_BYTES ? text.slice(0, MAX_ERROR_BODY_BYTES) : text;
+    return new TextDecoder().decode(concatChunks(chunks));
   } catch {
     return undefined;
   } finally {
-    if (timer) {
-      clearTimeout(timer);
-    }
+    clearTimeout(timer);
   }
+}
+
+const TIMED_OUT = Symbol("timedOut");
+
+function concatChunks(chunks: Uint8Array[]): Uint8Array {
+  const total = chunks.reduce((sum, chunk) => sum + chunk.byteLength, 0);
+  const out = new Uint8Array(total);
+  let offset = 0;
+
+  for (const chunk of chunks) {
+    out.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+
+  return out;
 }
 
 function toErrorMessage(value: unknown): string {
