@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.34.0](https://github.com/raydak-labs/configarr/compare/v1.33.0...v1.34.0) (2026-10-03)
+
+### Features
+
+- unify tag handling and add tags/delete_unmanaged_tags config for all *arrs ([#548](https://github.com/raydak-labs/configarr/issues/548)) ([923ee6e](https://github.com/raydak-labs/configarr/commit/923ee6e9c0aa103b116122013acd67be85972d66))
+
+### Bug Fixes
+
+- dry run showed fake tag ids for not-yet-created tags ([c0fd354](https://github.com/raydak-labs/configarr/commit/c0fd3544a74ac149721c4437da7fee13115a3d85))
+- propagate download-client pipeline failures instead of exiting 0 ([db7f764](https://github.com/raydak-labs/configarr/commit/db7f7642f243918f7dae82221bcf9d97f9b2b173))
+- show *arr error body in API error messages ([#549](https://github.com/raydak-labs/configarr/issues/549)) ([d37c91f](https://github.com/raydak-labs/configarr/commit/d37c91f9527047348a7e5f3ea5caa0a8753419d6))
+- stop creating Lidarr/Readarr tags during dry runs ([35dc120](https://github.com/raydak-labs/configarr/commit/35dc12048a3c3548c893181493ad846b662e2c7f))
+- stop dry runs from creating missing download client tags ([cf0fef5](https://github.com/raydak-labs/configarr/commit/cf0fef517df01d9916aefb69f17656f039a6092c))
+- stop leaking download client secrets into logs and diff reports ([#550](https://github.com/raydak-labs/configarr/issues/550)) ([7d66e42](https://github.com/raydak-labs/configarr/commit/7d66e42c933ad8b8118e1de61ca210bac2488042))
+
+### (internal) Refactorings
+
+- bind media feature syncs to per-*arr client contracts ([#555](https://github.com/raydak-labs/configarr/issues/555)) ([1bd5607](https://github.com/raydak-labs/configarr/commit/1bd5607ae8a17165830e413b71d40c9d5d2c62b8))
+- drop unreachable helpers and superseded merge pass ([#556](https://github.com/raydak-labs/configarr/issues/556)) ([0d6fa81](https://github.com/raydak-labs/configarr/commit/0d6fa8182ef0e39187453840a87195225ce7b6d3))
+
 ## [1.33.0](https://github.com/raydak-labs/configarr/compare/v1.32.0...v1.33.0) (2026-09-29)
 
 ### Features
