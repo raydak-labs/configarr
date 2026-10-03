@@ -69,9 +69,11 @@ resolved; the pre-prune tag reload stays in `prowlarrSyncer.ts`.
 
 ## Templates
 
-A template may contribute `tags` labels and `delete_unmanaged_tags.ignore`, but never
-`delete_unmanaged_tags.enabled`: an imported Recyclarr/URL template must not be able to turn on tag
-deletion. Ignore lists union across templates and the instance. Both keys must be carried by
+A template may contribute `tags` labels and the whole `delete_unmanaged_tags` block. Both keys are
+opt-in wherever they are set, the same authority `delete_unmanaged_metadata_profiles` gives a template:
+a Recyclarr, URL or local template that sets `enabled: true` turns tag pruning on for the instance
+that includes it, so a template author - or whoever hosts the file it is fetched from - decides that
+alongside you. Ignore lists union across templates and the instance. Both keys must be carried by
 `mergeConfigsAndTemplates` on the template _and_ the instance side, plus `MappedTemplates` — adding
 the Zod key alone leaves the feature silently inert for any config file or template.
 

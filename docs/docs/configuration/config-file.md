@@ -718,6 +718,7 @@ Notes:
 - A tag that is still in use by something configarr does not manage (for example an import list, notification or indexer) cannot be deleted. On media \*arrs the tag is left alone and a warning is logged, so the rest of the instance still syncs. On Prowlarr every tag-bearing resource is managed, so this case fails the Prowlarr instance instead
 - Prowlarr keeps its own set of referencing features: its tags are also read from `applications`, `indexers` and `indexer_proxies`
 - A dry run (`DRY_RUN=true`) never creates or deletes tags; it only reports what it would do
+- Both keys work the same way whether they come from your config or from a template: a Recyclarr, URL or local template that sets `delete_unmanaged_tags.enabled: true` switches tag pruning on for every instance including it. Review templates from third parties for this key before including them
 - The instance-level `tags` list takes labels only. Inside the per-feature blocks (`download_clients`, Prowlarr `applications` / `indexers` / `indexer_proxies`) a raw server id is still accepted but is **deprecated** — it logs a warning and may be removed in a future release. Use labels everywhere
 
 ## CustomFormatGroups <span className="theme-doc-version-badge badge badge--secondary configarr-badge">1.12.0</span> {#custom-format-groups}
