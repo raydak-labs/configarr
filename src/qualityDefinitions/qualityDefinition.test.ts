@@ -6,10 +6,23 @@ import {
   QualityDefinitionPreferredSync,
   QualityDefinitionSync,
 } from "./qualityDefinition";
-import { TrashQualityDefinition } from "../types/trashguide.types";
+import { TrashQualityDefinition, TrashQualityDefinitionQuality } from "../types/trashguide.types";
 import * as env from "../env";
 import { ConfigValidationError } from "../validation";
 import type { QualityDefinitionsClient } from "../clients/capabilities";
+
+const createApi = () => ({
+  getQualityDefinitions: vi.fn(),
+  updateQualityDefinitions: vi.fn(),
+});
+
+const createSync = () => {
+  const api = createApi();
+  return {
+    api,
+    sync: new QualityDefinitionSync<QualityDefinitionShared>(api as unknown as QualityDefinitionsClient<QualityDefinitionShared>),
+  };
+};
 
 describe("QualityDefinitions", async () => {
   const server: QualityDefinitionShared[] = [
@@ -160,6 +173,57 @@ describe("QualityDefinitions", async () => {
     expect(interpolateSize(2, 100, 95, 0.5)).toBe(95);
     expect(interpolateSize(2, 100, 95, 0.0)).toBe(2);
     expect(interpolateSize(2, 100, 95, 1.0)).toBe(100);
+  });
+
+  describe("QualityDefinitionSync.persist", () => {
+    test("writes the computed restData and returns the server response", async () => {
+      const { api, sync } = createSync();
+      const updatedFromServer: QualityDefinitionShared[] = [{ ...server[1]!, minSize: 3 }];
+      api.updateQualityDefinitions.mockResolvedValue(updatedFromServer);
+
+      const qualities: TrashQualityDefinitionQuality[] = [{ quality: "SDTV", min: 3, preferred: 95, max: 100 }];
+
+      const result = await sync.persist(server, qualities, true);
+
+      expect(api.updateQualityDefinitions).toHaveBeenCalledTimes(1);
+      expect(api.updateQualityDefinitions).toHaveBeenCalledWith([{ ...server[1]!, minSize: 3 }, { ...server[0]! }]);
+      expect(result.changeMap.size).toBe(1);
+      expect(result.restData).toBe(updatedFromServer);
+    });
+
+    test("does not write anything when write is false but still reports the changeMap", async () => {
+      const { api, sync } = createSync();
+
+      const result = await sync.persist(server, [{ quality: "SDTV", min: 3, preferred: 95, max: 100 }], false);
+
+      expect(api.updateQualityDefinitions).not.toHaveBeenCalled();
+      expect(result.changeMap.get("SDTV")).toEqual([{ field: "minSize", from: 2, to: 3 }]);
+      expect(result.restData).toHaveLength(2);
+    });
+
+    test("does not write when there are no changes", async () => {
+      const { api, sync } = createSync();
+
+      const result = await sync.persist(server, [{ quality: "SDTV", min: 2, preferred: 95, max: 100 }], true);
+
+      expect(api.updateQualityDefinitions).not.toHaveBeenCalled();
+      expect(result.changeMap.size).toBe(0);
+      expect(result.restData.map((q) => q.quality?.name)).toEqual(["SDTV", "Unknown"]);
+    });
+
+    test("propagates write failures", async () => {
+      const { api, sync } = createSync();
+      api.updateQualityDefinitions.mockRejectedValue(new Error("500 from server"));
+
+      await expect(sync.persist(server, [{ quality: "SDTV", min: 3, preferred: 95, max: 100 }], true)).rejects.toThrow("500 from server");
+    });
+
+    test("loads the server qualities through the api", async () => {
+      const { api, sync } = createSync();
+      api.getQualityDefinitions.mockResolvedValue(server);
+
+      await expect(sync.loadFromServer()).resolves.toBe(server);
+    });
   });
 
   test("interpolateSize - should fail", async ({}) => {

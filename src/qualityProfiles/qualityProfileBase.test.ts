@@ -17,6 +17,7 @@ import { CFProcessing } from "../customFormats/customFormat.types";
 import { ConfigQualityProfile, ConfigQualityProfileItem, MergedConfigInstance } from "../types/config.types";
 import { ConfigValidationError } from "../validation";
 import * as env from "../env";
+import type { FieldChange } from "../diffReport/diffReport.types";
 
 describe("qualityProfileBase", async () => {
   test("isOrderOfConfigQualitiesEqual - should match", async ({}) => {
@@ -1246,5 +1247,80 @@ describe("qualityProfileBase", async () => {
         fieldChanges: [{ field: "minFormatScore", from: 0, to: 10 }],
       },
     ]);
+  });
+
+  describe("BaseQualityProfileSync.persist", () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    const createApi = () => ({
+      getQualityProfiles: vi.fn(),
+      createQualityProfile: vi.fn(),
+      updateQualityProfile: vi.fn(),
+      deleteQualityProfile: vi.fn(),
+    });
+
+    const diff = () => ({
+      create: [
+        { id: 1, name: "Created-1" },
+        { id: 2, name: "Created-2" },
+      ] as QualityProfileShared[],
+      changedQPs: [{ id: 10, name: "Changed-1" }] as QualityProfileShared[],
+      noChanges: ["Unchanged-1"],
+      changes: new Map<string, FieldChange[]>(),
+    });
+
+    test("does not touch the server when write is false", async () => {
+      const api = createApi();
+      vi.spyOn(log.logger, "info").mockImplementation(() => {});
+
+      await new QualityProfileRadarrSync(api as any).persist(diff(), false);
+
+      expect(api.createQualityProfile).not.toHaveBeenCalled();
+      expect(api.updateQualityProfile).not.toHaveBeenCalled();
+    });
+
+    test("creates every profile in the create list and updates every changed profile by id", async () => {
+      const api = createApi();
+      api.createQualityProfile.mockImplementation(async (profile: QualityProfileShared) => ({ ...profile, id: 99 }));
+      api.updateQualityProfile.mockImplementation(async (_id: string, profile: QualityProfileShared) => ({ ...profile, id: 99 }));
+      const infoSpy = vi.spyOn(log.logger, "info").mockImplementation(() => {});
+      const result = diff();
+
+      await new QualityProfileRadarrSync(api as any).persist(result, true);
+
+      expect(api.createQualityProfile).toHaveBeenCalledTimes(2);
+      expect(api.createQualityProfile).toHaveBeenNthCalledWith(1, result.create[0]);
+      expect(api.createQualityProfile).toHaveBeenNthCalledWith(2, result.create[1]);
+      expect(api.updateQualityProfile).toHaveBeenCalledTimes(1);
+      expect(api.updateQualityProfile).toHaveBeenCalledWith("10", result.changedQPs[0]);
+      expect(infoSpy).toHaveBeenCalledWith("Created QualityProfile: Created-1");
+      expect(infoSpy).toHaveBeenCalledWith("Updated QualityProfile: Changed-1");
+      // unchanged profiles are never sent to the server
+      expect(api.updateQualityProfile).not.toHaveBeenCalledWith("Unchanged-1", expect.anything());
+    });
+
+    test("logs and rethrows create failures without continuing to the updates", async () => {
+      const api = createApi();
+      api.createQualityProfile.mockRejectedValue(new Error("500 from server"));
+      const errorSpy = vi.spyOn(log.logger, "error").mockImplementation(() => {});
+
+      await expect(new QualityProfileRadarrSync(api as any).persist(diff(), true)).rejects.toThrow("500 from server");
+
+      expect(errorSpy).toHaveBeenCalledWith("Failed creating QualityProfile (Created-1)");
+      expect(api.updateQualityProfile).not.toHaveBeenCalled();
+    });
+
+    test("logs and rethrows update failures", async () => {
+      const api = createApi();
+      api.createQualityProfile.mockImplementation(async (profile: QualityProfileShared) => profile);
+      api.updateQualityProfile.mockRejectedValue(new Error("500 from server"));
+      const errorSpy = vi.spyOn(log.logger, "error").mockImplementation(() => {});
+
+      await expect(new QualityProfileRadarrSync(api as any).persist(diff(), true)).rejects.toThrow("500 from server");
+
+      expect(errorSpy).toHaveBeenCalledWith("Failed updating QualityProfile (Changed-1)");
+    });
   });
 });

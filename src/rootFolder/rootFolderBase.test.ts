@@ -5,6 +5,16 @@ import { PathRootFolderSync } from "./rootFolderBase";
 import { ServerCache } from "../cache";
 import type { RootFolderServerResource } from "./rootFolder.types";
 
+vi.mock("../env", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../env")>();
+  return {
+    ...actual,
+    getEnvs: vi.fn(() => ({ DRY_RUN: false, LOG_LEVEL: "silent", CONFIGARR_VERSION: "test" })),
+  };
+});
+
+import { getEnvs } from "../env";
+
 describe("PathRootFolderSync", () => {
   const mockApi: Mocked<RootFoldersClient<RootFolderServerResource>> = {
     getRootfolders: vi.fn(),
@@ -17,8 +27,12 @@ describe("PathRootFolderSync", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(getEnvs).mockReturnValue({ DRY_RUN: false, LOG_LEVEL: "silent", CONFIGARR_VERSION: "test" } as never);
     serverCache = new ServerCache();
   });
+
+  const setDryRun = (dryRun: boolean) =>
+    vi.mocked(getEnvs).mockReturnValue({ DRY_RUN: dryRun, LOG_LEVEL: "silent", CONFIGARR_VERSION: "test" } as never);
 
   describe("calculateDiff", () => {
     it("should handle string root folders", async () => {
@@ -95,6 +109,70 @@ describe("PathRootFolderSync", () => {
       const sync = new PathRootFolderSync(mockApi);
       const result = await sync.resolveRootFolderConfig("/path/to/folder", serverCache);
       expect(result).toEqual({ path: "/path/to/folder" });
+    });
+  });
+
+  describe("syncRootFolders", () => {
+    it("does not write anything when the server is already in sync", async () => {
+      mockApi.getRootfolders.mockResolvedValue([{ path: "/existing" }]);
+
+      const result = await new PathRootFolderSync(mockApi).syncRootFolders(["/existing"], serverCache);
+
+      expect(result).toEqual({ added: 0, removed: 0, updated: 0, diffEntries: [] });
+      expect(mockApi.addRootFolder).not.toHaveBeenCalled();
+      expect(mockApi.updateRootFolder).not.toHaveBeenCalled();
+      expect(mockApi.deleteRootFolder).not.toHaveBeenCalled();
+    });
+
+    it("deletes folders missing from config and creates missing folders", async () => {
+      mockApi.getRootfolders.mockResolvedValue([
+        { id: 7, path: "/keep" },
+        { id: 8, path: "/gone" },
+      ]);
+      mockApi.addRootFolder.mockResolvedValue(undefined);
+      mockApi.deleteRootFolder.mockResolvedValue(undefined);
+
+      const result = await new PathRootFolderSync(mockApi).syncRootFolders(["/keep", "/added"], serverCache);
+
+      expect(mockApi.deleteRootFolder).toHaveBeenCalledTimes(1);
+      expect(mockApi.deleteRootFolder).toHaveBeenCalledWith("8");
+      expect(mockApi.addRootFolder).toHaveBeenCalledTimes(1);
+      expect(mockApi.addRootFolder).toHaveBeenCalledWith({ path: "/added" });
+      expect(result).toEqual({
+        added: 1,
+        removed: 1,
+        updated: 0,
+        diffEntries: [
+          { resourceType: "RootFolder", name: "/added", action: "create" },
+          { resourceType: "RootFolder", name: "/gone", action: "delete" },
+        ],
+      });
+    });
+
+    it("reports the diff but writes nothing on a dry run", async () => {
+      setDryRun(true);
+      mockApi.getRootfolders.mockResolvedValue([{ id: 8, path: "/gone" }]);
+
+      const result = await new PathRootFolderSync(mockApi).syncRootFolders(["/added"], serverCache);
+
+      expect(mockApi.deleteRootFolder).not.toHaveBeenCalled();
+      expect(mockApi.addRootFolder).not.toHaveBeenCalled();
+      expect(result).toEqual({
+        added: 1,
+        removed: 1,
+        updated: 0,
+        diffEntries: [
+          { resourceType: "RootFolder", name: "/added", action: "create" },
+          { resourceType: "RootFolder", name: "/gone", action: "delete" },
+        ],
+      });
+    });
+
+    it("propagates delete failures so the instance is not reported as successful", async () => {
+      mockApi.getRootfolders.mockResolvedValue([{ id: 8, path: "/gone" }]);
+      mockApi.deleteRootFolder.mockRejectedValue(new Error("500 from server"));
+
+      await expect(new PathRootFolderSync(mockApi).syncRootFolders(["/keep"], serverCache)).rejects.toThrow("500 from server");
     });
   });
 });
