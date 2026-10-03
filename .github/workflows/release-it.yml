@@ -2,8 +2,6 @@ name: release-it
 
 on:
   workflow_dispatch:
-    branches:
-      - main
 
 permissions: {}
 
@@ -17,6 +15,8 @@ jobs:
     permissions:
       contents: read
     steps:
+      # workflow_dispatch accepts no branch filter, so this assertion is what actually restricts a
+      # release to main. It runs before checkout, and before the release token exists.
       - name: Ensure release is cut from main
         run: |
           if [ "${GITHUB_REF}" != "refs/heads/main" ]; then
