@@ -118,10 +118,11 @@ describe("BaseDownloadClientSync – sync accounting", () => {
   test("does not create missing tags during a dry run", async () => {
     vi.mocked(getEnvs).mockReturnValue({ DRY_RUN: true, LOG_LEVEL: "fatal" } as ReturnType<typeof getEnvs>);
     api.createTag.mockResolvedValue({ id: 5, label: "brand-new" });
+    const serverCache = cache();
 
     const result = await new SyncingMock().syncDownloadClients(
       { download_clients: { data: [{ name: "bh", type: "TorrentBlackhole", fields: { watchFolder: "/data" }, tags: ["brand-new"] }] } },
-      cache(),
+      serverCache,
     );
 
     expect(api.createTag).not.toHaveBeenCalled();
@@ -129,7 +130,9 @@ describe("BaseDownloadClientSync – sync accounting", () => {
     // it carries resolves to a placeholder id rather than a real one, which is what keeps the report
     // honest about what does not exist yet.
     expect(result).toMatchObject({ added: 1, updated: 0, removed: 0, failed: 0 });
-    expect(cache().tags).toEqual([]);
+    // Asserted on the very cache handed to the sync: a fresh `cache()` would pass even if the run had
+    // written a tag into this one.
+    expect(serverCache.tags).toEqual([]);
   });
 
   test("stops download client synchronization on invalid fields", async () => {
