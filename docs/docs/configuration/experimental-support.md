@@ -297,7 +297,9 @@ Experimental support for Prowlarr was added with [v1.31.0](https://github.com/ra
 Prowlarr is an indexer manager, not a media manager, so it uses a dedicated `prowlarr:` block
 instead of the usual `*arr` instance shape. The following are managed:
 
-- **Tags** – ensure a set of tag labels exists (and optionally prune the rest)
+- **Tags** – ensure a set of tag labels exists (and optionally prune the rest). Same
+  `tags:` / `delete_unmanaged_tags:` block as the media \*Arrs — see
+  [Tags](/docs/configuration/config-file#tags) for the shared description.
 - **Sync Profiles** – the RSS/search rules indexers are bound to (`appprofile` in Prowlarr's API)
 - **Applications** – the Sonarr/Radarr/... sync targets Prowlarr pushes its indexers to
 - **Indexers** – created from a Prowlarr schema `definition` (e.g. `1337x`), matched by `name`
@@ -306,7 +308,8 @@ instead of the usual `*arr` instance shape. The following are managed:
 - an optional **"sync indexers to apps"** trigger (`applications.sync_indexers`)
 
 Each managed section (`sync_profiles`, `applications`, `indexers`, `indexer_proxies`,
-`download_clients`) supports a `delete_unmanaged: { enabled, ignore }` block. Resources are synced in
+`download_clients`) supports a `delete_unmanaged: { enabled, ignore }` block, and tags use the
+instance-level `delete_unmanaged_tags: { enabled, ignore }` block. Resources are synced in
 dependency order: tags → sync profiles → indexer proxies → indexers → applications → download
 clients, so an indexer can reference a sync profile created in the same run.
 
@@ -345,6 +348,7 @@ prowlarr:
     api_key: !secret PROWLARR_API_KEY
 
     # Ensure these tag labels exist (created if missing)
+    # Same block as the media *Arrs: /docs/configuration/config-file#tags
     tags:
       - managed
       - vip

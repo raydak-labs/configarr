@@ -1,10 +1,10 @@
 import { z } from "zod";
 import { ServerCache } from "../cache";
 import type { DownloadClientsClient, TagsClient } from "../clients/capabilities";
-import type { Tag } from "../tags/tag.types";
 import { DiffEntry, FieldChange } from "../diffReport/diffReport.types";
 import { getEnvs } from "../env";
 import { logger } from "../logger";
+import { buildTagPlaceholders, ensureTags, resolveTagNames } from "../tags/tags";
 import { ArrType } from "../types/common.types";
 import { InputConfigDownloadClient, MergedConfigInstance } from "../types/config.types";
 import { DownloadClientDiff, DownloadClientShared, DownloadClientSyncResult, ValidationResult } from "./downloadClient.types";
@@ -105,36 +105,20 @@ export abstract class BaseDownloadClientSync<T extends DownloadClientShared> {
     return normalized;
   }
 
-  public resolveTagNamesToIds(tagNames: (string | number)[], serverTags: Tag[]): { ids: number[]; missingTags: string[] } {
-    const ids: number[] = [];
-    const missingTags: string[] = [];
-
-    for (const tag of tagNames) {
-      if (typeof tag === "number") {
-        ids.push(tag);
-      } else {
-        const serverTag = serverTags.find((t) => t.label?.toLowerCase() === tag.toLowerCase());
-        if (serverTag?.id) {
-          ids.push(serverTag.id);
-        } else {
-          missingTags.push(tag);
-        }
-      }
+  /**
+   * A tag the server does not have yet is represented by a negative placeholder id while diffing
+   * (see `tagPlaceholders`). No *arr ever hands out a negative tag id, so those entries are reported
+   * by label instead - the same convention as `providerResourceSync`. Real ids stay as they are.
+   */
+  private renderTagIds(ids: number[], placeholders?: Map<string, number>): Array<number | string> {
+    if (!placeholders || placeholders.size === 0) {
+      return ids;
     }
 
-    return { ids, missingTags };
-  }
+    const byId = new Map(Array.from(placeholders, ([label, id]) => [id, label]));
 
-  /**
-   * A tag the server does not have yet is represented by a negative placeholder id in the preview
-   * cache (see `withPlaceholderTags`). No *arr ever hands out a negative tag id, so those entries
-   * are reported by label instead - the same convention as `providerResourceSync`. Real ids stay as
-   * they are.
-   */
-  private renderTagIds(ids: number[], cache: ServerCache): Array<number | string> {
-    return ids.map((id) => (id < 0 ? (cache.tags.find((tag) => tag.id === id)?.label ?? id) : id));
+    return ids.map((id) => (id < 0 ? (byId.get(id) ?? id) : id));
   }
-
   protected collectSharedFieldChanges(
     config: InputConfigDownloadClient,
     server: T,
@@ -197,14 +181,15 @@ export abstract class BaseDownloadClientSync<T extends DownloadClientShared> {
 
     const configTags = config.tags;
     if (configTags !== undefined) {
-      const { ids: resolvedTagIds } = this.resolveTagNamesToIds(configTags, cache.tags);
+      const placeholders = this.tagPlaceholders(configTags, cache);
+      const { ids: resolvedTagIds } = resolveTagNames(configTags, cache.tags, { placeholders });
       const serverTags = server.tags ?? [];
 
       const sortedConfigTagIds = [...resolvedTagIds].sort();
       const sortedServerTags = [...serverTags].sort();
 
       if (JSON.stringify(sortedConfigTagIds) !== JSON.stringify(sortedServerTags)) {
-        changes.push({ field: "tags", from: sortedServerTags, to: this.renderTagIds(sortedConfigTagIds, cache) });
+        changes.push({ field: "tags", from: sortedServerTags, to: this.renderTagIds(sortedConfigTagIds, placeholders) });
       }
     }
 
@@ -216,13 +201,7 @@ export abstract class BaseDownloadClientSync<T extends DownloadClientShared> {
       return serverClient?.tags ?? [];
     }
 
-    const { ids, missingTags } = this.resolveTagNamesToIds(config.tags, cache.tags);
-    if (missingTags.length > 0) {
-      this.logger.warn(
-        `Missing tags for download client '${config.name}': ${missingTags.join(", ")}. ` +
-          `These should have been created during batch tag creation.`,
-      );
-    }
+    const { ids } = resolveTagNames(config.tags, cache.tags, { placeholders: this.tagPlaceholders(config.tags, cache) });
     return ids;
   }
 
@@ -452,60 +431,28 @@ export abstract class BaseDownloadClientSync<T extends DownloadClientShared> {
     return { validClients, hasErrors };
   }
 
-  private collectMissingTags(configClients: InputConfigDownloadClient[], serverCache: ServerCache): string[] {
+  /** Dry runs create nothing, so synthetic ids keep `tags` visible in the diff. */
+  private tagPlaceholders(tagNames: (string | number)[], cache: ServerCache): Map<string, number> | undefined {
+    if (!getEnvs().DRY_RUN) {
+      return undefined;
+    }
+    return buildTagPlaceholders(
+      tagNames.filter((tag): tag is string => typeof tag === "string"),
+      cache.tags,
+    );
+  }
+
+  private async createMissingTags(configClients: InputConfigDownloadClient[], serverCache: ServerCache): Promise<void> {
     const allMissingTags = new Set<string>();
 
     for (const config of configClients) {
       if (config.tags) {
-        const { missingTags } = this.resolveTagNamesToIds(config.tags, serverCache.tags);
-        missingTags.forEach((tag) => allMissingTags.add(tag));
+        const { missing } = resolveTagNames(config.tags, serverCache.tags);
+        missing.forEach((tag) => allMissingTags.add(tag));
       }
     }
 
-    return Array.from(allMissingTags);
-  }
-
-  /**
-   * Cache view of the tags a real run would create. Their IDs only exist once the server assigned
-   * them, so a dry run stands in stable negative placeholders: the diff then reports the same
-   * create/update/remove counts as a real run without writing anything.
-   */
-  private withPlaceholderTags(configClients: InputConfigDownloadClient[], serverCache: ServerCache): ServerCache {
-    const previewTags: Tag[] = [...serverCache.tags];
-
-    this.collectMissingTags(configClients, serverCache).forEach((label, index) => {
-      previewTags.push({ id: -(index + 1), label });
-    });
-
-    return new ServerCache({
-      qualityDefinitions: serverCache.qualityDefinitions,
-      qualityProfiles: serverCache.qualityProfiles,
-      customFormats: serverCache.customFormats,
-      languages: serverCache.languages,
-      tags: previewTags,
-    });
-  }
-
-  private async createMissingTags(configClients: InputConfigDownloadClient[], serverCache: ServerCache): Promise<void> {
-    const allMissingTags = this.collectMissingTags(configClients, serverCache);
-
-    if (allMissingTags.length === 0) {
-      return;
-    }
-
-    this.logger.info(`Creating missing tags for download clients: ${allMissingTags.join(", ")}`);
-
-    for (const tagName of allMissingTags) {
-      try {
-        const newTag = await this.getApi().createTag({ label: tagName });
-        serverCache.tags.push(newTag);
-        this.logger.debug(`Created tag: '${tagName}' (ID: ${newTag.id})`);
-      } catch (error: unknown) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        this.logger.error(`Failed to create tag '${tagName}': ${errorMessage}`);
-        throw new Error("Tag creation failed. Cannot proceed with download client sync.");
-      }
-    }
+    await ensureTags(this.getApi(), serverCache, [...allMissingTags]);
   }
 
   private async createClients(configs: InputConfigDownloadClient[], serverCache: ServerCache): Promise<InputConfigDownloadClient[]> {
@@ -612,20 +559,13 @@ export abstract class BaseDownloadClientSync<T extends DownloadClientShared> {
     // the server still holds whatever that entry was supposed to manage.
     const skipped = configClients.length - validClients.length;
 
-    const dryRun = getEnvs().DRY_RUN;
-    let diffCache = serverCache;
-
-    if (dryRun) {
-      // Dry runs must not create the missing tags, so the diff runs against placeholder tag IDs.
-      diffCache = this.withPlaceholderTags(validClients, serverCache);
-    } else {
-      // Tags have to exist before the diff: a client whose only change is a new tag resolves to no
-      // tag ID and would otherwise compare equal.
-      await this.createMissingTags(validClients, serverCache);
-    }
+    // `ensureTags` creates nothing while DRY_RUN is set, and tags that do not exist on the server yet
+    // resolve to stable placeholder ids while diffing, so a dry run reports the same counts as a real
+    // run without writing anything.
+    await this.createMissingTags(validClients, serverCache);
 
     // Calculate diff
-    const diff = await this.calculateDiff(validClients, serverClients, diffCache, updatePassword);
+    const diff = await this.calculateDiff(validClients, serverClients, serverCache, updatePassword);
 
     this.logger.info(
       `Download clients diff - Create: ${diff.create.length}, Update: ${diff.update.length}, Unchanged: ${diff.unchanged.length}`,
@@ -635,7 +575,7 @@ export abstract class BaseDownloadClientSync<T extends DownloadClientShared> {
       ? this.filterUnmanagedClients(serverClients, configClients, config.download_clients.delete_unmanaged)
       : [];
 
-    if (dryRun) {
+    if (getEnvs().DRY_RUN) {
       this.logger.info("DryRun: Would update download clients.");
       return {
         added: diff.create.length,

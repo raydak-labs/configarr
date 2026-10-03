@@ -4,7 +4,7 @@ import { ProwlarrSyncer } from "./prowlarrSyncer";
 
 const providerEntries = [{ resourceType: "Indexer", name: "i", action: "create" as const }];
 const syncProviders = vi.fn(async () => providerEntries);
-const deleteUnmanagedTags = vi.fn(async () => ({
+const deleteUnmanagedInstanceTags = vi.fn(async (..._args: unknown[]) => ({
   added: 0,
   removed: 1,
   diffEntries: [{ resourceType: "Tag", name: "t", action: "delete" as const }],
@@ -12,11 +12,14 @@ const deleteUnmanagedTags = vi.fn(async () => ({
 const syncDownloadClients = vi.fn(async () => ({ added: 0, updated: 0, removed: 0, failed: 0, diffEntries: [] }));
 const loadServerTags = vi.fn(async () => [{ id: 1, label: "keep" }]);
 
+const prowlarrClient = { getSystemStatus: vi.fn(async () => ({ version: "1" })) };
 vi.mock("../logger", () => ({ logger: { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
-vi.mock("../clients/client", () => ({ getClient: vi.fn(() => ({ getSystemStatus: vi.fn(async () => ({ version: "1" })) })) }));
+vi.mock("../clients/client", () => ({ getClient: vi.fn(() => prowlarrClient) }));
 vi.mock("../prowlarr/prowlarrSyncer", () => ({ syncProwlarrProviders: (...args: unknown[]) => syncProviders(...(args as [])) }));
-vi.mock("../prowlarr/tagSync", () => ({ deleteUnmanagedTags: (...args: unknown[]) => deleteUnmanagedTags(...(args as [])) }));
-vi.mock("../tags/tags", () => ({ loadServerTags: (...args: unknown[]) => loadServerTags(...(args as [])) }));
+vi.mock("../tags/tags", () => ({
+  loadServerTags: (...args: unknown[]) => loadServerTags(...(args as [])),
+  deleteUnmanagedInstanceTags: (...args: unknown[]) => deleteUnmanagedInstanceTags(...(args as [])),
+}));
 vi.mock("../downloadClients/downloadClientProwlarr", () => ({
   ProwlarrDownloadClientSync: class {
     syncDownloadClients = syncDownloadClients;
@@ -44,10 +47,20 @@ describe("ProwlarrSyncer", () => {
     const report = await new ProwlarrSyncer().run(instance(), "e2e");
 
     expect(syncDownloadClients).toHaveBeenCalledTimes(1);
-    expect(deleteUnmanagedTags).toHaveBeenCalledTimes(1);
+    expect(deleteUnmanagedInstanceTags).toHaveBeenCalledTimes(1);
+    // The wrapper no longer resolves its own client, so the syncer hands its own down.
+    expect(deleteUnmanagedInstanceTags.mock.calls[0]![0]).toBe(prowlarrClient);
     // Reloaded once up front and once before the tag cleanup, so provider-created tags are seen.
     expect(loadServerTags).toHaveBeenCalledTimes(2);
     expect(report.entries.map((e) => e.resourceType)).toEqual(["Indexer", "Tag"]);
+  });
+
+  it("keeps an instance tag that no provider references", async () => {
+    // A tag listed under `tags:` is created up front; cleanup must not then delete it, or every
+    // run would create and delete the same tag.
+    await new ProwlarrSyncer().run(instance({ tags: ["declared"] }), "e2e");
+
+    expect(deleteUnmanagedInstanceTags.mock.calls[0]![2]).toMatchObject({ instanceLabels: ["declared"] });
   });
 
   it("skips tag cleanup when a download client change failed", async () => {
@@ -55,7 +68,7 @@ describe("ProwlarrSyncer", () => {
 
     const report = await new ProwlarrSyncer().run(instance(), "e2e");
 
-    expect(deleteUnmanagedTags).not.toHaveBeenCalled();
+    expect(deleteUnmanagedInstanceTags).not.toHaveBeenCalled();
     expect(report.entries.map((e) => e.resourceType)).toEqual(["Indexer"]);
   });
 
@@ -64,13 +77,13 @@ describe("ProwlarrSyncer", () => {
 
     await new ProwlarrSyncer().run(instance(), "e2e");
 
-    expect(deleteUnmanagedTags).not.toHaveBeenCalled();
+    expect(deleteUnmanagedInstanceTags).not.toHaveBeenCalled();
   });
 
   it("does not reload tags when delete_unmanaged_tags is off", async () => {
     await new ProwlarrSyncer().run(instance({ delete_unmanaged_tags: undefined }), "e2e");
 
-    expect(deleteUnmanagedTags).not.toHaveBeenCalled();
+    expect(deleteUnmanagedInstanceTags).not.toHaveBeenCalled();
     expect(loadServerTags).toHaveBeenCalledTimes(1);
   });
 });

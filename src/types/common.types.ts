@@ -22,6 +22,8 @@ export type MappedTemplates = Partial<
     | "delay_profiles"
     | "release_profiles"
     | "download_clients"
+    | "tags"
+    | "delete_unmanaged_tags"
   >
 > & {
   // Not picked from InputConfigArrInstance: by the time profiles live in mergedTemplates

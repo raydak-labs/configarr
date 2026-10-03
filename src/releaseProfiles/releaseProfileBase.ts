@@ -4,6 +4,7 @@ import { DiffEntry, FieldChange } from "../diffReport/diffReport.types";
 import { getEnvs } from "../env";
 import { logger } from "../logger";
 import { Tag } from "../tags/tag.types";
+import { buildTagPlaceholders, ensureTags, resolveTagNames } from "../tags/tags";
 import { InputConfigReleaseProfile } from "../types/config.types";
 import { ConfigValidationError } from "../validation";
 import { MappedReleaseProfile, ReleaseProfileShared, ReleaseProfilesDiff, ReleaseProfileSyncResult } from "./releaseProfile.types";
@@ -122,32 +123,6 @@ function compareFields(
   return changes;
 }
 
-function resolveTagIds(
-  tagNames: string[] | undefined,
-  serverTags: Tag[],
-  placeholders?: Map<string, number>,
-): { ids: number[]; missing: string[] } {
-  const ids: number[] = [];
-  const missing: string[] = [];
-  for (const name of tagNames ?? []) {
-    const found = serverTags.find((tag) => tag.label === name);
-    if (found?.id != null) {
-      ids.push(found.id);
-    } else {
-      missing.push(name);
-      if (placeholders) {
-        let id = placeholders.get(name);
-        if (id == null) {
-          id = -(placeholders.size + 1);
-          placeholders.set(name, id);
-        }
-        ids.push(id);
-      }
-    }
-  }
-  return { ids, missing };
-}
-
 export function resolveIndexerId(indexerName: string | undefined, indexers: IndexerListItem[]): number {
   if (indexerName == null || indexerName === "") {
     return 0;
@@ -192,18 +167,15 @@ export class BaseReleaseProfileSync<T extends ReleaseProfileShared> {
   private async createMissingTags(configs: InputConfigReleaseProfile[], serverCache: ServerCache): Promise<void> {
     const missingTags = new Set<string>();
     for (const config of configs) {
-      resolveTagIds(config.tags, serverCache.tags).missing.forEach((tag) => missingTags.add(tag));
+      // Configured casing wins: this is the label the server gets.
+      resolveTagNames(config.tags ?? [], serverCache.tags).missing.forEach((tag) => missingTags.add(tag));
     }
 
     if (missingTags.size === 0) {
       return;
     }
 
-    logger.info(`Creating missing tags on server: ${[...missingTags].join(", ")}`);
-    for (const tagName of missingTags) {
-      const created = await this.api.createTag({ label: tagName });
-      serverCache.tags.push(created);
-    }
+    await ensureTags(this.api, serverCache, [...missingTags]);
   }
 
   async calculateDiff(
@@ -215,9 +187,14 @@ export class BaseReleaseProfileSync<T extends ReleaseProfileShared> {
     const needsIndexers = configs.some((config) => config.indexer != null && config.indexer !== "");
     const indexers = needsIndexers ? await serverCache.getIndexers(() => this.api.getIndexers()) : [];
 
-    const placeholders = placeholderMissingTags ? new Map<string, number>() : undefined;
+    const placeholders = placeholderMissingTags
+      ? buildTagPlaceholders(
+          configs.flatMap((config) => config.tags ?? []),
+          serverCache.tags,
+        )
+      : undefined;
     const mappedConfigs: MappedReleaseProfile[] = configs.map((config) => {
-      const { ids } = resolveTagIds(config.tags, serverCache.tags, placeholders);
+      const { ids } = resolveTagNames(config.tags ?? [], serverCache.tags, { placeholders });
       return { config, mapped: this.mapToServer(config, ids, resolveIndexerId(config.indexer, indexers)) };
     });
 

@@ -6,6 +6,7 @@ import { DiffEntry, FieldChange } from "../diffReport/diffReport.types";
 import { getEnvs } from "../env";
 import { logger } from "../logger";
 import type { Tag } from "../tags/tag.types";
+import { ensureTags, resolveTagNames } from "../tags/tags";
 import { camelToSnake, snakeToCamel } from "../util";
 import { ConfigValidationError } from "../validation";
 
@@ -146,24 +147,6 @@ export abstract class ProviderResourceSync<
     return normalized;
   }
 
-  resolveTagNamesToIds(tagNames: (string | number)[], serverTags: Tag[]): { ids: number[]; missingTags: string[] } {
-    const ids: number[] = [];
-    const missingTags: string[] = [];
-    for (const tag of tagNames) {
-      if (typeof tag === "number") {
-        ids.push(tag);
-      } else {
-        const serverTag = serverTags.find((t) => t.label?.toLowerCase() === tag.toLowerCase());
-        if (serverTag?.id) {
-          ids.push(serverTag.id);
-        } else {
-          missingTags.push(tag);
-        }
-      }
-    }
-    return { ids, missingTags };
-  }
-
   private mergeFieldsWithSchema(
     schemaFields: ProviderField[],
     configFields: Record<string, unknown>,
@@ -275,10 +258,10 @@ export abstract class ProviderResourceSync<
     // Omitted `tags` means "do not manage" - only diff when the user set it explicitly,
     // otherwise an update would wipe tags added on the server.
     if (config.tags !== undefined) {
-      const { ids, missingTags } = this.resolveTagNamesToIds(config.tags, serverTags);
+      const { ids, missing } = resolveTagNames(config.tags, serverTags);
       // A tag with no id yet is one a dry run would create. Listing it by name keeps the report
       // honest; dropping it would show an unchanged resource that a real run would retag.
-      const desiredTags = [...[...ids].sort(), ...missingTags];
+      const desiredTags = [...[...ids].sort(), ...missing];
       const sortedServerTags = [...(server.tags ?? [])].sort();
       if (JSON.stringify(desiredTags) !== JSON.stringify(sortedServerTags)) {
         changes.push({ field: "tags", from: sortedServerTags, to: desiredTags });
@@ -335,10 +318,10 @@ export abstract class ProviderResourceSync<
       // Not managed - keep whatever the server has.
       tagIds = server?.tags ?? [];
     } else {
-      const { ids, missingTags } = this.resolveTagNamesToIds(config.tags, serverTags);
-      if (missingTags.length > 0) {
+      const { ids, missing } = resolveTagNames(config.tags, serverTags);
+      if (missing.length > 0) {
         this.logger.warn(
-          `Missing tags for ${this.label} '${config.name}': ${missingTags.join(", ")}. These should have been created during batch tag creation.`,
+          `Missing tags for ${this.label} '${config.name}': ${missing.join(", ")}. These should have been created during batch tag creation.`,
         );
       }
       tagIds = ids;
@@ -380,29 +363,21 @@ export abstract class ProviderResourceSync<
     const allMissingTags = new Set<string>();
     for (const config of configItems) {
       if (config.tags) {
-        const { missingTags } = this.resolveTagNamesToIds(config.tags, serverCache.tags);
-        missingTags.forEach((tag) => allMissingTags.add(tag));
+        const { missing } = resolveTagNames(config.tags, serverCache.tags);
+        missing.forEach((tag) => allMissingTags.add(tag));
       }
     }
     if (allMissingTags.size === 0) return;
 
-    const names = Array.from(allMissingTags);
     if (getEnvs().DRY_RUN) {
-      this.logger.info(`DryRun: Would create missing tags for ${this.label}s: ${names.join(", ")}`);
+      this.logger.info(`DryRun: Would create missing tags for ${this.label}s: ${Array.from(allMissingTags).join(", ")}`);
       return;
     }
 
-    this.logger.info(`Creating missing tags for ${this.label}s: ${names.join(", ")}`);
-    for (const tagName of allMissingTags) {
-      try {
-        const newTag = await this.apiClient.createTag({ label: tagName });
-        serverCache.tags.push(newTag);
-        this.logger.debug(`Created tag: '${tagName}' (ID: ${newTag.id})`);
-      } catch (error: unknown) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        this.logger.error(`Failed to create tag '${tagName}': ${errorMessage}`);
-        throw new Error(`Tag creation failed. Cannot proceed with ${this.label} sync.`);
-      }
+    try {
+      await ensureTags(this.apiClient, serverCache, [...allMissingTags]);
+    } catch (error: unknown) {
+      throw new Error(`Tag creation failed. Cannot proceed with ${this.label} sync.`, { cause: error });
     }
   }
 

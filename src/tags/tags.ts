@@ -1,10 +1,282 @@
-import type { Tag } from "./tag.types";
+import type { ServerCache } from "../cache";
 import type { TagsClient } from "../clients/capabilities";
 import { getEnvs } from "../env";
+import { logger } from "../logger";
+import { TagDeletionError } from "./tag.types";
+import type { DeleteUnmanagedTagsOptions, EnsureTagsResult, Tag, TagResolveOptions, TagSyncResult } from "./tag.types";
 
+/** Reads the server's current tags into the shared cache shape every feature resolves against. */
 export const loadServerTags = async (client: TagsClient): Promise<Tag[]> => {
   if (getEnvs().LOAD_LOCAL_SAMPLES) {
     throw new Error("Local sample loading for tags is not implemented yet.");
   }
   return client.getTags();
 };
+
+/** Numeric tag entries are deprecated: labels are the default and recommended form. Warn once per label per run. */
+const warnedNumericTags = new Set<string>();
+
+/** Resolves config tag entries to ids. Case-insensitive; numbers pass through as raw ids. */
+export const resolveTagNames = (
+  tagNames: readonly (string | number)[],
+  serverTags: readonly Tag[],
+  options: TagResolveOptions = {},
+): { ids: number[]; missing: string[] } => {
+  const ids: number[] = [];
+  const missing: string[] = [];
+  const byLabel = new Map<string, Tag>();
+
+  for (const tag of serverTags) {
+    // First match wins, matching the Array.find the per-caller resolvers used before.
+    if (tag.label && tag.id != null && !byLabel.has(tag.label.toLowerCase())) {
+      byLabel.set(tag.label.toLowerCase(), tag);
+    }
+  }
+
+  for (const entry of tagNames) {
+    if (typeof entry === "number") {
+      const key = String(entry);
+      if (!warnedNumericTags.has(key)) {
+        warnedNumericTags.add(key);
+        logger.warn(
+          `Numeric tag id '${entry}' in config is deprecated and may be removed. Use the tag label instead, e.g. 'tags: ["my-label"]'.`,
+        );
+      }
+      ids.push(entry);
+      continue;
+    }
+
+    const key = entry.toLowerCase();
+    const serverTag = byLabel.get(key);
+    if (serverTag?.id != null) {
+      ids.push(serverTag.id);
+      continue;
+    }
+
+    missing.push(entry);
+    const placeholder = options.placeholders?.get(key);
+    if (placeholder != null) {
+      ids.push(placeholder);
+    }
+  }
+
+  return { ids, missing };
+};
+
+/** Synthetic ids for missing labels, so a dry run diffs stably. Keyed by lowercased label. */
+export const buildTagPlaceholders = (tagNames: readonly string[], serverTags: readonly Tag[]): Map<string, number> => {
+  const known = new Set(serverTags.map((tag) => tag.label?.toLowerCase()).filter((label) => label != null));
+  const placeholders = new Map<string, number>();
+
+  for (const name of tagNames) {
+    const key = name.toLowerCase();
+    if (!known.has(key) && !placeholders.has(key)) {
+      placeholders.set(key, -(placeholders.size + 1));
+    }
+  }
+
+  return placeholders;
+};
+
+/** Folds config tag lists into one lowercased set of labels, skipping raw numeric ids. */
+const collectTagLabels = (...tagLists: readonly (readonly (string | number)[] | undefined)[]): Set<string> => {
+  const labels = new Set<string>();
+  for (const tags of tagLists) {
+    for (const tag of tags ?? []) {
+      if (typeof tag === "string") {
+        labels.add(tag.toLowerCase());
+      }
+    }
+  }
+  return labels;
+};
+
+/**
+ * Collects the raw server ids from config tag entries. Numeric entries are deprecated but still
+ * accepted in the per-feature blocks, and such a tag must survive an unmanaged-tag prune.
+ */
+const collectTagIds = (...tagLists: readonly (readonly (string | number)[] | undefined)[]): number[] => {
+  const ids: number[] = [];
+  for (const tags of tagLists) {
+    for (const tag of tags ?? []) {
+      if (typeof tag === "number" && !ids.includes(tag)) {
+        ids.push(tag);
+      }
+    }
+  }
+  return ids;
+};
+
+/** Creates the labels the server lacks. Pushes them to the cache; a dry run creates nothing. */
+export const ensureTags = async (
+  client: TagsClient,
+  serverCache: ServerCache,
+  tagNames: readonly (string | number)[],
+  options: TagResolveOptions = {},
+): Promise<EnsureTagsResult> => {
+  const { missing } = resolveTagNames(tagNames, serverCache.tags, options);
+  const created: string[] = [];
+
+  const toCreate: string[] = [];
+  // A server tag without an id cannot be referenced, so it does not count as known.
+  const seen = new Set(serverCache.tags.filter((tag) => tag.id != null).map((tag) => tag.label?.toLowerCase() ?? ""));
+  for (const label of missing) {
+    const key = label.toLowerCase();
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    toCreate.push(label);
+  }
+
+  if (toCreate.length > 0 && getEnvs().DRY_RUN) {
+    logger.info(`DryRun: Would create tags: ${toCreate.join(", ")}`);
+  } else if (toCreate.length > 0) {
+    logger.info(`Creating missing tags on server: ${toCreate.join(", ")}`);
+
+    for (const label of toCreate) {
+      try {
+        const newTag = await client.createTag({ label });
+        serverCache.tags.push(newTag);
+        created.push(label);
+        logger.debug(`Created tag: '${label}' (ID: ${newTag.id})`);
+      } catch (error: unknown) {
+        const message = `Failed to create tag '${label}': ${error instanceof Error ? error.message : String(error)}`;
+        logger.error(message);
+        throw new Error(message);
+      }
+    }
+  }
+
+  // Resolve again so labels created above come back with their real ids.
+  const { ids } = resolveTagNames(tagNames, serverCache.tags, options);
+
+  return { ids, created, missing: toCreate };
+};
+
+/** 409 = tag still referenced. The status sits on `cause`, not the error ky-client rethrows. */
+const isInUseError = (error: unknown): boolean => {
+  const seen = new Set<unknown>();
+  let current: unknown = error;
+
+  while (current != null && typeof current === "object" && !seen.has(current)) {
+    seen.add(current);
+    const candidate = current as { response?: { status?: number }; status?: number; cause?: unknown };
+    const status = candidate.response?.status ?? candidate.status;
+    if (typeof status === "number") {
+      return status === 409;
+    }
+    current = candidate.cause;
+  }
+
+  return false;
+};
+
+/** Prunes tags outside `keep`. A mid-run failure throws TagDeletionError with the partial result. */
+const deleteUnmanagedTags = async (
+  client: TagsClient,
+  serverCache: ServerCache,
+  options: DeleteUnmanagedTagsOptions,
+): Promise<TagSyncResult> => {
+  const result: TagSyncResult = { added: 0, removed: 0, diffEntries: [] };
+  const keep = new Set<string>();
+  for (const label of options.keep) {
+    keep.add(label.toLowerCase());
+  }
+  const keepIds = new Set(options.keepIds ?? []);
+
+  const dryRun = getEnvs().DRY_RUN;
+  const deletedIds = new Set<number>();
+
+  for (const tag of serverCache.tags) {
+    const label = tag.label ?? "";
+    if (!label || tag.id == null || keep.has(label.toLowerCase()) || keepIds.has(tag.id)) {
+      continue;
+    }
+
+    if (dryRun) {
+      logger.info(`DryRun: Would delete unmanaged tag '${label}'.`);
+      result.diffEntries.push({ resourceType: "Tag", name: label, action: "delete" });
+      result.removed++;
+      continue;
+    }
+
+    try {
+      await client.deleteTag(tag.id.toString());
+    } catch (error: unknown) {
+      if (isInUseError(error) && options.onInUse === "skip") {
+        logger.warn(`Skipping unmanaged tag '${label}': still in use by a resource configarr does not manage.`);
+        continue;
+      }
+      const message = `Failed to delete tag '${label}': ${error instanceof Error ? error.message : String(error)}`;
+      logger.error(message);
+      // Deletions before this one already happened on the server, so hand their diff entries
+      // back to the caller rather than losing them.
+      throw new TagDeletionError(message, result);
+    }
+
+    deletedIds.add(tag.id);
+    result.diffEntries.push({ resourceType: "Tag", name: label, action: "delete" });
+    result.removed++;
+    logger.info(`Deleted unmanaged tag: '${label}'`);
+  }
+
+  serverCache.tags = serverCache.tags.filter((tag) => tag.id == null || !deletedIds.has(tag.id));
+
+  return result;
+};
+
+type TagDeleteConfig = { enabled: boolean; ignore?: string[] };
+
+interface DeleteUnmanagedInstanceTagsOptions {
+  /** Only prunes when `enabled` is set. */
+  deleteConfig?: TagDeleteConfig;
+  /** Instance-level `tags`. Always kept: pruning them would create-then-delete each run. */
+  instanceLabels?: readonly string[];
+  /** Every `tags` list in the instance config, so a tag a managed resource uses is never pruned. */
+  referencedTagLists?: readonly (readonly (string | number)[] | undefined)[];
+  /** Media *arrs have unmanaged tag holders, so a 409 skips; Prowlarr fails the instance. */
+  onInUse: "throw" | "skip";
+}
+
+/** Ensures the instance-level `tags` labels exist, reporting one diff entry each. */
+export async function syncInstanceTags(
+  client: TagsClient,
+  serverCache: ServerCache,
+  labels: readonly string[] | undefined,
+): Promise<TagSyncResult> {
+  const result: TagSyncResult = { added: 0, removed: 0, diffEntries: [] };
+
+  if (!labels?.length) {
+    return result;
+  }
+
+  const { created, missing } = await ensureTags(client, serverCache, labels);
+  for (const label of created) {
+    logger.info(`Created tag: '${label}'`);
+  }
+
+  for (const label of getEnvs().DRY_RUN ? missing : created) {
+    result.diffEntries.push({ resourceType: "Tag", name: label, action: "create" });
+    result.added++;
+  }
+
+  return result;
+}
+
+/** Prunes tags outside `instanceLabels` + `ignore` + everything the config references. */
+export async function deleteUnmanagedInstanceTags(
+  client: TagsClient,
+  serverCache: ServerCache,
+  options: DeleteUnmanagedInstanceTagsOptions,
+): Promise<TagSyncResult> {
+  if (!options.deleteConfig?.enabled) {
+    return { added: 0, removed: 0, diffEntries: [] };
+  }
+
+  return deleteUnmanagedTags(client, serverCache, {
+    keep: collectTagLabels(options.instanceLabels, options.deleteConfig.ignore, ...(options.referencedTagLists ?? [])),
+    keepIds: collectTagIds(...(options.referencedTagLists ?? [])),
+    onInUse: options.onInUse,
+  });
+}

@@ -105,6 +105,12 @@ describe("DelayProfileLidarrSync", () => {
     expect(mapped).not.toHaveProperty("enableUsenet");
   });
 
+  test("mapToServer matches tag labels case-insensitively", async () => {
+    const mapped = lidarrDelay().mapToServer({ tags: ["Test", "other"] }, [{ id: 5, label: "test" }]);
+
+    expect(mapped.tags).toEqual([5]);
+  });
+
   test("InputConfigDelayProfileSchema - accepts Items alias", async () => {
     const { InputConfigDelayProfileSchema } = await import("../types/config.types");
     const parsed = InputConfigDelayProfileSchema.parse({

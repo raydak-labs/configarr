@@ -36,7 +36,12 @@ vi.mock("../customFormats/customFormats", () => ({
   loadServerCustomFormats: vi.fn(async () => []),
   manageCf: vi.fn(async () => ({ createCFs: [], updatedCFs: [], validCFs: [], errorCFs: [], diffEntries: [] })),
 }));
-vi.mock("../tags/tags", () => ({ loadServerTags: vi.fn(async () => []) }));
+vi.mock("../tags/tags", () => ({
+  loadServerTags: vi.fn(async () => []),
+  syncInstanceTags: vi.fn(async () => ({ added: 0, removed: 0, diffEntries: [] })),
+  ensureTags: vi.fn(async () => ({ ids: [], created: [], missing: [] })),
+  deleteUnmanagedInstanceTags: vi.fn(async () => ({ added: 0, removed: 0, diffEntries: [] })),
+}));
 vi.mock("../telemetry", () => ({ Telemetry: { isEnabled: () => false }, getTelemetryInstance: vi.fn() }));
 vi.mock("../uiConfigs/uiConfigSyncer", () => ({
   syncUiConfig: vi.fn(async () => ({ diffEntries: [] })),
