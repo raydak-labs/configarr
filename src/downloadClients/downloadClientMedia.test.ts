@@ -1,9 +1,21 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
+vi.mock("../env", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../env")>();
+  return {
+    ...actual,
+    getEnvs: vi.fn(() => ({ LOG_LEVEL: "fatal", DRY_RUN: false, CONFIGARR_ENFORCE_CONFIG_VALIDATION: false })),
+  };
+});
+
 import { DownloadProtocol } from "../__generated__/radarr/data-contracts";
 import type { DownloadClientResource } from "../__generated__/radarr/data-contracts";
+import type { DownloadClientsClient, TagsClient } from "../clients/capabilities";
 import { ServerCache } from "../cache";
+import type { DiffEntry } from "../diffReport/diffReport.types";
+import { getEnvs } from "../env";
 import { MediaArrType } from "../types/common.types";
 import type { InputConfigDownloadClient } from "../types/config.types";
+import type { DownloadClientSyncResult } from "./downloadClient.types";
 import { MediaDownloadClientSync } from "./downloadClientMedia";
 import { LidarrDownloadClientSync } from "./downloadClientLidarr";
 import { ReadarrDownloadClientSync } from "./downloadClientReadarr";
@@ -534,5 +546,125 @@ describe("MediaDownloadClientSync – ARR type handling", () => {
 
       expect(payload.tags).toEqual([4, 5]);
     });
+  });
+});
+
+describe("MediaDownloadClientSync – syncDownloadClients tags", () => {
+  const serverClient = (tags: number[]): DownloadClientResource =>
+    qbitSchema({
+      id: 1,
+      name: "qBittorrent",
+      fields: [{ name: "host", value: "qbittorrent" }],
+      tags,
+    });
+
+  const api = (serverClients: DownloadClientResource[]) => ({
+    getDownloadClientSchema: vi.fn(async () => [qbitSchema()]),
+    getDownloadClients: vi.fn(async () => serverClients),
+    createTag: vi.fn(async (tag: { label: string }) => ({ id: 5, label: tag.label })),
+    createDownloadClient: vi.fn(),
+    updateDownloadClient: vi.fn(),
+    deleteDownloadClient: vi.fn(),
+  });
+
+  const syncWith = (clientApi: ReturnType<typeof api>) =>
+    new RadarrDownloadClientSync(clientApi as unknown as DownloadClientsClient<DownloadClientResource> & TagsClient);
+
+  const setDryRun = (DRY_RUN: boolean) =>
+    vi
+      .mocked(getEnvs)
+      .mockReturnValue({ LOG_LEVEL: "fatal", DRY_RUN, CONFIGARR_ENFORCE_CONFIG_VALIDATION: false } as ReturnType<typeof getEnvs>);
+
+  const configWithMissingTag = {
+    download_clients: {
+      data: [{ name: "qBittorrent", type: "qbittorrent", tags: ["existing", "brand-new"], fields: { host: "qbittorrent" } }],
+    },
+  };
+
+  test("dry run does not create tags missing from the server", async () => {
+    setDryRun(true);
+    const clientApi = api([serverClient([1])]);
+    const cache = new ServerCache({ tags: [{ id: 1, label: "existing" }] });
+
+    const result = await syncWith(clientApi).syncDownloadClients(configWithMissingTag, cache);
+
+    expect(clientApi.createTag).not.toHaveBeenCalled();
+    expect(clientApi.createDownloadClient).not.toHaveBeenCalled();
+    expect(clientApi.updateDownloadClient).not.toHaveBeenCalled();
+    expect(clientApi.deleteDownloadClient).not.toHaveBeenCalled();
+    expect(cache.tags).toEqual([{ id: 1, label: "existing" }]);
+    // Same counts the real run reports: the tag is missing but the client still needs updating.
+    expect(result).toMatchObject({ added: 0, updated: 1, removed: 0, failed: 0 });
+    // The new tag has no server ID yet, so it is listed by name - never by the internal
+    // placeholder id the diff compared with.
+    expect(result.diffEntries).toEqual([
+      {
+        resourceType: "DownloadClient",
+        name: "qBittorrent",
+        action: "update",
+        fieldChanges: [{ field: "tags", from: [1], to: ["brand-new", 1] }],
+      },
+    ]);
+  });
+
+  test("dry run and a real run report the same tag values", async () => {
+    const tagChangeOf = (result: DownloadClientSyncResult) => {
+      const entry = result.diffEntries.find((e: DiffEntry) => e.fieldChanges?.some((change) => change.field === "tags"));
+      return entry?.fieldChanges?.find((change) => change.field === "tags");
+    };
+
+    // Labels known to the server plus the id `createTag` hands out for a tag created mid-run.
+    const knownLabels = new Map([
+      [1, "existing"],
+      [5, "brand-new"],
+    ]);
+    const reportedLabels = (result: DownloadClientSyncResult) =>
+      ((tagChangeOf(result)?.to as unknown[]) ?? []).map((value) => (typeof value === "number" ? knownLabels.get(value) : value));
+
+    const cache = () => new ServerCache({ tags: [{ id: 1, label: "existing" }] });
+
+    setDryRun(true);
+    const dryRunResult = await syncWith(api([serverClient([1])])).syncDownloadClients(configWithMissingTag, cache());
+
+    setDryRun(false);
+    const realResult = await syncWith(api([serverClient([1])])).syncDownloadClients(configWithMissingTag, cache());
+
+    expect(tagChangeOf(dryRunResult)?.from).toEqual([1]);
+    expect(tagChangeOf(realResult)?.from).toEqual([1]);
+    expect(reportedLabels(dryRunResult).sort()).toEqual(["brand-new", "existing"]);
+    expect(reportedLabels(realResult).sort()).toEqual(reportedLabels(dryRunResult).sort());
+    // The placeholder id is internal bookkeeping and must never reach the report.
+    expect(JSON.stringify(dryRunResult.diffEntries)).not.toContain("-1");
+  });
+
+  test("dry run reports the same counts as a real run for a missing client", async () => {
+    const config = {
+      download_clients: { data: [{ name: "qBittorrent", type: "qbittorrent", tags: ["brand-new"], fields: { host: "qbittorrent" } }] },
+    };
+
+    setDryRun(true);
+    const dryRunApi = api([]);
+    const dryRunResult = await syncWith(dryRunApi).syncDownloadClients(config, new ServerCache());
+    expect(dryRunApi.createTag).not.toHaveBeenCalled();
+    expect(dryRunResult).toMatchObject({ added: 1, updated: 0, removed: 0, failed: 0 });
+
+    setDryRun(false);
+    const realApi = api([]);
+    const realResult = await syncWith(realApi).syncDownloadClients(config, new ServerCache());
+
+    expect(realApi.createTag).toHaveBeenCalledWith({ label: "brand-new" });
+    expect(realResult).toMatchObject({ added: 1, updated: 0, removed: 0, failed: 0 });
+  });
+
+  test("real run creates missing tags before the diff", async () => {
+    setDryRun(false);
+    const clientApi = api([serverClient([1])]);
+    const cache = new ServerCache({ tags: [{ id: 1, label: "existing" }] });
+
+    const result = await syncWith(clientApi).syncDownloadClients(configWithMissingTag, cache);
+
+    expect(clientApi.createTag).toHaveBeenCalledWith({ label: "brand-new" });
+    expect(clientApi.updateDownloadClient).toHaveBeenCalledWith("1", expect.objectContaining({ tags: [1, 5] }));
+    expect(result).toMatchObject({ added: 0, updated: 1, removed: 0, failed: 0 });
   });
 });
