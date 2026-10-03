@@ -55,8 +55,8 @@ pkgs.stdenvNoCC.mkDerivation (finalAttrs: {
     owner = "raydak-labs";
     repo = "configarr";
     rev = "v${finalAttrs.version}";
-    hash = "sha256-Z4eSImumTj1rVbcCMt2M5BqmcR7tiupMeA/7aKqaLzw=";
+    hash = "sha256-yCdlc/T+FARPeWcaOaMqN8gpc+RRV+qI2B4eBWZdPVE=";
   };
 
-  version = "1.33.0";
+  version = "1.34.0";
 })
