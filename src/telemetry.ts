@@ -99,8 +99,6 @@ export class Telemetry {
     }
 
     try {
-      // custom umami tracking is disabled for now, we only report to posthog
-
       await ky.post("https://eu.i.posthog.com/capture/", {
         body: JSON.stringify({
           api_key: "phc_So3UZ2BxlK56T2UDPtVwMqPZ0F1XOQNOhHss2JNqMKF", // gitleaks:allow
