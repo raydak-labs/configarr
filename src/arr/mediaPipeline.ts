@@ -374,9 +374,7 @@ export const completeMediaSync = async <T extends MediaArrType>(ctx: MediaSyncCo
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
       logger.error(`Failed to sync download clients: ${message}`);
-      if (err instanceof ConfigValidationError) {
-        throw err;
-      }
+      throw err;
     }
   }
 
@@ -385,11 +383,10 @@ export const completeMediaSync = async <T extends MediaArrType>(ctx: MediaSyncCo
     try {
       const downloadClientConfigResult = await syncDownloadClientConfig(client, arrType, config, serverCache);
       collector.add(downloadClientConfigDiffToDiffEntries(downloadClientConfigResult));
-    } catch (err: any) {
-      logger.error(`Failed to sync download client config: ${err.message}`);
-      if (err instanceof ConfigValidationError) {
-        throw err;
-      }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      logger.error(`Failed to sync download client config: ${message}`);
+      throw err;
     }
   }
 
@@ -402,11 +399,10 @@ export const completeMediaSync = async <T extends MediaArrType>(ctx: MediaSyncCo
     try {
       const remotePathsResult = await syncRemotePaths(client, arrType, config);
       collector.add(remotePathsResult.diffEntries);
-    } catch (err: any) {
-      logger.error(`Failed to sync remote path mappings: ${err.message}`);
-      if (err instanceof ConfigValidationError) {
-        throw err;
-      }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      logger.error(`Failed to sync remote path mappings: ${message}`);
+      throw err;
     }
   } else {
     logger.debug(`[DEBUG] No remote paths to sync for ${arrType}. download_clients: ${JSON.stringify(config.download_clients)}`);
