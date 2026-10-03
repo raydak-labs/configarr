@@ -4,6 +4,10 @@ import { BaseQualityProfileSync, warnUnsupportedQualityProfileLanguage } from ".
 import { QualityProfileLanguage, QualityProfileShared } from "./qualityProfile.types";
 
 export class QualityProfileReadarrSync extends BaseQualityProfileSync<QualityProfileResource> {
+  protected toServerProfile(profile: QualityProfileShared): QualityProfileResource {
+    return profile;
+  }
+
   protected resolveLanguage(
     profileName: string,
     configLanguage: string | undefined,

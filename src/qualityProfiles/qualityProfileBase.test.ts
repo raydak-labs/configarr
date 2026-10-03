@@ -13,6 +13,11 @@ import {
   qualityProfilesToDiffEntries,
 } from "./qualityProfileBase";
 import { QualityProfileRadarrSync } from "./qualityProfileRadarr";
+import type { QualityProfileResource } from "../__generated__/radarr/data-contracts";
+import type { QualityProfilesClient } from "../clients/capabilities";
+
+/** calculateQualityProfilesDiff never touches the API; the client is only required by the type. */
+const qpClient = {} as QualityProfilesClient<QualityProfileResource>;
 import { CFProcessing } from "../customFormats/customFormat.types";
 import { ConfigQualityProfile, ConfigQualityProfileItem, MergedConfigInstance } from "../types/config.types";
 import { ConfigValidationError } from "../validation";
@@ -1223,10 +1228,18 @@ describe("qualityProfileBase", async () => {
     };
 
     await expect(
-      new QualityProfileRadarrSync().calculateQualityProfilesDiff(cfMap, config, new ServerCache({ qualityDefinitions: resources })),
+      new QualityProfileRadarrSync(qpClient).calculateQualityProfilesDiff(
+        cfMap,
+        config,
+        new ServerCache({ qualityDefinitions: resources }),
+      ),
     ).rejects.toThrow(ConfigValidationError);
     await expect(
-      new QualityProfileRadarrSync().calculateQualityProfilesDiff(cfMap, config, new ServerCache({ qualityDefinitions: resources })),
+      new QualityProfileRadarrSync(qpClient).calculateQualityProfilesDiff(
+        cfMap,
+        config,
+        new ServerCache({ qualityDefinitions: resources }),
+      ),
     ).rejects.toThrow("QualityProfile 'New Profile': configured upgrade.until_quality 'DoesNotExist' was not found on the server");
   });
 

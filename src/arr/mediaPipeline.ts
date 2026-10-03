@@ -2,7 +2,7 @@ import fs from "node:fs";
 import { ServerCache } from "../cache";
 import { ArrTypeToClient } from "../clients/client";
 import { mergeConfigsAndTemplates } from "../config";
-import { CFIDToConfigGroup, CFProcessing, CustomFormatRequest } from "../customFormats/customFormat.types";
+import { CFIDToConfigGroup, CFProcessing, CustomFormatRef } from "../customFormats/customFormat.types";
 import {
   calculateCFsToManage,
   deleteCustomFormat,
@@ -16,16 +16,12 @@ import { DiffCollector } from "../diffReport/diffCollector";
 import { InstanceDiffReport } from "../diffReport/diffReport.types";
 import { downloadClientConfigDiffToDiffEntries, syncDownloadClientConfig } from "../downloadClientConfig/downloadClientConfigSyncer";
 import { BaseDownloadClientSync } from "../downloadClients/downloadClientBase";
-import { MediaDownloadClientResource } from "../downloadClients/downloadClient.types";
 import { getEnvs } from "../env";
 import { logger } from "../logger";
 import { MediaManagementSync, mediamanagementDiffToDiffEntries, namingDiffToDiffEntries } from "../mediaManagement/mediaManagement";
 import { QualityDefinitionSync, qualityDefinitionsToDiffEntries } from "../qualityDefinitions/qualityDefinition";
-import { QualityDefinitionShared } from "../qualityDefinitions/qualityDefinition.types";
 import { BaseQualityProfileSync, getUnmanagedQualityProfiles, qualityProfilesToDiffEntries } from "../qualityProfiles/qualityProfileBase";
-import { QualityProfileShared } from "../qualityProfiles/qualityProfile.types";
 import { BaseReleaseProfileSync } from "../releaseProfiles/releaseProfileBase";
-import { ReleaseProfileShared } from "../releaseProfiles/releaseProfile.types";
 import { syncRemotePaths } from "../remotePaths/remotePathSyncer";
 import { BaseRootFolderSync } from "../rootFolder/rootFolderBase";
 import { loadServerTags } from "../tags/tags";
@@ -35,15 +31,113 @@ import { InputConfigArrInstance, InputConfigSchema, MergedConfigInstance } from 
 import { TrashQualityDefinitionQuality } from "../types/trashguide.types";
 import { syncUiConfig, uiConfigDiffToDiffEntries } from "../uiConfigs/uiConfigSyncer";
 import { ConfigValidationError } from "../validation";
+import type {
+  DownloadClientResource as LidarrDownloadClientResource,
+  MediaManagementConfigResource as LidarrMediaManagementConfigResource,
+  NamingConfigResource as LidarrNamingConfigResource,
+  QualityDefinitionResource as LidarrQualityDefinitionResource,
+  QualityProfileResource as LidarrQualityProfileResource,
+  ReleaseProfileResource as LidarrReleaseProfileResource,
+} from "../__generated__/lidarr/data-contracts";
+import type {
+  DownloadClientResource as RadarrDownloadClientResource,
+  MediaManagementConfigResource as RadarrMediaManagementConfigResource,
+  NamingConfigResource as RadarrNamingConfigResource,
+  QualityDefinitionResource as RadarrQualityDefinitionResource,
+  QualityProfileResource as RadarrQualityProfileResource,
+  ReleaseProfileResource as RadarrReleaseProfileResource,
+} from "../__generated__/radarr/data-contracts";
+import type {
+  DownloadClientResource as ReadarrDownloadClientResource,
+  MediaManagementConfigResource as ReadarrMediaManagementConfigResource,
+  NamingConfigResource as ReadarrNamingConfigResource,
+  QualityDefinitionResource as ReadarrQualityDefinitionResource,
+  QualityProfileResource as ReadarrQualityProfileResource,
+  ReleaseProfileResource as ReadarrReleaseProfileResource,
+} from "../__generated__/readarr/data-contracts";
+import type {
+  DownloadClientResource as SonarrDownloadClientResource,
+  MediaManagementConfigResource as SonarrMediaManagementConfigResource,
+  NamingConfigResource as SonarrNamingConfigResource,
+  QualityDefinitionResource as SonarrQualityDefinitionResource,
+  QualityProfileResource as SonarrQualityProfileResource,
+  ReleaseProfileResource as SonarrReleaseProfileResource,
+} from "../__generated__/sonarr/data-contracts";
+import type {
+  DownloadClientResource as WhisparrDownloadClientResource,
+  MediaManagementConfigResource as WhisparrMediaManagementConfigResource,
+  NamingConfigResource as WhisparrNamingConfigResource,
+  QualityDefinitionResource as WhisparrQualityDefinitionResource,
+  QualityProfileResource as WhisparrQualityProfileResource,
+  ReleaseProfileResource as WhisparrReleaseProfileResource,
+} from "../__generated__/whisparr/data-contracts";
 
-export type MediaFeatureSyncs = {
-  qd: QualityDefinitionSync<QualityDefinitionShared>;
-  mm: MediaManagementSync<{ id?: number }, { id?: number }>;
-  qp: BaseQualityProfileSync<QualityProfileShared>;
+/**
+ * The generated resource each *arr client returns for a feature. This is what binds a
+ * `MediaFeatureSyncs` bag to one *arr.
+ *
+ * What it actually buys: a wrong-arr bag is rejected wherever two *arrs' generated resources are mutually
+ * non-assignable, for example Sonarr and Radarr quality profiles (`Quality.source`). It is not a complete
+ * barrier - the generated resources are field-for-field identical for release profiles and for Sonarr/Radarr
+ * download clients, so those slots accept a sync built for either arr. Adding a nominal brand to the bag would
+ * close that, at the cost of a hand-written marker type per feature.
+ */
+type MediaArrResources = {
+  LIDARR: {
+    qualityDefinition: LidarrQualityDefinitionResource;
+    naming: LidarrNamingConfigResource;
+    mediaManagement: LidarrMediaManagementConfigResource;
+    qualityProfile: LidarrQualityProfileResource;
+    releaseProfile: LidarrReleaseProfileResource;
+    downloadClient: LidarrDownloadClientResource;
+  };
+  RADARR: {
+    qualityDefinition: RadarrQualityDefinitionResource;
+    naming: RadarrNamingConfigResource;
+    mediaManagement: RadarrMediaManagementConfigResource;
+    qualityProfile: RadarrQualityProfileResource;
+    releaseProfile: RadarrReleaseProfileResource;
+    downloadClient: RadarrDownloadClientResource;
+  };
+  READARR: {
+    qualityDefinition: ReadarrQualityDefinitionResource;
+    naming: ReadarrNamingConfigResource;
+    mediaManagement: ReadarrMediaManagementConfigResource;
+    qualityProfile: ReadarrQualityProfileResource;
+    releaseProfile: ReadarrReleaseProfileResource;
+    downloadClient: ReadarrDownloadClientResource;
+  };
+  SONARR: {
+    qualityDefinition: SonarrQualityDefinitionResource;
+    naming: SonarrNamingConfigResource;
+    mediaManagement: SonarrMediaManagementConfigResource;
+    qualityProfile: SonarrQualityProfileResource;
+    releaseProfile: SonarrReleaseProfileResource;
+    downloadClient: SonarrDownloadClientResource;
+  };
+  WHISPARR: {
+    qualityDefinition: WhisparrQualityDefinitionResource;
+    naming: WhisparrNamingConfigResource;
+    mediaManagement: WhisparrMediaManagementConfigResource;
+    qualityProfile: WhisparrQualityProfileResource;
+    releaseProfile: WhisparrReleaseProfileResource;
+    downloadClient: WhisparrDownloadClientResource;
+  };
+};
+
+export type MediaFeatureSyncs<T extends MediaArrType = MediaArrType> = {
+  qd: QualityDefinitionSync<MediaArrResources[T]["qualityDefinition"]>;
+  mm: MediaManagementSync<MediaArrResources[T]["naming"], MediaArrResources[T]["mediaManagement"]>;
+  qp: BaseQualityProfileSync<MediaArrResources[T]["qualityProfile"]>;
+  // Delay profiles are synced through the shared `StandardDelayProfile` shape plus Lidarr's
+  // plugin extension, so this slot intentionally is not per-arr resource typed: a per-arr
+  // slot would need a union across the two implementations and would loosen the bag rather
+  // than tighten it. Replace it once `DelayProfilesWriter` is generic on the delay resource,
+  // which is also the point where both delay implementations can share one resource type.
   delay: BaseDelayProfileSync<DelayProfileShared>;
-  releaseProfiles: BaseReleaseProfileSync<ReleaseProfileShared>;
+  releaseProfiles: BaseReleaseProfileSync<MediaArrResources[T]["releaseProfile"]>;
   root: BaseRootFolderSync;
-  downloadClients: BaseDownloadClientSync<MediaDownloadClientResource>;
+  downloadClients: BaseDownloadClientSync<MediaArrResources[T]["downloadClient"]>;
 };
 
 export type MediaTrashOps = {
@@ -59,7 +153,7 @@ export type MediaSyncContext<T extends MediaArrType = MediaArrType> = {
   config: MergedConfigInstance;
   serverCache: ServerCache;
   collector: DiffCollector;
-  syncs: MediaFeatureSyncs;
+  syncs: MediaFeatureSyncs<T>;
 };
 
 export type MediaSyncToQualityProfilesArgs<T extends MediaArrType = MediaArrType> = {
@@ -68,7 +162,7 @@ export type MediaSyncToQualityProfilesArgs<T extends MediaArrType = MediaArrType
   globalConfig: InputConfigSchema;
   instanceConfig: InputConfigArrInstance;
   client: ArrTypeToClient[T];
-  syncs: MediaFeatureSyncs;
+  syncs: MediaFeatureSyncs<T>;
   trash?: MediaTrashOps;
 };
 
@@ -112,7 +206,7 @@ export const runMediaSyncToQualityProfiles = async <T extends MediaArrType>(
   const serverCFMapping = serverCache.customFormats.reduce((p, c) => {
     p.set(c.name!, c);
     return p;
-  }, new Map<string, CustomFormatRequest>());
+  }, new Map<string, CustomFormatRef>());
 
   const cfUpdateResult = await manageCf(client, mergedCFs, serverCFMapping);
   collector.add(cfUpdateResult.diffEntries);

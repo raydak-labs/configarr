@@ -11,7 +11,6 @@ import { BaseDownloadClientSync } from "./downloadClientBase";
 import type { InputConfigDownloadClient } from "../types/config.types";
 import type { ServerCache } from "../cache";
 import type { DownloadClientsClient, TagsClient } from "../clients/capabilities";
-import { getClient } from "../clients/client";
 import type { TagResource } from "../__generated__/radarr/data-contracts";
 import { DownloadProtocol } from "../__generated__/radarr/data-contracts";
 import { ArrType } from "../types/common.types";
@@ -20,10 +19,6 @@ import { getEnvs } from "../env";
 import { ConfigValidationError } from "../validation";
 
 class MockDownloadClientSync extends BaseDownloadClientSync<MediaDownloadClientResource> {
-  constructor() {
-    super();
-  }
-
   public testValidateDownloadClient(config: InputConfigDownloadClient, schema: MediaDownloadClientResource[]) {
     return this.validateDownloadClient(config, schema);
   }
@@ -36,30 +31,24 @@ class MockDownloadClientSync extends BaseDownloadClientSync<MediaDownloadClientR
     return this.normalizeConfigFields(configFields, arrType);
   }
 
-  public testGetApi(): DownloadClientsClient & TagsClient {
+  public testGetApi(): DownloadClientsClient<MediaDownloadClientResource> & TagsClient {
     return this.getApi();
   }
 
-  protected getApi(): DownloadClientsClient<MediaDownloadClientResource> & TagsClient {
-    return getClient("RADARR");
+  public get testInjectedApi(): DownloadClientsClient<MediaDownloadClientResource> & TagsClient {
+    return this.api;
+  }
+
+  public isDownloadClientEqual() {
+    return { equal: true, changes: [] };
+  }
+
+  public shouldUsePartialUpdate() {
+    return false;
   }
 
   protected getArrType(): ArrType {
     return "RADARR";
-  }
-
-  protected async calculateDiff(
-    configClients: InputConfigDownloadClient[],
-    serverClients: MediaDownloadClientResource[],
-    cache: ServerCache,
-    updatePassword?: boolean,
-  ) {
-    return {
-      create: [],
-      update: [],
-      unchanged: [],
-      deleted: [],
-    };
   }
 
   public async resolveConfig(
@@ -69,18 +58,6 @@ class MockDownloadClientSync extends BaseDownloadClientSync<MediaDownloadClientR
     partialUpdate?: boolean,
   ) {
     return {} as MediaDownloadClientResource;
-  }
-
-  protected createClient() {
-    throw new Error("Not implemented in test");
-  }
-
-  protected updateClient() {
-    throw new Error("Not implemented in test");
-  }
-
-  protected deleteClient() {
-    throw new Error("Not implemented in test");
   }
 }
 
@@ -95,13 +72,14 @@ describe("BaseDownloadClientSync – sync accounting", () => {
       },
     ]),
     getDownloadClients: vi.fn(async () => []),
+    createDownloadClient: vi.fn(async (client) => client),
     getTags: vi.fn(async () => []),
     createTag: vi.fn(),
   };
 
   class SyncingMock extends MockDownloadClientSync {
-    protected override getApi(): DownloadClientsClient<MediaDownloadClientResource> & TagsClient {
-      return api as unknown as DownloadClientsClient<MediaDownloadClientResource> & TagsClient;
+    constructor() {
+      super(api as unknown as DownloadClientsClient<MediaDownloadClientResource> & TagsClient);
     }
   }
 
@@ -164,7 +142,7 @@ describe("BaseDownloadClientSync – utility methods", () => {
 
   beforeEach(() => {
     vi.mocked(getEnvs).mockReturnValue({ LOG_LEVEL: "fatal", CONFIGARR_ENFORCE_CONFIG_VALIDATION: false } as ReturnType<typeof getEnvs>);
-    sync = new MockDownloadClientSync();
+    sync = new MockDownloadClientSync({} as DownloadClientsClient<MediaDownloadClientResource> & TagsClient);
   });
 
   describe("field normalization", () => {
@@ -372,9 +350,9 @@ describe("BaseDownloadClientSync – utility methods", () => {
     });
   });
 
-  describe("lazy API initialization", () => {
-    test("getApi() throws error when not configured", () => {
-      expect(() => sync.testGetApi()).toThrow("Please configure API first.");
+  describe("API injection", () => {
+    test("getApi() returns the client handed to the constructor", () => {
+      expect(sync.testGetApi()).toBe(sync.testInjectedApi);
     });
   });
 });

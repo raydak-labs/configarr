@@ -2,7 +2,6 @@ import type { DownloadClientResource } from "../__generated__/prowlarr/data-cont
 import { ServerCache } from "../cache";
 import { FieldChange } from "../diffReport/diffReport.types";
 import { InputConfigDownloadClient } from "../types/config.types";
-import { DownloadClientDiff } from "./downloadClient.types";
 import { BaseDownloadClientSync } from "./downloadClientBase";
 
 export class ProwlarrDownloadClientSync extends BaseDownloadClientSync<DownloadClientResource> {
@@ -37,40 +36,6 @@ export class ProwlarrDownloadClientSync extends BaseDownloadClientSync<DownloadC
 
     return specifiedTopLevelProps > 0;
   };
-
-  async calculateDiff(
-    configClients: InputConfigDownloadClient[],
-    serverClients: DownloadClientResource[],
-    cache: ServerCache,
-    updatePassword: boolean = false,
-  ): Promise<DownloadClientDiff<DownloadClientResource>> {
-    const create: InputConfigDownloadClient[] = [];
-    const update: DownloadClientDiff<DownloadClientResource>["update"] = [];
-    const unchanged: { config: InputConfigDownloadClient; server: DownloadClientResource }[] = [];
-
-    for (const config of configClients) {
-      const serverClient = serverClients.find(
-        (s) => s.name === config.name && s.implementation?.toLowerCase() === config.type.toLowerCase(),
-      );
-
-      if (!serverClient) {
-        create.push(config);
-      } else {
-        const comparison = this.isDownloadClientEqual(config, serverClient, cache, updatePassword);
-        if (!comparison.equal) {
-          const partialUpdate = this.shouldUsePartialUpdate(config);
-          update.push({ config, server: serverClient, partialUpdate, fieldChanges: comparison.changes });
-        } else {
-          unchanged.push({ config, server: serverClient });
-        }
-      }
-    }
-
-    const configKeys = new Set(configClients.map((c) => `${c.name}::${c.type.toLowerCase()}`));
-    const deleted = serverClients.filter((s) => !configKeys.has(`${s.name ?? ""}::${s.implementation?.toLowerCase() ?? ""}`));
-
-    return { create, update, unchanged, deleted };
-  }
 
   async resolveConfig(
     config: InputConfigDownloadClient,

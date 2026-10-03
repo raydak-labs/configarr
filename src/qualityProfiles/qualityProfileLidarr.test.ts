@@ -3,6 +3,11 @@ import { QualityDefinitionShared } from "../qualityDefinitions/qualityDefinition
 import { QualityProfileShared } from "./qualityProfile.types";
 import { ServerCache } from "../cache";
 import { QualityProfileLidarrSync } from "./qualityProfileLidarr";
+import type { QualityProfileResource } from "../__generated__/lidarr/data-contracts";
+import type { QualityProfilesClient } from "../clients/capabilities";
+
+/** calculateQualityProfilesDiff never touches the API; the client is only required by the type. */
+const qpClient = {} as QualityProfilesClient<QualityProfileResource>;
 import { CFProcessing } from "../customFormats/customFormat.types";
 import { MergedConfigInstance } from "../types/config.types";
 
@@ -28,7 +33,7 @@ describe("QualityProfileLidarrSync", async () => {
       media_naming: {},
     };
 
-    const diff = await new QualityProfileLidarrSync().calculateQualityProfilesDiff(
+    const diff = await new QualityProfileLidarrSync(qpClient).calculateQualityProfilesDiff(
       cfMap,
       config,
       new ServerCache({ qualityDefinitions: resources }),
@@ -68,7 +73,7 @@ describe("QualityProfileLidarrSync", async () => {
       media_naming: {},
     };
 
-    const diff = await new QualityProfileLidarrSync().calculateQualityProfilesDiff(
+    const diff = await new QualityProfileLidarrSync(qpClient).calculateQualityProfilesDiff(
       cfMap,
       config,
       new ServerCache({

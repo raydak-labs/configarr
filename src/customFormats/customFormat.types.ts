@@ -22,6 +22,9 @@ export type CustomFormatSpecification = {
   }> | null;
 };
 
+/** Minimal shape every *arr custom-format resource shares; used to keep Pattern B stages arr-generic. */
+export type CustomFormatRef = { id?: number; name?: string | null; specifications?: CustomFormatSpecification[] | null };
+
 /** TRaSH/config mapping payload sent to *arr custom-format APIs. */
 export type CustomFormatRequest = {
   id?: number;

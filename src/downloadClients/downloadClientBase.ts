@@ -62,23 +62,23 @@ export abstract class BaseDownloadClientSync<T extends DownloadClientShared> {
   protected readonly logger = logger;
   private schema: T[] | null = null;
 
-  constructor(protected readonly api?: DownloadClientsClient<T> & TagsClient) {}
+  constructor(protected readonly api: DownloadClientsClient<T> & TagsClient) {}
 
   protected getApi(): DownloadClientsClient<T> & TagsClient {
-    if (this.api === undefined) {
-      throw new Error("Please configure API first.");
-    }
     return this.api;
   }
 
   protected abstract getArrType(): ArrType;
 
-  protected abstract calculateDiff(
-    configClients: InputConfigDownloadClient[],
-    serverClients: T[],
+  /** Shared diff: reads no per-arr field, so it lives here and only the comparison hooks stay per-arr. */
+  public abstract isDownloadClientEqual(
+    config: InputConfigDownloadClient,
+    server: T,
     cache: ServerCache,
     updatePassword?: boolean,
-  ): Promise<DownloadClientDiff<T>>;
+  ): { equal: boolean; changes: FieldChange[] };
+
+  public abstract shouldUsePartialUpdate(config: InputConfigDownloadClient): boolean;
 
   public abstract resolveConfig(
     config: InputConfigDownloadClient,
@@ -360,6 +360,40 @@ export abstract class BaseDownloadClientSync<T extends DownloadClientShared> {
 
       return !configKeys.has(key) && !ignore.includes(name);
     });
+  }
+
+  async calculateDiff(
+    configClients: InputConfigDownloadClient[],
+    serverClients: T[],
+    cache: ServerCache,
+    updatePassword: boolean = false,
+  ): Promise<DownloadClientDiff<T>> {
+    const create: InputConfigDownloadClient[] = [];
+    const update: DownloadClientDiff<T>["update"] = [];
+    const unchanged: { config: InputConfigDownloadClient; server: T }[] = [];
+
+    for (const config of configClients) {
+      const serverClient = serverClients.find(
+        (s) => s.name === config.name && s.implementation?.toLowerCase() === config.type.toLowerCase(),
+      );
+
+      if (!serverClient) {
+        create.push(config);
+      } else {
+        const comparison = this.isDownloadClientEqual(config, serverClient, cache, updatePassword);
+        if (!comparison.equal) {
+          const partialUpdate = this.shouldUsePartialUpdate(config);
+          update.push({ config, server: serverClient, partialUpdate, fieldChanges: comparison.changes });
+        } else {
+          unchanged.push({ config, server: serverClient });
+        }
+      }
+    }
+
+    const configKeys = new Set(configClients.map((c) => `${c.name}::${c.type.toLowerCase()}`));
+    const deleted = serverClients.filter((s) => !configKeys.has(`${s.name ?? ""}::${s.implementation?.toLowerCase() ?? ""}`));
+
+    return { create, update, unchanged, deleted };
   }
 
   private async validateConfigClients(

@@ -16,6 +16,7 @@ import {
   RemotePathMappingResource,
   ReleaseProfileResource,
   UiConfigResource,
+  CustomFormatResource,
 } from "../__generated__/readarr/data-contracts";
 import { logger } from "../logger";
 import type { CustomFormatRequest } from "../customFormats/customFormat.types";
@@ -35,7 +36,7 @@ export class ReadarrClient
     TagsClient,
     DownloadClientsClient<DownloadClientResource>,
     QualityProfilesClient<QualityProfileResource>,
-    CustomFormatsClient,
+    CustomFormatsClient<CustomFormatResource>,
     QualityDefinitionsClient<QualityDefinitionResource>,
     MetadataProfilesClient<MetadataProfileResource>
 {
