@@ -452,10 +452,6 @@ export abstract class BaseDownloadClientSync<T extends DownloadClientShared> {
       } catch (error: unknown) {
         const errorMessage = error instanceof Error ? error.message : String(error);
         this.logger.error(`Create download client '${config.name}' failed: ${errorMessage}`);
-        const httpError = error as any;
-        if (httpError.response?.data) {
-          this.logger.debug(`Server response: ${JSON.stringify(httpError.response.data)}`);
-        }
       }
     }
 
@@ -484,10 +480,6 @@ export abstract class BaseDownloadClientSync<T extends DownloadClientShared> {
       } catch (error: unknown) {
         const errorMessage = error instanceof Error ? error.message : String(error);
         this.logger.error(`Update download client '${config.name}' failed: ${errorMessage}`);
-        const httpError = error as any;
-        if (httpError.response?.data) {
-          this.logger.debug(`Server response: ${JSON.stringify(httpError.response.data)}`);
-        }
       }
     }
 

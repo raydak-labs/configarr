@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import kyDefault, { HTTPError, NormalizedOptions } from "ky";
+import kyDefault, { HTTPError, NormalizedOptions, type Options as KyOptions } from "ky";
 import { HttpClient } from "./ky-client";
 
 vi.mock("ky", async (importOriginal) => {
@@ -37,6 +37,25 @@ describe("HttpClient error handling", () => {
     client = new HttpClient({ prefix: "http://localhost:7878" });
   });
 
+  /**
+   * Mimics how ky 2.x rejects: the registered `afterResponse` hooks receive an unconsumed clone of the
+   * response, afterwards the original response body is consumed before the `HTTPError` is thrown.
+   */
+  const rejectLikeKy = (error: HTTPError) => {
+    mockKyFn.mockImplementationOnce(async (_path: string, options: KyOptions) => {
+      for (const hook of options.hooks?.afterResponse ?? []) {
+        await hook({
+          request: error.request,
+          options: {} as NormalizedOptions,
+          response: error.response.clone(),
+          retryCount: 0,
+        });
+      }
+      await error.response.text();
+      throw error;
+    });
+  };
+
   describe("JSON error responses", () => {
     test("extracts messages from array response", async () => {
       const error = makeHTTPError(
@@ -45,14 +64,14 @@ describe("HttpClient error handling", () => {
         JSON.stringify([{ message: "First error" }, { message: "Second error" }]),
         "application/json",
       );
-      mockKyFn.mockRejectedValueOnce(error);
+      rejectLikeKy(error);
 
       await expect(client.request({ path: "/api/test", method: "GET" })).rejects.toThrow("First error, Second error");
     });
 
     test("extracts errorMessage field from array items", async () => {
       const error = makeHTTPError(422, "Unprocessable Entity", JSON.stringify([{ errorMessage: "Validation failed" }]), "application/json");
-      mockKyFn.mockRejectedValueOnce(error);
+      rejectLikeKy(error);
 
       await expect(client.request({ path: "/api/test", method: "GET" })).rejects.toThrow("Validation failed");
     });
@@ -60,48 +79,49 @@ describe("HttpClient error handling", () => {
     test("falls back to JSON dump when array items have no message fields (no 'undefined' in output)", async () => {
       const body = JSON.stringify([{ code: 123 }, { code: 456 }]);
       const error = makeHTTPError(400, "Bad Request", body, "application/json");
-      mockKyFn.mockRejectedValueOnce(error);
+      rejectLikeKy(error);
 
       await expect(client.request({ path: "/api/test", method: "GET" })).rejects.toThrow('[{"code":123},{"code":456}]');
     });
 
     test("extracts message from object response", async () => {
       const error = makeHTTPError(401, "Unauthorized", JSON.stringify({ message: "Invalid API key" }), "application/json");
-      mockKyFn.mockRejectedValueOnce(error);
+      rejectLikeKy(error);
 
       await expect(client.request({ path: "/api/test", method: "GET" })).rejects.toThrow("Invalid API key");
     });
 
     test("extracts errorMessage field from object response", async () => {
       const error = makeHTTPError(400, "Bad Request", JSON.stringify({ errorMessage: "Resource not found" }), "application/json");
-      mockKyFn.mockRejectedValueOnce(error);
+      rejectLikeKy(error);
 
       await expect(client.request({ path: "/api/test", method: "GET" })).rejects.toThrow("Resource not found");
     });
 
     test("includes non-JSON body when content-type is application/json", async () => {
       const error = makeHTTPError(409, "Conflict", "NOT NULL constraint failed: DownloadClients.Categories", "application/json");
-      mockKyFn.mockRejectedValueOnce(error);
+      rejectLikeKy(error);
 
       const thrown = await client.request({ path: "/api/test", method: "GET" }).catch((e: Error) => e);
       expect((thrown as Error).message).toContain("409 Conflict");
       expect((thrown as Error).message).toContain("NOT NULL constraint failed: DownloadClients.Categories");
-      const cause = (thrown as Error).cause as { response?: Response };
-      expect(await cause.response!.clone().text()).toContain("NOT NULL constraint failed");
+      // ky 2.x consumes the error body before throwing, so the message can only be built from the captured text
+      const cause = (thrown as Error).cause as HTTPError;
+      expect(cause.response.bodyUsed).toBe(true);
     });
   });
 
   describe("non-JSON HTTP errors", () => {
     test("includes HTTP status in message for non-JSON responses", async () => {
       const error = makeHTTPError(503, "Service Unavailable", "<html>Down</html>", "text/html");
-      mockKyFn.mockRejectedValueOnce(error);
+      rejectLikeKy(error);
 
       await expect(client.request({ path: "/api/test", method: "GET" })).rejects.toThrow("HTTP Error: 503 Service Unavailable");
     });
 
     test("no trailing punctuation when no additional context", async () => {
       const error = makeHTTPError(404, "Not Found", "Not found", "text/plain");
-      mockKyFn.mockRejectedValueOnce(error);
+      rejectLikeKy(error);
 
       const thrown = await client.request({ path: "/api/test", method: "GET" }).catch((e: Error) => e);
       expect((thrown as Error).message).toBe("HTTP Error: 404 Not Found");

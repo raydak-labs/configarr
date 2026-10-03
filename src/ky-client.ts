@@ -1,5 +1,5 @@
 // Copied and modified from here: https://github.com/acacode/swagger-typescript-api/pull/690
-import type { BeforeRequestHook, Hooks, KyInstance, Options as KyOptions, NormalizedOptions } from "ky";
+import type { AfterResponseHook, BeforeRequestHook, Hooks, KyInstance, Options as KyOptions, NormalizedOptions } from "ky";
 import ky, { HTTPError } from "ky";
 import { logger } from "./logger";
 import { createConnectionErrorParts, selectConnectionErrorDetail } from "./clients/connection";
@@ -140,6 +140,19 @@ export class HttpClient<SecurityDataType = unknown> {
       }
     }
 
+    // ky 2.x consumes the response body into `HTTPError.data` before throwing, so `error.response` can no longer be read.
+    // The body text therefore has to be captured while the response is still unconsumed: `afterResponse` hooks receive a clone.
+    let capturedErrorBody: string | undefined;
+    const captureErrorBody: AfterResponseHook = async ({ response }) => {
+      if (!response.ok) {
+        try {
+          capturedErrorBody = await response.clone().text();
+        } catch {
+          // Diagnostics only: a body we cannot read is reported as an empty body further down.
+        }
+      }
+    };
+
     let hooks: Hooks | undefined;
     if (secure && this.securityWorker) {
       const securityWorker: BeforeRequestHook = async ({ request, options }) => {
@@ -167,6 +180,8 @@ export class HttpClient<SecurityDataType = unknown> {
         beforeRequest: options.hooks && options.hooks.beforeRequest ? [securityWorker, ...options.hooks.beforeRequest] : [securityWorker],
       };
     }
+
+    hooks = { ...hooks, afterResponse: [captureErrorBody, ...(hooks?.afterResponse ?? [])] };
 
     let searchParams: URLSearchParams | undefined;
 
@@ -217,16 +232,7 @@ export class HttpClient<SecurityDataType = unknown> {
           const contentType = response.headers.get("content-type");
 
           if (contentType && contentType.includes("application/json")) {
-            let text = "";
-            try {
-              text = await response.clone().text();
-            } catch {
-              try {
-                text = await response.text();
-              } catch {
-                text = "";
-              }
-            }
+            const text = capturedErrorBody ?? "";
 
             let errorJson: unknown;
             try {

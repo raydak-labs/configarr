@@ -588,10 +588,6 @@ export abstract class ProviderResourceSync<
     }
     const errorMessage = error instanceof Error ? error.message : String(error);
     this.logger.error(`${message}: ${errorMessage}`);
-    const httpError = error as any;
-    if (httpError?.response?.data) {
-      this.logger.debug(`Server response: ${JSON.stringify(httpError.response.data)}`);
-    }
     return new Error(`${message}: ${errorMessage}`);
   }
 }
