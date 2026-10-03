@@ -3,7 +3,6 @@ import { DiffEntry, FieldChange } from "../diffReport/diffReport.types";
 import { getEnvs } from "../env";
 import { logger } from "../logger";
 import type { QualityDefinitionsClient } from "../clients/capabilities";
-import { MediaArrType } from "../types/common.types";
 import { TrashQualityDefinitionQuality } from "../types/trashguide.types";
 import { cloneWithJSON, loadJsonFile, roundToDecimal } from "../util";
 import { warnOrThrowConfig } from "../validation";
@@ -165,11 +164,3 @@ export function qualityDefinitionsToDiffEntries(changeMap: Map<string, FieldChan
     fieldChanges,
   }));
 }
-
-export const calculateQualityDefinitionDiff = (
-  arrType: MediaArrType,
-  serverQDs: QualityDefinitionShared[],
-  qualityDefinitions: TrashQualityDefinitionQuality[],
-) => {
-  return calculateQualityDefinitionDiffCore(serverQDs, qualityDefinitions, arrType === "READARR" ? () => {} : applyPreferredSizeDiff);
-};

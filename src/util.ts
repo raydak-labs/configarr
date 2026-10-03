@@ -221,7 +221,6 @@ export function compareObjectsCarr(serverObject: any, localObject: any, parent?:
 
 export function notEmpty<TValue>(value: TValue | null | undefined): value is TValue {
   if (value === null || value === undefined) return false;
-  const testDummy: TValue = value;
   return true;
 }
 
@@ -258,17 +257,6 @@ export function zip<T extends unknown[][]>(...arrays: T): Array<{ [K in keyof T]
   const result = [];
 
   for (let i = 0; i < length; i++) {
-    result.push(arrays.map((arr) => arr[i]));
-  }
-
-  return result as Array<{ [K in keyof T]: T[K] extends (infer U)[] ? U : never }>;
-}
-
-export function zipNLength<T extends unknown[][]>(...arrays: T): Array<{ [K in keyof T]: T[K] extends (infer U)[] ? U : never }> {
-  const minLength = Math.min(...arrays.map((arr) => arr.length));
-  const result = [];
-
-  for (let i = 0; i < minLength; i++) {
     result.push(arrays.map((arr) => arr[i]));
   }
 
@@ -402,14 +390,6 @@ export const roundToDecimal = (num: number, decimalPlaces = 0) => {
   const p = Math.pow(10, decimalPlaces);
   return Math.round((num + Number.EPSILON) * p) / p;
 };
-
-export function pickFromConst<T extends readonly string[], K extends T[number]>(constArray: T, keys: readonly K[]): readonly K[] {
-  return keys.filter((key): key is K => constArray.includes(key));
-}
-
-export function isInConstArray<T extends readonly unknown[]>(array: T, value: unknown): value is T[number] {
-  return array.includes(value as T[number]);
-}
 
 export function toEnumOrThrow<T extends Record<string, string>>(enumObj: T, value: string, label: string): T[keyof T] {
   const members = Object.values(enumObj);

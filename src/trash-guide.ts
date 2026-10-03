@@ -110,12 +110,6 @@ export const cloneTrashRepo = async () => {
 };
 
 export const loadTrashCFs = async (arrType: TrashArrSupported): Promise<CFIDToConfigGroup> => {
-  if (arrType !== "RADARR" && arrType !== "SONARR") {
-    logger.debug(`Unsupported arrType: ${arrType}. Skipping TrashCFs.`);
-
-    return new Map();
-  }
-
   if (cacheReady) {
     return cache[arrType].customFormats;
   }
@@ -152,12 +146,6 @@ export const loadTrashCFs = async (arrType: TrashArrSupported): Promise<CFIDToCo
 };
 
 export const loadTrashCustomFormatGroups = async (arrType: TrashArrSupported): Promise<TrashCFGroupMapping> => {
-  if (arrType !== "RADARR" && arrType !== "SONARR") {
-    logger.debug(`Unsupported arrType: ${arrType}. Skipping TrashCustomFormatGroups.`);
-
-    return new Map();
-  }
-
   if (cacheReady) {
     return cache[arrType].customFormatsGroups;
   }
@@ -272,12 +260,6 @@ export const loadQPFromTrash = async (arrType: TrashArrSupported) => {
   } catch (err: any) {
     logger.warn(`(${arrType}) Failed loading TRaSH-Guides QualityProfiles. Continue without ...`, err?.message);
   }
-
-  // const localPath = getLocalTemplatePath();
-
-  // if (localPath) {
-  //   fillMap(localPath);
-  // }
 
   logger.debug(`(${arrType}) Found ${map.size} TRaSH-Guides QualityProfiles.`);
   return map;
@@ -396,11 +378,6 @@ const normalizeTrashConflictGroup = (group: z.infer<typeof trashConflictGroupRec
 };
 
 export const loadTrashCFConflicts = async (arrType: TrashArrSupported): Promise<TrashCFConflict[]> => {
-  if (arrType !== "RADARR" && arrType !== "SONARR") {
-    logger.debug(`Unsupported arrType: ${arrType}. Skipping TrashCFConflicts.`);
-    return [];
-  }
-
   if (cacheReady) {
     return cache[arrType].conflicts;
   }

@@ -5,7 +5,6 @@ import {
   getSecrets,
   isTrashQualityDefinition,
   mergeConfigsAndTemplates,
-  readConfigRaw,
   resetSecretsCache,
   transformConfig,
   validateConfig as validateMergedConfig,
@@ -518,6 +517,65 @@ describe("mergeConfigsAndTemplates", () => {
     expect(result.config.custom_formats.length).toBe(2);
     expect(result.config.quality_profiles.length).toBe(1);
     expect(result.config.quality_profiles[0]!.min_format_score).toBe(5);
+  });
+
+  test("should merge same-named quality profiles using a single pass", async () => {
+    const fromConfig: ConfigQualityProfileItem[] = [{ name: "HDTV-1080p", enabled: false }];
+
+    const baseProfile: ConfigQualityProfile = {
+      name: "profile1",
+      min_format_score: 2,
+      qualities: fromConfig,
+      quality_sort: "sort",
+      upgrade: { allowed: true, until_quality: "HDTV-1080p", until_score: 1000 },
+      score_set: "default",
+    };
+
+    // Same name, does not touch reset_unmatched_scores
+    const profile1: ConfigQualityProfile = cloneWithJSON(baseProfile);
+    profile1.min_format_score = 5;
+
+    // Template only profile which carries reset_unmatched_scores
+    const templateProfile2: ConfigQualityProfile = {
+      ...cloneWithJSON(baseProfile),
+      name: "profile2",
+      reset_unmatched_scores: { enabled: false, except: ["SDTV"] },
+    };
+
+    // Instance only profile with the same name, which drops reset_unmatched_scores entirely
+    const profile2: ConfigQualityProfile = cloneWithJSON(templateProfile2);
+    delete profile2.reset_unmatched_scores;
+    profile2.min_format_score = 7;
+
+    const recyclarrTemplates: Map<string, MappedTemplates> = new Map<string, MappedTemplates>([
+      ["template1", { custom_formats: [{ trash_ids: ["cf1"] }], quality_profiles: [baseProfile, templateProfile2] }],
+    ]);
+
+    vi.spyOn(reclarrImporter, "loadRecyclarrTemplates").mockReturnValue(recyclarrTemplates);
+    vi.spyOn(localImporter, "loadLocalRecyclarrTemplate").mockReturnValue(new Map());
+    vi.spyOn(trashGuide, "loadQPFromTrash").mockReturnValue(Promise.resolve(new Map()));
+    vi.spyOn(trashGuide, "loadTrashCustomFormatGroups").mockReturnValue(Promise.resolve(new Map()));
+
+    const inputConfig: InputConfigArrInstance = {
+      include: [{ template: "template1", source: "RECYCLARR" }],
+      custom_formats: [{ trash_ids: ["cf4"] }],
+      quality_profiles: [profile1, profile2],
+      api_key: "test",
+      base_url: "http://sonarr:8989",
+    };
+
+    const result = await mergeConfigsAndTemplates({}, inputConfig, "SONARR");
+
+    expect(result.config.quality_profiles.length).toBe(2);
+
+    const merged1 = result.config.quality_profiles.find((p) => p.name === "profile1")!;
+    expect(merged1.min_format_score).toBe(5);
+    // Neither side sets `enabled`, so the default of the surviving merge has to win
+    expect(merged1.reset_unmatched_scores?.enabled).toBe(true);
+
+    const merged2 = result.config.quality_profiles.find((p) => p.name === "profile2")!;
+    expect(merged2.min_format_score).toBe(7);
+    expect(merged2.reset_unmatched_scores).toEqual({ enabled: false, except: ["SDTV"] });
   });
 
   test("should handle recursive includes gracefully (not supported)", async () => {
@@ -1391,7 +1449,28 @@ describe("custom_formats ordering", () => {
       mockExistsSync.mockReturnValue(true);
     });
 
-    test("should merge YAML anchor when enableMerge is true", () => {
+    // `getConfig` memoizes into a module level variable, so every case needs a fresh module graph.
+    const loadConfig = async (enableMerge: boolean, configYaml: string) => {
+      vi.resetModules();
+
+      const envModule = await import("./env");
+      vi.spyOn(envModule, "getHelpers").mockReturnValue({
+        configLocation,
+        secretLocation: "/config/secrets.yml",
+        repoPath: "/repos",
+        enableMerge,
+      });
+
+      mockReadFileSync.mockImplementation((path: string) => {
+        if (path === configLocation) return configYaml.trim();
+        return "";
+      });
+
+      const { getConfig } = await import("./config");
+      return getConfig();
+    };
+
+    test("should merge YAML anchor when enableMerge is true", async () => {
       const yamlWithMerge = `
 base: &qb_base
   type: qbittorrent
@@ -1411,20 +1490,8 @@ sonarr:
       update_password: false
 `;
 
-      vi.spyOn(env, "getHelpers").mockReturnValue({
-        configLocation,
-        secretLocation: "/config/secrets.yml",
-        repoPath: "/repos",
-        enableMerge: true,
-      });
-      mockReadFileSync.mockImplementation((path: string) => {
-        if (path === configLocation) return yamlWithMerge.trim();
-        return "";
-      });
-
-      const raw = readConfigRaw() as Record<string, unknown>;
-      const dc = (raw.sonarr as Record<string, unknown>)?.instance1 as Record<string, unknown>;
-      const data = (dc?.download_clients as Record<string, unknown>)?.data as Record<string, unknown>[];
+      const parsed = await loadConfig(true, yamlWithMerge);
+      const data = parsed.sonarr?.instance1?.download_clients?.data ?? [];
       expect(data).toHaveLength(1);
       // Merge is shallow: base contributed type; override replaced fields entirely
       expect(data[0]).toMatchObject({
@@ -1434,7 +1501,7 @@ sonarr:
       });
     });
 
-    test("should not merge when enableMerge is false (<< remains literal or alias only)", () => {
+    test("should not merge when enableMerge is false (<< remains literal or alias only)", async () => {
       const yamlWithMerge = `
 base: &qb_base
   type: qbittorrent
@@ -1448,22 +1515,10 @@ sonarr:
           name: "MyQbit"
 `;
 
-      vi.spyOn(env, "getHelpers").mockReturnValue({
-        configLocation,
-        secretLocation: "/config/secrets.yml",
-        repoPath: "/repos",
-        enableMerge: false,
-      });
-      mockReadFileSync.mockImplementation((path: string) => {
-        if (path === configLocation) return yamlWithMerge.trim();
-        return "";
-      });
-
-      const raw = readConfigRaw() as Record<string, unknown>;
-      const dc = (raw.sonarr as Record<string, unknown>)?.instance1 as Record<string, unknown>;
-      const data = (dc?.download_clients as Record<string, unknown>)?.data as Record<string, unknown>[];
+      const parsed = await loadConfig(false, yamlWithMerge);
+      const data = parsed.sonarr?.instance1?.download_clients?.data ?? [];
       expect(data).toHaveLength(1);
-      const entry = data[0] as Record<string, unknown>;
+      const entry = data[0]!;
       expect(entry.name).toBe("MyQbit");
       // With merge disabled, type from *qb_base is not merged into this object
       expect(entry.type).toBeUndefined();

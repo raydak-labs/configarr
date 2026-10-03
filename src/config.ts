@@ -128,27 +128,6 @@ export const getConfig = (): ConfigSchema => {
   return config;
 };
 
-export const readConfigRaw = (): object => {
-  const helpers = getHelpers();
-  const configLocation = helpers.configLocation;
-
-  if (!existsSync(configLocation)) {
-    logger.error(`Config file in location "${configLocation}" does not exists.`);
-    throw new Error("Config file not found.");
-  }
-
-  const file = readFileSync(configLocation, "utf8");
-
-  logger.debug(`Merging config file with merge: ${helpers.enableMerge}`);
-
-  const inputConfig = yaml.parse(file, {
-    customTags: [secretsTag, envTag, fileTag],
-    merge: helpers.enableMerge,
-  });
-
-  return inputConfig;
-};
-
 /**
  * Expand a path pattern (glob or direct path) into an array of file paths
  */
@@ -1004,32 +983,6 @@ export const mergeConfigsAndTemplates = async (
 
   mergedTemplates.quality_profiles = filterInvalidQualityProfiles(mergedTemplates.quality_profiles);
 
-  // merge profiles from recyclarr templates into one
-  const qualityProfilesMerged = mergedTemplates.quality_profiles.reduce((p, c) => {
-    let existingQp = p.get(c.name);
-
-    if (!existingQp) {
-      p.set(c.name, { ...c });
-    } else {
-      existingQp = {
-        ...existingQp,
-        ...c,
-        // Overwriting qualities array for now
-        upgrade: { ...existingQp.upgrade, ...c.upgrade },
-        reset_unmatched_scores: {
-          ...existingQp.reset_unmatched_scores,
-          ...c.reset_unmatched_scores,
-          enabled: (c.reset_unmatched_scores?.enabled ?? existingQp.reset_unmatched_scores?.enabled) || false,
-        },
-      };
-      p.set(c.name, existingQp);
-    }
-
-    return p;
-  }, new Map<string, ConfigQualityProfile>());
-
-  mergedTemplates.quality_profiles = Array.from(qualityProfilesMerged.values());
-
   if (instanceConfig.metadata_profiles) {
     mergedTemplates.metadata_profiles = [...(mergedTemplates.metadata_profiles || []), ...instanceConfig.metadata_profiles];
 
@@ -1113,18 +1066,7 @@ export const mergeConfigsAndTemplates = async (
   const validatedConfig = validateConfig(mergedTemplates);
   logger.debug(`Merged config: '${JSON.stringify(validatedConfig)}'`);
 
-  /*
-  TODO: do we want to load all available local templates or only the included ones in the instance?
-  Example: we have a local template folder which we can always traverse. So we could load every CF defined there.
-  But then we could also have in theory conflicted CF IDs if user want to define same CF in different templates.
-  How to handle overwrite? Maybe also support overriding CFs defined in Trash or something?
-  */
-  // const localTemplateCFDs = Array.from(localTemplateMap.values()).reduce((p, c) => {
-  //   if (c.customFormatDefinitions) {
-  //     p.push(...c.customFormatDefinitions);
-  //   }
-  //   return p;
-  // }, [] as CustomFormatDefinitions);
+  // TODO: Decide whether local templates should contribute custom format definitions even when they are not explicitly included.
 
   return { config: validatedConfig };
 };
