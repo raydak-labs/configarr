@@ -1,7 +1,21 @@
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
-import { afterAll, beforeAll, describe, expect, test } from "vitest";
+import { afterAll, beforeAll, describe, expect, test, vi } from "vitest";
 import { HttpClient } from "./ky-client";
+
+const logged = vi.hoisted(() => ({ args: [] as unknown[][] }));
+
+vi.mock("./logger", () => ({
+  logger: {
+    error: (...args: unknown[]) => {
+      logged.args.push(args);
+    },
+    warn: () => {},
+    info: () => {},
+    debug: () => {},
+    trace: () => {},
+  },
+}));
 
 /**
  * Regression coverage for the ky 2.x behavior where the response body is consumed before the `HTTPError`
@@ -41,6 +55,12 @@ describe("HttpClient error body (real ky + local server)", () => {
         // Headers say it failed, the body never finishes: the capture must not wait for it.
         res.writeHead(400, { "Content-Type": "application/json" });
         res.write("{");
+        return;
+      }
+
+      if (req.url === "/api/v3/echo") {
+        res.writeHead(400, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ message: "Path is not valid", fields: { password: "SUPERSECRET123" } }));
         return;
       }
 
@@ -105,6 +125,21 @@ describe("HttpClient error body (real ky + local server)", () => {
     expect(thrown.message).not.toBe("client never settled");
     expect(thrown.message).toContain("empty body");
   }, 30_000);
+
+  test("does not log the parsed error payload", async () => {
+    logged.args.length = 0;
+    const client = createClient();
+
+    await client.request({ path: "/api/v3/echo", method: "POST", type: undefined, body: {} }).catch(() => undefined);
+
+    const dumped = logged.args
+      .flat()
+      .map((arg) => JSON.stringify(arg) ?? String(arg))
+      .join("\n");
+
+    expect(dumped).toContain("Path is not valid");
+    expect(dumped).not.toContain("SUPERSECRET123");
+  });
 
   test("successful responses are unaffected", async () => {
     const server = createServer((_req, res) => {

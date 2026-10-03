@@ -314,7 +314,9 @@ export class HttpClient<SecurityDataType = unknown> {
               if (typeof msg === "string" && msg) errorMessage = msg;
             }
 
-            logger.error(errorJson, `Failed executing request: '${errorMessage}'`);
+            // Only the selected message is logged, never the parsed payload: a server can echo submitted
+            // values back in its validation response, and this line runs at error level on every failure.
+            logger.error(`Failed executing request: '${errorMessage}'`);
             throw new Error(errorMessage, { cause: error });
           } else {
             const messageParts = [`HTTP Error: ${response.status} ${response.statusText}`];
