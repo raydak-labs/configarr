@@ -32,6 +32,18 @@ describe("HttpClient error body (real ky + local server)", () => {
         return;
       }
 
+      if (req.url === "/api/v3/huge") {
+        res.writeHead(400, { "Content-Type": "application/json", "Content-Length": String(1024 * 1024) });
+        res.write(JSON.stringify({ message: "x".repeat(1024 * 1024) }));
+        return;
+      }
+      if (req.url === "/api/v3/stalled") {
+        // Headers say it failed, the body never finishes: the capture must not wait for it.
+        res.writeHead(400, { "Content-Type": "application/json" });
+        res.write("{");
+        return;
+      }
+
       res.writeHead(404, { "Content-Type": "text/plain" });
       res.end("Not Found");
     });
@@ -42,6 +54,9 @@ describe("HttpClient error body (real ky + local server)", () => {
   });
 
   afterAll(async () => {
+    // The stalled and oversized responses are deliberately left unfinished, so their sockets have to go
+    // before close() can resolve.
+    server.closeAllConnections();
     await new Promise<void>((resolve, reject) => server.close((err) => (err ? reject(err) : resolve())));
   });
 
@@ -69,6 +84,27 @@ describe("HttpClient error body (real ky + local server)", () => {
 
     await expect(client.request({ path: "/api/v3/htmlerror", method: "GET" })).rejects.toThrow("HTTP Error: 500");
   });
+
+  test("does not buffer an oversized error body", async () => {
+    const client = createClient();
+
+    const thrown = await client.request({ path: "/api/v3/huge", method: "POST", type: undefined, body: {} }).catch((e: Error) => e);
+
+    expect(thrown.message).toContain("empty body");
+    expect(thrown.message).not.toContain("xxxx");
+  });
+
+  test("settles when the server sends error headers and never finishes the body", async () => {
+    const client = createClient();
+
+    const thrown = await Promise.race([
+      client.request({ path: "/api/v3/stalled", method: "POST", type: undefined, body: {} }).catch((e: Error) => e),
+      new Promise((resolve) => setTimeout(() => resolve(new Error("client never settled")), 20_000)),
+    ]);
+
+    expect(thrown.message).not.toBe("client never settled");
+    expect(thrown.message).toContain("empty body");
+  }, 30_000);
 
   test("successful responses are unaffected", async () => {
     const server = createServer((_req, res) => {

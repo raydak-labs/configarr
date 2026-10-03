@@ -4,6 +4,56 @@ import ky, { HTTPError } from "ky";
 import { logger } from "./logger";
 import { createConnectionErrorParts, selectConnectionErrorDetail } from "./clients/connection";
 
+/** Upper bound on an error body kept for the user-facing message. *arr error bodies are small. */
+const MAX_ERROR_BODY_BYTES = 64 * 1024;
+
+/**
+ * How long the error-body capture may wait before the request gives up on it.
+ *
+ * Ky bounds its own error-body read, but that read happens after `afterResponse` hooks, so a server that
+ * sends error headers and then keeps the body open would otherwise stall the request indefinitely.
+ */
+const ERROR_BODY_CAPTURE_TIMEOUT_MS = 5_000;
+
+/**
+ * Read a response body for diagnostics only, bounded in both time and size.
+ *
+ * Returns `undefined` when the body is unusable, too large, or too slow; the caller reports an empty body
+ * in that case. The clone is cancelled once we stop waiting, so a stalled server cannot keep a stream open.
+ */
+async function readErrorBodyBounded(response: Response): Promise<string | undefined> {
+  const declaredBytes = Number(response.headers.get("content-length") ?? Number.NaN);
+
+  if (Number.isFinite(declaredBytes) && declaredBytes > MAX_ERROR_BODY_BYTES) {
+    return undefined;
+  }
+
+  let timer: NodeJS.Timeout | undefined;
+
+  try {
+    const text = await Promise.race([
+      response.text(),
+      new Promise<undefined>((resolve) => {
+        timer = setTimeout(() => resolve(undefined), ERROR_BODY_CAPTURE_TIMEOUT_MS);
+        timer.unref?.();
+      }),
+    ]);
+
+    if (text === undefined) {
+      void response.body?.cancel().catch(() => {});
+      return undefined;
+    }
+
+    return text.length > MAX_ERROR_BODY_BYTES ? text.slice(0, MAX_ERROR_BODY_BYTES) : text;
+  } catch {
+    return undefined;
+  } finally {
+    if (timer) {
+      clearTimeout(timer);
+    }
+  }
+}
+
 function toErrorMessage(value: unknown): string {
   if (value === null) return "null";
   if (value === undefined) return "undefined";
@@ -145,11 +195,7 @@ export class HttpClient<SecurityDataType = unknown> {
     let capturedErrorBody: string | undefined;
     const captureErrorBody: AfterResponseHook = async ({ response }) => {
       if (!response.ok) {
-        try {
-          capturedErrorBody = await response.clone().text();
-        } catch {
-          // Diagnostics only: a body we cannot read is reported as an empty body further down.
-        }
+        capturedErrorBody = await readErrorBodyBounded(response.clone());
       }
     };
 
@@ -181,7 +227,9 @@ export class HttpClient<SecurityDataType = unknown> {
       };
     }
 
-    hooks = { ...hooks, afterResponse: [captureErrorBody, ...(hooks?.afterResponse ?? [])] };
+    // Ky replaces the response with whatever an `afterResponse` hook returns, so the capture hook goes last:
+    // it then sees the response Ky actually rejects rather than the one an earlier hook replaced.
+    hooks = { ...hooks, afterResponse: [...(hooks?.afterResponse ?? []), captureErrorBody] };
 
     let searchParams: URLSearchParams | undefined;
 
