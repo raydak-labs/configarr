@@ -257,6 +257,53 @@ describe("ReleaseProfiles", () => {
     expect(result.added).toBe(1);
   });
 
+  test("dry run reports a not-yet-created tag by name instead of a placeholder id", async () => {
+    api.getReleaseProfiles.mockResolvedValue([
+      { id: 3, name: "HEVC", enabled: true, required: ["hevc"], ignored: [], indexerId: 0, tags: [7] },
+    ]);
+    const config = [{ name: "HEVC", required: ["hevc"], tags: ["existing", "new-tag"] }];
+
+    // A real run assigns "new-tag" a fresh server id and sends it to the API.
+    await namedSync().sync(config, cache([{ id: 7, label: "existing" }]));
+    const realPayload = api.updateReleaseProfile.mock.calls[0]?.[1] as { tags: number[] };
+    expect(realPayload.tags).toEqual([7, 50]);
+
+    vi.mocked(getEnvs).mockReturnValue({ DRY_RUN: true, LOG_LEVEL: "silent", CONFIGARR_VERSION: "test" } as never);
+    const result = await namedSync().sync(config, cache([{ id: 7, label: "existing" }]));
+
+    // Counts are unaffected: exactly one update, no create, no delete.
+    expect(result.added).toBe(0);
+    expect(result.removed).toBe(0);
+    expect(result.updated).toBe(1);
+    expect(result.diffEntries).toEqual([
+      {
+        resourceType: "ReleaseProfile",
+        name: "HEVC",
+        action: "update",
+        fieldChanges: [{ field: "tags", from: [7], to: [7, "new-tag"] }],
+      },
+    ]);
+
+    // No id is printed that the server never assigned.
+    const tagsChange = (result.diffEntries[0]?.fieldChanges ?? [])[0];
+    expect((tagsChange?.to as unknown[]).filter((id) => typeof id === "number" && id < 0)).toEqual([]);
+  });
+
+  test("dry run on a nameless arr leaves an already-tagged server profile alone", async () => {
+    // Lidarr/Readarr match by content, so a tag the server already carries must resolve to its real
+    // id and match cleanly. Guards against a "fix" that starts reporting create+delete here.
+    vi.mocked(getEnvs).mockReturnValue({ DRY_RUN: true, LOG_LEVEL: "silent", CONFIGARR_VERSION: "test" } as never);
+    api.getReleaseProfiles.mockResolvedValue([{ id: 4, enabled: true, required: ["hevc"], ignored: [], indexerId: 0, tags: [7] }]);
+
+    const sync = new BaseReleaseProfileSync<ReleaseProfileShared>(api, false);
+    const result = await sync.sync([{ required: ["hevc"], tags: ["existing"] }], cache([{ id: 7, label: "existing" }]));
+
+    expect(result.added).toBe(0);
+    expect(result.removed).toBe(0);
+    expect(result.updated).toBe(0);
+    expect(result.diffEntries).toEqual([]);
+  });
+
   test("trims array terms", () => {
     expect(normalizeTerms([" hevc ", "x265"])).toEqual(["hevc", "x265"]);
   });

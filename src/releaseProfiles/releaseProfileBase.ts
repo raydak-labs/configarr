@@ -66,7 +66,27 @@ export function displayName(profile: { name?: string | null; required?: unknown 
   return `profile-${index + 1}`;
 }
 
-function compareFields(mapped: ReleaseProfileShared, server: ReleaseProfileShared, supportsName: boolean): FieldChange[] {
+/**
+ * A tag that does not exist on the server yet has no id the server could ever assign it. A dry run
+ * still needs a stable stand-in to match profiles by content, but it must not print that stand-in:
+ * listing the tag by label keeps the report honest about what the real run will do. Mirrors the
+ * convention in `providerResourceSync`.
+ */
+function renderTags(ids: number[], placeholderLabels?: Map<number, string>): Array<number | string> {
+  if (placeholderLabels === undefined) {
+    return ids;
+  }
+  const resolved = ids.filter((id) => !placeholderLabels.has(id));
+  const pending = ids.filter((id) => placeholderLabels.has(id)).map((id) => placeholderLabels.get(id) as string);
+  return [...resolved, ...pending];
+}
+
+function compareFields(
+  mapped: ReleaseProfileShared,
+  server: ReleaseProfileShared,
+  supportsName: boolean,
+  placeholderLabels?: Map<number, string>,
+): FieldChange[] {
   const changes: FieldChange[] = [];
 
   if (supportsName && mapped.name != null && mapped.name !== (server.name ?? "")) {
@@ -96,7 +116,7 @@ function compareFields(mapped: ReleaseProfileShared, server: ReleaseProfileShare
   const mappedTags = tagsOf(mapped);
   const serverTags = tagsOf(server);
   if (mappedTags.length !== serverTags.length || mappedTags.some((id, i) => id !== serverTags[i])) {
-    changes.push({ field: "tags", from: serverTags, to: mappedTags });
+    changes.push({ field: "tags", from: serverTags, to: renderTags(mappedTags, placeholderLabels) });
   }
 
   return changes;
@@ -201,6 +221,11 @@ export class BaseReleaseProfileSync<T extends ReleaseProfileShared> {
       return { config, mapped: this.mapToServer(config, ids, resolveIndexerId(config.indexer, indexers)) };
     });
 
+    // Inverted once every stand-in is assigned, so the report can name a stand-in id instead of
+    // printing a number the server never handed out.
+    const placeholderLabels =
+      placeholders && placeholders.size > 0 ? new Map([...placeholders].map(([label, id]) => [id, label])) : undefined;
+
     const seen = new Map<string, number>();
     mappedConfigs.forEach((entry, index) => {
       const key = profileKey(entry.mapped, this.supportsName);
@@ -228,7 +253,7 @@ export class BaseReleaseProfileSync<T extends ReleaseProfileShared> {
       }
 
       match.claimed = true;
-      const fieldChanges = compareFields(entry.mapped, match.profile, this.supportsName);
+      const fieldChanges = compareFields(entry.mapped, match.profile, this.supportsName, placeholderLabels);
       if (fieldChanges.length > 0) {
         update.push({ config: entry.config, server: match.profile, mapped: entry.mapped, fieldChanges });
       }
