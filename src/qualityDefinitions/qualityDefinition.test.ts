@@ -1,9 +1,15 @@
 import { describe, expect, test, vi } from "vitest";
 import { QualityDefinitionShared } from "./qualityDefinition.types";
-import { interpolateSize, qualityDefinitionsToDiffEntries, calculateQualityDefinitionDiff } from "./qualityDefinition";
+import {
+  interpolateSize,
+  qualityDefinitionsToDiffEntries,
+  QualityDefinitionPreferredSync,
+  QualityDefinitionSync,
+} from "./qualityDefinition";
 import { TrashQualityDefinition } from "../types/trashguide.types";
 import * as env from "../env";
 import { ConfigValidationError } from "../validation";
+import type { QualityDefinitionsClient } from "../clients/capabilities";
 
 describe("QualityDefinitions", async () => {
   const server: QualityDefinitionShared[] = [
@@ -48,72 +54,80 @@ describe("QualityDefinitions", async () => {
     ],
   };
 
-  test("calculateQualityDefinitionDiff - expect restData to always contain all server QDs", async ({}) => {
-    const result = calculateQualityDefinitionDiff("SONARR", server, client.qualities);
+  const api = {
+    getQualityDefinitions: vi.fn(),
+    updateQualityDefinitions: vi.fn(),
+  } satisfies QualityDefinitionsClient<QualityDefinitionShared>;
+
+  const preferredSync = new QualityDefinitionPreferredSync(api);
+  const plainSync = new QualityDefinitionSync(api);
+
+  test("QualityDefinitionPreferredSync.calculateDiff - expect restData to always contain all server QDs", async ({}) => {
+    const result = preferredSync.calculateDiff(server, client.qualities);
 
     expect(result.restData.length).toBe(2);
   });
 
-  test("calculateQualityDefinitionDiff - no diff", async ({}) => {
-    const result = calculateQualityDefinitionDiff("SONARR", server, client.qualities);
+  test("QualityDefinitionPreferredSync.calculateDiff - no diff", async ({}) => {
+    const result = preferredSync.calculateDiff(server, client.qualities);
 
     expect(result.changeMap.size).toBe(0);
   });
 
-  test("calculateQualityDefinitionDiff - diff min size", async ({}) => {
+  test("QualityDefinitionPreferredSync.calculateDiff - diff min size", async ({}) => {
     const clone: TrashQualityDefinition = JSON.parse(JSON.stringify(client));
     clone.qualities[0]!.min = 3;
 
-    const result = calculateQualityDefinitionDiff("SONARR", server, clone.qualities);
+    const result = preferredSync.calculateDiff(server, clone.qualities);
 
     expect(result.changeMap.size).toBe(1);
   });
 
-  test("calculateQualityDefinitionDiff - diff max size", async ({}) => {
+  test("QualityDefinitionPreferredSync.calculateDiff - diff max size", async ({}) => {
     const clone: TrashQualityDefinition = JSON.parse(JSON.stringify(client));
     clone.qualities[0]!.max = 3;
 
-    const result = calculateQualityDefinitionDiff("SONARR", server, clone.qualities);
+    const result = preferredSync.calculateDiff(server, clone.qualities);
 
     expect(result.changeMap.size).toBe(1);
   });
 
-  test("calculateQualityDefinitionDiff - diff preferred size", async ({}) => {
+  test("QualityDefinitionPreferredSync.calculateDiff - diff preferred size", async ({}) => {
     const clone: TrashQualityDefinition = JSON.parse(JSON.stringify(client));
     clone.qualities[0]!.preferred = 3;
 
-    const result = calculateQualityDefinitionDiff("SONARR", server, clone.qualities);
+    const result = preferredSync.calculateDiff(server, clone.qualities);
 
     expect(result.changeMap.size).toBe(1);
   });
 
-  test("calculateQualityDefinitionDiff - ignore not available qualities on server", async ({}) => {
+  test("QualityDefinitionPreferredSync.calculateDiff - ignore not available qualities on server", async ({}) => {
     const clone: TrashQualityDefinition = JSON.parse(JSON.stringify(client));
     clone.qualities[0]!.quality = "New";
 
-    const result = calculateQualityDefinitionDiff("SONARR", server, clone.qualities);
+    const result = preferredSync.calculateDiff(server, clone.qualities);
 
     expect(result.changeMap.size).toBe(0);
     expect(result.restData.length).toBe(2);
   });
 
-  test("calculateQualityDefinitionDiff - throws for unknown qualities when enforcement is on", () => {
+  test("QualityDefinitionPreferredSync.calculateDiff - throws for unknown qualities when enforcement is on", () => {
     const spy = vi.spyOn(env, "getEnvs").mockReturnValue({ CONFIGARR_ENFORCE_CONFIG_VALIDATION: true } as ReturnType<typeof env.getEnvs>);
     const clone: TrashQualityDefinition = JSON.parse(JSON.stringify(client));
     clone.qualities[0]!.quality = "New";
 
     try {
-      expect(() => calculateQualityDefinitionDiff("SONARR", server, clone.qualities)).toThrow(ConfigValidationError);
+      expect(() => preferredSync.calculateDiff(server, clone.qualities)).toThrow(ConfigValidationError);
     } finally {
       spy.mockRestore();
     }
   });
 
-  test("calculateQualityDefinitionDiff - min size diff produces a structured FieldChange", async ({}) => {
+  test("QualityDefinitionPreferredSync.calculateDiff - min size diff produces a structured FieldChange", async ({}) => {
     const clone: TrashQualityDefinition = JSON.parse(JSON.stringify(client));
     clone.qualities[0]!.min = 3;
 
-    const result = calculateQualityDefinitionDiff("SONARR", server, clone.qualities);
+    const result = preferredSync.calculateDiff(server, clone.qualities);
 
     expect(result.changeMap.get("SDTV")).toEqual([{ field: "minSize", from: 2, to: 3 }]);
   });
@@ -128,11 +142,11 @@ describe("QualityDefinitions", async () => {
     ]);
   });
 
-  test("calculateQualityDefinitionDiff - skip preferredSize for READARR", async ({}) => {
+  test("QualityDefinitionSync.calculateDiff - skip preferredSize (used by Readarr)", async ({}) => {
     const clone: TrashQualityDefinition = JSON.parse(JSON.stringify(client));
     clone.qualities[0]!.preferred = 3;
 
-    const result = calculateQualityDefinitionDiff("READARR", server, clone.qualities);
+    const result = plainSync.calculateDiff(server, clone.qualities);
 
     expect(result.changeMap.size).toBe(0);
   });

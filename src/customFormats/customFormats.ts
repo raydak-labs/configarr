@@ -10,15 +10,6 @@ import { TrashCF } from "../types/trashguide.types";
 import { compareCustomFormats, loadJsonFile, mapImportCfToRequestCf, toCarrCF } from "../util";
 import { CFIDToConfigGroup, CFProcessing, ConfigarrCF, CustomFormatRequest } from "./customFormat.types";
 
-export const deleteAllCustomFormats = async (client: CustomFormatsClient) => {
-  const cfOnServer = await client.getCustomFormats();
-
-  for (const cf of cfOnServer) {
-    await client.deleteCustomFormat(cf.id + "");
-    logger.info(`Deleted CF: '${cf.name}'`);
-  }
-};
-
 export const deleteCustomFormat = async (client: CustomFormatsClient, customFormat: CustomFormatRequest) => {
   await client.deleteCustomFormat(customFormat.id + "");
   logger.info(`Deleted CF: '${customFormat.name}'`);
@@ -143,17 +134,6 @@ export const loadLocalCfs = async (): Promise<CFIDToConfigGroup> => {
   }
 
   return carrIdToObject;
-};
-
-export const loadCFFromConfig = (): CFIDToConfigGroup | null => {
-  const defs = getConfig().customFormatDefinitions;
-
-  if (defs == null) {
-    logger.debug(`No local config CustomFormat definitions defined.`);
-    return null;
-  }
-
-  return mapCustomFormatDefinitions(defs);
 };
 
 export const mapCustomFormatDefinitions = (customFormatDefinitions: CustomFormatDefinitions): CFIDToConfigGroup | null => {

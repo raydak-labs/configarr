@@ -538,15 +538,6 @@ export abstract class BaseQualityProfileSync<T extends QualityProfileShared> {
     return this.getApi().deleteQualityProfile(qualityProfile.id + "");
   }
 
-  async deleteAll(): Promise<void> {
-    const qualityProfilesOnServer = await this.loadFromServer();
-
-    for (const qualityProfile of qualityProfilesOnServer) {
-      await this.deleteOnServer(qualityProfile);
-      this.logger.info(`Deleted QP: '${qualityProfile.name}'`);
-    }
-  }
-
   async persist(diff: QualityProfileDiffResult, write: boolean): Promise<void> {
     if (!write) {
       return;

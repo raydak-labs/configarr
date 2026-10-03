@@ -99,15 +99,6 @@ export class Telemetry {
     }
 
     try {
-      // disable custom umami for now
-      // const umami = new Umami({
-      //   websiteId: "6b0669cc-8047-4382-a551-95e1a6e92d42",
-      //   hostUrl: "https://telemetry.configarr.de",
-      // });
-
-      // // Cast to any to handle external API type requirements
-      // await umami.track(eventName, data as any);
-
       await ky.post("https://eu.i.posthog.com/capture/", {
         body: JSON.stringify({
           api_key: "phc_So3UZ2BxlK56T2UDPtVwMqPZ0F1XOQNOhHss2JNqMKF", // gitleaks:allow

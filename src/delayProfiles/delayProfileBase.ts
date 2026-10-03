@@ -17,13 +17,6 @@ export interface DelayProfilesDiff {
   additionalProfilesFieldChanges: FieldChange[][];
 }
 
-export function flattenDelayProfiles<T extends { tags?: number[] | null }>(delayProfilesObj: { default?: T; additional?: T[] }): T[] {
-  const arr: T[] = [];
-  if (delayProfilesObj.default) arr.push(delayProfilesObj.default);
-  if (Array.isArray(delayProfilesObj.additional)) arr.push(...delayProfilesObj.additional);
-  return arr;
-}
-
 export function splitServerDelayProfiles<T extends { tags?: number[] | null }>(
   serverProfiles: T[],
 ): {
@@ -245,10 +238,6 @@ export abstract class BaseDelayProfileSync<T extends DelayProfileShared> {
 
   async updateDefaultFromConfig(profile: InputConfigDelayProfile, tags: Tag[], id: string) {
     await this.updateOnServer(id, this.mapToServer(profile, tags));
-  }
-
-  async createFromConfig(profile: InputConfigDelayProfile, tags: Tag[]) {
-    return this.createOnServer(this.mapToServer(profile, tags));
   }
 
   async recreateAdditionalFromConfig(profiles: InputConfigDelayProfile[], tags: Tag[]) {
