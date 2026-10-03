@@ -1460,6 +1460,15 @@ describe("custom_formats ordering", () => {
         repoPath: "/repos",
         enableMerge,
       });
+      // These cases are about merge-key handling, not about validation strictness. Without this the
+      // unmerged fixture - which by design lacks the `type` it would inherit from the anchor - is
+      // rejected when CONFIGARR_ENFORCE_CONFIG_VALIDATION is on, and the test only passes by accident
+      // of whatever the ambient mode happens to be.
+      const realEnvs = envModule.getEnvs();
+      vi.spyOn(envModule, "getEnvs").mockReturnValue({
+        ...realEnvs,
+        CONFIGARR_ENFORCE_CONFIG_VALIDATION: false,
+      } as ReturnType<typeof envModule.getEnvs>);
 
       mockReadFileSync.mockImplementation((path: string) => {
         if (path === configLocation) return configYaml.trim();
