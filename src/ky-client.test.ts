@@ -76,12 +76,14 @@ describe("HttpClient error handling", () => {
       await expect(client.request({ path: "/api/test", method: "GET" })).rejects.toThrow("Validation failed");
     });
 
-    test("falls back to JSON dump when array items have no message fields (no 'undefined' in output)", async () => {
+    test("falls back to a fixed message when array items have no message fields", async () => {
       const body = JSON.stringify([{ code: 123 }, { code: 456 }]);
       const error = makeHTTPError(400, "Bad Request", body, "application/json");
       rejectLikeKy(error);
 
-      await expect(client.request({ path: "/api/test", method: "GET" })).rejects.toThrow('[{"code":123},{"code":456}]');
+      // The payload itself is not part of the message: an error body can carry submitted values back.
+      await expect(client.request({ path: "/api/test", method: "GET" })).rejects.toThrow("unknown error");
+      await expect(client.request({ path: "/api/test", method: "GET" })).rejects.not.toThrow("123");
     });
 
     test("extracts message from object response", async () => {

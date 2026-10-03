@@ -76,6 +76,12 @@ describe("HttpClient error body (real ky + local server)", () => {
         return;
       }
 
+      if (req.url === "/api/v3/unlabelled") {
+        res.writeHead(400, { "Content-Type": "application/json" });
+        res.end(JSON.stringify([{ fields: { password: "SUPERSECRET123" } }]));
+        return;
+      }
+
       res.writeHead(404, { "Content-Type": "text/plain" });
       res.end("Not Found");
     });
@@ -146,6 +152,17 @@ describe("HttpClient error body (real ky + local server)", () => {
     expect(thrown.message).not.toBe("client never settled");
     expect(thrown.message).toContain("empty body");
   }, 30_000);
+
+  test("does not fall back to the payload when array entries carry no message", async () => {
+    logged.args.length = 0;
+    const client = createClient();
+
+    const thrown = await client.request({ path: "/api/v3/unlabelled", method: "POST", type: undefined, body: {} }).catch((e: Error) => e);
+
+    expect(thrown.message).toBe("unknown error");
+    expect(thrown.message).not.toContain("SUPERSECRET123");
+    expect(JSON.stringify(logged.args)).not.toContain("SUPERSECRET123");
+  });
 
   test("does not log the parsed error payload", async () => {
     logged.args.length = 0;

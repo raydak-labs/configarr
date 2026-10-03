@@ -339,7 +339,9 @@ export class HttpClient<SecurityDataType = unknown> {
                   return typeof msg === "string" && msg ? msg : undefined;
                 })
                 .filter((m): m is string => m !== undefined);
-              errorMessage = messages.length > 0 ? messages.join(", ") : JSON.stringify(errorJson);
+              // No JSON.stringify fallback here: entries without a message would otherwise put the whole
+              // response payload into both the log line and the thrown error.
+              errorMessage = messages.length > 0 ? messages.join(", ") : "unknown error";
             } else if (errorJson && typeof errorJson === "object") {
               const errObj = errorJson as Record<string, unknown>;
               const msg = errObj["message"] ?? errObj["errorMessage"];
