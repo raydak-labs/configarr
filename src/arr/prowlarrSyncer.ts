@@ -5,7 +5,7 @@ import { InstanceDiffReport } from "../diffReport/diffReport.types";
 import { ProwlarrDownloadClientSync } from "../downloadClients/downloadClientProwlarr";
 import { logger } from "../logger";
 import { syncProwlarrProviders } from "../prowlarr/prowlarrSyncer";
-import { deleteUnmanagedTags } from "../prowlarr/tagSync";
+import { deleteUnmanagedInstanceTags } from "../tags/tags";
 import { loadServerTags } from "../tags/tags";
 import { InputConfigProwlarrInstance } from "../types/config.types";
 import { ConfigValidationError } from "../validation";
@@ -22,7 +22,7 @@ export class ProwlarrSyncer {
     const serverCache = new ServerCache();
     serverCache.tags = await loadServerTags(client);
 
-    diffCollector.add(await syncProwlarrProviders(instance, serverCache));
+    diffCollector.add(await syncProwlarrProviders(client, instance, serverCache));
 
     let downloadClientsFailed = false;
     if (instance.download_clients?.data || instance.download_clients?.delete_unmanaged?.enabled) {
@@ -51,7 +51,22 @@ export class ProwlarrSyncer {
         logger.warn(`Skipping unmanaged tag cleanup: download client sync reported failures.`);
       } else {
         serverCache.tags = await loadServerTags(client);
-        diffCollector.add((await deleteUnmanagedTags(instance, serverCache)).diffEntries);
+        // Every tag-bearing Prowlarr resource is managed, so a 409 is a real error.
+        diffCollector.add(
+          (
+            await deleteUnmanagedInstanceTags(client, serverCache, {
+              deleteConfig: instance.delete_unmanaged_tags,
+              instanceLabels: instance.tags,
+              referencedTagLists: [
+                instance.applications?.data?.flatMap((application) => application.tags ?? []),
+                instance.indexers?.data?.flatMap((indexer) => indexer.tags ?? []),
+                instance.indexer_proxies?.data?.flatMap((proxy) => proxy.tags ?? []),
+                instance.download_clients?.data?.flatMap((downloadClient) => downloadClient.tags ?? []),
+              ],
+              onInUse: "throw",
+            })
+          ).diffEntries,
+        );
       }
     }
 

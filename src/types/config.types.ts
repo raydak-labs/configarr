@@ -424,6 +424,10 @@ export const InputConfigArrInstanceSchema = z.object({
   base_url: z.string(),
   api_key: z.string(),
   enabled: z.boolean().optional(),
+  // Ensure these tag labels exist on the server (created if missing).
+  tags: z.array(z.string()).optional(),
+  // Delete server tags not listed in `tags` (and not referenced by managed resources).
+  delete_unmanaged_tags: DeleteUnmanagedSchema.optional(),
   delete_unmanaged_custom_formats: DeleteUnmanagedSchema.optional(),
   delete_unmanaged_quality_profiles: DeleteUnmanagedSchema.optional(),
   quality_definition: z

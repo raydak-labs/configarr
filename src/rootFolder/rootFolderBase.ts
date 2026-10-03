@@ -4,6 +4,7 @@ import { DiffEntry, FieldChange } from "../diffReport/diffReport.types";
 import { getEnvs } from "../env";
 import { logger } from "../logger";
 import { InputConfigRootFolder } from "../types/config.types";
+import { buildTagPlaceholders, ensureTags, resolveTagNames } from "../tags/tags";
 import { compareObjectsCarr } from "../util";
 import { ConfigValidationError } from "../validation";
 import { InputConfigRootFolderObject, RootFolderDiff, RootFolderServerResource, RootFolderSyncResult } from "./rootFolder.types";
@@ -143,7 +144,7 @@ export type NamedProfile = { name?: string | null; id?: number };
 export type ProfileAwareRootFolderApi<TResource extends RootFolderServerResource> = RootFoldersClient<TResource> &
   Pick<QualityProfilesClient<NamedProfile>, "getQualityProfiles"> &
   Pick<MetadataProfilesClient<NamedProfile>, "getMetadataProfiles"> &
-  Pick<TagsClient, "createTag">;
+  TagsClient;
 
 /**
  * YAML fields every profile-aware (Lidarr/Readarr) root folder entry carries.
@@ -231,29 +232,21 @@ export abstract class ProfileAwareRootFolderSync<
   }
 
   /** Ids for the configured tags. Names missing server-side get a negative placeholder that never matches a real id. */
+  /**
+   * Resolves configured tag labels to server ids without creating anything.
+   *
+   * Labels that do not exist yet get a stable negative placeholder so the diff still sees the pending
+   * change; real creation happens in `createMissingTags`, after the dry-run guard. Matching is
+   * case-insensitive, like everywhere else that resolves a label.
+   */
   protected resolveTagIds(tagNames: string[] | undefined, serverCache: ServerCache): { ids: number[]; missing: string[] } {
-    const ids: number[] = [];
-    const missing: string[] = [];
-    const placeholders = new Map<string, number>();
+    const names = tagNames ?? [];
+    // Stable negative placeholders for labels the server does not have yet. They are needed on a real
+    // run too: calculateDiff resolves before createMissingTags has created anything, and without them a
+    // folder whose only pending change is a new tag would compare equal and never be written.
+    const placeholders = buildTagPlaceholders(names, serverCache.tags);
 
-    for (const label of tagNames ?? []) {
-      const existingTag = serverCache.tags.find((tag) => tag.label === label);
-      if (existingTag) {
-        if (existingTag.id != null) {
-          ids.push(existingTag.id);
-        }
-        continue;
-      }
-
-      if (!missing.includes(label)) {
-        missing.push(label);
-      }
-      const placeholder = placeholders.get(label) ?? -missing.length;
-      placeholders.set(label, placeholder);
-      ids.push(placeholder);
-    }
-
-    return { ids, missing };
+    return resolveTagNames(names, serverCache.tags, { placeholders });
   }
 
   public async resolveRootFolderConfig(config: TConfig, serverCache: ServerCache): Promise<TResource> {
@@ -293,14 +286,8 @@ export abstract class ProfileAwareRootFolderSync<
       this.resolveTagIds(config.tags, serverCache).missing.forEach((tag) => missingTags.add(tag));
     }
 
-    if (missingTags.size === 0) {
-      return;
-    }
-
-    this.logger.info(`Creating missing tags on server: ${[...missingTags].join(", ")}`);
-    for (const label of missingTags) {
-      serverCache.tags.push(await this.api.createTag({ label }));
-    }
+    // `ensureTags` creates nothing while DRY_RUN is set and reports what it would create instead.
+    await ensureTags(this.api, serverCache, [...missingTags]);
   }
 
   private compareRootFolderConfig(resolvedConfig: TResource, serverFolder: TResource): { equal: boolean; changes: FieldChange[] } {

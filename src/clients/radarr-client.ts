@@ -202,6 +202,10 @@ export class RadarrClient
     return this.api.v3TagCreate(tag);
   }
 
+  async deleteTag(id: string): Promise<void> {
+    return this.api.v3TagDelete(+id);
+  }
+
   // Download Clients
   async getDownloadClientSchema(): Promise<DownloadClientResource[]> {
     return this.api.v3DownloadclientSchemaList();

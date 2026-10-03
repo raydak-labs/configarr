@@ -247,6 +247,60 @@ prowlarr:
   });
 });
 
+describe("media instance tags", () => {
+  test("parses the media `tags` and `delete_unmanaged_tags` block", () => {
+    const parsed = InputConfigSchemaSchema.parse(
+      yaml.parse(`
+sonarr:
+  main:
+    base_url: http://sonarr:8989
+    api_key: test
+    tags:
+      - managed
+    delete_unmanaged_tags:
+      enabled: true
+      ignore:
+        - Standard
+`),
+    );
+
+    const instance = parsed.sonarr!.main!;
+    expect(instance.tags).toEqual(["managed"]);
+    expect(instance.delete_unmanaged_tags).toEqual({ enabled: true, ignore: ["Standard"] });
+  });
+
+  test("rejects a non-string media `tags` entry", () => {
+    expect(() =>
+      InputConfigSchemaSchema.parse(
+        yaml.parse(`
+sonarr:
+  main:
+    base_url: http://sonarr:8989
+    api_key: test
+    tags:
+      - 1
+`),
+      ),
+    ).toThrow();
+  });
+
+  test("rejects a media `delete_unmanaged_tags` without `enabled`", () => {
+    expect(() =>
+      InputConfigSchemaSchema.parse(
+        yaml.parse(`
+sonarr:
+  main:
+    base_url: http://sonarr:8989
+    api_key: test
+    delete_unmanaged_tags:
+      ignore:
+        - Standard
+`),
+      ),
+    ).toThrow();
+  });
+});
+
 describe("mergeConfigsAndTemplates", () => {
   beforeEach(() => {
     // Reset mocks before each test
@@ -351,6 +405,117 @@ describe("mergeConfigsAndTemplates", () => {
 
     expect(result.config.custom_formats.length).toBe(2); // was 3, now 2 after deduplication
     expect(result.config.quality_profiles.length).toBe(3);
+  });
+
+  test("carries instance tags and delete_unmanaged_tags through the merge", async () => {
+    // Regression: the merge copies instance keys one by one, and these two were missing, so the
+    // block silently did nothing for any config file or template. The e2e caught it; a unit test
+    // that builds the config by hand would not, because it bypasses this merge.
+    vi.spyOn(reclarrImporter, "loadRecyclarrTemplates").mockReturnValue(new Map());
+    vi.spyOn(localImporter, "loadLocalRecyclarrTemplate").mockReturnValue(new Map());
+    vi.spyOn(trashGuide, "loadQPFromTrash").mockReturnValue(Promise.resolve(new Map()));
+    vi.spyOn(trashGuide, "loadTrashCustomFormatGroups").mockReturnValue(Promise.resolve(new Map()));
+
+    const inputConfig: InputConfigArrInstance = {
+      api_key: "test",
+      base_url: "http://sonarr:8989",
+      tags: ["listed"],
+      delete_unmanaged_tags: { enabled: true, ignore: ["keep-me"] },
+    };
+
+    const result = await mergeConfigsAndTemplates({}, inputConfig, "SONARR");
+
+    expect(result.config.tags).toEqual(["listed"]);
+    expect(result.config.delete_unmanaged_tags).toEqual({ enabled: true, ignore: ["keep-me"] });
+  });
+
+  test("merges template tag settings, with the instance taking the lead", async () => {
+    // Mirrors delete_unmanaged_metadata_profiles: a template may set the block, the instance runs
+    // last so its `enabled` wins, and the ignore lists union rather than replace.
+    const templates: Map<string, MappedTemplates> = new Map([
+      [
+        "tagged",
+        {
+          tags: ["from-template"],
+          delete_unmanaged_tags: { enabled: false, ignore: ["template-protected"] },
+        } as MappedTemplates,
+      ],
+    ]);
+    vi.spyOn(reclarrImporter, "loadRecyclarrTemplates").mockReturnValue(templates);
+    vi.spyOn(localImporter, "loadLocalRecyclarrTemplate").mockReturnValue(new Map());
+    vi.spyOn(trashGuide, "loadQPFromTrash").mockReturnValue(Promise.resolve(new Map()));
+    vi.spyOn(trashGuide, "loadTrashCustomFormatGroups").mockReturnValue(Promise.resolve(new Map()));
+
+    const base: InputConfigArrInstance = {
+      api_key: "test",
+      base_url: "http://sonarr:8989",
+      include: [{ template: "tagged", source: "RECYCLARR" }],
+    };
+
+    // Template-only: its labels and ignore survive.
+    const templateOnly = await mergeConfigsAndTemplates({}, base, "SONARR");
+    expect(templateOnly.config.tags).toEqual(["from-template"]);
+    expect(templateOnly.config.delete_unmanaged_tags).toEqual({ enabled: false, ignore: ["template-protected"] });
+
+    // The instance enables cleanup and overrides the template's labels; both ignores are kept.
+    const withInstance = await mergeConfigsAndTemplates(
+      {},
+      { ...base, tags: ["from-instance"], delete_unmanaged_tags: { enabled: true, ignore: ["instance-protected"] } },
+      "SONARR",
+    );
+    expect(withInstance.config.tags).toEqual(["from-instance"]);
+    expect(withInstance.config.delete_unmanaged_tags).toEqual({
+      enabled: true,
+      ignore: ["template-protected", "instance-protected"],
+    });
+  });
+
+  test("a template can enable cleanup when the instance does not override it", async () => {
+    // Same authority as delete_unmanaged_metadata_profiles: the block is opt-in wherever it is set.
+    const templates: Map<string, MappedTemplates> = new Map([
+      ["tagged", { delete_unmanaged_tags: { enabled: true, ignore: ["template-protected"] } } as MappedTemplates],
+    ]);
+    vi.spyOn(reclarrImporter, "loadRecyclarrTemplates").mockReturnValue(templates);
+    vi.spyOn(localImporter, "loadLocalRecyclarrTemplate").mockReturnValue(new Map());
+    vi.spyOn(trashGuide, "loadQPFromTrash").mockReturnValue(Promise.resolve(new Map()));
+    vi.spyOn(trashGuide, "loadTrashCustomFormatGroups").mockReturnValue(Promise.resolve(new Map()));
+
+    const result = await mergeConfigsAndTemplates(
+      {},
+      { api_key: "test", base_url: "http://sonarr:8989", include: [{ template: "tagged", source: "RECYCLARR" }] },
+      "SONARR",
+    );
+
+    expect(result.config.delete_unmanaged_tags).toEqual({ enabled: true, ignore: ["template-protected"] });
+  });
+
+  test("accumulates tag settings across multiple templates", async () => {
+    // A later include must not drop what an earlier one contributed, least of all an ignore
+    // list, which is a protection rather than a preference.
+    const templates: Map<string, MappedTemplates> = new Map([
+      ["first", { tags: ["a", "shared"], delete_unmanaged_tags: { enabled: true, ignore: ["keep-a"] } } as MappedTemplates],
+      ["second", { tags: ["b", "shared"], delete_unmanaged_tags: { enabled: false, ignore: ["keep-b"] } } as MappedTemplates],
+    ]);
+    vi.spyOn(reclarrImporter, "loadRecyclarrTemplates").mockReturnValue(templates);
+    vi.spyOn(localImporter, "loadLocalRecyclarrTemplate").mockReturnValue(new Map());
+    vi.spyOn(trashGuide, "loadQPFromTrash").mockReturnValue(Promise.resolve(new Map()));
+    vi.spyOn(trashGuide, "loadTrashCustomFormatGroups").mockReturnValue(Promise.resolve(new Map()));
+
+    const result = await mergeConfigsAndTemplates(
+      {},
+      {
+        api_key: "test",
+        base_url: "http://sonarr:8989",
+        include: [
+          { template: "first", source: "RECYCLARR" },
+          { template: "second", source: "RECYCLARR" },
+        ],
+      },
+      "SONARR",
+    );
+
+    expect(result.config.tags).toEqual(["a", "shared", "b"]);
+    expect(result.config.delete_unmanaged_tags).toEqual({ enabled: false, ignore: ["keep-a", "keep-b"] });
   });
 
   test("filters Recyclarr release profiles and warns", async () => {
