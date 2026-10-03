@@ -11,6 +11,10 @@ import {
 import { QualityProfileLanguage, QualityProfileShared } from "./qualityProfile.types";
 
 export class QualityProfileRadarrSync extends BaseQualityProfileSync<QualityProfileResource> {
+  protected toServerProfile(profile: QualityProfileShared): QualityProfileResource {
+    return profile;
+  }
+
   protected resolveLanguage(
     _profileName: string,
     configLanguage: string | undefined,

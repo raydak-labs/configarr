@@ -1,5 +1,6 @@
 import path from "path";
-import { beforeEach, afterEach, describe, expect, test, vi } from "vitest";
+import { beforeEach, afterEach, describe, expect, expectTypeOf, test, vi } from "vitest";
+import type { QualityProfileResource } from "../__generated__/sonarr/data-contracts";
 import { QualityProfileShared } from "./qualityProfile.types";
 import { QualityProfileSonarrSync } from "./qualityProfileSonarr";
 import { cloneWithJSON, loadJsonFile } from "../util";
@@ -43,6 +44,31 @@ describe("QualityProfileSonarrSync", async () => {
       expect(deleteFn).toHaveBeenNthCalledWith(1, "1001");
       expect(deleteFn).not.toHaveBeenCalledWith("1002");
       expect(deleteFn).not.toHaveBeenCalledWith("1003");
+    });
+  });
+
+  describe("injected client", () => {
+    test("create and update go through the injected client typed with the generated resource", async () => {
+      const createQualityProfile = vi.fn(async (profile: QualityProfileResource) => profile);
+      const updateQualityProfile = vi.fn(async (_id: string, profile: QualityProfileResource) => profile);
+
+      const sync = new QualityProfileSonarrSync({
+        getQualityProfiles: vi.fn(async () => []),
+        createQualityProfile,
+        updateQualityProfile,
+        deleteQualityProfile: vi.fn(),
+      });
+
+      // The client is mandatory and its writes are typed with Sonarr's own resource.
+      expectTypeOf(sync.createOnServer).returns.resolves.toEqualTypeOf<QualityProfileResource>();
+
+      const profile: QualityProfileShared = { name: "New", items: [] };
+
+      await sync.createOnServer(profile);
+      await sync.updateOnServer("7", profile);
+
+      expect(createQualityProfile).toHaveBeenCalledWith(profile);
+      expect(updateQualityProfile).toHaveBeenCalledWith("7", profile);
     });
   });
 });

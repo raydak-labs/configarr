@@ -15,6 +15,7 @@ import {
   RemotePathMappingResource,
   ReleaseProfileResource,
   UiConfigResource,
+  CustomFormatResource,
 } from "../__generated__/whisparr/data-contracts";
 import { logger } from "../logger";
 import type { CustomFormatRequest } from "../customFormats/customFormat.types";
@@ -44,7 +45,7 @@ export class WhisparrClient
     TagsClient,
     DownloadClientsClient<DownloadClientResource>,
     QualityProfilesClient<QualityProfileResource>,
-    CustomFormatsClient,
+    CustomFormatsClient<CustomFormatResource>,
     QualityDefinitionsClient<QualityDefinitionResource>
 {
   private api!: Api<unknown>;

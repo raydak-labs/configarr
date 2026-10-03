@@ -54,40 +54,6 @@ export abstract class MediaDownloadClientSync<T extends MediaDownloadClientResou
     return specifiedTopLevelProps > 0 && specifiedTopLevelProps <= 2;
   };
 
-  async calculateDiff(
-    configClients: InputConfigDownloadClient[],
-    serverClients: T[],
-    cache: ServerCache,
-    updatePassword: boolean = false,
-  ): Promise<DownloadClientDiff<T>> {
-    const create: InputConfigDownloadClient[] = [];
-    const update: DownloadClientDiff<T>["update"] = [];
-    const unchanged: { config: InputConfigDownloadClient; server: T }[] = [];
-
-    for (const config of configClients) {
-      const serverClient = serverClients.find(
-        (s) => s.name === config.name && s.implementation?.toLowerCase() === config.type.toLowerCase(),
-      );
-
-      if (!serverClient) {
-        create.push(config);
-      } else {
-        const comparison = this.isDownloadClientEqual(config, serverClient, cache, updatePassword);
-        if (!comparison.equal) {
-          const partialUpdate = this.shouldUsePartialUpdate(config);
-          update.push({ config, server: serverClient, partialUpdate, fieldChanges: comparison.changes });
-        } else {
-          unchanged.push({ config, server: serverClient });
-        }
-      }
-    }
-
-    const configKeys = new Set(configClients.map((c) => `${c.name}::${c.type.toLowerCase()}`));
-    const deleted = serverClients.filter((s) => !configKeys.has(`${s.name ?? ""}::${s.implementation?.toLowerCase() ?? ""}`));
-
-    return { create, update, unchanged, deleted };
-  }
-
   async resolveConfig(
     config: InputConfigDownloadClient,
     cache: ServerCache,

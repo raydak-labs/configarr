@@ -8,27 +8,33 @@ import { logger } from "../logger";
 import { ConfigCustomFormatList, CustomFormatDefinitions } from "../types/config.types";
 import { TrashCF } from "../types/trashguide.types";
 import { compareCustomFormats, loadJsonFile, mapImportCfToRequestCf, toCarrCF } from "../util";
-import { CFIDToConfigGroup, CFProcessing, ConfigarrCF, CustomFormatRequest } from "./customFormat.types";
+import { CFIDToConfigGroup, CFProcessing, ConfigarrCF, CustomFormatRef, CustomFormatRequest } from "./customFormat.types";
 
-export const deleteCustomFormat = async (client: CustomFormatsClient, customFormat: CustomFormatRequest) => {
+export const deleteCustomFormat = async <CF extends CustomFormatRef>(client: CustomFormatsClient<CF>, customFormat: CustomFormatRef) => {
   await client.deleteCustomFormat(customFormat.id + "");
   logger.info(`Deleted CF: '${customFormat.name}'`);
 };
 
-export const loadServerCustomFormats = async (client: CustomFormatsClient): Promise<CustomFormatRequest[]> => {
+export const loadServerCustomFormats = async <CF extends CustomFormatRef>(
+  client: CustomFormatsClient<CF>,
+): Promise<CF[] | CustomFormatRequest[]> => {
   if (getEnvs().LOAD_LOCAL_SAMPLES) {
     return loadJsonFile<CustomFormatRequest[]>(path.resolve(__dirname, "../../tests/samples/cfs.json"));
   }
   return client.getCustomFormats();
 };
 
-export const manageCf = async (client: CustomFormatsClient, cfProcessing: CFProcessing, serverCfs: Map<string, CustomFormatRequest>) => {
+export const manageCf = async <CF extends CustomFormatRef>(
+  client: CustomFormatsClient<CF>,
+  cfProcessing: CFProcessing,
+  serverCfs: Map<string, CustomFormatRef>,
+) => {
   const { cfNameToCarrConfig } = cfProcessing;
 
-  let updatedCFs: CustomFormatRequest[] = [];
+  let updatedCFs: CustomFormatRef[] = [];
   let errorCFs: string[] = [];
   const validCFs: ConfigarrCF[] = [];
-  let createCFs: CustomFormatRequest[] = [];
+  let createCFs: CustomFormatRef[] = [];
   const diffEntries: DiffEntry[] = [];
 
   const manageSingle = async (cfName: string, carrConfig: ConfigarrCF) => {

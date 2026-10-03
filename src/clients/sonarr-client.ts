@@ -15,6 +15,7 @@ import {
   SystemResource,
   TagResource,
   UiConfigResource,
+  CustomFormatResource,
 } from "../__generated__/sonarr/data-contracts";
 import { logger } from "../logger";
 import type { CustomFormatRequest } from "../customFormats/customFormat.types";
@@ -33,7 +34,7 @@ export class SonarrClient
     TagsClient,
     DownloadClientsClient<DownloadClientResource>,
     QualityProfilesClient<QualityProfileResource>,
-    CustomFormatsClient,
+    CustomFormatsClient<CustomFormatResource>,
     QualityDefinitionsClient<QualityDefinitionResource>
 {
   private api!: Api<unknown>;

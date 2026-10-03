@@ -33,7 +33,7 @@ export interface QualityProfilesClient<QualityProfile extends { id?: number; nam
   deleteQualityProfile(id: string): Promise<void>;
 }
 
-export interface CustomFormatsClient<CustomFormat extends { id?: number; name?: string | null } = CustomFormatRequest> {
+export interface CustomFormatsClient<CustomFormat extends { id?: number; name?: string | null }> {
   getCustomFormats(): Promise<CustomFormat[]>;
   createCustomFormat(format: CustomFormatRequest): Promise<CustomFormat>;
   updateCustomFormat(id: string, format: CustomFormatRequest): Promise<CustomFormat>;

@@ -1,9 +1,18 @@
 import fs from "node:fs";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, expectTypeOf, it, vi } from "vitest";
 import * as config from "../config";
 import * as env from "../env";
-import { calculateCFsToManage, loadCustomFormatDefinitions, loadLocalCfs, manageCf, mergeCfSources } from "./customFormats";
+import {
+  calculateCFsToManage,
+  loadCustomFormatDefinitions,
+  loadLocalCfs,
+  loadServerCustomFormats,
+  manageCf,
+  mergeCfSources,
+} from "./customFormats";
 import { loadTrashCFs } from "../trash-guide";
+import type { CustomFormatsClient } from "../clients/capabilities";
+import type { CustomFormatResource } from "../__generated__/radarr/data-contracts";
 import { CFIDToConfigGroup, CFProcessing, ConfigarrCF, CustomFormatRequest } from "./customFormat.types";
 import { ConfigCustomFormatList } from "../types/config.types";
 import { TrashCF } from "../types/trashguide.types";
@@ -347,6 +356,51 @@ describe("CustomFormats", () => {
       expect(out.diffEntries[0]!.resourceType).toBe("CustomFormat");
       expect(out.diffEntries[0]!.action).toBe("update");
       expect(out.diffEntries[0]!.fieldChanges).toContainEqual({ field: "specifications[0].negate", from: true, to: false });
+    });
+  });
+
+  describe("loadServerCustomFormats", () => {
+    // `presets` only exists on the generated resource, never on the write-shaped CustomFormatRequest.
+    const serverCfs: CustomFormatResource[] = [
+      {
+        id: 1,
+        name: "Server CF",
+        includeCustomFormatWhenRenaming: true,
+        specifications: [
+          {
+            id: 7,
+            name: "Release Title",
+            implementation: "ReleaseTitleSpecification",
+            fields: [{ name: "value", value: "^(0)$", order: 0 }],
+            presets: [],
+          },
+        ],
+      },
+    ];
+
+    const makeClient = (): CustomFormatsClient<CustomFormatResource> => ({
+      getCustomFormats: vi.fn(async () => serverCfs),
+      createCustomFormat: vi.fn(),
+      updateCustomFormat: vi.fn(),
+      deleteCustomFormat: vi.fn(),
+    });
+
+    it("returns the server payload unchanged, including server-only fields", async () => {
+      vi.spyOn(env, "getEnvs").mockReturnValue({ DRY_RUN: false } as ReturnType<typeof env.getEnvs>);
+
+      const loaded = await loadServerCustomFormats(makeClient());
+
+      expect(loaded).toEqual(serverCfs);
+    });
+
+    it("types the result as the client's own custom-format resource", async () => {
+      vi.spyOn(env, "getEnvs").mockReturnValue({ DRY_RUN: false } as ReturnType<typeof env.getEnvs>);
+
+      const loaded = await loadServerCustomFormats(makeClient());
+
+      // Radarr's resource, not the write-shaped CustomFormatRequest; the second member is the
+      // local-samples branch. Both `CustomFormatsClient` and this stage stay parameterized per arr.
+      expectTypeOf(loaded).toEqualTypeOf<CustomFormatResource[] | CustomFormatRequest[]>();
     });
   });
 });

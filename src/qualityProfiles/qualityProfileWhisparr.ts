@@ -9,6 +9,10 @@ import {
 import { QualityProfileLanguage, QualityProfileShared } from "./qualityProfile.types";
 
 export class QualityProfileWhisparrSync extends BaseQualityProfileSync<QualityProfileResource> {
+  protected toServerProfile(profile: QualityProfileShared): QualityProfileResource {
+    return profile;
+  }
+
   protected resolveLanguage(
     profileName: string,
     configLanguage: string | undefined,

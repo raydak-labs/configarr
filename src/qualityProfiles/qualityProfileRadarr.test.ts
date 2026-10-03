@@ -6,6 +6,11 @@ import { QualityDefinitionShared } from "../qualityDefinitions/qualityDefinition
 import { QualityProfileShared } from "./qualityProfile.types";
 import { ServerCache } from "../cache";
 import { QualityProfileRadarrSync } from "./qualityProfileRadarr";
+import type { QualityProfileResource } from "../__generated__/radarr/data-contracts";
+import type { QualityProfilesClient } from "../clients/capabilities";
+
+/** calculateQualityProfilesDiff never touches the API; the client is only required by the type. */
+const qpClient = {} as QualityProfilesClient<QualityProfileResource>;
 import { ConfigQualityProfile, ConfigQualityProfileItem, MergedConfigInstance } from "../types/config.types";
 import { cloneWithJSON, loadJsonFile } from "../util";
 
@@ -54,26 +59,26 @@ describe("QualityProfileRadarrSync", async () => {
 
     const serverCache = new ServerCache({ qualityDefinitions: serverQD, qualityProfiles: serverQP, customFormats: serverCF });
 
-    let diff = await new QualityProfileRadarrSync().calculateQualityProfilesDiff(cfMap, config, serverCache);
+    let diff = await new QualityProfileRadarrSync(qpClient).calculateQualityProfilesDiff(cfMap, config, serverCache);
     expect(diff.changedQPs.length).toBe(1);
     expect(diff.create.length).toBe(0);
     expect(diff.noChanges.length).toBe(0);
 
     serverProfile.minFormatScore = 0;
-    diff = await new QualityProfileRadarrSync().calculateQualityProfilesDiff(cfMap, config, serverCache);
+    diff = await new QualityProfileRadarrSync(qpClient).calculateQualityProfilesDiff(cfMap, config, serverCache);
     expect(diff.changedQPs.length).toBe(1);
     expect(diff.create.length).toBe(0);
     expect(diff.noChanges.length).toBe(0);
 
     serverProfile.minUpgradeFormatScore = 0;
-    diff = await new QualityProfileRadarrSync().calculateQualityProfilesDiff(cfMap, config, serverCache);
+    diff = await new QualityProfileRadarrSync(qpClient).calculateQualityProfilesDiff(cfMap, config, serverCache);
     expect(diff.changedQPs.length).toBe(1);
     expect(diff.create.length).toBe(0);
     expect(diff.noChanges.length).toBe(0);
 
     profile.min_format_score = 0;
     serverProfile.minFormatScore = 1;
-    diff = await new QualityProfileRadarrSync().calculateQualityProfilesDiff(cfMap, config, serverCache);
+    diff = await new QualityProfileRadarrSync(qpClient).calculateQualityProfilesDiff(cfMap, config, serverCache);
     expect(diff.changedQPs.length).toBe(1);
     expect(diff.create.length).toBe(0);
     expect(diff.noChanges.length).toBe(0);
@@ -117,7 +122,7 @@ describe("QualityProfileRadarrSync", async () => {
 
     const serverCache = new ServerCache({ qualityDefinitions: serverQD, qualityProfiles: serverQP, customFormats: serverCF });
 
-    const diff = await new QualityProfileRadarrSync().calculateQualityProfilesDiff(cfMap, config, serverCache);
+    const diff = await new QualityProfileRadarrSync(qpClient).calculateQualityProfilesDiff(cfMap, config, serverCache);
     expect(diff.changedQPs.length).toBe(0);
     expect(diff.create.length).toBe(0);
     expect(diff.noChanges.length).toBe(1);
@@ -172,7 +177,7 @@ describe("QualityProfileRadarrSync", async () => {
       languages: [{ id: 0, name: "Any" }],
     });
 
-    const diff = await new QualityProfileRadarrSync().calculateQualityProfilesDiff(cfMap, config, serverCache);
+    const diff = await new QualityProfileRadarrSync(qpClient).calculateQualityProfilesDiff(cfMap, config, serverCache);
     expect(diff.changedQPs.length).toBe(1);
     expect(diff.create.length).toBe(0);
     expect(diff.noChanges.length).toBe(0);
@@ -223,7 +228,7 @@ describe("QualityProfileRadarrSync", async () => {
       languages: [{ id: 0, name: "Any" }],
     });
 
-    const diff = await new QualityProfileRadarrSync().calculateQualityProfilesDiff(cfMap, config, serverCache);
+    const diff = await new QualityProfileRadarrSync(qpClient).calculateQualityProfilesDiff(cfMap, config, serverCache);
     expect(diff.changedQPs.length).toBe(1);
     expect((diff.changedQPs[0] as QualityProfileShared).language).toEqual({ id: 0, name: "Any" });
   });
@@ -276,7 +281,7 @@ describe("QualityProfileRadarrSync", async () => {
 
     const logSpy = vi.spyOn(log.logger, "warn").mockImplementation(() => {});
 
-    const diff = await new QualityProfileRadarrSync().calculateQualityProfilesDiff(cfMap, config, serverCache);
+    const diff = await new QualityProfileRadarrSync(qpClient).calculateQualityProfilesDiff(cfMap, config, serverCache);
 
     expect(logSpy).toHaveBeenCalledWith(expect.stringContaining("Any"));
     expect(diff.changedQPs.length).toBe(0);
@@ -328,7 +333,7 @@ describe("QualityProfileRadarrSync", async () => {
       languages: [{ id: 0, name: "Any" }],
     });
 
-    const diff = await new QualityProfileRadarrSync().calculateQualityProfilesDiff(cfMap, config, serverCache);
+    const diff = await new QualityProfileRadarrSync(qpClient).calculateQualityProfilesDiff(cfMap, config, serverCache);
     expect(diff.changedQPs.length).toBe(0);
     expect(diff.create.length).toBe(0);
     expect(diff.noChanges.length).toBe(1);
@@ -372,7 +377,7 @@ describe("QualityProfileRadarrSync", async () => {
 
     const serverCache = new ServerCache({ qualityDefinitions: resources });
 
-    const diff = await new QualityProfileRadarrSync().calculateQualityProfilesDiff(cfMap, config, serverCache);
+    const diff = await new QualityProfileRadarrSync(qpClient).calculateQualityProfilesDiff(cfMap, config, serverCache);
     expect(diff.changedQPs.length).toBe(0);
     expect(diff.create.length).toBe(1);
     expect(diff.noChanges.length).toBe(0);
@@ -426,7 +431,7 @@ describe("QualityProfileRadarrSync", async () => {
 
     const serverCache = new ServerCache({ qualityDefinitions: resources });
 
-    const diff = await new QualityProfileRadarrSync().calculateQualityProfilesDiff(cfMap, config, serverCache);
+    const diff = await new QualityProfileRadarrSync(qpClient).calculateQualityProfilesDiff(cfMap, config, serverCache);
     expect(diff.create.length).toBe(1);
 
     const createdProfile = diff.create[0];
@@ -473,7 +478,7 @@ describe("QualityProfileRadarrSync", async () => {
 
     const serverCache = new ServerCache({ qualityDefinitions: resources, qualityProfiles: [serverProfile] });
 
-    const diff = await new QualityProfileRadarrSync().calculateQualityProfilesDiff(cfMap, config, serverCache);
+    const diff = await new QualityProfileRadarrSync(qpClient).calculateQualityProfilesDiff(cfMap, config, serverCache);
     expect(diff.changedQPs.length).toBe(1);
     expect(diff.create.length).toBe(0);
     expect(diff.noChanges.length).toBe(0);
@@ -556,7 +561,7 @@ describe("QualityProfileRadarrSync", async () => {
 
     const serverCache = new ServerCache({ qualityDefinitions: resources, qualityProfiles: [serverProfile] });
 
-    const diff = await new QualityProfileRadarrSync().calculateQualityProfilesDiff(cfMap, config, serverCache);
+    const diff = await new QualityProfileRadarrSync(qpClient).calculateQualityProfilesDiff(cfMap, config, serverCache);
     expect(diff.changedQPs.length).toBe(1);
     expect(diff.create.length).toBe(0);
     expect(diff.noChanges.length).toBe(0);
@@ -611,7 +616,7 @@ describe("QualityProfileRadarrSync", async () => {
 
     const serverCache = new ServerCache({ qualityDefinitions: resources, qualityProfiles: [serverProfile] });
 
-    const diff = await new QualityProfileRadarrSync().calculateQualityProfilesDiff(cfMap, config, serverCache);
+    const diff = await new QualityProfileRadarrSync(qpClient).calculateQualityProfilesDiff(cfMap, config, serverCache);
     expect(diff.changedQPs.length).toBe(1);
     expect(diff.create.length).toBe(0);
 
@@ -661,7 +666,7 @@ describe("QualityProfileRadarrSync", async () => {
 
     const serverCache = new ServerCache({ qualityDefinitions: serverQD, qualityProfiles: serverQP, customFormats: serverCF });
 
-    const diff = await new QualityProfileRadarrSync().calculateQualityProfilesDiff(cfMap, config, serverCache);
+    const diff = await new QualityProfileRadarrSync(qpClient).calculateQualityProfilesDiff(cfMap, config, serverCache);
 
     const fieldChanges = diff.changes.get("hi");
     expect(fieldChanges).toContainEqual({ field: "minFormatScore", from: 3, to: 2 });

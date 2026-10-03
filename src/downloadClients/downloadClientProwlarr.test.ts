@@ -3,6 +3,7 @@ import { ServerCache } from "../cache";
 import { logger } from "../logger";
 import type { InputConfigDownloadClient } from "../types/config.types";
 import type { DownloadClientResource } from "../__generated__/prowlarr/data-contracts";
+import type { DownloadClientsClient, TagsClient } from "../clients/capabilities";
 import { ProwlarrDownloadClientSync } from "./downloadClientProwlarr";
 
 const qbitSchema = (extra: Record<string, unknown> = {}): DownloadClientResource =>
@@ -15,6 +16,9 @@ const qbitSchema = (extra: Record<string, unknown> = {}): DownloadClientResource
     infoLink: "",
     ...extra,
   }) as DownloadClientResource;
+
+/** resolveConfig tests seed the schema explicitly, so no API calls are made. */
+const stubClient = {} as DownloadClientsClient<DownloadClientResource> & TagsClient;
 
 describe("ProwlarrDownloadClientSync", () => {
   beforeEach(() => {
@@ -30,7 +34,7 @@ describe("ProwlarrDownloadClientSync", () => {
     };
 
     test("PROWLARR create uses schema categories (default [])", async () => {
-      const sync = new ProwlarrDownloadClientSync();
+      const sync = new ProwlarrDownloadClientSync(stubClient);
       const cache = new ServerCache();
       sync.setDownloadClientSchema([qbitSchema({ categories: [] })]);
 
@@ -41,7 +45,7 @@ describe("ProwlarrDownloadClientSync", () => {
     });
 
     test("PROWLARR create uses [] when schema omits categories", async () => {
-      const sync = new ProwlarrDownloadClientSync();
+      const sync = new ProwlarrDownloadClientSync(stubClient);
       const cache = new ServerCache();
       sync.setDownloadClientSchema([qbitSchema()]);
 
@@ -51,7 +55,7 @@ describe("ProwlarrDownloadClientSync", () => {
     });
 
     test("PROWLARR update keeps server categories", async () => {
-      const sync = new ProwlarrDownloadClientSync();
+      const sync = new ProwlarrDownloadClientSync(stubClient);
       const cache = new ServerCache();
       sync.setDownloadClientSchema([qbitSchema({ categories: [] })]);
       const server = qbitSchema({
@@ -66,9 +70,48 @@ describe("ProwlarrDownloadClientSync", () => {
     });
   });
 
+  describe("calculateDiff (shared on BaseDownloadClientSync)", () => {
+    test("classifies create, unchanged and deleted against the server list", async () => {
+      const sync = new ProwlarrDownloadClientSync(stubClient);
+
+      const server: DownloadClientResource[] = [
+        { id: 1, name: "qBittorrent", implementation: "QBittorrent", enable: true, fields: [] },
+        { id: 2, name: "Transmission", implementation: "Transmission", enable: true, fields: [] },
+      ];
+
+      const diff = await sync.calculateDiff(
+        [
+          { name: "qBittorrent", type: "qbittorrent", enable: true },
+          { name: "SABnzbd", type: "sabnzbd" },
+        ],
+        server,
+        new ServerCache(),
+      );
+
+      expect(diff.create).toEqual([{ name: "SABnzbd", type: "sabnzbd" }]);
+      expect(diff.update).toEqual([]);
+      expect(diff.unchanged).toEqual([{ config: { name: "qBittorrent", type: "qbittorrent", enable: true }, server: server[0] }]);
+      expect(diff.deleted).toEqual([server[1]]);
+    });
+
+    test("marks a client as updated when the shared fields differ", async () => {
+      const sync = new ProwlarrDownloadClientSync(stubClient);
+
+      const server: DownloadClientResource[] = [{ id: 1, name: "qBittorrent", implementation: "QBittorrent", enable: false, fields: [] }];
+
+      const diff = await sync.calculateDiff([{ name: "qBittorrent", type: "qbittorrent", enable: true }], server, new ServerCache());
+
+      expect(diff.create).toEqual([]);
+      expect(diff.unchanged).toEqual([]);
+      expect(diff.update).toHaveLength(1);
+      expect(diff.update[0]?.partialUpdate).toBe(true);
+      expect(diff.update[0]?.fieldChanges).toEqual([{ field: "enable", from: false, to: true }]);
+    });
+  });
+
   describe("partial update", () => {
     test("keeps server fields when enable, priority, and tags are all set", async () => {
-      const sync = new ProwlarrDownloadClientSync();
+      const sync = new ProwlarrDownloadClientSync(stubClient);
       const cache = new ServerCache({ tags: [{ id: 3, label: "tv" }] });
       sync.setDownloadClientSchema([
         qbitSchema({

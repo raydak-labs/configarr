@@ -1,5 +1,6 @@
 import path from "node:path";
 import { ServerCache } from "../cache";
+import type { QualityProfilesClient } from "../clients/capabilities";
 import { DiffEntry, FieldChange } from "../diffReport/diffReport.types";
 import { getEnvs } from "../env";
 import { logger } from "../logger";
@@ -475,24 +476,16 @@ export const checkForConflictingCFs = (
   }
 };
 
-export type QualityProfileSyncApi<T extends QualityProfileShared> = {
-  getQualityProfiles(): Promise<T[]>;
-  createQualityProfile(profile: QualityProfileShared): Promise<T>;
-  updateQualityProfile(id: string, profile: QualityProfileShared): Promise<T>;
-  deleteQualityProfile(id: string): Promise<void>;
-};
-
 export abstract class BaseQualityProfileSync<T extends QualityProfileShared> {
   protected readonly logger = logger;
 
-  constructor(protected readonly api?: QualityProfileSyncApi<T>) {}
+  constructor(protected readonly api: QualityProfilesClient<T>) {}
 
-  protected getApi(): QualityProfileSyncApi<T> {
-    if (this.api === undefined) {
-      throw new Error("Quality profile API client is required");
-    }
-    return this.api;
-  }
+  /**
+   * The diff pipeline produces the shared profile shape; each *arr writes it as its own
+   * generated `QualityProfileResource`, which is what `QualityProfilesClient<T>` accepts.
+   */
+  protected abstract toServerProfile(profile: QualityProfileShared): T;
 
   protected abstract resolveLanguage(
     profileName: string,
@@ -520,22 +513,22 @@ export abstract class BaseQualityProfileSync<T extends QualityProfileShared> {
   ): boolean;
 
   createOnServer(profile: QualityProfileShared) {
-    return this.getApi().createQualityProfile(profile);
+    return this.api.createQualityProfile(this.toServerProfile(profile));
   }
 
   updateOnServer(id: string, profile: QualityProfileShared) {
-    return this.getApi().updateQualityProfile(id, profile);
+    return this.api.updateQualityProfile(id, this.toServerProfile(profile));
   }
 
-  loadFromServer() {
+  async loadFromServer(): Promise<T[] | QualityProfileShared[]> {
     if (getEnvs().LOAD_LOCAL_SAMPLES) {
       return loadJsonFile<QualityProfileShared[]>(path.resolve(__dirname, "../../tests/samples/quality_profiles.json"));
     }
-    return this.getApi().getQualityProfiles();
+    return this.api.getQualityProfiles();
   }
 
   deleteOnServer(qualityProfile: QualityProfileShared) {
-    return this.getApi().deleteQualityProfile(qualityProfile.id + "");
+    return this.api.deleteQualityProfile(qualityProfile.id + "");
   }
 
   async persist(diff: QualityProfileDiffResult, write: boolean): Promise<void> {
