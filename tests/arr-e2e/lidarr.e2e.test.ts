@@ -258,7 +258,8 @@ describe("lidarr (live)", () => {
     // The default profile is not guaranteed to be id 1 on a server that already had one.
     const defaultId = defaultDelayProfile(await client.getDelayProfiles())?.id;
     expect(defaultId).toBeDefined();
-    await expect(client.updateDelayProfile(String(defaultId), LEGACY_DELAY_PROFILE as never)).rejects.toThrow(/400/);
+    // Since #549 the thrown message is the *arr error body, no longer the HTTP status line.
+    await expect(client.updateDelayProfile(String(defaultId), LEGACY_DELAY_PROFILE as never)).rejects.toThrow(/Items/);
 
     const parsed = InputConfigDelayProfileSchema.parse({
       Items: [
