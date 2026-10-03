@@ -64,11 +64,9 @@ export const manageCf = async (client: CustomFormatsClient, cfProcessing: CFProc
             logger.debug(`Updated CF ${requestConfig.name}`);
             updatedCFs.push(updatedCf);
           }
-        } catch (err: any) {
-          const data = err?.response?.data;
-          const dataMessage = typeof data === "object" ? (data?.message ?? data?.errorMessage) : data;
-          const errorMessage = dataMessage ?? err?.message ?? String(err);
-          logger.error(errorMessage, `Failed updating CF ${requestConfig.name}`);
+        } catch (err: unknown) {
+          const errorMessage = err instanceof Error ? err.message : String(err);
+          logger.error(`Failed updating CF ${requestConfig.name}: ${errorMessage}`);
           errorCFs.push(carrConfig.configarr_id ?? requestConfig.name ?? "unknown");
           throw new Error(`Failed updating CF '${requestConfig.name}'. Message: ${errorMessage}`, { cause: err });
         }
@@ -88,11 +86,9 @@ export const manageCf = async (client: CustomFormatsClient, cfProcessing: CFProc
           createCFs.push(createResult);
           serverCfs.set(createResult.name!, createResult);
         }
-      } catch (err: any) {
-        const data = err?.response?.data;
-        const dataMessage = typeof data === "object" ? (data?.message ?? data?.errorMessage) : data;
-        const errorMessage = dataMessage ?? err?.message ?? String(err);
-        logger.error(errorMessage, `Failed creating CF ${requestConfig.name}`);
+      } catch (err: unknown) {
+        const errorMessage = err instanceof Error ? err.message : String(err);
+        logger.error(`Failed creating CF ${requestConfig.name}: ${errorMessage}`);
         errorCFs.push(carrConfig.configarr_id ?? requestConfig.name ?? "unknown");
         throw new Error(`Failed creating CF '${requestConfig.name}'. Message: ${errorMessage}`, { cause: err });
       }

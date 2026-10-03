@@ -1,8 +1,90 @@
 // Copied and modified from here: https://github.com/acacode/swagger-typescript-api/pull/690
-import type { BeforeRequestHook, Hooks, KyInstance, Options as KyOptions, NormalizedOptions } from "ky";
+import type { AfterResponseHook, BeforeRequestHook, Hooks, KyInstance, Options as KyOptions, NormalizedOptions } from "ky";
 import ky, { HTTPError } from "ky";
 import { logger } from "./logger";
 import { createConnectionErrorParts, selectConnectionErrorDetail } from "./clients/connection";
+
+/** Upper bound on an error body kept for the user-facing message. *arr error bodies are small. */
+const MAX_ERROR_BODY_BYTES = 64 * 1024;
+
+/**
+ * How long the error-body capture may wait before the request gives up on it.
+ *
+ * Ky bounds its own error-body read, but that read happens after `afterResponse` hooks, so a server that
+ * sends error headers and then keeps the body open would otherwise stall the request indefinitely.
+ */
+const ERROR_BODY_CAPTURE_TIMEOUT_MS = 5_000;
+
+/**
+ * Read a response body for diagnostics only, bounded in both time and size.
+ *
+ * Reads through a reader instead of `response.text()`: the text helpers buffer the whole body before any
+ * limit applies, and a body without a `Content-Length` would slip past a header check. Chunks are counted as
+ * they arrive and the reader is cancelled the moment either limit is hit, so a stalled or oversized body
+ * stops being read instead of lingering in memory. Returns `undefined` when the body is unusable; the
+ * caller then reports an empty body.
+ */
+async function readErrorBodyBounded(response: Response): Promise<string | undefined> {
+  if (!response.body) {
+    return undefined;
+  }
+
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let received = 0;
+  let timer: NodeJS.Timeout | undefined;
+
+  const timedOut = new Promise<typeof TIMED_OUT>((resolve) => {
+    timer = setTimeout(() => resolve(TIMED_OUT), ERROR_BODY_CAPTURE_TIMEOUT_MS);
+    timer.unref?.();
+  });
+
+  try {
+    for (;;) {
+      const step = await Promise.race([reader.read(), timedOut]);
+
+      if (step === TIMED_OUT) {
+        void reader.cancel().catch(() => {});
+        return undefined;
+      }
+
+      if (step.done) {
+        break;
+      }
+
+      received += step.value.byteLength;
+
+      if (received > MAX_ERROR_BODY_BYTES) {
+        // Fire and forget: awaiting a cancel on a tee branch can stay pending forever.
+        void reader.cancel().catch(() => {});
+        return undefined;
+      }
+
+      chunks.push(step.value);
+    }
+
+    return new TextDecoder().decode(concatChunks(chunks));
+  } catch {
+    return undefined;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+const TIMED_OUT = Symbol("timedOut");
+
+function concatChunks(chunks: Uint8Array[]): Uint8Array {
+  const total = chunks.reduce((sum, chunk) => sum + chunk.byteLength, 0);
+  const out = new Uint8Array(total);
+  let offset = 0;
+
+  for (const chunk of chunks) {
+    out.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+
+  return out;
+}
 
 function toErrorMessage(value: unknown): string {
   if (value === null) return "null";
@@ -140,6 +222,15 @@ export class HttpClient<SecurityDataType = unknown> {
       }
     }
 
+    // ky 2.x consumes the response body into `HTTPError.data` before throwing, so `error.response` can no longer be read.
+    // The body text therefore has to be captured while the response is still unconsumed: `afterResponse` hooks receive a clone.
+    let capturedErrorBody: string | undefined;
+    const captureErrorBody: AfterResponseHook = async ({ response }) => {
+      if (!response.ok) {
+        capturedErrorBody = await readErrorBodyBounded(response.clone());
+      }
+    };
+
     let hooks: Hooks | undefined;
     if (secure && this.securityWorker) {
       const securityWorker: BeforeRequestHook = async ({ request, options }) => {
@@ -167,6 +258,10 @@ export class HttpClient<SecurityDataType = unknown> {
         beforeRequest: options.hooks && options.hooks.beforeRequest ? [securityWorker, ...options.hooks.beforeRequest] : [securityWorker],
       };
     }
+
+    // Ky replaces the response with whatever an `afterResponse` hook returns, so the capture hook goes last:
+    // it then sees the response Ky actually rejects rather than the one an earlier hook replaced.
+    hooks = { ...hooks, afterResponse: [...(hooks?.afterResponse ?? []), captureErrorBody] };
 
     let searchParams: URLSearchParams | undefined;
 
@@ -217,16 +312,7 @@ export class HttpClient<SecurityDataType = unknown> {
           const contentType = response.headers.get("content-type");
 
           if (contentType && contentType.includes("application/json")) {
-            let text = "";
-            try {
-              text = await response.clone().text();
-            } catch {
-              try {
-                text = await response.text();
-              } catch {
-                text = "";
-              }
-            }
+            const text = capturedErrorBody ?? "";
 
             let errorJson: unknown;
             try {
@@ -253,14 +339,18 @@ export class HttpClient<SecurityDataType = unknown> {
                   return typeof msg === "string" && msg ? msg : undefined;
                 })
                 .filter((m): m is string => m !== undefined);
-              errorMessage = messages.length > 0 ? messages.join(", ") : JSON.stringify(errorJson);
+              // No JSON.stringify fallback here: entries without a message would otherwise put the whole
+              // response payload into both the log line and the thrown error.
+              errorMessage = messages.length > 0 ? messages.join(", ") : "unknown error";
             } else if (errorJson && typeof errorJson === "object") {
               const errObj = errorJson as Record<string, unknown>;
               const msg = errObj["message"] ?? errObj["errorMessage"];
               if (typeof msg === "string" && msg) errorMessage = msg;
             }
 
-            logger.error(errorJson, `Failed executing request: '${errorMessage}'`);
+            // Only the selected message is logged, never the parsed payload: a server can echo submitted
+            // values back in its validation response, and this line runs at error level on every failure.
+            logger.error(`Failed executing request: '${errorMessage}'`);
             throw new Error(errorMessage, { cause: error });
           } else {
             const messageParts = [`HTTP Error: ${response.status} ${response.statusText}`];
