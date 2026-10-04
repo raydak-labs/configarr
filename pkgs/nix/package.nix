@@ -1,12 +1,14 @@
 {
   lib,
   pkgs,
+  src,
+  version ? "1.34.0",
   ...
 }:
 pkgs.stdenvNoCC.mkDerivation (finalAttrs: {
   buildPhase = ''
     runHook preBuild
-    pnpm build
+    CONFIGARR_VERSION=${lib.escapeShellArg finalAttrs.version} pnpm build
     runHook postBuild
   '';
 
@@ -27,7 +29,7 @@ pkgs.stdenvNoCC.mkDerivation (finalAttrs: {
   '';
 
   meta = {
-    changelog = "https://github.com/raydak-labs/configarr/blob/${finalAttrs.src.rev}/CHANGELOG.md";
+    changelog = "https://github.com/raydak-labs/configarr/blob/v${finalAttrs.version}/CHANGELOG.md";
     description = "Sync TRaSH Guides + custom configs with Sonarr/Radarr";
     homepage = "https://github.com/raydak-labs/configarr";
     license = lib.licenses.agpl3Only;
@@ -51,12 +53,5 @@ pkgs.stdenvNoCC.mkDerivation (finalAttrs: {
     inherit (finalAttrs) pname src version;
   };
 
-  src = pkgs.fetchFromGitHub {
-    owner = "raydak-labs";
-    repo = "configarr";
-    rev = "v${finalAttrs.version}";
-    hash = "sha256-yCdlc/T+FARPeWcaOaMqN8gpc+RRV+qI2B4eBWZdPVE=";
-  };
-
-  version = "1.34.0";
+  inherit src version;
 })

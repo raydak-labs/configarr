@@ -33,7 +33,7 @@
     };
 
     package = lib.mkOption {
-      default = import ../package.nix {inherit lib pkgs;};
+      default = import ../default.nix {inherit lib pkgs;};
       description = "Package to use";
       type = lib.types.package;
     };

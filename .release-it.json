@@ -34,7 +34,6 @@
     }
   },
   "hooks": {
-    "before:git:release": ["pnpm exec prettier . --write", "git add .", "pnpm run lint"],
-    "after:release": "echo \"RELEASED_VERSION=${version}\" >> $GITHUB_ENV"
+    "before:git:release": ["bash scripts/prepare-nix-release.sh ${version}", "pnpm exec prettier . --write", "git add .", "pnpm run lint"]
   }
 }
