@@ -12,8 +12,8 @@ if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
   exit 1
 fi
 
-if [[ -n "${GITHUB_ACTIONS:-}" && -z "$pnpm_hash" ]]; then
-  echo "NIX_PNPM_DEPS_HASH is required when preparing a GitHub release" >&2
+if [[ -z "$pnpm_hash" ]]; then
+  echo "NIX_PNPM_DEPS_HASH is required. Run scripts/prefetch-nix-pnpm-deps.sh first." >&2
   exit 1
 fi
 
@@ -34,18 +34,17 @@ text, version_count = re.subn(
 if version_count != 1:
     sys.exit(f"failed to update version in {path}")
 
-if pnpm_hash:
-    if re.fullmatch(r"sha256-[A-Za-z0-9+/=]+", pnpm_hash) is None:
-        sys.exit(f"unexpected pnpm hash: {pnpm_hash}")
-    text, hash_count = re.subn(
-        r'(pnpmDeps = pkgs\.fetchPnpmDeps \{[^}]*?hash = ")sha256-[A-Za-z0-9+/=]+(";)',
-        rf"\1{pnpm_hash}\2",
-        text,
-        count=1,
-        flags=re.S,
-    )
-    if hash_count != 1:
-        sys.exit(f"failed to update pnpmDeps hash in {path}")
+if re.fullmatch(r"sha256-[A-Za-z0-9+/=]+", pnpm_hash) is None:
+    sys.exit(f"unexpected pnpm hash: {pnpm_hash}")
+text, hash_count = re.subn(
+    r'(pnpmDeps = pkgs\.fetchPnpmDeps \{[^}]*?hash = ")sha256-[A-Za-z0-9+/=]+(";)',
+    rf"\1{pnpm_hash}\2",
+    text,
+    count=1,
+    flags=re.S,
+)
+if hash_count != 1:
+    sys.exit(f"failed to update pnpmDeps hash in {path}")
 
 open(path, "w", encoding="utf-8").write(text)
 PY
