@@ -2,6 +2,7 @@ import { z } from "zod";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ServerCache } from "../cache";
 import { getEnvs } from "../env";
+import { logger } from "../logger";
 import { ConfigValidationError } from "../validation";
 import { ExtraProp, ProviderResource, ProviderResourceSync } from "./providerResourceSync";
 
@@ -191,6 +192,110 @@ describe("ProviderResourceSync", () => {
       await sync().sync([{ name: "W", type: "Widget", fields: { movie_imported_category: "movies" } }], undefined, cache());
 
       expect(mockClient.create).toHaveBeenCalled();
+    });
+
+    // Some tracker definitions (UNIT3D) use snake_case field names in the schema itself, so the
+    // server's spelling is not always camelCase. See issue #561.
+    describe("snake_case schema fields", () => {
+      const snakeSchema: ThingResource[] = [
+        {
+          implementation: "Widget",
+          implementationName: "Widget",
+          configContract: "WidgetSettings",
+          fields: [
+            { name: "host", value: "" },
+            { name: "single_file_release_use_filename", value: false },
+            { name: "api_key", value: "" },
+          ],
+          tags: [],
+        },
+      ];
+
+      beforeEach(() => {
+        mockClient.getSchema.mockResolvedValue(snakeSchema);
+      });
+
+      it("accepts a snake_case config field whose schema field is snake_case", async () => {
+        const res = sync().validate({ name: "W", type: "Widget", fields: { single_file_release_use_filename: true } }, snakeSchema);
+
+        expect(res.valid).toBe(true);
+        expect(res.errors).toEqual([]);
+
+        await sync().sync([{ name: "W", type: "Widget", fields: { single_file_release_use_filename: true } }], undefined, cache());
+
+        const [payload] = mockClient.create.mock.calls[0]!;
+        expect(payload.fields).toContainEqual({ name: "single_file_release_use_filename", value: true });
+      });
+
+      it("accepts a camelCase config field whose schema field is snake_case", async () => {
+        await sync().sync([{ name: "W", type: "Widget", fields: { singleFileReleaseUseFilename: true } }], undefined, cache());
+
+        const [payload] = mockClient.create.mock.calls[0]!;
+        expect(payload.fields).toContainEqual({ name: "single_file_release_use_filename", value: true });
+      });
+
+      it("still rejects a field that exists in neither casing, spelling it as configured", () => {
+        const res = sync().validate({ name: "W", type: "Widget", fields: { singleFileReleaseTypo: true } }, snakeSchema);
+
+        expect(res.valid).toBe(false);
+        expect(res.errors).toEqual(["Field 'singleFileReleaseTypo' does not exist for Thing type 'Widget'"]);
+      });
+
+      it("reports a changed snake_case field without warning that it is missing on the server", async () => {
+        mockClient.getAll.mockResolvedValue([
+          {
+            id: 5,
+            name: "W",
+            implementation: "Widget",
+            fields: [{ name: "single_file_release_use_filename", value: false }],
+            tags: [],
+          },
+        ]);
+
+        const out = await sync().sync(
+          [{ name: "W", type: "Widget", fields: { single_file_release_use_filename: true } }],
+          undefined,
+          cache(),
+        );
+
+        expect(out).toMatchObject({ added: 0, updated: 1, removed: 0 });
+        expect(out.diffEntries[0]!.fieldChanges).toEqual([{ field: "fields.single_file_release_use_filename", from: false, to: true }]);
+        expect(logger.warn).not.toHaveBeenCalledWith(expect.stringContaining("does not exist on server"));
+      });
+
+      it("treats a masked snake_case secret as unchanged", async () => {
+        mockClient.getAll.mockResolvedValue([
+          {
+            id: 5,
+            name: "W",
+            implementation: "Widget",
+            fields: [{ name: "api_key", value: "********" }],
+            tags: [],
+          },
+        ]);
+
+        const out = await sync().sync([{ name: "W", type: "Widget", fields: { api_key: "secret" } }], undefined, cache());
+
+        expect(out).toMatchObject({ added: 0, updated: 0, removed: 0 });
+        expect(mockClient.update).not.toHaveBeenCalled();
+      });
+
+      it("reports no change when the snake_case field already matches", async () => {
+        mockClient.getAll.mockResolvedValue([
+          {
+            id: 5,
+            name: "W",
+            implementation: "Widget",
+            fields: [{ name: "single_file_release_use_filename", value: true }],
+            tags: [],
+          },
+        ]);
+
+        const out = await sync().sync([{ name: "W", type: "Widget", fields: { singleFileReleaseUseFilename: true } }], undefined, cache());
+
+        expect(out).toMatchObject({ added: 0, updated: 0, removed: 0 });
+        expect(mockClient.update).not.toHaveBeenCalled();
+      });
     });
   });
 

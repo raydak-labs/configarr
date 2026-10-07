@@ -7,7 +7,7 @@ import { getEnvs } from "../env";
 import { logger } from "../logger";
 import type { Tag } from "../tags/tag.types";
 import { ensureTags, resolveTagNames } from "../tags/tags";
-import { camelToSnake, snakeToCamel } from "../util";
+import { camelToSnake } from "../util";
 import { ConfigValidationError } from "../validation";
 
 export type { Tag };
@@ -75,6 +75,12 @@ export interface ExtraProp<TConfig, TCtx> {
 const NAME_MAX_LENGTH = 100;
 
 /**
+ * Case- and underscore-insensitive form of a field name, so `single_file_release_use_filename`
+ * in config can match a schema field spelled `singleFileReleaseUseFilename` - or the reverse.
+ */
+const canonicalFieldKey = (name: string): string => name.replace(/_/g, "").toLowerCase();
+
+/**
  * Generic add/update/delete sync for a Prowlarr provider resource type.
  *
  * Subclasses wire in the client calls, the schema-template lookup, the identity
@@ -135,16 +141,33 @@ export abstract class ProviderResourceSync<
     return this.schemaCache;
   }
 
-  normalizeConfigFields(configFields: Record<string, unknown>): Record<string, unknown> {
-    const normalized: Record<string, unknown> = {};
-    for (const [key, value] of Object.entries(configFields)) {
-      const camelKey = snakeToCamel(key);
-      normalized[camelKey] = value;
-      if (key !== camelKey) {
-        normalized[key] = value;
-      }
+  /**
+   * Maps config keys onto the field names the server actually uses. Prowlarr schema field
+   * names are not consistently cased - most are camelCase, some tracker definitions use
+   * snake_case - so matching ignores case and underscores. Keys that match no field are
+   * returned in `unknown` for reporting, spelled as the user wrote them.
+   */
+  private resolveConfigFields(
+    configFields: Record<string, unknown>,
+    fields: readonly ProviderField[],
+  ): { resolved: Record<string, unknown>; unknown: string[] } {
+    const byExact = new Map<string, string>();
+    const byCanonical = new Map<string, string>();
+    for (const { name } of fields) {
+      if (!name) continue;
+      byExact.set(name, name);
+      const canonical = canonicalFieldKey(name);
+      if (!byCanonical.has(canonical)) byCanonical.set(canonical, name);
     }
-    return normalized;
+
+    const resolved: Record<string, unknown> = {};
+    const unknown: string[] = [];
+    for (const [key, value] of Object.entries(configFields)) {
+      const target = byExact.get(key) ?? byCanonical.get(canonicalFieldKey(key));
+      if (target === undefined) unknown.push(key);
+      else resolved[target] = value;
+    }
+    return { resolved, unknown };
   }
 
   private mergeFieldsWithSchema(
@@ -153,11 +176,11 @@ export abstract class ProviderResourceSync<
     serverFields: ProviderField[] | null | undefined,
     partialUpdate: boolean,
   ): ProviderField[] {
-    const normalizedFields = this.normalizeConfigFields(configFields);
     const baseFields = partialUpdate && serverFields ? serverFields : schemaFields;
+    const { resolved } = this.resolveConfigFields(configFields, baseFields);
     return baseFields.map((field) => {
       const fieldName = field.name ?? "";
-      const configValue = normalizedFields[fieldName];
+      const configValue = resolved[fieldName];
       return configValue !== undefined ? { ...field, value: configValue } : field;
     });
   }
@@ -176,21 +199,16 @@ export abstract class ProviderResourceSync<
       errors.push(`Unknown ${this.label} '${this.templateHint(config)}' - not found in the Prowlarr schema`);
     } else {
       const requiredFields = (template.fields ?? []).filter((f) => f.value === undefined || f.value === null || f.value === "");
-      const normalizedFields = this.normalizeConfigFields(config.fields || {});
+      const { resolved, unknown } = this.resolveConfigFields(config.fields || {}, template.fields || []);
       for (const field of requiredFields) {
         const fieldName = field.name;
-        if (fieldName && !(fieldName in normalizedFields)) {
+        if (fieldName && !(fieldName in resolved)) {
           warnings.push(`Field '${camelToSnake(fieldName)}' may be required for ${this.templateHint(config)}`);
         }
       }
 
-      const schemaFieldNames = new Set(
-        (template.fields ?? []).map((field) => field.name).filter((fieldName): fieldName is string => !!fieldName),
-      );
-      for (const key of Object.keys(normalizedFields)) {
-        if (key === snakeToCamel(key) && !schemaFieldNames.has(key)) {
-          errors.push(`Field '${key}' does not exist for ${this.label} type '${this.templateHint(config)}'`);
-        }
+      for (const key of unknown) {
+        errors.push(`Field '${key}' does not exist for ${this.label} type '${this.templateHint(config)}'`);
       }
     }
 
@@ -217,22 +235,24 @@ export abstract class ProviderResourceSync<
       }
     }
 
-    const normalizedConfigFields = this.normalizeConfigFields(config.fields || {});
     const serverFields = server.fields || [];
+    const { resolved, unknown } = this.resolveConfigFields(config.fields || {}, serverFields);
 
     for (const serverField of serverFields) {
       const fieldName = serverField.name;
       if (!fieldName) continue;
-      const configValue = normalizedConfigFields[fieldName];
+      const configValue = resolved[fieldName];
       if (configValue === undefined) continue;
 
       const serverValue = serverField.value;
       let valuesMatch = JSON.stringify(configValue) === JSON.stringify(serverValue);
 
       // Server masks secrets as "********"; a non-empty configured secret counts as unchanged.
+      // Matched on the canonical form so a snake_case `api_key` is recognized too.
+      const canonical = canonicalFieldKey(fieldName);
       if (
         !valuesMatch &&
-        (fieldName.toLowerCase().includes("password") || fieldName.toLowerCase().includes("apikey")) &&
+        (canonical.includes("password") || canonical.includes("apikey")) &&
         serverValue === "********" &&
         typeof configValue === "string" &&
         configValue.length > 0
@@ -245,14 +265,8 @@ export abstract class ProviderResourceSync<
       }
     }
 
-    const serverFieldNames = new Set(
-      serverFields.map((f) => f.name).filter((name): name is string => typeof name === "string" && name.length > 0),
-    );
-    for (const key of Object.keys(normalizedConfigFields)) {
-      if (key !== snakeToCamel(key)) continue;
-      if (!serverFieldNames.has(key) && normalizedConfigFields[key] !== undefined) {
-        this.logger.warn(`Config field '${key}' does not exist on server`);
-      }
+    for (const key of unknown) {
+      this.logger.warn(`Config field '${key}' does not exist on server`);
     }
 
     // Omitted `tags` means "do not manage" - only diff when the user set it explicitly,
