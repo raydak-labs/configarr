@@ -2,11 +2,13 @@ import { afterAll, beforeAll, describe, expect, test } from "vitest";
 import { E2E_API_KEY, prowlarrConnection } from "./config";
 import {
   assertDiffUpToDate,
+  assertNoErrorLogs,
   assertPipelineSucceeded,
   blackholeFromSchema,
   cleanupProwlarrE2e,
   createProwlarrClient,
   findNamed,
+  nonE2eNames,
   syncConfig,
 } from "./helpers";
 
@@ -119,6 +121,42 @@ function prowlarrYaml(opts: {
   return { telemetry: false, prowlarr: { e2e: instance } };
 }
 
+/** Schema field from issue #561: UNIT3D definitions spell this checkbox in snake_case. */
+const SNAKE_SCHEMA_FIELD = "single_file_release_use_filename";
+
+function definitionWithSnakeField(
+  schema: Array<{
+    definitionName?: string | null;
+    name?: string | null;
+    fields?: Array<{ name?: string | null; type?: string | null }> | null;
+  }>,
+): string | undefined {
+  const match = schema.find((item) => item.fields?.some((field) => field.name === SNAKE_SCHEMA_FIELD && field.type === "checkbox"));
+  return match?.definitionName ?? match?.name ?? undefined;
+}
+
+function snakeFieldYaml(opts: {
+  definition: string;
+  fields?: Record<string, unknown>;
+  deleteUnmanaged?: boolean;
+  ignoreIndexers?: string[];
+}): Record<string, unknown> {
+  const indexers = opts.deleteUnmanaged
+    ? { data: [], delete_unmanaged: { enabled: true, ignore: opts.ignoreIndexers ?? [] } }
+    : {
+        data: [
+          {
+            name: "e2e-snake",
+            definition: opts.definition,
+            enable: false,
+            priority: 25,
+            fields: opts.fields,
+          },
+        ],
+      };
+  return { telemetry: false, prowlarr: { e2e: { ...prowlarrConnection(), indexers } } };
+}
+
 describe("prowlarr (live)", () => {
   beforeAll(async () => {
     await cleanupProwlarrE2e(createProwlarrClient());
@@ -212,4 +250,37 @@ describe("prowlarr (live)", () => {
     expect(findNamed(await client.getAppProfiles(), "e2e-sync")).toBeUndefined();
     expect(findNamed(await client.getAppProfiles(), "Standard")).toBeTruthy();
   }, 600_000);
+
+  test("snake_case schema fields accept snake_case and camelCase config keys", async () => {
+    const client = createProwlarrClient();
+    const definition = definitionWithSnakeField(await client.getIndexerSchema());
+    expect(definition, `schema checkbox ${SNAKE_SCHEMA_FIELD}`).toBeTruthy();
+
+    const ignoreIndexers = nonE2eNames(await client.getIndexers());
+    const snakeFields = { [SNAKE_SCHEMA_FIELD]: false };
+    const camelFields = { singleFileReleaseUseFilename: true };
+
+    const created = await syncConfig(snakeFieldYaml({ definition: definition!, fields: snakeFields }));
+    assertPipelineSucceeded(created.result, ["PROWLARR"]);
+    assertNoErrorLogs(created.result);
+    expect(fieldValue(findNamed(await client.getIndexers(), "e2e-snake"), SNAKE_SCHEMA_FIELD)).toBe(false);
+
+    const second = await syncConfig(snakeFieldYaml({ definition: definition!, fields: snakeFields }), created.workspace);
+    assertPipelineSucceeded(second.result, ["PROWLARR"]);
+    assertDiffUpToDate(second.result, ["PROWLARR"]);
+    expect(`${second.result.stdout}\n${second.result.stderr}`).not.toContain("does not exist on server");
+
+    const updated = await syncConfig(snakeFieldYaml({ definition: definition!, fields: camelFields }), created.workspace);
+    assertPipelineSucceeded(updated.result, ["PROWLARR"]);
+    assertNoErrorLogs(updated.result);
+    expect(fieldValue(findNamed(await client.getIndexers(), "e2e-snake"), SNAKE_SCHEMA_FIELD)).toBe(true);
+
+    const unchanged = await syncConfig(snakeFieldYaml({ definition: definition!, fields: camelFields }), created.workspace);
+    assertPipelineSucceeded(unchanged.result, ["PROWLARR"]);
+    assertDiffUpToDate(unchanged.result, ["PROWLARR"]);
+
+    const deleted = await syncConfig(snakeFieldYaml({ definition: definition!, deleteUnmanaged: true, ignoreIndexers }), created.workspace);
+    assertPipelineSucceeded(deleted.result, ["PROWLARR"]);
+    expect(findNamed(await client.getIndexers(), "e2e-snake")).toBeUndefined();
+  }, 300_000);
 });
