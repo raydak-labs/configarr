@@ -1096,7 +1096,9 @@ prowlarr:
 ```
 
 - Applications are matched by `name` + `type` (implementation)
-- `fields` are merged onto the Prowlarr schema for the implementation; snake_case keys are accepted
+- `fields` are merged onto the Prowlarr schema for the implementation; keys are matched ignoring
+  case and underscores, so snake_case and camelCase both work regardless of how the schema spells
+  the field
 - Secrets shown by the server as `********` are left untouched unless you change them
 - `sync_indexers: true` triggers Prowlarr's global `ApplicationIndexerSync` command once per run
 
