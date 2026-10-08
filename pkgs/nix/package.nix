@@ -2,7 +2,7 @@
   lib,
   pkgs,
   src,
-  version ? "1.34.0",
+  version ? "1.34.1",
   ...
 }:
 pkgs.stdenvNoCC.mkDerivation (finalAttrs: {

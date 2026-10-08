@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.34.1](https://github.com/raydak-labs/configarr/compare/v1.34.0...v1.34.1) (2026-10-08)
+
+### Bug Fixes
+
+- build pinned Nix releases from the tagged revision ([#560](https://github.com/raydak-labs/configarr/issues/560)) ([6f988c8](https://github.com/raydak-labs/configarr/commit/6f988c8390cb10d43221cc45cfab34b71d6eed82))
+- match Prowlarr fields ignoring case and underscores ([#562](https://github.com/raydak-labs/configarr/issues/562)) ([3e2ded0](https://github.com/raydak-labs/configarr/commit/3e2ded0238cc93bfd97238b1b6189f15fdadf4c2))
+
 ## [1.34.0](https://github.com/raydak-labs/configarr/compare/v1.33.0...v1.34.0) (2026-10-03)
 
 ### Features
