@@ -27,7 +27,7 @@
       perSystem = {system, ...}: let
         pkgs = nixpkgs.legacyPackages.${system};
       in {
-        packages.default = import ./pkgs/nix/package.nix {
+        packages.default = import ./pkgs/nix {
           inherit pkgs;
           inherit (pkgs) lib;
         };

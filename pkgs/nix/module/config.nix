@@ -29,7 +29,7 @@ in {
             pkg =
               if (cfg.package != null)
               then cfg.package
-              else (import ../package.nix {inherit lib pkgs;});
+              else (import ../default.nix {inherit lib pkgs;});
           in
             lib.getExe pkg;
           Group = cfg.group;
