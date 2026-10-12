@@ -1,6 +1,6 @@
 # Sonarr v5 API support
 
-Status: proposed. Not yet implemented.
+Status: implemented (2026-10-12).
 
 ## Why
 
@@ -128,12 +128,14 @@ Three mappings differ enough to isolate:
 
 ### 5. What is covered, and what is not
 
-Every feature configarr has today runs against a v5 contract, with two deliberate exclusions.
+Every feature configarr has today runs against a v5 contract, with one deliberate exclusion.
 
 Quality definition size limits (`minSize`, `maxSize`, `preferredSize`) are excluded, because v5
 moved them from the quality definition resource to the quality profile item resource. Configarr's
 `QualityDefinitionPreferredSync` reads and writes them on the definition, so on a v5 contract it
-would silently no-op. The v3 contract still carries them, so nothing changes for v4 users.
+would silently no-op. `SonarrClient.updateQualityDefinitions` rejects a payload carrying any of the
+three on a v5 contract, so a user with size limits configured gets an explicit error instead. The
+v3 contract still carries them, so nothing changes for v4 users.
 
 Release profile indexer tags are the one request-shape change (`indexerId` to `indexerIds`), so
 they are the first feature to land after the dispatcher. Everything else only changed endpoint
