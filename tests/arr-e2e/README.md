@@ -33,11 +33,20 @@ Each file cleans its *arr in `beforeAll`, snapshots the server-wide settings it 
 
 ## Ports / API key
 
-Override with `SONARR_BASE_URL`, `SONARR_API_KEY`, …, `PROWLARR_BASE_URL`, `PROWLARR_API_KEY`.
+Override with `SONARR_BASE_URL`, `SONARR_API_KEY`, …, `PROWLARR_BASE_URL`, `PROWLARR_API_KEY`. The Sonarr test defaults to v4; to run its full feature suite against the pinned v5 beta instead, target the second container:
+
+```bash
+SONARR_BASE_URL=http://127.0.0.1:18990 \
+SONARR_API_KEY=e2etestapikey0123456789abcdef012 \
+pnpm exec vitest run --config vitest.arr-e2e.config.ts tests/arr-e2e/sonarr.e2e.test.ts
+```
+
+The two Sonarr containers use separate config/database volumes. Do not share their volumes or use `docker compose down -v` if the local test databases should be retained.
 
 | App          | URL                    | API key                            |
 | ------------ | ---------------------- | ---------------------------------- |
-| Sonarr       | http://127.0.0.1:18989 | `e2etestapikey0123456789abcdef012` |
+| Sonarr v4    | http://127.0.0.1:18989 | `e2etestapikey0123456789abcdef012` |
+| Sonarr v5    | http://127.0.0.1:18990 | same                               |
 | Radarr       | http://127.0.0.1:17878 | same                               |
 | Whisparr     | http://127.0.0.1:16969 | same                               |
 | Readarr      | http://127.0.0.1:18787 | same                               |

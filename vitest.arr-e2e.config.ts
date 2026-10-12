@@ -6,7 +6,7 @@ import { arrE2eTestOptions } from "./vitest.arr-e2e.base";
 export default defineConfig({
   test: {
     ...arrE2eTestOptions,
-    include: ["tests/arr-e2e/**/*.e2e.test.ts"],
+    include: ["tests/arr-e2e/*.e2e.test.ts"],
     exclude: ["tests/arr-e2e/pipeline.e2e.test.ts"],
   },
 });

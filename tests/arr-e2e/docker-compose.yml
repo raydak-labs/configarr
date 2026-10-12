@@ -21,6 +21,25 @@ services:
     ports:
       - "18989:8989"
 
+  # Pin the beta image by manifest-list digest so the e2e contract does not move with develop.
+  # Update the digest and version together when intentionally refreshing the v5 test target.
+  sonarr-v5:
+    image: lscr.io/linuxserver/sonarr@sha256:2c1e9317f330e84a4c6e8c9295361b3a9ae425786295d8b3cfd12c7cbc008f53
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=Etc/UTC
+      - SONARR__APP__INSTANCENAME=Sonarr v5
+      - SONARR__AUTH__APIKEY=e2etestapikey0123456789abcdef012
+      - SONARR__AUTH__METHOD=External
+      - SONARR__AUTH__REQUIRED=DisabledForLocalAddresses
+    volumes:
+      - sonarr-v5-data:/config
+      - ./fixtures/media/e2e:/data/e2e
+      - ./fixtures/media/e2e-b:/data/e2e-b
+    ports:
+      - "18990:8989"
+
   radarr:
     image: lscr.io/linuxserver/radarr:6.2.1
     environment:
@@ -120,6 +139,7 @@ services:
 
 volumes:
   sonarr-data:
+  sonarr-v5-data:
   radarr-data:
   whisparr-data:
   readarr-data:

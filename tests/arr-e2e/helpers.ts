@@ -20,13 +20,56 @@ const FLARESOLVERR_DEFAULT_BASE_URL = "http://127.0.0.1:18191";
 export type MediaArrClient = SonarrClient | RadarrClient | WhisparrClient | ReadarrClient | LidarrClient;
 
 /** Status endpoint per *arr, for the readiness wait in `globalSetup`. */
-const STATUS_PATHS: Record<MediaArrType, string> = {
-  SONARR: "/api/v3/system/status",
+const STATUS_PATHS: Omit<Record<MediaArrType, string>, "SONARR"> = {
   RADARR: "/api/v3/system/status",
   WHISPARR: "/api/v3/system/status",
   READARR: "/api/v1/system/status",
   LIDARR: "/api/v1/system/status",
 };
+
+async function sonarrStatusPath(baseUrl: string, apiKey: string): Promise<string> {
+  const response = await fetch(`${baseUrl}/api`, {
+    headers: { "X-Api-Key": apiKey },
+    signal: AbortSignal.timeout(3000),
+  });
+  if (!response.ok) throw new Error(`GET ${baseUrl}/api returned ${response.status}`);
+
+  const apiInfo: unknown = await response.json();
+  if (apiInfo === null || typeof apiInfo !== "object" || !("current" in apiInfo)) {
+    throw new Error(`GET ${baseUrl}/api returned an invalid API version document`);
+  }
+  const version = apiInfo.current;
+  if (version !== "v3" && version !== "v5") {
+    throw new Error(`Unsupported Sonarr API version '${String(version)}'`);
+  }
+  return `/api/${version}/system/status`;
+}
+
+async function waitForSonarrApi(baseUrl: string, apiKey: string, timeoutMs = 180_000): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  let lastError: unknown;
+  while (Date.now() < deadline) {
+    let authFailure: Error | undefined;
+    try {
+      const statusPath = await sonarrStatusPath(baseUrl, apiKey);
+      const response = await fetch(`${baseUrl}${statusPath}`, {
+        headers: { "X-Api-Key": apiKey },
+        signal: AbortSignal.timeout(3000),
+      });
+      if (response.ok) return;
+      if (response.status === 401 || response.status === 403) {
+        authFailure = new Error(`${baseUrl}${statusPath} returned ${response.status} (API key / auth env vars)`);
+      } else {
+        lastError = new Error(`HTTP ${response.status}`);
+      }
+    } catch (error) {
+      lastError = error;
+    }
+    if (authFailure) throw authFailure;
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+  }
+  throw new Error(`Timed out waiting for ${baseUrl} Sonarr API: ${String(lastError)}`);
+}
 
 export function createProwlarrClient(): ProwlarrClient {
   const { baseUrl, apiKey } = arrConnection("PROWLARR");
@@ -90,6 +133,13 @@ async function anyArrReachable(): Promise<boolean> {
     if (!res.ok && res.status !== 401 && res.status !== 403) throw new Error(`HTTP ${res.status}`);
     return true;
   });
+  const sonarr = arrConnection("SONARR");
+  probes.push(
+    fetch(`${sonarr.baseUrl}/api`, { headers: { "X-Api-Key": sonarr.apiKey }, signal: AbortSignal.timeout(3000) }).then((res) => {
+      if (!res.ok && res.status !== 401 && res.status !== 403) throw new Error(`HTTP ${res.status}`);
+      return true;
+    }),
+  );
   const results = await Promise.allSettled(probes);
   return results.some((r) => r.status === "fulfilled");
 }
@@ -104,6 +154,10 @@ export async function waitForAllArrApis(timeoutMs = 180_000): Promise<void> {
   const prowlarr = arrConnection("PROWLARR");
   const flaresolverr = process.env.FLARESOLVERR_BASE_URL ?? FLARESOLVERR_DEFAULT_BASE_URL;
   await Promise.all([
+    (async () => {
+      const { baseUrl, apiKey } = arrConnection("SONARR");
+      await waitForSonarrApi(baseUrl, apiKey, timeoutMs);
+    })(),
     ...Object.entries(STATUS_PATHS).map(async ([kind, statusPath]) => {
       const { baseUrl, apiKey } = arrConnection(kind as MediaArrType);
       await waitForArrApi(baseUrl, apiKey, statusPath, timeoutMs);
