@@ -28,6 +28,9 @@ const STATUS_PATHS: Record<MediaArrType, string> = {
   LIDARR: "/api/v1/system/status",
 };
 
+/** The Sonarr v5 instance answers its own versioned route, not the v3 one. */
+const SONARR_V5_STATUS_PATH = "/api/v5/system/status";
+
 export function createProwlarrClient(): ProwlarrClient {
   const { baseUrl, apiKey } = arrConnection("PROWLARR");
   return new ProwlarrClient(baseUrl, apiKey);
@@ -102,12 +105,14 @@ export async function waitForAllArrApis(timeoutMs = 180_000): Promise<void> {
   }
 
   const prowlarr = arrConnection("PROWLARR");
+  const sonarrV5 = arrConnection("SONARR", "v5");
   const flaresolverr = process.env.FLARESOLVERR_BASE_URL ?? FLARESOLVERR_DEFAULT_BASE_URL;
   await Promise.all([
     ...Object.entries(STATUS_PATHS).map(async ([kind, statusPath]) => {
       const { baseUrl, apiKey } = arrConnection(kind as MediaArrType);
       await waitForArrApi(baseUrl, apiKey, statusPath, timeoutMs);
     }),
+    waitForArrApi(sonarrV5.baseUrl, sonarrV5.apiKey, SONARR_V5_STATUS_PATH, timeoutMs),
     waitForArrApi(prowlarr.baseUrl, prowlarr.apiKey, PROWLARR_STATUS_PATH, timeoutMs),
     waitForArrApi(flaresolverr, "", "/", timeoutMs),
   ]);
@@ -217,6 +222,23 @@ async function runConfigarr(env: Record<string, string>, timeoutMs = 300_000): P
       resolve({ exitCode, stdout, stderr });
     });
   });
+}
+
+/**
+ * A non-zero exit plus the failure summary for the named instances. Used for configs a contract
+ * deliberately refuses, where the refusal rather than a silent no-op is the behaviour under test.
+ */
+export function assertPipelineFailed(result: ConfigarrRunResult, kinds: readonly ArrType[]): void {
+  if (result.exitCode === 0) {
+    throw new Error(`Expected configarr to fail, but it exited 0\n--- stdout ---\n${result.stdout}`);
+  }
+
+  for (const kind of kinds) {
+    const upper = kind.toUpperCase();
+    if (!new RegExp(`${upper}: \\(0/1/0\\)`).test(result.stdout)) {
+      throw new Error(`Missing failure summary for ${upper} in:\n${result.stdout}`);
+    }
+  }
 }
 
 /** Exit code 0 plus a `(1/0/0)` summary for each instance the run was supposed to configure. */

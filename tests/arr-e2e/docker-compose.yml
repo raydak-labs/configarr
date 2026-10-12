@@ -21,6 +21,25 @@ services:
     ports:
       - "18989:8989"
 
+  # Sonarr v5 beta. Pinned to `develop`, which is the v5 branch: `main` is v4 maintenance and
+  # `latest` still ships v4. Kept next to the v4 instance so a run can compare the two contracts.
+  sonarr-v5:
+    image: lscr.io/linuxserver/sonarr:5.0.0-develop
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=Etc/UTC
+      - SONARR__APP__INSTANCENAME=Sonarr
+      - SONARR__AUTH__APIKEY=e2etestapikey0123456789abcdef012
+      - SONARR__AUTH__METHOD=External
+      - SONARR__AUTH__REQUIRED=DisabledForLocalAddresses
+    volumes:
+      - sonarr-v5-data:/config
+      - ./fixtures/media/e2e:/data/e2e
+      - ./fixtures/media/e2e-b:/data/e2e-b
+    ports:
+      - "18990:8989"
+
   radarr:
     image: lscr.io/linuxserver/radarr:6.2.1
     environment:
@@ -120,6 +139,7 @@ services:
 
 volumes:
   sonarr-data:
+  sonarr-v5-data:
   radarr-data:
   whisparr-data:
   readarr-data:

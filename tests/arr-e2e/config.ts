@@ -18,10 +18,21 @@ const DEFAULT_BASE_URL: Record<ArrType, string> = {
   PROWLARR: "http://127.0.0.1:19696",
 };
 
+/**
+ * Sonarr only, since it is the one arr with two API contracts. The v5 compose service lives
+ * beside the v4 instance so a run can point the same config block at either contract.
+ */
+const SONARR_V5_BASE_URL = "http://127.0.0.1:18990";
+
+/** Which Sonarr API contract an e2e instance targets. Omitted means the arr's only service. */
+export type E2eContract = "v3" | "v5";
+
 /** `<ARR>_BASE_URL` / `<ARR>_API_KEY` env override, else the compose defaults. */
-export function arrConnection(kind: ArrType): { baseUrl: string; apiKey: string } {
+export function arrConnection(kind: ArrType, contract?: E2eContract): { baseUrl: string; apiKey: string } {
+  const override = contract ? process.env[`${kind}_${contract.toUpperCase()}_BASE_URL`] : undefined;
+  const fallback = contract === "v5" && kind === "SONARR" ? SONARR_V5_BASE_URL : DEFAULT_BASE_URL[kind];
   return {
-    baseUrl: process.env[`${kind}_BASE_URL`] ?? DEFAULT_BASE_URL[kind],
+    baseUrl: override ?? fallback,
     apiKey: process.env[`${kind}_API_KEY`] ?? E2E_API_KEY,
   };
 }
@@ -60,8 +71,8 @@ export function downloadClientConfigBlock(enableCompletedDownloadHandling: boole
   return { enable_completed_download_handling: enableCompletedDownloadHandling };
 }
 
-export function instanceConnection(kind: MediaArrType): { base_url: string; api_key: string } {
-  const { baseUrl, apiKey } = arrConnection(kind);
+export function instanceConnection(kind: MediaArrType, contract?: E2eContract): { base_url: string; api_key: string } {
+  const { baseUrl, apiKey } = arrConnection(kind, contract);
   return { base_url: baseUrl, api_key: apiKey };
 }
 
@@ -71,11 +82,15 @@ export function prowlarrConnection(): { base_url: string; api_key: string } {
 }
 
 /** `{ sonarr: { e2e: { <connection>, ...instance } } }` */
-export function mediaInstance(kind: MediaArrType, instance: Record<string, unknown> = {}): Record<string, Record<string, unknown>> {
+export function mediaInstance(
+  kind: MediaArrType,
+  instance: Record<string, unknown> = {},
+  contract?: E2eContract,
+): Record<string, Record<string, unknown>> {
   return {
     [kind.toLowerCase()]: {
       e2e: {
-        ...instanceConnection(kind),
+        ...instanceConnection(kind, contract),
         ...instance,
       },
     },
@@ -87,11 +102,12 @@ export function mediaConfig(
   kind: MediaArrType,
   instance: Record<string, unknown> = {},
   root: Record<string, unknown> = {},
+  contract?: E2eContract,
 ): Record<string, unknown> {
   return {
     telemetry: false,
     ...root,
-    ...mediaInstance(kind, instance),
+    ...mediaInstance(kind, instance, contract),
   };
 }
 

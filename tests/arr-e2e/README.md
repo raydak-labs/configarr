@@ -2,7 +2,7 @@
 
 Opt-in Vitest suite against real *arr containers. **Not** part of `pnpm test`. Stack lives in `tests/arr-e2e/` (not `examples/full`).
 
-Covers: **Sonarr**, **Radarr**, **Whisparr**, **Readarr**, **Lidarr** (nightly), **Prowlarr**.
+Covers: **Sonarr v4** and **Sonarr v5** (both containers, one per API contract), **Radarr**, **Whisparr**, **Readarr**, **Lidarr** (nightly), **Prowlarr**.
 
 ## Local
 
@@ -23,7 +23,7 @@ The suite only runs through its own config (`vitest.arr-e2e.config.ts`); `pnpm t
 
 One file per *arr, each owning its container end to end. That is also what makes the run parallel:
 
-- `pnpm test:e2e:arr:parallel` — the six per-*arr files, in parallel (~40s). Its config excludes the pipeline file, so a direct `vitest run --config vitest.arr-e2e.config.ts` cannot mix the two.
+- `pnpm test:e2e:arr:parallel` — the seven per-*arr files, in parallel (~40s). Its config excludes the pipeline file, so a direct `vitest run --config vitest.arr-e2e.config.ts` cannot mix the two.
 - `pnpm test:e2e:arr:pipeline` — `pipeline.e2e.test.ts` alone through `vitest.arr-e2e.pipeline.config.ts`, since it drives every container from one config.yml (~15s).
 - `pnpm test:e2e:arr` — both, in that order.
 
@@ -37,7 +37,8 @@ Override with `SONARR_BASE_URL`, `SONARR_API_KEY`, …, `PROWLARR_BASE_URL`, `PR
 
 | App          | URL                    | API key                            |
 | ------------ | ---------------------- | ---------------------------------- |
-| Sonarr       | http://127.0.0.1:18989 | `e2etestapikey0123456789abcdef012` |
+| Sonarr v4    | http://127.0.0.1:18989 | `e2etestapikey0123456789abcdef012` |
+| Sonarr v5    | http://127.0.0.1:18990 | same                               |
 | Radarr       | http://127.0.0.1:17878 | same                               |
 | Whisparr     | http://127.0.0.1:16969 | same                               |
 | Readarr      | http://127.0.0.1:18787 | same                               |
@@ -49,11 +50,12 @@ Override with `SONARR_BASE_URL`, `SONARR_API_KEY`, …, `PROWLARR_BASE_URL`, `PR
 
 | File                   | Role                                                                                                                 |
 | ---------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| `docker-compose.yml`   | Five media *arr + Prowlarr + FlareSolverr                                                                            |
+| `docker-compose.yml`   | Six media *arr containers (Sonarr twice) + Prowlarr + FlareSolverr                                                   |
 | `globalSetup.ts`       | Wait for every API, warm the template repo clone                                                                     |
 | `helpers.ts`           | Clients, configarr runner, assertions, cleanup, snapshot/restore                                                     |
 | `config.ts`            | Only the config fragments that are identical for every *arr                                                          |
-| `sonarr.e2e.test.ts`   | All Sonarr features + Recyclarr `WEB-1080p` include                                                                  |
+| `sonarr.e2e.test.ts`   | All Sonarr v4 features + Recyclarr `WEB-1080p` include                                                               |
+| `sonarrV5.e2e.test.ts` | Same features against Sonarr v5 and its `/api/v5` contract, minus what that contract cannot serve                    |
 | `radarr.e2e.test.ts`   | All Radarr features + Recyclarr `HD Bluray + WEB` include                                                            |
 | `whisparr.e2e.test.ts` | All Whisparr features                                                                                                |
 | `readarr.e2e.test.ts`  | All Readarr features + metadata profiles, object root folders                                                        |
@@ -67,24 +69,24 @@ Per-*arr files are deliberately duplicated instead of generated from a shared fa
 
 Feature × arr × create / update / delete / idempotent (second run Diff Report `(up to date - no changes)` + GET). `C` create, `U` update, `D` delete, `I` idempotent. `—` not applicable.
 
-| Feature                        | Sonarr   | Radarr   | Whisparr | Readarr  | Lidarr   | Prowlarr |
-| ------------------------------ | -------- | -------- | -------- | -------- | -------- | -------- |
-| Custom formats                 | CUDI     | CUDI     | CUDI     | CUDI     | CUDI     | —        |
-| Quality profiles               | CUDI     | CUDI     | CUDI     | CUDI     | CUDI     | —        |
-| Quality definitions            | CUI      | CUI      | CUI      | CUI      | CUI      | —        |
-| Root folders                   | CDI      | CDI      | CDI      | CUDI     | CUDI     | —        |
-| Media settings (MM/naming/UI)  | CUI      | CUI      | CUI      | CUI      | CUI      | —        |
-| Delay profiles                 | CUDI     | CUDI     | CUDI     | CUDI     | CUDI     | —        |
-| Release profiles               | CUDI     | CUDI     | CUDI     | CUDI     | CUDI     | —        |
-| Download clients (blackhole)   | CUDI     | CUDI     | CUDI     | CUDI     | CUDI     | CUDI     |
-| DC config / remote paths       | CUI / CD | CUI / CD | CUI / CD | CUI / CD | CUI / CD | —        |
-| Metadata profiles              | —        | —        | —        | CUDI     | CUDI     | —        |
-| Tags                           | CDI      | —        | —        | —        | —        | CDI      |
-| Sync profiles                  | —        | —        | —        | —        | —        | CUDI     |
-| Applications                   | —        | —        | —        | —        | —        | CUDI     |
-| Indexer proxies (FlareSolverr) | —        | —        | —        | —        | —        | CUDI     |
-| Indexers                       | —        | —        | —        | —        | —        | CUDI     |
-| TRaSH/Recyclarr templates      | C        | C        | —        | —        | —        | —        |
+| Feature                        | Sonarr   | Sonarr v5          | Radarr   | Whisparr | Readarr  | Lidarr   | Prowlarr |
+| ------------------------------ | -------- | ------------------ | -------- | -------- | -------- | -------- | -------- |
+| Custom formats                 | CUDI     | CUDI               | CUDI     | CUDI     | CUDI     | CUDI     | —        |
+| Quality profiles               | CUDI     | CUDI               | CUDI     | CUDI     | CUDI     | CUDI     | —        |
+| Quality definitions            | CUI      | C (no size limits) | CUI      | CUI      | CUI      | CUI      | —        |
+| Root folders                   | CDI      | CDI                | CDI      | CUDI     | CUDI     | —        |
+| Media settings (MM/naming/UI)  | CUI      | CUI                | CUI      | CUI      | CUI      | CUI      | —        |
+| Delay profiles                 | CUDI     | CUDI               | CUDI     | CUDI     | CUDI     | CUDI     | —        |
+| Release profiles               | CUDI     | CUDI               | CUDI     | CUDI     | CUDI     | CUDI     | —        |
+| Download clients (blackhole)   | CUDI     | CUDI               | CUDI     | CUDI     | CUDI     | CUDI     | CUDI     |
+| DC config / remote paths       | CUI / CD | CUI / CD           | CUI / CD | CUI / CD | CUI / CD | CUI / CD | —        |
+| Metadata profiles              | —        | —                  | —        | CUDI     | CUDI     | —        |
+| Tags                           | CDI      | —                  | —        | —        | —        | CDI      |
+| Sync profiles                  | —        | —                  | —        | —        | —        | CUDI     |
+| Applications                   | —        | —                  | —        | —        | —        | CUDI     |
+| Indexer proxies (FlareSolverr) | —        | —                  | —        | —        | —        | CUDI     |
+| Indexers                       | —        | —                  | —        | —        | —        | CUDI     |
+| TRaSH/Recyclarr templates      | C        | C                  | —        | —        | —        | —        |
 
 Letters = asserted GET after a configarr write/omit. Root-folder **update** for Sonarr/Radarr/Whisparr is N/A (path identity). Lidarr/Readarr update the folder `name` via YAML. Tags have no update API. Media-arr **CD** is the instance `tags:` / `delete_unmanaged_tags:` block, asserted once on Sonarr in `pipeline.e2e.test.ts` rather than duplicated per \*arr: it drops a seeded orphan tag while keeping a label listed in `tags` and a label referenced only by a managed delay profile. It is the same schema on all five, so the other four are not re-asserted. Download clients and indexers stay `enable: false` (configuration only; no live download/search). Prowlarr indexer fields are matched ignoring case and underscores: `prowlarr.e2e.test.ts` writes `single_file_release_use_filename` on a live schema that spells it that way, then updates it through the camelCase alias. DC **U** is `priority`. The delay-profile mapper is additionally exercised directly per *arr (legacy payload, or `items[]` for Lidarr).
 
@@ -100,6 +102,9 @@ Letters = asserted GET after a configarr write/omit. Root-folder **update** for 
 
 ## Known gaps
 
+- **Sonarr v5 is a beta pinned to `develop`.** The container image is `lscr.io/linuxserver/sonarr:5.0.0-develop`; `main` is v4 maintenance and `latest` still ships v4. When v5 stable ships, repoint the image tag and re-run.
+- **Sonarr v5 quality definitions carry no size limits.** The v5 API moved `minSize` / `maxSize` / `preferredSize` from the quality definition resource onto quality profile items, so the v5 file asserts that a config asking for them fails loudly rather than silently no-opping, and covers only the fields that remain.
+- **Sonarr v5 release profiles spell the indexer as `indexerIds[]`.** The v5 file asserts the array field is what persists; no v5 fixture names an indexer, because the container starts with none.
 - **No qBittorrent / usenet backend.** Download-client e2e uses TorrentBlackhole with `enable: false`. Disabled clients are saved with `forceSave` so *arr does not connection-test a downloader.
 - **Indexers** are created `enable: false` (config only). FlareSolverr is in compose for the Prowlarr proxy, same image as `examples/full`.
 - **TRaSH/Recyclarr templates** are a Sonarr/Radarr create-only smoke (`WEB-1080p` / `HD Bluray + WEB`). No CUDI.
