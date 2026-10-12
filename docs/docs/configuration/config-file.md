@@ -687,6 +687,35 @@ Notes:
 
 - **experimental**, available since `v1.18.0`
 
+## Sonarr API contract <span className="theme-doc-version-badge badge badge--secondary configarr-badge">1.35.0</span> {#sonarr-api-contract}
+
+Sonarr v5 serves a second API contract at `/api/v5` next to the `/api/v3` one every earlier
+version uses. The two contracts differ in more than the path: field names move and the settings
+group is renamed, so syncing against the wrong one fails silently rather than loudly. Configarr
+picks the contract by asking the instance for `/api/v5/system/status`, which only a v5 instance
+answers.
+
+```yml
+# ...
+sonarr:
+  instance1:
+    # ...
+    # since v1.35.0. Sonarr only. Optional
+    api_version: v5
+```
+
+Notes:
+
+- available since `v1.35.0`, Sonarr only
+- Omit the key to let configarr probe the instance. A v4 instance always resolves to `v3`
+- Set it explicitly only when the probe picks the wrong one, since a wrong contract causes a silent
+  partial sync. The override is honoured over whatever the server answers
+- Quality definition size limits (`min`, `max`, `preferred`) are v3-only. The v5 contract moved them
+  from the quality definition resource onto quality profile items, so a config that asks for them
+  fails with an explicit error instead of silently doing nothing
+- Release profiles store the indexers they apply to as an array on v5 and as a single value on v3.
+  Configarr writes whichever shape the resolved contract expects
+
 ## Tags <span className="theme-doc-version-badge badge badge--secondary configarr-badge">1.34.0</span> {#tags}
 
 Every instance can manage **Tags** directly. The `tags` block is a plain list of tag labels which are
