@@ -61,9 +61,9 @@ import type {
   NamingConfigResource as SonarrNamingConfigResource,
   QualityDefinitionResource as SonarrQualityDefinitionResource,
   QualityProfileResource as SonarrQualityProfileResource,
-  ReleaseProfileResource as SonarrReleaseProfileResource,
 } from "../__generated__/sonarr/data-contracts";
 import type { SonarrMediaManagementResource } from "../mediaManagement/mediaManagement.types";
+import type { SonarrReleaseProfileResource } from "../releaseProfiles/releaseProfile.types";
 import type {
   DownloadClientResource as WhisparrDownloadClientResource,
   MediaManagementConfigResource as WhisparrMediaManagementConfigResource,

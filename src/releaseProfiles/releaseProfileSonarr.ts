@@ -1,9 +1,9 @@
-import { ReleaseProfileResource } from "../__generated__/sonarr/data-contracts";
 import type { ReleaseProfilesApi } from "../clients/capabilities";
 import { BaseReleaseProfileSync } from "./releaseProfileBase";
+import type { SonarrReleaseProfileResource } from "./releaseProfile.types";
 
-export class ReleaseProfileSonarrSync extends BaseReleaseProfileSync<ReleaseProfileResource> {
-  constructor(api: ReleaseProfilesApi<ReleaseProfileResource>) {
+export class ReleaseProfileSonarrSync extends BaseReleaseProfileSync<SonarrReleaseProfileResource> {
+  constructor(api: ReleaseProfilesApi<SonarrReleaseProfileResource>) {
     super(api, true);
   }
 }

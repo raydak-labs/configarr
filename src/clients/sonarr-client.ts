@@ -20,12 +20,14 @@ import {
 import {
   HealthResource as HealthResourceV5,
   MediaManagementSettingsResource,
+  ReleaseProfileResource as ReleaseProfileResourceV5,
   SystemResource as SystemResourceV5,
 } from "../__generated__/sonarrV5/data-contracts";
 import { logger } from "../logger";
 import type { CustomFormatRequest } from "../customFormats/customFormat.types";
 import { forceSaveIfDisabled, logConnectionError, validateClientParams } from "./connection";
 import type { SonarrMediaManagementResource } from "../mediaManagement/mediaManagement.types";
+import type { ReleaseProfileShared, SonarrReleaseProfileResource } from "../releaseProfiles/releaseProfile.types";
 import {
   CustomFormatsClient,
   DownloadClientsClient,
@@ -149,6 +151,16 @@ export class SonarrClient
         fields: specification.fields ?? null,
       })),
     };
+  }
+
+  /**
+   * The v5 contract expresses the indexers a release profile applies to as an `indexerIds` array,
+   * where v3 uses a scalar `indexerId`. The sync layer produces the scalar form, so it is expanded
+   * here at the point the contract is chosen.
+   */
+  private toV5ReleaseProfile(profile: ReleaseProfileShared) {
+    const { indexerId, ...rest } = profile as ReleaseProfileShared & { indexerId?: number };
+    return { ...rest, indexerIds: indexerId != null && indexerId > 0 ? [indexerId] : [] };
   }
 
   async getLanguages() {
@@ -330,24 +342,24 @@ export class SonarrClient
     );
   }
 
-  async getReleaseProfiles(): Promise<ReleaseProfileResource[]> {
+  async getReleaseProfiles(): Promise<SonarrReleaseProfileResource[]> {
     return this.route(
       (api) => api.v3ReleaseprofileList(),
       (api) => api.v5ReleaseprofileList(),
     );
   }
 
-  async createReleaseProfile(profile: ReleaseProfileResource): Promise<ReleaseProfileResource> {
+  async createReleaseProfile(profile: ReleaseProfileShared): Promise<unknown> {
     return this.route(
-      (api) => api.v3ReleaseprofileCreate(profile),
-      (api) => api.v5ReleaseprofileCreate(profile),
+      (api) => api.v3ReleaseprofileCreate(profile as ReleaseProfileResource),
+      (api) => api.v5ReleaseprofileCreate(this.toV5ReleaseProfile(profile)),
     );
   }
 
-  async updateReleaseProfile(id: string, data: ReleaseProfileResource): Promise<ReleaseProfileResource> {
+  async updateReleaseProfile(id: string, profile: ReleaseProfileShared): Promise<unknown> {
     return this.route(
-      (api) => api.v3ReleaseprofileUpdate(id, data),
-      (api) => api.v5ReleaseprofileUpdate(id, data),
+      (api) => api.v3ReleaseprofileUpdate(id, profile as ReleaseProfileResource),
+      (api) => api.v5ReleaseprofileUpdate(id, this.toV5ReleaseProfile(profile)),
     );
   }
 

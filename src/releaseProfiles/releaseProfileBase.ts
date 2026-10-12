@@ -29,6 +29,19 @@ function sortedTerms(value: unknown): string[] {
   return [...normalizeTerms(value)].sort();
 }
 
+/**
+ * The indexers a profile applies to, in one canonical form. Sonarr's v3 contract expresses this as
+ * a scalar `indexerId` and its v5 contract as an `indexerIds` array, so both are read here. Keeping
+ * the canonical form in one place lets a server shape and a mapped config shape be compared and
+ * keyed identically whichever contract produced them.
+ */
+function indexerIdsOf(profile: ReleaseProfileShared): number[] {
+  if (profile.indexerIds != null) {
+    return [...profile.indexerIds].sort((a, b) => a - b);
+  }
+  return profile.indexerId != null ? [profile.indexerId] : [];
+}
+
 function tagsOf(profile: { tags?: number[] | null }): number[] {
   return Array.isArray(profile.tags) ? [...profile.tags].sort((a, b) => a - b) : [];
 }
@@ -38,7 +51,7 @@ export function contentKey(profile: ReleaseProfileShared): string {
     enabled: profile.enabled ?? true,
     required: sortedTerms(profile.required),
     ignored: sortedTerms(profile.ignored),
-    indexerId: profile.indexerId ?? 0,
+    indexerIds: indexerIdsOf(profile),
     tags: tagsOf(profile),
   })}`;
 }
@@ -108,10 +121,10 @@ function compareFields(
     changes.push({ field: "ignored", from: normalizeTerms(server.ignored), to: normalizeTerms(mapped.ignored) });
   }
 
-  const mappedIndexer = mapped.indexerId ?? 0;
-  const serverIndexer = server.indexerId ?? 0;
-  if (mappedIndexer !== serverIndexer) {
-    changes.push({ field: "indexerId", from: serverIndexer, to: mappedIndexer });
+  const mappedIndexers = indexerIdsOf(mapped);
+  const serverIndexers = indexerIdsOf(server);
+  if (JSON.stringify(mappedIndexers) !== JSON.stringify(serverIndexers)) {
+    changes.push({ field: "indexerIds", from: serverIndexers, to: mappedIndexers });
   }
 
   const mappedTags = tagsOf(mapped);
