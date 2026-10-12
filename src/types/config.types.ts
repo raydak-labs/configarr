@@ -424,6 +424,10 @@ export const InputConfigArrInstanceSchema = z.object({
   base_url: z.string(),
   api_key: z.string(),
   enabled: z.boolean().optional(),
+  // Sonarr only. Selects which API contract to sync against. Omit to let configarr probe the
+  // instance. Set it only when the probe picks the wrong one, because a wrong contract fails
+  // silently rather than loudly.
+  api_version: z.enum(["v3", "v5"]).optional(),
   // Ensure these tag labels exist on the server (created if missing).
   tags: z.array(z.string()).optional(),
   // Delete server tags not listed in `tags` (and not referenced by managed resources).

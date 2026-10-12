@@ -1,5 +1,5 @@
 import { logger } from "../logger";
-import { ArrType } from "../types/common.types";
+import { ArrType, SonarrApiVersion } from "../types/common.types";
 import { LidarrClient } from "./lidarr-client";
 import { ProwlarrClient } from "./prowlarr-client";
 import { RadarrClient } from "./radarr-client";
@@ -26,10 +26,10 @@ export const unsetApi = () => {
   configured = undefined;
 };
 
-const createClient = (type: ArrType, baseUrl: string, apiKey: string): ArrTypeToClient[ArrType] => {
+const createClient = (type: ArrType, baseUrl: string, apiKey: string, sonarrApiVersion?: SonarrApiVersion): ArrTypeToClient[ArrType] => {
   switch (type) {
     case "SONARR":
-      return new SonarrClient(baseUrl, apiKey);
+      return new SonarrClient(baseUrl, apiKey, sonarrApiVersion);
     case "RADARR":
       return new RadarrClient(baseUrl, apiKey);
     case "READARR":
@@ -55,10 +55,15 @@ export function getClient<T extends ArrType>(arrType: T): ArrTypeToClient[T] {
   return configured.api as ArrTypeToClient[T];
 }
 
-export const configureApi = async <T extends ArrType>(type: T, baseUrl: string, apiKey: string): Promise<ArrTypeToClient[T]> => {
+export const configureApi = async <T extends ArrType>(
+  type: T,
+  baseUrl: string,
+  apiKey: string,
+  sonarrApiVersion?: SonarrApiVersion,
+): Promise<ArrTypeToClient[T]> => {
   unsetApi();
 
-  const api = createClient(type, baseUrl, apiKey);
+  const api = createClient(type, baseUrl, apiKey, sonarrApiVersion);
   let connectionSuccessful = false;
 
   try {

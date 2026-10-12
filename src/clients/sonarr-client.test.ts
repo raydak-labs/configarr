@@ -66,15 +66,38 @@ describe("SonarrClient contract routing (real http + real generated clients)", (
     test("resolves v3 when the v5 route is absent, as on Sonarr v4", async () => {
       reset(false);
       const client = new SonarrClient(baseUrl, "key");
-      expect(await client.probeApiVersion()).toBe("v3");
+      expect(await client.resolveApiVersion()).toBe("v3");
       expect(client.apiVersion).toBe("v3");
     });
 
     test("resolves v5 when the v5 route answers, as on Sonarr v5", async () => {
       reset(true);
       const client = new SonarrClient(baseUrl, "key");
-      expect(await client.probeApiVersion()).toBe("v5");
+      expect(await client.resolveApiVersion()).toBe("v5");
       expect(client.apiVersion).toBe("v5");
+    });
+
+    test("an explicit override wins without probing the instance", async () => {
+      // The override is the escape hatch for an instance where the probe would guess wrong, so it
+      // has to take precedence over what the server actually answers.
+      reset(true);
+      const client = new SonarrClient(baseUrl, "key", "v3");
+      expect(await client.resolveApiVersion("v3")).toBe("v3");
+      expect(client.apiVersion).toBe("v3");
+
+      await client.updateMediamanagement("1", { id: 1 });
+      expect(lastRequest().url).toBe("/api/v3/config/mediamanagement/1");
+    });
+
+    test("an explicit v5 override binds the contract on an instance that only serves v3", async () => {
+      // The override is honoured even against an instance that does not answer v5, so the request
+      // is attempted at the v5 path and fails there rather than quietly succeeding elsewhere.
+      reset(false);
+      const client = new SonarrClient(baseUrl, "key", "v5");
+      expect(await client.resolveApiVersion("v5")).toBe("v5");
+
+      await expect(client.updateMediamanagement("1", { id: 1 })).rejects.toThrow(/Not found/);
+      expect(lastRequest().url).toBe("/api/v5/settings/mediamanagement/1");
     });
   });
 

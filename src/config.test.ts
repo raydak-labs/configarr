@@ -301,6 +301,37 @@ sonarr:
   });
 });
 
+describe("sonarr api_version", () => {
+  const parse = (body: string) => {
+    const indented = body
+      .split("\n")
+      .map((line) => (line.trim() ? `    ${line}` : line))
+      .join("\n");
+    return InputConfigSchemaSchema.parse(
+      yaml.parse(`
+sonarr:
+  main:
+    base_url: http://sonarr:8989
+    api_key: test
+${indented}
+`),
+    ).sonarr!.main!;
+  };
+
+  test("parses an explicit contract", () => {
+    expect(parse(`api_version: v5`).api_version).toBe("v5");
+    expect(parse(`api_version: v3`).api_version).toBe("v3");
+  });
+
+  test("is absent when omitted, which leaves the instance to be probed", () => {
+    expect(parse("tags:\n      - managed").api_version).toBeUndefined();
+  });
+
+  test("rejects an unknown contract", () => {
+    expect(() => parse("api_version: v4")).toThrow();
+  });
+});
+
 describe("mergeConfigsAndTemplates", () => {
   beforeEach(() => {
     // Reset mocks before each test

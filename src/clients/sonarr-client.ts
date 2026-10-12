@@ -88,12 +88,21 @@ export class SonarrClient
   }
 
   /**
-   * Reads the contract an instance actually serves. A v5 instance answers `/api/v5/system/status`
-   * and also still answers `/api/v3/*`, so a successful v5 probe is the only signal that
-   * distinguishes them. Anything else (404, connection failure) means the v3 contract, which is
-   * also what Sonarr v4 always serves.
+   * Resolves the contract this instance speaks, preferring an explicit override over the probe.
+   *
+   * A v5 instance answers `/api/v5/system/status` and also still answers `/api/v3/*`, so a
+   * successful v5 probe is the only signal that separates the two. Anything else (404, connection
+   * failure) means the v3 contract, which is also what Sonarr v4 always serves.
+   *
+   * The override exists because a wrong guess causes a silent partial sync rather than an error,
+   * so a user needs a way to force the contract when the probe is ambiguous on their instance.
    */
-  async probeApiVersion(): Promise<SonarrApiVersion> {
+  async resolveApiVersion(explicit?: SonarrApiVersion): Promise<SonarrApiVersion> {
+    if (explicit) {
+      this.resolved = explicit;
+      return this.resolved;
+    }
+
     try {
       await this.apiV5.v5SystemStatusList();
       this.resolved = "v5";

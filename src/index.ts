@@ -19,7 +19,7 @@ import { logger, logHeading, logInstanceHeading } from "./logger";
 import { cloneRecyclarrTemplateRepo } from "./recyclarr-importer";
 import { getTelemetryInstance, Telemetry } from "./telemetry";
 import { cloneTrashRepo } from "./trash-guide";
-import { ArrType } from "./types/common.types";
+import { ArrType, SonarrApiVersion } from "./types/common.types";
 import { InputConfigArrInstance } from "./types/config.types";
 import { ConfigValidationError } from "./validation";
 
@@ -27,7 +27,7 @@ import { ConfigValidationError } from "./validation";
  * Shared instance loop: skip disabled instances, run `runInstance` against each one,
  * and tally success / failure / skipped while honouring STOP_ON_ERROR.
  */
-const runInstances = async <TInstance extends { base_url: string; api_key: string; enabled?: boolean }>(
+const runInstances = async <TInstance extends { base_url: string; api_key: string; enabled?: boolean; api_version?: SonarrApiVersion }>(
   arrType: ArrType,
   entries: Record<string, TInstance> | undefined,
   runInstance: (instance: TInstance, instanceName: string) => Promise<InstanceDiffReport>,
@@ -56,9 +56,9 @@ const runInstances = async <TInstance extends { base_url: string; api_key: strin
     }
 
     try {
-      const client = await configureApi(arrType, instance.base_url, instance.api_key);
+      const client = await configureApi(arrType, instance.base_url, instance.api_key, instance.api_version);
       if (client instanceof SonarrClient) {
-        await client.probeApiVersion();
+        await client.resolveApiVersion(instance.api_version);
       }
       const report = await runInstance(instance, instanceName);
       new ConsoleDiffFormatter().format(report);

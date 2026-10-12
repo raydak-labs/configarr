@@ -88,9 +88,7 @@ describe("Sonarr release profile indexer field per contract (real http)", () => 
 
   const syncAndWrite = async (contract: "v3" | "v5") => {
     const client = new SonarrClient(baseUrl, "key", contract);
-    if (contract === "v5") {
-      await client.probeApiVersion();
-    }
+    await client.resolveApiVersion(contract);
     const cache = new ServerCache({ tags: [], indexers: [{ id: 7, name: "MyIndexer" }] });
     await new ReleaseProfileSonarrSync(client as never).sync([{ name: "HEVC", required: ["hevc"], indexer: "MyIndexer" }], cache);
     return writes.at(-1);
