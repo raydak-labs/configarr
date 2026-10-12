@@ -119,6 +119,9 @@ const mmSync = (order: Order) => ({
 });
 
 const qpSync = (order: Order, diff: QualityProfileDiffResult = emptyQpDiff()) => ({
+  validateConfig: vi.fn(async () => {
+    order.push("validate");
+  }),
   loadFromServer: vi.fn(async () => []),
   calculateQualityProfilesDiff: vi.fn(async () => diff),
   persist: vi.fn(async () => {
@@ -165,9 +168,25 @@ describe("runMediaSyncToQualityProfiles", () => {
       return { diffEntries: [] } as never;
     });
 
-    await run(order, syncs(order));
+    const syncObjects = syncs(order);
+    await run(order, syncObjects);
 
-    expect(order).toEqual(["qd", "naming", "mediaManagement", "uiConfig", "qp"]);
+    expect(syncObjects.qp.validateConfig).toHaveBeenCalledOnce();
+    expect(order).toEqual(["validate", "qd", "naming", "mediaManagement", "uiConfig", "qp"]);
+  });
+
+  it("validates configuration before any mutating feature runs", async () => {
+    const order: Order = [];
+    const syncObjects = syncs(order);
+    vi.mocked(syncObjects.qp.validateConfig).mockRejectedValue(new Error("unsupported configuration"));
+
+    await expect(run(order, syncObjects)).rejects.toThrow("unsupported configuration");
+
+    expect(order).toEqual([]);
+    expect(syncObjects.qd.persist).not.toHaveBeenCalled();
+    expect(syncObjects.mm.persistNaming).not.toHaveBeenCalled();
+    expect(syncObjects.mm.persistMediamanagement).not.toHaveBeenCalled();
+    expect(syncObjects.qp.persist).not.toHaveBeenCalled();
   });
 
   it("passes write=false to every write boundary on a dry run", async () => {

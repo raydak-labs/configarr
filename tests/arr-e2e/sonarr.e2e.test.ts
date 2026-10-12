@@ -153,6 +153,57 @@ describe("sonarr (live)", () => {
     expect(findNamed(await client.getQualityProfiles(), "e2e-qp")).toBeUndefined();
   });
 
+  test("per-profile quality sizes", async () => {
+    if (!(await client.supportsProfileQualitySizes())) {
+      return;
+    }
+
+    const profile = (name: string, min: number, preferred: number) => ({
+      ...qualityProfile(),
+      name,
+      quality_sizes: [{ quality: "WEBDL-1080p", min, preferred, max: 200 }],
+    });
+    const yaml = (secondPreferred: number) =>
+      mediaConfig("SONARR", {
+        quality_definition: qualityDefinition(5),
+        quality_profiles: [
+          profile("e2e-size-a", 1, 60),
+          profile("e2e-size-b", 2, secondPreferred),
+          { ...qualityProfile(), name: "e2e-size-default" },
+        ],
+      });
+    const sizes = async (name: string) => (await client.getProfileQualitySizes()).find((item) => item.name === name)?.items;
+
+    const created = await syncConfig(yaml(80));
+    assertPipelineSucceeded(created.result, ["SONARR"]);
+    await waitUntil(async () => (await sizes("e2e-size-a"))?.find((item) => item.quality === "WEBDL-1080p")?.minSize === 1);
+    expect((await sizes("e2e-size-a"))?.find((item) => item.quality === "WEBDL-1080p")).toMatchObject({
+      minSize: 1,
+      preferredSize: 60,
+      maxSize: 200,
+    });
+    expect((await sizes("e2e-size-b"))?.find((item) => item.quality === "WEBDL-1080p")).toMatchObject({
+      minSize: 2,
+      preferredSize: 80,
+      maxSize: 200,
+    });
+    expect((await sizes("e2e-size-default"))?.find((item) => item.quality === "WEBDL-1080p")).toMatchObject({
+      minSize: 5,
+      preferredSize: 50,
+      maxSize: 199.9,
+    });
+
+    const second = await syncConfig(yaml(80), created.workspace);
+    assertPipelineSucceeded(second.result, ["SONARR"]);
+    assertDiffUpToDate(second.result, ["SONARR"]);
+
+    const updated = await syncConfig(yaml(90), created.workspace);
+    assertPipelineSucceeded(updated.result, ["SONARR"]);
+    await waitUntil(async () => (await sizes("e2e-size-b"))?.find((item) => item.quality === "WEBDL-1080p")?.preferredSize === 90);
+    expect((await sizes("e2e-size-a"))?.find((item) => item.quality === "WEBDL-1080p")?.preferredSize).toBe(60);
+    expect((await sizes("e2e-size-default"))?.find((item) => item.quality === "WEBDL-1080p")?.preferredSize).toBe(50);
+  });
+
   test("quality definitions", async () => {
     const webdl = async () => (await client.getQualityDefinitions()).find((d) => d.quality?.name === "WEBDL-1080p");
 

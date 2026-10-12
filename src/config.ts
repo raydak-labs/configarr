@@ -743,6 +743,20 @@ const mergeAndReduceCustomFormats = (cfs: InputConfigCustomFormat[]) => {
  * @param instanceConfig
  * @param arrType
  */
+function mergeQualitySizes(
+  previous: ConfigQualityProfile["quality_sizes"],
+  current: ConfigQualityProfile["quality_sizes"],
+): ConfigQualityProfile["quality_sizes"] {
+  if (previous == null && current == null) {
+    return undefined;
+  }
+  const merged = new Map((previous ?? []).map((size) => [size.quality, size]));
+  for (const size of current ?? []) {
+    merged.set(size.quality, { ...merged.get(size.quality), ...size });
+  }
+  return [...merged.values()];
+}
+
 export const mergeConfigsAndTemplates = async (
   globalConfig: InputConfigSchema,
   instanceConfig: InputConfigArrInstance,
@@ -993,6 +1007,7 @@ export const mergeConfigsAndTemplates = async (
       p.set(c.name, {
         ...profile,
         ...c,
+        quality_sizes: mergeQualitySizes(profile.quality_sizes, c.quality_sizes),
         reset_unmatched_scores: {
           enabled: c.reset_unmatched_scores?.enabled ?? profile.reset_unmatched_scores?.enabled ?? true,
           except: c.reset_unmatched_scores?.except ?? profile.reset_unmatched_scores?.except,

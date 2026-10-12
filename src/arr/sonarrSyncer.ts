@@ -2,9 +2,10 @@ import { DownloadProtocol } from "../__generated__/sonarr/data-contracts";
 import { getClient } from "../clients/client";
 import { StandardDelayProfileSync } from "../delayProfiles/delayProfileBase";
 import { InstanceDiffReport } from "../diffReport/diffReport.types";
+import { getEnvs } from "../env";
 import { SonarrDownloadClientSync } from "../downloadClients/downloadClientSonarr";
 import { MediaManagementSync } from "../mediaManagement/mediaManagement";
-import { QualityDefinitionPreferredSync } from "../qualityDefinitions/qualityDefinition";
+import { QualityDefinitionSonarrSync } from "../qualityDefinitions/qualityDefinitionSonarr";
 import { QualityProfileSonarrSync } from "../qualityProfiles/qualityProfileSonarr";
 import { ReleaseProfileSonarrSync } from "../releaseProfiles/releaseProfileSonarr";
 import { PathRootFolderSync } from "../rootFolder/rootFolderBase";
@@ -17,6 +18,7 @@ const ARR = "SONARR" as const;
 export class SonarrSyncer {
   async run(globalConfig: InputConfigSchema, instance: InputConfigArrInstance, instanceName: string): Promise<InstanceDiffReport> {
     const client = getClient(ARR);
+    const qualityProfiles = new QualityProfileSonarrSync(client);
     const ctx = await runMediaSyncToQualityProfiles({
       arrType: ARR,
       instanceName,
@@ -24,9 +26,9 @@ export class SonarrSyncer {
       instanceConfig: instance,
       client,
       syncs: {
-        qd: new QualityDefinitionPreferredSync(client),
+        qd: new QualityDefinitionSonarrSync(client),
         mm: new MediaManagementSync(client),
-        qp: new QualityProfileSonarrSync(client),
+        qp: qualityProfiles,
         delay: new StandardDelayProfileSync(client, DownloadProtocol),
         releaseProfiles: new ReleaseProfileSonarrSync(client),
         root: new PathRootFolderSync(client),
@@ -34,6 +36,14 @@ export class SonarrSyncer {
       },
       trash: createTrashOps(ARR),
     });
+    ctx.collector.add(
+      await qualityProfiles.syncQualitySizes(
+        ctx.config.quality_profiles,
+        ctx.serverCache.qualityDefinitions,
+        !getEnvs().DRY_RUN,
+        ctx.qualityDefinitionDefaults,
+      ),
+    );
     return completeMediaSync(ctx);
   }
 }

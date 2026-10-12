@@ -54,8 +54,36 @@ export const InputConfigQualityProfileItemSchema = z.object({
 });
 export type InputConfigQualityProfileItem = z.infer<typeof InputConfigQualityProfileItemSchema>;
 
+export const InputConfigQualitySizeSchema = z
+  .object({
+    quality: z.string(),
+    min: z.number().optional(),
+    preferred: z.number().optional(),
+    max: z.number().optional(),
+  })
+  .refine(
+    ({ min, preferred, max }) => min !== undefined || preferred !== undefined || max !== undefined,
+    "At least one of min, preferred, or max must be configured.",
+  );
+export type InputConfigQualitySize = z.infer<typeof InputConfigQualitySizeSchema>;
+
 export const InputConfigQualityProfileSchema = z.object({
   name: z.string(),
+  quality_sizes: z
+    .array(InputConfigQualitySizeSchema)
+    .optional()
+    .superRefine((sizes, ctx) => {
+      const seen = new Set<string>();
+      for (const [index, size] of (sizes ?? []).entries()) {
+        const quality = size.quality.trim();
+        if (quality.length === 0) {
+          ctx.addIssue({ code: "custom", path: [index, "quality"], message: "Quality name must not be empty." });
+        } else if (seen.has(quality)) {
+          ctx.addIssue({ code: "custom", path: [index, "quality"], message: `Quality '${quality}' is listed more than once.` });
+        }
+        seen.add(quality);
+      }
+    }),
   reset_unmatched_scores: z
     .object({
       enabled: z.boolean(),
@@ -543,9 +571,10 @@ export type ConfigArrInstance = OmitTyped<
 
 export type ConfigQualityProfile = OmitTyped<
   Required<InputConfigQualityProfile>,
-  "qualities" | "reset_unmatched_scores" | "language" | "score_set"
+  "qualities" | "quality_sizes" | "reset_unmatched_scores" | "language" | "score_set"
 > & {
   qualities: ConfigQualityProfileItem[];
+  quality_sizes?: InputConfigQualitySize[];
   reset_unmatched_scores?: InputConfigQualityProfile["reset_unmatched_scores"];
 } & Pick<InputConfigQualityProfile, "language" | "score_set">;
 

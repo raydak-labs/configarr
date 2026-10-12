@@ -527,6 +527,34 @@ sonarr:
               - WEBRip-1080p
 ```
 
+Sonarr v5 stores size limits on each quality-profile quality instead of globally. Keep
+`quality_definition` for a shared default, then set `quality_sizes` on a profile only
+where it needs a different value. Per-profile values take precedence field by field;
+omitted fields inherit the global default, or keep Sonarr's current value when neither
+form configures that field. `quality_sizes` requires Sonarr v5; Configarr reports an
+error before applying changes if it is used with Sonarr v4.
+
+```yml
+sonarr:
+  instance1:
+    quality_definition:
+      qualities:
+        - quality: WEBDL-1080p
+          min: 5
+          preferred: 50
+          max: 199.9
+
+    quality_profiles:
+      - name: WEB-1080p
+        quality_sizes:
+          - quality: WEBDL-1080p
+            min: 0
+            preferred: 75
+```
+
+Quality selectors accept the quality name or display title shown in Sonarr. Only the
+configured fields are changed; zero is a valid size value.
+
 ### Quality Profile Rename {#quality-profile-rename}
 
 Support has been added to allow renaming quality profiles.

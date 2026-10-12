@@ -716,6 +716,7 @@ describe("mergeConfigsAndTemplates", () => {
     const baseProfile: ConfigQualityProfile = {
       name: "profile1",
       min_format_score: 2,
+      quality_sizes: [{ quality: "WEBDL-1080p", min: 1, preferred: 60 }],
       qualities: fromConfig,
       quality_sort: "sort",
       upgrade: { allowed: true, until_quality: "HDTV-1080p", until_score: 1000 },
@@ -725,6 +726,10 @@ describe("mergeConfigsAndTemplates", () => {
     // Same name, does not touch reset_unmatched_scores
     const profile1: ConfigQualityProfile = cloneWithJSON(baseProfile);
     profile1.min_format_score = 5;
+    profile1.quality_sizes = [
+      { quality: "WEBDL-1080p", max: 200 },
+      { quality: "WEBRip-1080p", preferred: 75 },
+    ];
 
     // Template only profile which carries reset_unmatched_scores
     const templateProfile2: ConfigQualityProfile = {
@@ -761,6 +766,10 @@ describe("mergeConfigsAndTemplates", () => {
 
     const merged1 = result.config.quality_profiles.find((p) => p.name === "profile1")!;
     expect(merged1.min_format_score).toBe(5);
+    expect(merged1.quality_sizes).toEqual([
+      { quality: "WEBDL-1080p", min: 1, preferred: 60, max: 200 },
+      { quality: "WEBRip-1080p", preferred: 75 },
+    ]);
     // Neither side sets `enabled`, so the default of the surviving merge has to win
     expect(merged1.reset_unmatched_scores?.enabled).toBe(true);
 
@@ -2372,6 +2381,42 @@ describe("InputConfigSchemaSchema (regression)", () => {
         metadata_profiles: [profile],
       }).metadata_profiles?.[0],
     ).toMatchObject(profile);
+  });
+
+  test("keeps quality_sizes and rejects duplicate or empty quality overrides", () => {
+    const profile = {
+      name: "WEB-1080p",
+      quality_sizes: [{ quality: "WEBDL-1080p", min: 0, preferred: 50, max: 100 }],
+    };
+    const parsed = InputConfigArrInstanceSchema.parse({
+      base_url: "http://sonarr:8989",
+      api_key: "key",
+      quality_profiles: [profile],
+    });
+
+    expect(parsed.quality_profiles?.[0]?.quality_sizes).toEqual(profile.quality_sizes);
+    expect(() =>
+      InputConfigArrInstanceSchema.parse({
+        base_url: "http://sonarr:8989",
+        api_key: "key",
+        quality_profiles: [
+          {
+            name: "WEB-1080p",
+            quality_sizes: [
+              { quality: "WEBDL-1080p", min: 0 },
+              { quality: "WEBDL-1080p", max: 100 },
+            ],
+          },
+        ],
+      }),
+    ).toThrow();
+    expect(() =>
+      InputConfigArrInstanceSchema.parse({
+        base_url: "http://sonarr:8989",
+        api_key: "key",
+        quality_profiles: [{ name: "WEB-1080p", quality_sizes: [{ quality: "WEBDL-1080p" }] }],
+      }),
+    ).toThrow();
   });
 
   test("does not silently strip Lidarr metadata_profiles fields", () => {

@@ -58,6 +58,7 @@ const makeSyncs = (): MediaFeatureSyncs =>
     qd: { loadFromServer: vi.fn(async () => []) },
     mm: { persistNaming: vi.fn(async () => undefined), persistMediamanagement: vi.fn(async () => undefined) },
     qp: {
+      validateConfig: vi.fn(async () => undefined),
       loadFromServer: vi.fn(async () => []),
       calculateQualityProfilesDiff: vi.fn(async () => ({ changedQPs: [], create: [], noChanges: [], changes: [] })),
       persist: vi.fn(async () => undefined),

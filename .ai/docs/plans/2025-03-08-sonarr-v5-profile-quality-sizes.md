@@ -1,5 +1,7 @@
 # Plan: Sonarr v5 per-profile quality sizes
 
+Status: implemented (2026-10-12)
+
 Roadmap: [Sonarr v5 feature parity roadmap](2025-03-08-sonarr-v5-feature-roadmap.md)  
 Research: [Sonarr v5 beta compatibility research](../research/2026-10-12-sonarr-v5-beta-configarr-compatibility.md)
 
@@ -35,24 +37,24 @@ The generated v5 API places size fields on `QualityProfileQualityItemResource`; 
 
 ## Implementation steps
 
-1. **Confirm the write contract.** Against the pinned v5 image, manually verify that size values survive `GET /api/v5/qualityprofile`, `PUT /api/v5/qualityprofile/{id}`, and profile creation. Verify quality names/IDs for nested groups and confirm whether size fields belong on group nodes, leaf nodes, or both.
-2. **Define and validate config.** Extend `InputConfigQualityProfileSchema` with the optional keyed size list. Reject duplicate quality selectors in one profile, unknown quality names, and invalid numeric ranges with useful diagnostics.
-3. **Keep the sync model explicit.** Carry per-profile settings through the existing profile load/diff/persist lifecycle. Resolve the profile's configured overrides and legacy global defaults in one Sonarr-specific mapping boundary; do not add Sonarr v5 resource types to shared quality-profile modules.
-4. **Preserve profile state.** Map all nested v5 quality items without dropping their size properties during create/update. An unset field must retain its current value. Do not rely on process-local caches populated by a preceding quality-definition call as the only source for an update.
-5. **Integrate legacy defaults.** Ensure global TRaSH/`quality_definition` values still update every applicable v5 profile when no per-profile override exists. Explicit profile values must win regardless of pipeline stage order.
-6. **Add test coverage.** Unit-test schema validation, nested quality selection, field-level precedence, preservation of unset server values, legacy global fallback, conflict handling, and rejection on v4. Add v4/v5 e2e cases for two profiles assigning different sizes to the same quality; run a second sync and assert it is unchanged.
-7. **Document migration.** Add user-facing examples and explain that `quality_definition` remains the global/default form while `quality_profiles[].quality_sizes` is the v5-specific override.
+1. **Confirm the write contract.** Against the pinned v5 image, verify size values survive `GET /api/v5/qualityprofile` and profile update. Preserve omitted/null nested `items` fields when updating profile resources; sizes belong on quality profile items.
+2. **Define and validate config.** Extend `InputConfigQualityProfileSchema` with the optional keyed size list. Reject blank/duplicate selectors, non-numeric values, unknown qualities, and ambiguous aliases with useful diagnostics.
+3. **Keep the sync model explicit.** Carry per-profile settings through the existing profile load/diff/persist lifecycle. Resolve per-profile overrides and global defaults in the Sonarr-specific adapter; keep generated v5 resource types out of shared quality-profile modules.
+4. **Preserve profile state.** Keep existing values for unset fields and preserve nullable/omitted nested item arrays during profile updates.
+5. **Integrate legacy defaults.** Keep global TRaSH/`quality_definition` values as defaults for v5 profiles; explicit profile fields take precedence, and v4 retains global behavior unchanged.
+6. **Add test coverage.** Unit tests cover config merging, profile-size precedence, implicit disabled quality items, dry-run, state preservation, and v4 rejection. v4/v5 e2e cases verify persisted values and idempotent repeat syncs.
+7. **Document migration.** Document `quality_definition` as the global/default form and `quality_profiles[].quality_sizes` as the v5-specific override.
 
 ## Design checks before implementation
 
-- Decide whether a quality selector should match a leaf quality by its stable API ID, its Sonarr quality name, or both. Prefer name in user YAML and resolve to IDs from the server; treat ambiguous aliases as errors.
-- Confirm how a profile group maps to children so one setting cannot accidentally overwrite unrelated qualities.
-- Determine whether a per-profile-only config on v4 should fail only when the profile is synchronized or during config validation after version discovery. Prefer validation at sync time so the same config can still load without an API connection.
-- Keep zero values meaningful; use `undefined` to mean “inherit/preserve,” not truthiness checks.
+- Selectors accept canonical quality names or quality titles; ambiguous title/name matches fail validation.
+- Sonarr creates disabled entries for definitions omitted from configured `qualities`; they remain valid targets for size settings and global defaults.
+- Sonarr v4 rejects per-profile settings during pipeline preflight, before any writes.
+- Zero values are meaningful; `undefined` means inherit from the global default or preserve the server value.
 
 ## Done when
 
-- Legacy configs produce the same v4 and v5 behavior as before.
-- Two v5 profiles can store distinct settings for the same quality and a second run is a no-op.
-- Existing sizes for unconfigured fields survive updates.
-- A v4 server gives a clear error when a v5-only override is requested.
+- [x] Legacy configs retain global v4 behavior and use global sizes as v5 defaults.
+- [x] Two v5 profiles can store distinct settings for the same quality; repeat sync is idempotent.
+- [x] Existing sizes for unconfigured fields survive updates.
+- [x] A v4 server gives a clear error before writes when a v5-only override is requested.

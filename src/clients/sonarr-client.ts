@@ -44,6 +44,14 @@ import {
 
 type QualitySize = Pick<QualityDefinitionResource, "minSize" | "maxSize" | "preferredSize">;
 
+export type SonarrProfileQualitySize = QualitySize & { quality: string };
+
+export type SonarrProfileQualitySizes = {
+  id: number;
+  name: string;
+  items: SonarrProfileQualitySize[];
+};
+
 function copyV5Naming(settings: SonarrNamingV5): NamingConfigResource {
   return { ...settings };
 }
@@ -183,6 +191,48 @@ function collectQualitySizes(items: SonarrQualityProfileV5["items"], sizes: Map<
   }
 }
 
+function collectProfileQualitySizes(items: SonarrQualityProfileV5["items"]): SonarrProfileQualitySize[] {
+  const sizes: SonarrProfileQualitySize[] = [];
+  const collect = (qualityItems: SonarrQualityProfileV5["items"]) => {
+    for (const item of qualityItems ?? []) {
+      if (item.quality?.name) {
+        sizes.push({
+          quality: item.quality.name,
+          minSize: item.minSize,
+          maxSize: item.maxSize,
+          preferredSize: item.preferredSize,
+        });
+      }
+      collect(item.items);
+    }
+  };
+  collect(items);
+  return sizes;
+}
+
+function mergeProfileQualitySizes(
+  items: SonarrQualityProfileV5["items"],
+  sizes: ReadonlyMap<string, QualitySize>,
+): SonarrQualityProfileV5["items"] {
+  if (items == null) {
+    return items;
+  }
+  return items.map((item) => {
+    const configured = item.quality?.name ? sizes.get(item.quality.name) : undefined;
+    const updated: SonarrQualityItemV5 = { ...item };
+    if (item.items != null) {
+      updated.items = mergeProfileQualitySizes(item.items, sizes);
+    }
+
+    for (const field of ["minSize", "maxSize", "preferredSize"] as const) {
+      if (configured?.[field] !== undefined) {
+        updated[field] = configured[field];
+      }
+    }
+    return updated;
+  });
+}
+
 function commonQualitySizes(profiles: SonarrQualityProfileV5[]): Map<string, QualitySize> {
   const allSizes = new Map<string, QualitySize[]>();
   for (const profile of profiles) collectQualitySizes(profile.items, allSizes);
@@ -201,23 +251,6 @@ function commonQualitySizes(profiles: SonarrQualityProfileV5[]): Map<string, Qua
   return common;
 }
 
-function getV5QualitySizeMap(definitions: QualityDefinitionResource[]): Map<string, QualitySize> {
-  return new Map(
-    definitions
-      .filter((definition): definition is QualityDefinitionResource & { quality: NonNullable<QualityDefinitionResource["quality"]> } =>
-        Boolean(definition.quality?.name),
-      )
-      .map((definition) => [
-        definition.quality.name!,
-        {
-          minSize: definition.minSize,
-          maxSize: definition.maxSize,
-          preferredSize: definition.preferredSize,
-        },
-      ]),
-  );
-}
-
 function mergeV5QualityItems(
   desiredItems: QualityProfileResource["items"],
   currentItems: SonarrQualityProfileV5["items"],
@@ -232,10 +265,10 @@ function mergeV5QualityItems(
     const mergedSize: QualitySize = {};
 
     for (const field of ["minSize", "maxSize", "preferredSize"] as const) {
-      if (configuredSize && configuredSize[field] !== undefined) {
-        mergedSize[field] = configuredSize[field];
-      } else if (existing?.[field] !== undefined) {
+      if (existing?.[field] !== undefined) {
         mergedSize[field] = existing[field];
+      } else if (configuredSize && configuredSize[field] !== undefined) {
+        mergedSize[field] = configuredSize[field];
       }
     }
 
@@ -338,17 +371,6 @@ export class SonarrClient
           weight,
         }));
         await this.apiV5.v5QualitydefinitionUpdate2(v5Definitions);
-        this.v5QualitySizes = getV5QualitySizeMap(definitions);
-
-        const profiles = await this.apiV5.v5QualityprofileList();
-        this.v5QualityProfiles = await Promise.all(
-          profiles.map(async (profile) => {
-            const items = mergeV5QualityItems(profile.items, profile.items, this.v5QualitySizes);
-            const updated = { ...profile, items };
-            await this.apiV5.v5QualityprofileUpdate(String(profile.id), updated);
-            return updated;
-          }),
-        );
         return definitions;
       },
     );
@@ -363,6 +385,38 @@ export class SonarrClient
         return this.v5QualityProfiles.map(copyV5QualityProfile);
       },
     );
+  }
+
+  async supportsProfileQualitySizes(): Promise<boolean> {
+    return (await this.getApiVersion()) === "v5";
+  }
+
+  async getProfileQualitySizes(): Promise<SonarrProfileQualitySizes[]> {
+    if (!(await this.supportsProfileQualitySizes())) {
+      throw new Error("Sonarr per-profile quality sizes require the v5 API.");
+    }
+    const profiles = await this.apiV5.v5QualityprofileList();
+    return profiles.flatMap((profile) =>
+      profile.id == null || profile.name == null
+        ? []
+        : [{ id: profile.id, name: profile.name, items: collectProfileQualitySizes(profile.items) }],
+    );
+  }
+
+  async updateProfileQualitySizes(profileId: string, overrides: readonly SonarrProfileQualitySize[]): Promise<void> {
+    if (!(await this.supportsProfileQualitySizes())) {
+      throw new Error("Sonarr per-profile quality sizes require the v5 API.");
+    }
+    const profiles = await this.apiV5.v5QualityprofileList();
+    const current = profiles.find((profile) => profile.id === Number(profileId));
+    if (current == null) {
+      throw new Error(`Sonarr quality profile '${profileId}' was not found while updating quality sizes.`);
+    }
+    const sizes = new Map(overrides.map(({ quality, ...size }) => [quality, size]));
+    await this.apiV5.v5QualityprofileUpdate(profileId, {
+      ...current,
+      items: mergeProfileQualitySizes(current.items, sizes),
+    });
   }
 
   createQualityProfile(profile: QualityProfileResource) {
