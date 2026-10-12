@@ -58,12 +58,12 @@ import type {
 } from "../__generated__/readarr/data-contracts";
 import type {
   DownloadClientResource as SonarrDownloadClientResource,
-  MediaManagementConfigResource as SonarrMediaManagementConfigResource,
   NamingConfigResource as SonarrNamingConfigResource,
   QualityDefinitionResource as SonarrQualityDefinitionResource,
   QualityProfileResource as SonarrQualityProfileResource,
   ReleaseProfileResource as SonarrReleaseProfileResource,
 } from "../__generated__/sonarr/data-contracts";
+import type { SonarrMediaManagementResource } from "../mediaManagement/mediaManagement.types";
 import type {
   DownloadClientResource as WhisparrDownloadClientResource,
   MediaManagementConfigResource as WhisparrMediaManagementConfigResource,
@@ -111,7 +111,7 @@ type MediaArrResources = {
   SONARR: {
     qualityDefinition: SonarrQualityDefinitionResource;
     naming: SonarrNamingConfigResource;
-    mediaManagement: SonarrMediaManagementConfigResource;
+    mediaManagement: SonarrMediaManagementResource;
     qualityProfile: SonarrQualityProfileResource;
     releaseProfile: SonarrReleaseProfileResource;
     downloadClient: SonarrDownloadClientResource;

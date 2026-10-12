@@ -6,7 +6,7 @@
  */
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
 import { SonarrClient } from "../../src/clients/sonarr-client";
-import { DownloadProtocol } from "../../src/__generated__/sonarr/data-contracts";
+import { DownloadProtocol, QualityDefinitionResource as V3QualityDefinitionResource } from "../../src/__generated__/sonarr/data-contracts";
 import { StandardDelayProfileSync } from "../../src/delayProfiles/delayProfileBase";
 import { InputConfigDelayProfileSchema } from "../../src/types/config.types";
 import {
@@ -66,7 +66,10 @@ const delayProfiles = (usenetDelay: number, additional: boolean) => ({
 
 describe("sonarr (live)", () => {
   const { baseUrl, apiKey } = arrConnection("SONARR");
-  const client = new SonarrClient(baseUrl, apiKey);
+  // The e2e stack pins Sonarr 4.0.19, which serves the v3 contract only, so the v3 shape of the
+  // quality definition resource (with its size limits) is the one this file asserts against.
+  const client = new SonarrClient(baseUrl, apiKey, "v3");
+  const serverQualityDefinitions = async () => (await client.getQualityDefinitions()) as V3QualityDefinitionResource[];
   let baseline: MediaBaseline;
 
   beforeAll(async () => {
@@ -154,7 +157,7 @@ describe("sonarr (live)", () => {
   });
 
   test("quality definitions", async () => {
-    const webdl = async () => (await client.getQualityDefinitions()).find((d) => d.quality?.name === "WEBDL-1080p");
+    const webdl = async () => (await serverQualityDefinitions()).find((d) => d.quality?.name === "WEBDL-1080p");
 
     const created = await syncConfig(mediaConfig("SONARR", { quality_definition: qualityDefinition(2) }));
     assertPipelineSucceeded(created.result, ["SONARR"]);

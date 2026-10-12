@@ -10,6 +10,7 @@ import { ReadarrSyncer } from "./arr/readarrSyncer";
 import { SonarrSyncer } from "./arr/sonarrSyncer";
 import { WhisparrSyncer } from "./arr/whisparrSyncer";
 import { configureApi, unsetApi } from "./clients/client";
+import { SonarrClient } from "./clients/sonarr-client";
 import { getConfig } from "./config";
 import { ConsoleDiffFormatter } from "./diffReport/formatters/consoleFormatter";
 import { writeJsonDiffReport } from "./diffReport/formatters/jsonFormatter";
@@ -55,7 +56,10 @@ const runInstances = async <TInstance extends { base_url: string; api_key: strin
     }
 
     try {
-      await configureApi(arrType, instance.base_url, instance.api_key);
+      const client = await configureApi(arrType, instance.base_url, instance.api_key);
+      if (client instanceof SonarrClient) {
+        await client.probeApiVersion();
+      }
       const report = await runInstance(instance, instanceName);
       new ConsoleDiffFormatter().format(report);
       reports.push(report);

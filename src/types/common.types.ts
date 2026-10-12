@@ -38,5 +38,13 @@ export const ArrTypeConst = ["RADARR", "SONARR", "WHISPARR", "READARR", "LIDARR"
 export type ArrType = (typeof ArrTypeConst)[number];
 export type MediaArrType = Exclude<ArrType, "PROWLARR">;
 
+/**
+ * Selects which API contract a Sonarr instance speaks. Sonarr v5 serves both the legacy v3
+ * contract and a new v5 contract side by side, and the two differ in ways that fail silently
+ * rather than loudly: field names move and the settings group is renamed. This is a separate
+ * axis from `ArrType`, which stays "SONARR" for both.
+ */
+export type SonarrApiVersion = "v3" | "v5";
+
 export type QualityDefinitionsSonarr = "anime" | "series" | "custom";
 export type QualityDefinitionsRadarr = "movie" | "sqp-streaming" | "sqp-uhd" | "custom";
