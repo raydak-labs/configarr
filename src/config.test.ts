@@ -301,6 +301,60 @@ sonarr:
   });
 });
 
+describe("release profile config", () => {
+  const parse = (body: string) => {
+    const indented = body
+      .split("\n")
+      .map((line) => (line.trim() ? `    ${line}` : line))
+      .join("\n");
+    return InputConfigSchemaSchema.parse(
+      yaml.parse(`
+sonarr:
+  main:
+    base_url: http://sonarr:8989
+    api_key: test
+${indented}
+`),
+    ).sonarr!.main!;
+  };
+
+  test("accepts a single indexer and a list", () => {
+    expect(parse("release_profiles:\n      - name: r\n        indexer: One").release_profiles).toEqual([{ name: "r", indexer: "One" }]);
+    expect(parse("release_profiles:\n      - name: r\n        indexer: [One, Two]").release_profiles).toEqual([
+      { name: "r", indexer: ["One", "Two"] },
+    ]);
+  });
+
+  test("accepts the Sonarr v5 release profile fields", () => {
+    expect(
+      parse(
+        [
+          "release_profiles:",
+          "  - name: no-early",
+          "    required: [hevc]",
+          "    air_date_restriction: true",
+          "    air_date_grace_period: 14",
+          "    allow_season_pack_without_all_episodes_aired: true",
+          "    excluded_tags: [anime]",
+        ].join("\n"),
+      ).release_profiles,
+    ).toEqual([
+      {
+        name: "no-early",
+        required: ["hevc"],
+        air_date_restriction: true,
+        air_date_grace_period: 14,
+        allow_season_pack_without_all_episodes_aired: true,
+        excluded_tags: ["anime"],
+      },
+    ]);
+  });
+
+  test("rejects a non-integer air date grace period", () => {
+    expect(() => parse("release_profiles:\n      - name: r\n        air_date_grace_period: 1.5")).toThrow();
+  });
+});
+
 describe("sonarr api_version", () => {
   const parse = (body: string) => {
     const indented = body

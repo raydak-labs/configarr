@@ -237,8 +237,17 @@ export const InputConfigReleaseProfileSchema = z.object({
   enabled: z.boolean().optional(),
   required: z.array(z.string()).optional(),
   ignored: z.array(z.string()).optional(),
-  indexer: z.string().optional(),
+  // A single name works on every contract. A list needs the Sonarr v5 contract, whose
+  // ReleaseProfileResource carries indexerIds rather than a scalar indexerId.
+  indexer: z.union([z.string(), z.array(z.string())]).optional(),
   tags: z.array(z.string()).optional(),
+  // Sonarr v5 only. Label names, resolved like every other tag list. A tag a release profile
+  // excludes still has to be kept by `delete_unmanaged_tags`.
+  excluded_tags: z.array(z.string()).optional(),
+  // Sonarr v5 only. Blocks grabbing before the release's official air date.
+  air_date_restriction: z.boolean().optional(),
+  air_date_grace_period: z.number().int().optional(),
+  allow_season_pack_without_all_episodes_aired: z.boolean().optional(),
 });
 export type InputConfigReleaseProfile = z.infer<typeof InputConfigReleaseProfileSchema>;
 

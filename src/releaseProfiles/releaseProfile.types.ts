@@ -14,6 +14,12 @@ export type ReleaseProfileShared = {
   indexerId?: number;
   indexerIds?: number[] | null;
   tags?: number[] | null;
+  // Sonarr v5 only. A v4 resource has no field for either of these, so a config that sets them is
+  // rejected rather than written and dropped.
+  excludedTags?: number[] | null;
+  airDateRestriction?: boolean;
+  airDateGracePeriod?: number | null;
+  allowSeasonPackWithoutAllEpisodesAired?: boolean;
 };
 
 export type MappedReleaseProfile = {

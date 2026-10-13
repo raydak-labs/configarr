@@ -23,6 +23,8 @@ const api = {
   createTag: vi.fn(),
   deleteTag: vi.fn(),
   getIndexers: vi.fn(),
+  getSystemStatus: vi.fn(async () => ({ version: "5.0.0.2569" })),
+  testConnection: vi.fn(async () => true),
 };
 
 const namedSync = () => new BaseReleaseProfileSync<ReleaseProfileShared>(api, true);

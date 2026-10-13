@@ -522,6 +522,10 @@ export const completeMediaSync = async <T extends MediaArrType>(ctx: MediaSyncCo
             config.delay_profiles?.default?.tags,
             config.delay_profiles?.additional?.flatMap((profile) => profile.tags ?? []),
             config.release_profiles?.flatMap((profile) => profile.tags ?? []),
+            // A tag a release profile excludes is referenced exactly as a held one is, so tag
+            // cleanup has to keep it. The server refuses to delete an in-use tag anyway, but with
+            // `onInUse: "skip"` that surfaces as a warning on every run instead of a clean skip.
+            config.release_profiles?.flatMap((profile) => profile.excluded_tags ?? []),
             // Only the object form of `root_folders` carries tags.
             config.root_folders?.filter((folder) => typeof folder !== "string").flatMap((folder) => folder.tags ?? []),
             config.download_clients?.data?.flatMap((downloadClient) => downloadClient.tags ?? []),

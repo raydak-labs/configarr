@@ -176,7 +176,13 @@ describe("completeMediaSync unmanaged tag cleanup", () => {
         default: { enableUsenet: true, tags: ["from-delay-default"] },
         additional: [{ enableUsenet: true, tags: ["from-delay-extra"] }],
       },
-      release_profiles: [{ name: "rp", tags: ["from-release-profile"] }],
+      release_profiles: [
+        {
+          name: "rp",
+          tags: ["from-release-profile"],
+          excluded_tags: ["excluded-by-release-profile"],
+        },
+      ],
     });
 
     const ctx = buildContext(instanceConfig, syncs);
@@ -193,6 +199,31 @@ describe("completeMediaSync unmanaged tag cleanup", () => {
     expect(report.entries.filter((entry) => entry.resourceType === "Tag")).toEqual<DiffEntry[]>([
       { resourceType: "Tag", name: "orphan", action: "delete" },
     ]);
+  });
+
+  test("keeps a tag a release profile excludes", async () => {
+    // v5 puts excluded tags on the release profile resource, so a tag referenced only there has to
+    // survive cleanup. The server refuses to delete an in-use tag anyway, but with `onInUse: "skip"`
+    // that surfaces as a warning on every run instead of a clean skip.
+    serverTags.push({ id: 2, label: "excluded-by-release-profile" });
+    serverTags.push({ id: 3, label: "orphan" });
+    const syncs = makeSyncs();
+
+    const instanceConfig = config({
+      delete_unmanaged_tags: { enabled: true },
+      release_profiles: [{ name: "rp", excluded_tags: ["excluded-by-release-profile"] }],
+    });
+
+    const ctx = buildContext(instanceConfig, syncs);
+    (ctx.client.deleteTag as unknown as ReturnType<typeof vi.fn>).mockImplementation(async (id: string) => {
+      const index = serverTags.findIndex((tag) => String(tag.id) === id);
+      if (index >= 0) serverTags.splice(index, 1);
+    });
+
+    await completeMediaSync(ctx);
+
+    expect(serverTags.map((tag) => tag.label)).toEqual(["excluded-by-release-profile"]);
+    expect(ctx.client.deleteTag).toHaveBeenCalledTimes(1);
   });
 
   test("skips cleanup when the download-client sync reports failures", async () => {

@@ -69,9 +69,15 @@ export interface IndexersClient {
   getIndexers(): Promise<IndexerListItem[]>;
 }
 
+/**
+ * Includes `SystemClient` because the release profile resource changed shape between server
+ * generations: the v5-only fields have to be gated on the version the server reports, which is read
+ * from the status endpoint. Every *arr client already implements `SystemClient`.
+ */
 export type ReleaseProfilesApi<T extends ReleaseProfileShared = ReleaseProfileShared> = ReleaseProfilesClient<T> &
   TagsClient &
-  IndexersClient;
+  IndexersClient &
+  SystemClient;
 
 export interface RootFoldersClient<RootFolder extends { id?: number; path?: string | null } = { id?: number; path?: string | null }> {
   getRootfolders(): Promise<RootFolder[]>;

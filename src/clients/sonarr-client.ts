@@ -168,8 +168,10 @@ export class SonarrClient
    * here at the point the contract is chosen.
    */
   private toV5ReleaseProfile(profile: ReleaseProfileShared) {
-    const { indexerId, ...rest } = profile as ReleaseProfileShared & { indexerId?: number };
-    return { ...rest, indexerIds: indexerId != null && indexerId > 0 ? [indexerId] : [] };
+    const { indexerId, indexerIds, ...rest } = profile;
+    // A configured list survives unchanged; a single name is widened. Rebuilding from the scalar
+    // alone would collapse a multi-indexer profile back to one indexer.
+    return { ...rest, indexerIds: indexerIds ?? (indexerId != null && indexerId > 0 ? [indexerId] : []) };
   }
 
   async getLanguages() {
