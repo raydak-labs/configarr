@@ -35,6 +35,12 @@ export enum TrackedDownloadState {
   Ignored = "ignored",
 }
 
+export enum TagExistingType {
+  None = "none",
+  Add = "add",
+  Sync = "sync",
+}
+
 export enum SortDirection {
   Default = "default",
   Ascending = "ascending",
@@ -52,6 +58,12 @@ export enum SeriesStatusType {
   Ended = "ended",
   Upcoming = "upcoming",
   Deleted = "deleted",
+}
+
+export enum SeasonPackUpgradeType {
+  All = "all",
+  Threshold = "threshold",
+  Any = "any",
 }
 
 export enum RuntimeMode {
@@ -236,6 +248,7 @@ export enum CommandResult {
   Unknown = "unknown",
   Successful = "successful",
   Unsuccessful = "unsuccessful",
+  Indeterminate = "indeterminate",
 }
 
 export enum CommandPriority {
@@ -261,11 +274,13 @@ export enum AuthenticationType {
   Basic = "basic",
   Forms = "forms",
   External = "external",
+  Oidc = "oidc",
 }
 
 export enum AuthenticationRequiredType {
   Enabled = "enabled",
   DisabledForLocalAddresses = "disabledForLocalAddresses",
+  DisabledForLocalhost = "disabledForLocalhost",
 }
 
 export enum ApplyTags {
@@ -290,6 +305,11 @@ export interface AlternateTitleResource {
   sceneSeasonNumber?: number | null;
   sceneOrigin?: string | null;
   comment?: string | null;
+}
+
+export interface ApiInfoResource {
+  current?: string | null;
+  deprecated?: string[] | null;
 }
 
 export interface AutoTaggingResource {
@@ -582,10 +602,6 @@ export interface EpisodeResource {
   /** @format int32 */
   sceneSeasonNumber?: number | null;
   unverifiedSceneNumbering?: boolean;
-  /** @format date-time */
-  endTime?: string | null;
-  /** @format date-time */
-  grabDate?: string | null;
   series?: SeriesResource;
   images?: MediaCover[] | null;
 }
@@ -634,7 +650,7 @@ export interface HealthResource {
   source?: string | null;
   type?: HealthCheckResult;
   message?: string | null;
-  wikiUrl?: HttpUri;
+  wikiUrl?: string | null;
 }
 
 export interface HistoryResource {
@@ -684,10 +700,16 @@ export interface HostConfigResource {
   launchBrowser?: boolean;
   authenticationMethod?: AuthenticationType;
   authenticationRequired?: AuthenticationRequiredType;
+  allowedHosts?: string | null;
   analyticsEnabled?: boolean;
   username?: string | null;
   password?: string | null;
   passwordConfirmation?: string | null;
+  oidcAuthority?: string | null;
+  oidcClientId?: string | null;
+  oidcClientSecret?: string | null;
+  oidcUserIdentifier?: string | null;
+  oidcScopes?: string | null;
   logLevel?: string | null;
   /** @format int32 */
   logSizeLimit?: number;
@@ -695,8 +717,10 @@ export interface HostConfigResource {
   branch?: string | null;
   apiKey?: string | null;
   sslCertPath?: string | null;
+  sslKeyPath?: string | null;
   sslCertPassword?: string | null;
   urlBase?: string | null;
+  trustedNetworks?: string | null;
   instanceName?: string | null;
   applicationUrl?: string | null;
   updateAutomatically?: boolean;
@@ -720,17 +744,6 @@ export interface HostConfigResource {
   trustCgnatIpAddresses?: boolean;
 }
 
-export interface HttpUri {
-  fullUri?: string | null;
-  scheme?: string | null;
-  host?: string | null;
-  /** @format int32 */
-  port?: number | null;
-  path?: string | null;
-  query?: string | null;
-  fragment?: string | null;
-}
-
 export interface ImportListBulkResource {
   ids?: number[] | null;
   tags?: number[] | null;
@@ -739,6 +752,7 @@ export interface ImportListBulkResource {
   rootFolderPath?: string | null;
   /** @format int32 */
   qualityProfileId?: number | null;
+  tagExisting?: TagExistingType;
 }
 
 export interface ImportListConfigResource {
@@ -795,12 +809,14 @@ export interface ImportListResource {
   /** @format int32 */
   qualityProfileId?: number;
   seriesType?: SeriesTypes;
+  language?: Language;
   seasonFolder?: boolean;
   listType?: ImportListType;
   /** @format int32 */
   listOrder?: number;
   /** @format date-span */
   minRefreshInterval?: string;
+  tagExisting?: TagExistingType;
 }
 
 export interface ImportRejectionResource {
@@ -817,6 +833,8 @@ export interface IndexerBulkResource {
   enableInteractiveSearch?: boolean | null;
   /** @format int32 */
   priority?: number | null;
+  /** @format int32 */
+  seasonSearchMaximumSingleEpisodeAge?: number | null;
 }
 
 export interface IndexerConfigResource {
@@ -1041,6 +1059,7 @@ export interface MediaManagementConfigResource {
   chmodFolder?: string | null;
   chownGroup?: string | null;
   episodeTitleRequired?: EpisodeTitleRequiredType;
+  skipFreeSpaceCheckWhenGrabbing?: boolean;
   skipFreeSpaceCheckWhenImporting?: boolean;
   /** @format int32 */
   minimumFreeSpaceWhenImporting?: number;
@@ -1050,6 +1069,10 @@ export interface MediaManagementConfigResource {
   importExtraFiles?: boolean;
   extraFileExtensions?: string | null;
   enableMediaInfo?: boolean;
+  userRejectedExtensions?: string | null;
+  seasonPackUpgrade?: SeasonPackUpgradeType;
+  /** @format double */
+  seasonPackUpgradeThreshold?: number;
 }
 
 export interface MetadataResource {
@@ -1140,7 +1163,7 @@ export interface ParseResource {
   /** @format int32 */
   id?: number;
   title?: string | null;
-  parsedEpisodeInfo?: ParsedEpisodeInfo;
+  parsedEpisodeInfo?: ParsedEpisodeInfoResource;
   series?: SeriesResource;
   episodes?: EpisodeResource[] | null;
   languages?: Language[] | null;
@@ -1149,11 +1172,12 @@ export interface ParseResource {
   customFormatScore?: number;
 }
 
-export interface ParsedEpisodeInfo {
+export interface ParsedEpisodeInfoResource {
   releaseTitle?: string | null;
   seriesTitle?: string | null;
   seriesTitleInfo?: SeriesTitleInfo;
   quality?: QualityModel;
+  seasonNumbers?: number[] | null;
   /** @format int32 */
   seasonNumber?: number;
   episodeNumbers?: number[] | null;
@@ -1184,6 +1208,16 @@ export interface ParsedEpisodeInfo {
 
 export interface PingResource {
   status?: string | null;
+}
+
+export interface ProblemDetails {
+  type?: string | null;
+  title?: string | null;
+  /** @format int32 */
+  status?: number | null;
+  detail?: string | null;
+  instance?: string | null;
+  [key: string]: any;
 }
 
 export interface ProfileFormatItemResource {
@@ -1244,6 +1278,12 @@ export interface QualityProfileQualityItemResource {
   quality?: Quality;
   items?: QualityProfileQualityItemResource[] | null;
   allowed?: boolean;
+  /** @format double */
+  minSize?: number | null;
+  /** @format double */
+  maxSize?: number | null;
+  /** @format double */
+  preferredSize?: number | null;
 }
 
 export interface QualityProfileResource {
@@ -1367,10 +1407,16 @@ export interface ReleaseProfileResource {
   enabled?: boolean;
   required?: any | null;
   ignored?: any | null;
+  airDateRestriction?: boolean;
+  /** @format int32 */
+  airDateGracePeriod?: number;
+  allowSeasonPackWithoutAllEpisodesAired?: boolean;
   /** @format int32 */
   indexerId?: number;
   /** @uniqueItems true */
   tags?: number[] | null;
+  /** @uniqueItems true */
+  excludedTags?: number[] | null;
 }
 
 export interface ReleaseResource {
@@ -1399,6 +1445,7 @@ export interface ReleaseResource {
   sceneSource?: boolean;
   /** @format int32 */
   seasonNumber?: number;
+  seasonNumbers?: number[] | null;
   languages?: Language[] | null;
   /** @format int32 */
   languageWeight?: number;
@@ -1496,6 +1543,8 @@ export interface RootFolderResource {
   accessible?: boolean;
   /** @format int64 */
   freeSpace?: number | null;
+  /** @format int64 */
+  totalSpace?: number | null;
   unmappedFolders?: UnmappedFolder[] | null;
 }
 
@@ -1515,6 +1564,7 @@ export interface SeasonResource {
   /** @format int32 */
   seasonNumber?: number;
   monitored?: boolean;
+  title?: string | null;
   statistics?: SeasonStatisticsResource;
   images?: MediaCover[] | null;
 }
@@ -1537,6 +1587,14 @@ export interface SeasonStatisticsResource {
   percentOfEpisodes?: number;
 }
 
+export interface SeasonTypeResource {
+  name?: string | null;
+  type?: string | null;
+  seasonNumbers?: number[] | null;
+  /** @format int32 */
+  episodeCount?: number;
+}
+
 export interface SelectOption {
   /** @format int32 */
   value?: number;
@@ -1552,6 +1610,7 @@ export interface SeriesEditorResource {
   monitorNewItems?: NewItemMonitorTypes;
   /** @format int32 */
   qualityProfileId?: number | null;
+  language?: Language;
   seriesType?: SeriesTypes;
   seasonFolder?: boolean | null;
   rootFolderPath?: string | null;
@@ -1560,6 +1619,11 @@ export interface SeriesEditorResource {
   moveFiles?: boolean;
   deleteFiles?: boolean;
   addImportListExclusion?: boolean;
+}
+
+export interface SeriesFolderResource {
+  language?: Language;
+  folder?: string | null;
 }
 
 export interface SeriesResource {
@@ -1579,9 +1643,13 @@ export interface SeriesResource {
   network?: string | null;
   airTime?: string | null;
   images?: MediaCover[] | null;
+  language?: Language;
   originalLanguage?: Language;
   remotePoster?: string | null;
+  seasonType?: string | null;
   seasons?: SeasonResource[] | null;
+  seasonTypes?: SeasonTypeResource[] | null;
+  translations?: SeriesTranslationResource[] | null;
   /** @format int32 */
   year?: number;
   path?: string | null;
@@ -1607,10 +1675,13 @@ export interface SeriesResource {
   lastAired?: string | null;
   seriesType?: SeriesTypes;
   cleanTitle?: string | null;
+  originalTitle?: string | null;
+  cleanOriginalTitle?: string | null;
   imdbId?: string | null;
   titleSlug?: string | null;
   rootFolderPath?: string | null;
   folder?: string | null;
+  folders?: SeriesFolderResource[] | null;
   certification?: string | null;
   genres?: string[] | null;
   /** @uniqueItems true */
@@ -1652,6 +1723,12 @@ export interface SeriesTitleInfo {
   allTitles?: string[] | null;
 }
 
+export interface SeriesTranslationResource {
+  language?: Language;
+  title?: string | null;
+  overview?: string | null;
+}
+
 export interface SystemResource {
   appName?: string | null;
   instanceName?: string | null;
@@ -1671,6 +1748,7 @@ export interface SystemResource {
   isOsx?: boolean;
   isWindows?: boolean;
   isDocker?: boolean;
+  isContainerized?: boolean;
   mode?: RuntimeMode;
   branch?: string | null;
   authentication?: AuthenticationType;
@@ -1698,6 +1776,7 @@ export interface TagDetailsResource {
   importListIds?: number[] | null;
   notificationIds?: number[] | null;
   restrictionIds?: number[] | null;
+  excludedReleaseProfileIds?: number[] | null;
   indexerIds?: number[] | null;
   downloadClientIds?: number[] | null;
   autoTagIds?: number[] | null;
@@ -1741,6 +1820,7 @@ export interface UiConfigResource {
   shortDateFormat?: string | null;
   longDateFormat?: string | null;
   timeFormat?: string | null;
+  timeZone?: string | null;
   showRelativeDates?: boolean;
   enableColorImpairedMode?: boolean;
   theme?: string | null;

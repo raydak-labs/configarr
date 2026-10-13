@@ -28,7 +28,7 @@ export class Logout<SecurityDataType = unknown> {
    * @secure
    */
   logoutList = (params: RequestParams = {}) =>
-    this.http.request<void, any>({
+    this.http.request<any, void>({
       path: `/logout`,
       method: "GET",
       secure: true,
