@@ -303,6 +303,30 @@ describe("SonarrClient", () => {
     });
   });
 
+  it("rejects duplicate quality names in profile-size overrides", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (request: Request) => {
+        const url = new URL(request.url);
+        if (url.pathname === "/api") {
+          return Response.json({ current: "v5", deprecated: ["v3"] });
+        }
+        if (url.pathname === "/api/v5/qualityprofile" && request.method === "GET") {
+          return Response.json([{ id: 1, name: "WEB-1080p", items: [] }]);
+        }
+        throw new Error(`Unexpected request ${request.method} ${url.pathname}`);
+      }),
+    );
+    const client = new SonarrClient("http://sonarr.test", "api-key");
+
+    await expect(
+      client.updateProfileQualitySizes("1", [
+        { quality: "WEBDL-1080p", minSize: 1 },
+        { quality: "WEBDL-1080p", minSize: 2 },
+      ]),
+    ).rejects.toThrow("Duplicate quality size override for 'WEBDL-1080p'.");
+  });
+
   it("does not expose profile-specific quality sizes on Sonarr v4", async () => {
     vi.stubGlobal(
       "fetch",

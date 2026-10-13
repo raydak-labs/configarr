@@ -427,7 +427,13 @@ export class SonarrClient
     if (current == null) {
       throw new Error(`Sonarr quality profile '${profileId}' was not found while updating quality sizes.`);
     }
-    const sizes = new Map<string, SonarrProfileQualitySizeValues>(overrides.map(({ quality, ...size }) => [quality, size]));
+    const sizes = new Map<string, SonarrProfileQualitySizeValues>();
+    for (const { quality, ...size } of overrides) {
+      if (sizes.has(quality)) {
+        throw new Error(`Duplicate quality size override for '${quality}'.`);
+      }
+      sizes.set(quality, size);
+    }
     await this.apiV5.v5QualityprofileUpdate(profileId, {
       ...current,
       items: mergeProfileQualitySizes(current.items, sizes),
