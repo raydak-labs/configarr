@@ -15,7 +15,9 @@ It integrates with TRaSH Guides to automate updates of custom formats, quality p
 Configarr offers flexibility with deployment options like Docker and Kubernetes, ensuring compatibility with the latest versions of Sonarr and Radarr.
 By streamlining media server management, it saves time, enhances consistency, and reduces manual intervention.
 
-Official support for Sonarr v4+ and Radarr v5+.
+Official support for Sonarr v4 and the Sonarr v5 beta, and Radarr v5+.
+Sonarr API versions are detected at runtime, so existing v4 configurations continue to work.
+See the [configuration documentation](https://configarr.de/docs/configuration/config-file) for Sonarr v5-only settings.
 
 This will be a project similar to [Recyclarr](https://github.com/recyclarr/recyclarr) or [Notifiarr](https://notifiarr.wiki/) but support for additional specification and not only what [TRaSH-Guides](https://trash-guides.info/) offer.
 
@@ -44,7 +46,7 @@ Images are available via Github Container Registry (ghcr) and dockerhub with tag
 ### Supported \*arr Applications
 
 - Radarr v5+
-- Sonarr v4+
+- Sonarr v4 and v5 beta (v5-only settings require a v5 instance)
 - Whisparr (experimental)
 - Readarr (experimental)
 - Lidarr (experimental)

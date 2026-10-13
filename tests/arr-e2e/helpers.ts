@@ -20,13 +20,56 @@ const FLARESOLVERR_DEFAULT_BASE_URL = "http://127.0.0.1:18191";
 export type MediaArrClient = SonarrClient | RadarrClient | WhisparrClient | ReadarrClient | LidarrClient;
 
 /** Status endpoint per *arr, for the readiness wait in `globalSetup`. */
-const STATUS_PATHS: Record<MediaArrType, string> = {
-  SONARR: "/api/v3/system/status",
+const STATUS_PATHS: Omit<Record<MediaArrType, string>, "SONARR"> = {
   RADARR: "/api/v3/system/status",
   WHISPARR: "/api/v3/system/status",
   READARR: "/api/v1/system/status",
   LIDARR: "/api/v1/system/status",
 };
+
+async function sonarrStatusPath(baseUrl: string, apiKey: string): Promise<string> {
+  const response = await fetch(`${baseUrl}/api`, {
+    headers: { "X-Api-Key": apiKey },
+    signal: AbortSignal.timeout(3000),
+  });
+  if (!response.ok) throw new Error(`GET ${baseUrl}/api returned ${response.status}`);
+
+  const apiInfo: unknown = await response.json();
+  if (apiInfo === null || typeof apiInfo !== "object" || !("current" in apiInfo)) {
+    throw new Error(`GET ${baseUrl}/api returned an invalid API version document`);
+  }
+  const version = apiInfo.current;
+  if (version !== "v3" && version !== "v5") {
+    throw new Error(`Unsupported Sonarr API version '${String(version)}'`);
+  }
+  return `/api/${version}/system/status`;
+}
+
+async function waitForSonarrApi(baseUrl: string, apiKey: string, timeoutMs = 180_000): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  let lastError: unknown;
+  while (Date.now() < deadline) {
+    let authFailure: Error | undefined;
+    try {
+      const statusPath = await sonarrStatusPath(baseUrl, apiKey);
+      const response = await fetch(`${baseUrl}${statusPath}`, {
+        headers: { "X-Api-Key": apiKey },
+        signal: AbortSignal.timeout(3000),
+      });
+      if (response.ok) return;
+      if (response.status === 401 || response.status === 403) {
+        authFailure = new Error(`${baseUrl}${statusPath} returned ${response.status} (API key / auth env vars)`);
+      } else {
+        lastError = new Error(`HTTP ${response.status}`);
+      }
+    } catch (error) {
+      lastError = error;
+    }
+    if (authFailure) throw authFailure;
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+  }
+  throw new Error(`Timed out waiting for ${baseUrl} Sonarr API: ${String(lastError)}`);
+}
 
 export function createProwlarrClient(): ProwlarrClient {
   const { baseUrl, apiKey } = arrConnection("PROWLARR");
@@ -90,6 +133,13 @@ async function anyArrReachable(): Promise<boolean> {
     if (!res.ok && res.status !== 401 && res.status !== 403) throw new Error(`HTTP ${res.status}`);
     return true;
   });
+  const sonarr = arrConnection("SONARR");
+  probes.push(
+    fetch(`${sonarr.baseUrl}/api`, { headers: { "X-Api-Key": sonarr.apiKey }, signal: AbortSignal.timeout(3000) }).then((res) => {
+      if (!res.ok && res.status !== 401 && res.status !== 403) throw new Error(`HTTP ${res.status}`);
+      return true;
+    }),
+  );
   const results = await Promise.allSettled(probes);
   return results.some((r) => r.status === "fulfilled");
 }
@@ -104,6 +154,10 @@ export async function waitForAllArrApis(timeoutMs = 180_000): Promise<void> {
   const prowlarr = arrConnection("PROWLARR");
   const flaresolverr = process.env.FLARESOLVERR_BASE_URL ?? FLARESOLVERR_DEFAULT_BASE_URL;
   await Promise.all([
+    (async () => {
+      const { baseUrl, apiKey } = arrConnection("SONARR");
+      await waitForSonarrApi(baseUrl, apiKey, timeoutMs);
+    })(),
     ...Object.entries(STATUS_PATHS).map(async ([kind, statusPath]) => {
       const { baseUrl, apiKey } = arrConnection(kind as MediaArrType);
       await waitForArrApi(baseUrl, apiKey, statusPath, timeoutMs);
@@ -396,6 +450,11 @@ export async function cleanupMediaE2e(client: MediaArrClient): Promise<void> {
       await tryDelete(errors, "release", () => client.deleteReleaseProfile(String(profile.id)));
     }
   }
+  for (const tag of tags) {
+    if (tag.id != null && (tag.label === "e2e-release" || tag.label === "e2e-release-excluded")) {
+      await tryDelete(errors, "release tag", () => client.deleteTag(String(tag.id)));
+    }
+  }
 
   const folders = await client.getRootfolders();
   for (const folder of folders) {
@@ -478,6 +537,7 @@ export type MediaBaseline = {
   naming: unknown;
   delayDefault: unknown;
   qualityDefinitions: unknown;
+  profileQualitySizes: Awaited<ReturnType<SonarrClient["getProfileQualitySizes"]>> | undefined;
   downloadClientConfig: unknown;
 };
 
@@ -490,6 +550,8 @@ export async function snapshotMediaBaseline(client: MediaArrClient): Promise<Med
     naming: await client.getNaming(),
     delayDefault: defaultDelayProfile(delays),
     qualityDefinitions: await client.getQualityDefinitions(),
+    profileQualitySizes:
+      client instanceof SonarrClient && (await client.supportsProfileQualitySizes()) ? await client.getProfileQualitySizes() : undefined,
     downloadClientConfig: await client.getDownloadClientConfig(),
   };
 }
@@ -514,6 +576,22 @@ export async function restoreMediaBaseline(client: MediaArrClient, snap: MediaBa
   const definitions = snap.qualityDefinitions;
   if (Array.isArray(definitions) && JSON.stringify(definitions) !== JSON.stringify(await client.getQualityDefinitions())) {
     await client.updateQualityDefinitions(definitions as never);
+  }
+
+  if (client instanceof SonarrClient && snap.profileQualitySizes) {
+    const currentProfiles = new Set((await client.getProfileQualitySizes()).map((profile) => profile.id));
+    for (const profile of snap.profileQualitySizes) {
+      if (!currentProfiles.has(profile.id)) continue;
+      await client.updateProfileQualitySizes(
+        String(profile.id),
+        profile.items.map((item) => ({
+          quality: item.quality,
+          minSize: item.minSize ?? null,
+          preferredSize: item.preferredSize ?? null,
+          maxSize: item.maxSize ?? null,
+        })),
+      );
+    }
   }
 }
 

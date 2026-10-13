@@ -160,6 +160,38 @@ describe("validateConfig", () => {
     });
   });
 
+  test("accepts Sonarr v5 release-profile controls in strict mode", () => {
+    const input = {
+      name: "HEVC",
+      required: ["hevc"],
+      indexers: ["Usenet", "Torrents"],
+      excluded_tags: ["anime"],
+      air_date_restriction: true,
+      air_date_grace_period: 7,
+      allow_season_pack_without_all_episodes_aired: false,
+    };
+
+    expect(validateConfig(InputConfigReleaseProfileSchema, input, "release profile", true)).toEqual(input);
+  });
+
+  test("rejects conflicting singular and plural indexer selectors", () => {
+    expect(() =>
+      validateConfig(InputConfigReleaseProfileSchema, { name: "HEVC", indexer: "Usenet", indexers: ["Torrents"] }, "release profile", true),
+    ).toThrow("Use either 'indexer' or 'indexers', not both.");
+  });
+
+  test("rejects duplicate plural indexer names ignoring case", () => {
+    expect(() => validateConfig(InputConfigReleaseProfileSchema, { indexers: ["Usenet", " usenet "] }, "release profile", true)).toThrow(
+      "Indexer 'usenet' is listed more than once.",
+    );
+  });
+
+  test("rejects duplicate excluded release-profile tags ignoring case", () => {
+    expect(() => validateConfig(InputConfigReleaseProfileSchema, { excluded_tags: ["anime", " Anime "] }, "release profile", true)).toThrow(
+      "Excluded tag 'Anime' is listed more than once.",
+    );
+  });
+
   test("accepts Recyclarr trash_ids release profiles in strict mode", () => {
     const input = [{ trash_ids: ["abc"], strict_negative_scores: true }];
     expect(validateConfig(InputConfigReleaseProfilesSchema, input, "release profiles", true)).toEqual(input);

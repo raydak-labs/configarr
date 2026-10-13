@@ -531,6 +531,10 @@ export abstract class BaseQualityProfileSync<T extends QualityProfileShared> {
     return this.api.deleteQualityProfile(qualityProfile.id + "");
   }
 
+  async validateConfig(config: MergedConfigInstance): Promise<void> {
+    await this.validateQualitySizeConfig(config.quality_profiles);
+  }
+
   async persist(diff: QualityProfileDiffResult, write: boolean): Promise<void> {
     if (!write) {
       return;
@@ -888,5 +892,11 @@ export abstract class BaseQualityProfileSync<T extends QualityProfileShared> {
     }
 
     return { create: createQPs, changedQPs: changedQPs, noChanges: noChangedQPs, changes };
+  }
+
+  protected async validateQualitySizeConfig(profiles: ConfigQualityProfile[]): Promise<void> {
+    if (profiles.some((profile) => profile.quality_sizes?.length)) {
+      throw new ConfigValidationError("Per-profile quality_sizes are only supported by Sonarr v5.");
+    }
   }
 }

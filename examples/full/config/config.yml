@@ -142,6 +142,73 @@ sonarr:
           remote_path: "/downloads"
           local_path: "/downloads/2"
 
+  instance-v5:
+    enabled: true
+    base_url: http://sonarr-v5:8989
+    api_key: !secret SONARR_V5_API_KEY
+
+    include:
+      # TRaSH Guides WEB-1080p profile, including its custom-format scores and groups.
+      - template: 72dae194fc92bf828f32cde7744e51a1
+        source: TRASH
+
+    quality_definition:
+      type: series
+      qualities:
+        - quality: WEBDL-1080p
+          min: 5
+          preferred: 50
+          max: 199.9
+
+    root_folders:
+      - /app
+
+    ui_config:
+      firstDayOfWeek: 1
+
+    media_naming:
+      series: default
+      season: default
+      episodes:
+        rename: true
+        standard: default
+        daily: default
+        anime: default
+
+    quality_profiles:
+      - name: WEB-1080p v5 example
+        upgrade:
+          allowed: true
+          until_quality: WEB 1080p
+          until_score: 0
+        qualities:
+          - name: WEB 1080p
+            qualities:
+              - WEBDL-1080p
+              - WEBRip-1080p
+        quality_sizes:
+          - quality: WEBDL-1080p
+            min: 0
+            preferred: 75
+            max: 200
+
+    # This list is the complete desired state for release profiles on this instance.
+    release_profiles:
+      - name: Example v5 release policy
+        enabled: true
+        indexers: [] # Empty means all indexers.
+        tags: []
+        excluded_tags: []
+        air_date_restriction: true
+        air_date_grace_period: 12 # Hours.
+        allow_season_pack_without_all_episodes_aired: false
+
+    media_management:
+      skipFreeSpaceCheckWhenGrabbing: false
+      seasonPackUpgrade: threshold
+      seasonPackUpgradeThreshold: 80
+      userRejectedExtensions: ".xyz"
+
 radarr:
   instance1:
     # Set the URL/API Key to your actual instance

@@ -7,6 +7,7 @@
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
 import { SonarrClient } from "../../src/clients/sonarr-client";
 import { DownloadProtocol } from "../../src/__generated__/sonarr/data-contracts";
+import type { IndexerResource as SonarrIndexerResource } from "../../src/__generated__/sonarr-v5/data-contracts";
 import { StandardDelayProfileSync } from "../../src/delayProfiles/delayProfileBase";
 import { InputConfigDelayProfileSchema } from "../../src/types/config.types";
 import {
@@ -64,6 +65,79 @@ const delayProfiles = (usenetDelay: number, additional: boolean) => ({
   ...(additional ? { additional: [{ ...delayDefault(usenetDelay), order: 1, tags: ["e2e-delay"] }] } : {}),
 });
 
+const releaseProfileIndexerNames = ["e2e-release-indexer-1", "e2e-release-indexer-2"];
+
+async function cleanupReleaseProfileIndexers(client: SonarrClient, baseUrl: string, apiKey: string): Promise<void> {
+  if (!(await client.supportsReleaseProfileControls())) return;
+
+  for (const indexer of await client.getIndexers()) {
+    if (indexer.id != null && releaseProfileIndexerNames.includes(indexer.name ?? "")) {
+      const response = await fetch(`${baseUrl}/api/v5/indexer/${indexer.id}`, {
+        method: "DELETE",
+        headers: { "X-Api-Key": apiKey },
+      });
+      if (!response.ok) {
+        throw new Error(`Failed to delete test Sonarr indexer '${indexer.name}': HTTP ${response.status}`);
+      }
+    }
+  }
+}
+
+async function createReleaseProfileIndexers(
+  client: SonarrClient,
+  baseUrl: string,
+  apiKey: string,
+): Promise<Array<{ id: number; name: string }>> {
+  const schemaResponse = await fetch(`${baseUrl}/api/v5/indexer/schema`, {
+    headers: { "X-Api-Key": apiKey },
+  });
+  if (!schemaResponse.ok) {
+    throw new Error(`Failed to load Sonarr indexer schemas: HTTP ${schemaResponse.status}`);
+  }
+  const schemas: SonarrIndexerResource[] = await schemaResponse.json();
+  const schema = schemas.find((candidate) => candidate.implementation === "Newznab");
+  if (schema == null) {
+    throw new Error("Sonarr does not expose the Newznab indexer schema required by the release-profile e2e test.");
+  }
+
+  const created: Array<{ id: number; name: string }> = [];
+  try {
+    for (const name of releaseProfileIndexerNames) {
+      const payload: SonarrIndexerResource = {
+        ...schema,
+        id: 0,
+        name,
+        fields: schema.fields?.map((field) => ({
+          ...field,
+          value: field.name === "baseUrl" ? "http://127.0.0.1:1" : field.name === "apiKey" ? "e2e" : field.value,
+        })),
+        tags: [],
+        enableRss: false,
+        enableAutomaticSearch: false,
+        enableInteractiveSearch: false,
+      };
+      const response = await fetch(`${baseUrl}/api/v5/indexer`, {
+        method: "POST",
+        headers: { "X-Api-Key": apiKey, "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!response.ok) {
+        throw new Error(`Failed to create test Sonarr indexer '${name}': HTTP ${response.status} ${await response.text()}`);
+      }
+      const indexer = (await client.getIndexers()).find((candidate) => candidate.name === name);
+      if (indexer?.id == null) {
+        throw new Error(`Sonarr did not return the created test indexer '${name}'.`);
+      }
+      created.push({ id: indexer.id, name });
+    }
+  } catch (error) {
+    await cleanupReleaseProfileIndexers(client, baseUrl, apiKey);
+    throw error;
+  }
+
+  return created;
+}
+
 describe("sonarr (live)", () => {
   const { baseUrl, apiKey } = arrConnection("SONARR");
   const client = new SonarrClient(baseUrl, apiKey);
@@ -71,6 +145,7 @@ describe("sonarr (live)", () => {
 
   beforeAll(async () => {
     await cleanupMediaE2e(client);
+    await cleanupReleaseProfileIndexers(client, baseUrl, apiKey);
     baseline = await snapshotMediaBaseline(client);
   }, 180_000);
 
@@ -78,6 +153,7 @@ describe("sonarr (live)", () => {
     await teardown(
       () => restoreMediaBaseline(client, baseline),
       () => cleanupMediaE2e(client),
+      () => cleanupReleaseProfileIndexers(client, baseUrl, apiKey),
     );
   });
 
@@ -153,6 +229,57 @@ describe("sonarr (live)", () => {
     expect(findNamed(await client.getQualityProfiles(), "e2e-qp")).toBeUndefined();
   });
 
+  test("per-profile quality sizes", async () => {
+    if (!(await client.supportsProfileQualitySizes())) {
+      return;
+    }
+
+    const profile = (name: string, min: number, preferred: number) => ({
+      ...qualityProfile(),
+      name,
+      quality_sizes: [{ quality: "WEBDL-1080p", min, preferred, max: 200 }],
+    });
+    const yaml = (secondPreferred: number) =>
+      mediaConfig("SONARR", {
+        quality_definition: qualityDefinition(5),
+        quality_profiles: [
+          profile("e2e-size-a", 1, 60),
+          profile("e2e-size-b", 2, secondPreferred),
+          { ...qualityProfile(), name: "e2e-size-default" },
+        ],
+      });
+    const sizes = async (name: string) => (await client.getProfileQualitySizes()).find((item) => item.name === name)?.items;
+
+    const created = await syncConfig(yaml(80));
+    assertPipelineSucceeded(created.result, ["SONARR"]);
+    await waitUntil(async () => (await sizes("e2e-size-a"))?.find((item) => item.quality === "WEBDL-1080p")?.minSize === 1);
+    expect((await sizes("e2e-size-a"))?.find((item) => item.quality === "WEBDL-1080p")).toMatchObject({
+      minSize: 1,
+      preferredSize: 60,
+      maxSize: 200,
+    });
+    expect((await sizes("e2e-size-b"))?.find((item) => item.quality === "WEBDL-1080p")).toMatchObject({
+      minSize: 2,
+      preferredSize: 80,
+      maxSize: 200,
+    });
+    expect((await sizes("e2e-size-default"))?.find((item) => item.quality === "WEBDL-1080p")).toMatchObject({
+      minSize: 5,
+      preferredSize: 50,
+      maxSize: 199.9,
+    });
+
+    const second = await syncConfig(yaml(80), created.workspace);
+    assertPipelineSucceeded(second.result, ["SONARR"]);
+    assertDiffUpToDate(second.result, ["SONARR"]);
+
+    const updated = await syncConfig(yaml(90), created.workspace);
+    assertPipelineSucceeded(updated.result, ["SONARR"]);
+    await waitUntil(async () => (await sizes("e2e-size-b"))?.find((item) => item.quality === "WEBDL-1080p")?.preferredSize === 90);
+    expect((await sizes("e2e-size-a"))?.find((item) => item.quality === "WEBDL-1080p")?.preferredSize).toBe(60);
+    expect((await sizes("e2e-size-default"))?.find((item) => item.quality === "WEBDL-1080p")?.preferredSize).toBe(50);
+  });
+
   test("quality definitions", async () => {
     const webdl = async () => (await client.getQualityDefinitions()).find((d) => d.quality?.name === "WEBDL-1080p");
 
@@ -173,18 +300,49 @@ describe("sonarr (live)", () => {
   });
 
   test("media settings", async () => {
-    const created = await syncConfig(mediaConfig("SONARR", e2eMediaSettings(1)));
+    const supportsV5Controls = await client.supportsMediaManagementControls();
+    const mediaSettings = (firstDayOfWeek: number, seasonPackUpgradeThreshold: number) => ({
+      ...e2eMediaSettings(firstDayOfWeek),
+      media_management: {
+        recycleBin: "/tmp",
+        ...(supportsV5Controls
+          ? {
+              skipFreeSpaceCheckWhenGrabbing: true,
+              seasonPackUpgrade: "threshold",
+              seasonPackUpgradeThreshold,
+              userRejectedExtensions: ".dog",
+            }
+          : {}),
+      },
+    });
+    const created = await syncConfig(mediaConfig("SONARR", mediaSettings(1, 80.5)));
     assertPipelineSucceeded(created.result, ["SONARR"]);
     expect(((await client.getMediamanagement()) as { recycleBin?: string }).recycleBin).toBe("/tmp");
+    if (supportsV5Controls) {
+      expect(await client.getMediamanagement()).toMatchObject({
+        skipFreeSpaceCheckWhenGrabbing: true,
+        seasonPackUpgrade: "threshold",
+        seasonPackUpgradeThreshold: 80.5,
+        userRejectedExtensions: ".dog",
+      });
+    }
     expect(((await client.getNaming()) as { replaceIllegalCharacters?: boolean }).replaceIllegalCharacters).toBe(true);
     expect(((await client.getUiConfig()) as { firstDayOfWeek?: number }).firstDayOfWeek).toBe(1);
 
-    const updated = await syncConfig(mediaConfig("SONARR", e2eMediaSettings(0)), created.workspace);
+    const updated = await syncConfig(mediaConfig("SONARR", mediaSettings(0, 75.25)), created.workspace);
     assertPipelineSucceeded(updated.result, ["SONARR"]);
     expect(((await client.getUiConfig()) as { firstDayOfWeek?: number }).firstDayOfWeek).toBe(0);
     expect(((await client.getMediamanagement()) as { recycleBin?: string }).recycleBin).toBe("/tmp");
+    if (supportsV5Controls) {
+      expect(await client.getMediamanagement()).toMatchObject({
+        skipFreeSpaceCheckWhenGrabbing: true,
+        seasonPackUpgrade: "threshold",
+        seasonPackUpgradeThreshold: 75.25,
+        userRejectedExtensions: ".dog",
+      });
+    }
 
-    const second = await syncConfig(mediaConfig("SONARR", e2eMediaSettings(0)), created.workspace);
+    const second = await syncConfig(mediaConfig("SONARR", mediaSettings(0, 75.25)), created.workspace);
     assertPipelineSucceeded(second.result, ["SONARR"]);
     assertDiffUpToDate(second.result, ["SONARR"]);
   });
@@ -214,15 +372,42 @@ describe("sonarr (live)", () => {
   });
 
   test("release profiles", async () => {
+    const supportsV5Controls = await client.supportsReleaseProfileControls();
+    const indexers = supportsV5Controls ? await createReleaseProfileIndexers(client, baseUrl, apiKey) : [];
+    const selector = supportsV5Controls ? { indexers: releaseProfileIndexerNames } : { indexer: "" };
+    const v5Controls = supportsV5Controls
+      ? {
+          ...selector,
+          excluded_tags: ["e2e-release-excluded"],
+          air_date_restriction: true,
+          air_date_grace_period: 12,
+          allow_season_pack_without_all_episodes_aired: true,
+        }
+      : selector;
     const yaml = (required: string[], include: boolean) =>
       mediaConfig("SONARR", {
-        release_profiles: include ? [{ name: "e2e-hevc", required, ignored: ["xvid"], tags: ["e2e-release"] }] : [],
+        release_profiles: include ? [{ name: "e2e-hevc", required, ignored: ["xvid"], tags: ["e2e-release"], ...v5Controls }] : [],
       });
     const managed = async () => (await client.getReleaseProfiles()).filter((p) => p.name === "e2e-hevc");
 
     const created = await syncConfig(yaml(["hevc"], true));
     assertPipelineSucceeded(created.result, ["SONARR"]);
     expect(await managed()).toHaveLength(1);
+    if (supportsV5Controls) {
+      const excludedTag = (await client.getTags()).find((tag) => tag.label === "e2e-release-excluded");
+      if (excludedTag?.id == null) {
+        throw new Error("Sonarr did not create the excluded release-profile test tag.");
+      }
+      expect(await managed()).toMatchObject([
+        {
+          indexerIds: indexers.map((indexer) => indexer.id).sort((left, right) => left - right),
+          excludedTags: [excludedTag.id],
+          airDateRestriction: true,
+          airDateGracePeriod: 12,
+          allowSeasonPackWithoutAllEpisodesAired: true,
+        },
+      ]);
+    }
 
     const second = await syncConfig(yaml(["hevc"], true), created.workspace);
     assertPipelineSucceeded(second.result, ["SONARR"]);
@@ -231,6 +416,13 @@ describe("sonarr (live)", () => {
     const updated = await syncConfig(yaml(["hevc", "x265"], true), created.workspace);
     assertPipelineSucceeded(updated.result, ["SONARR"]);
     expect((await managed())[0]?.required).toEqual(expect.arrayContaining(["hevc", "x265"]));
+    if (supportsV5Controls) {
+      expect((await managed())[0]).toMatchObject({
+        airDateRestriction: true,
+        airDateGracePeriod: 12,
+        allowSeasonPackWithoutAllEpisodesAired: true,
+      });
+    }
 
     const removed = await syncConfig(yaml(["hevc"], false), created.workspace);
     assertPipelineSucceeded(removed.result, ["SONARR"]);

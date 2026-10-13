@@ -23,14 +23,14 @@ describe("ReleaseProfileLidarrSync", () => {
   test("drops name from the payload and warns once", () => {
     const sync = new ReleaseProfileLidarrSync(api);
 
-    expect(sync.mapToServer({ name: "HEVC", required: ["hevc"] }, [], 0)).toEqual({
+    expect(sync.mapToServer({ name: "HEVC", required: ["hevc"] }, [], [])).toEqual({
       enabled: true,
       required: ["hevc"],
       ignored: [],
       indexerId: 0,
       tags: [],
     });
-    sync.mapToServer({ name: "Other", required: ["x265"] }, [], 0);
+    sync.mapToServer({ name: "Other", required: ["x265"] }, [], []);
 
     expect(logger.warn).toHaveBeenCalledTimes(1);
     expect(logger.warn).toHaveBeenCalledWith("Release profile 'name' is not supported on this *arr and will be ignored.");

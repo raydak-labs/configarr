@@ -19,6 +19,7 @@ import { BaseDownloadClientSync } from "../downloadClients/downloadClientBase";
 import { getEnvs } from "../env";
 import { logger } from "../logger";
 import { MediaManagementSync, mediamanagementDiffToDiffEntries, namingDiffToDiffEntries } from "../mediaManagement/mediaManagement";
+import type { SonarrMediaManagementResource } from "../clients/sonarr-client";
 import { QualityDefinitionSync, qualityDefinitionsToDiffEntries } from "../qualityDefinitions/qualityDefinition";
 import { BaseQualityProfileSync, getUnmanagedQualityProfiles, qualityProfilesToDiffEntries } from "../qualityProfiles/qualityProfileBase";
 import { BaseReleaseProfileSync } from "../releaseProfiles/releaseProfileBase";
@@ -58,7 +59,6 @@ import type {
 } from "../__generated__/readarr/data-contracts";
 import type {
   DownloadClientResource as SonarrDownloadClientResource,
-  MediaManagementConfigResource as SonarrMediaManagementConfigResource,
   NamingConfigResource as SonarrNamingConfigResource,
   QualityDefinitionResource as SonarrQualityDefinitionResource,
   QualityProfileResource as SonarrQualityProfileResource,
@@ -111,7 +111,7 @@ type MediaArrResources = {
   SONARR: {
     qualityDefinition: SonarrQualityDefinitionResource;
     naming: SonarrNamingConfigResource;
-    mediaManagement: SonarrMediaManagementConfigResource;
+    mediaManagement: SonarrMediaManagementResource;
     qualityProfile: SonarrQualityProfileResource;
     releaseProfile: SonarrReleaseProfileResource;
     downloadClient: SonarrDownloadClientResource;
@@ -155,6 +155,7 @@ export type MediaSyncContext<T extends MediaArrType = MediaArrType> = {
   serverCache: ServerCache;
   collector: DiffCollector;
   syncs: MediaFeatureSyncs<T>;
+  qualityDefinitionDefaults: TrashQualityDefinitionQuality[];
 };
 
 export type MediaSyncToQualityProfilesArgs<T extends MediaArrType = MediaArrType> = {
@@ -173,6 +174,7 @@ export const runMediaSyncToQualityProfiles = async <T extends MediaArrType>(
   const { arrType, instanceName, globalConfig, instanceConfig, client, syncs, trash } = args;
   const { qd: qdSync, mm: mmSync, qp: qpSync } = syncs;
   const collector = new DiffCollector();
+  let qualityDefinitionDefaults: TrashQualityDefinitionQuality[] = [];
 
   const system = await client.getSystemStatus();
   logger.info(`System status: ${JSON.stringify(system)}`);
@@ -190,6 +192,9 @@ export const runMediaSyncToQualityProfiles = async <T extends MediaArrType>(
   logger.info(`Server objects: CustomFormats ${serverCFs.length}`);
 
   const { config } = await mergeConfigsAndTemplates(globalConfig, instanceConfig, arrType);
+  await qpSync.validateConfig(config);
+  await mmSync.validateConfig(config.media_management);
+  await syncs.releaseProfiles.validateConfig(config.release_profiles ?? []);
 
   if (Telemetry.isEnabled()) {
     getTelemetryInstance().trackInstanceConfig(config, arrType);
@@ -293,10 +298,14 @@ export const runMediaSyncToQualityProfiles = async <T extends MediaArrType>(
     if (config.quality_definition.qualities) {
       mergedQDs.push(...config.quality_definition.qualities);
     }
+    qualityDefinitionDefaults = mergedQDs;
 
     const writeQd = !getEnvs().DRY_RUN;
     const { changeMap, restData } = await qdSync.persist(serverCache.qualityDefinitions, mergedQDs, writeQd);
 
+    if (restData.length > 0) {
+      serverCache.qualityDefinitions = restData;
+    }
     if (changeMap.size > 0) {
       collector.add(qualityDefinitionsToDiffEntries(changeMap));
 
@@ -304,7 +313,6 @@ export const runMediaSyncToQualityProfiles = async <T extends MediaArrType>(
         logger.info("DryRun: Would update QualityDefinitions.");
       } else {
         logger.info(`Diffs in quality definitions found ${changeMap.values()}`);
-        serverCache.qualityDefinitions = restData;
         logger.info(`Updated QualityDefinitions`);
       }
     } else {
@@ -395,7 +403,7 @@ export const runMediaSyncToQualityProfiles = async <T extends MediaArrType>(
     }
   }
 
-  return { arrType, instanceName, client, config, serverCache, collector, syncs };
+  return { arrType, instanceName, client, config, serverCache, collector, syncs, qualityDefinitionDefaults };
 };
 
 export const completeMediaSync = async <T extends MediaArrType>(ctx: MediaSyncContext<T>): Promise<InstanceDiffReport> => {

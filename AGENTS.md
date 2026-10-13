@@ -31,6 +31,7 @@ Store design, architecture, and implementation planning documents created during
 
 - **`.ai/docs/specs/`** — feature design and architecture decisions
 - **`.ai/docs/plans/`** — step-by-step implementation plans
+- **`.ai/docs/tasks.md`** — brief active follow-ups; check before work and tell the user when a listed task is relevant.
 
 Specs are dated and fixed, not living documents — a spec is a record of the decision made at that time, not a description of current code (read the code for that). Do not edit a spec's decisions after the fact to match later changes.
 
@@ -45,7 +46,7 @@ Specs are dated and fixed, not living documents — a spec is a record of the de
 
 The project supports multiple \*arr applications with varying feature support:
 
-- **Full Support**: Sonarr v4, Radarr v5
+- **Full Support**: Sonarr v4 and v5, Radarr v5
 - **Experimental**: Lidarr, Readarr, Whisparr
 - **Experimental (Prowlarr v1)**: Applications, Indexers, Indexer Proxies, Download Clients
   (dedicated `prowlarr:` config block and its own minimal pipeline in `index.ts`; not a media
@@ -53,6 +54,8 @@ The project supports multiple \*arr applications with varying feature support:
   *arr including Prowlarr, but the mechanics live in `src/tags/`. Provider resources share a
   generic base (`src/prowlarr/providerResourceSync.ts`); see `src/prowlarr/` and
   `src/clients/prowlarr-client.ts`.
+
+- **Sonarr compatibility:** Preserve support for both v4 and v5 in every Sonarr change. When changing Sonarr code, config, API mappings, or tests, verify both versions with relevant coverage; keep v5-only behavior guarded on v4.
 
 ### Typed per-*arr clients
 

@@ -3,11 +3,20 @@ import type { IndexerListItem, ReleaseProfilesApi } from "../clients/capabilitie
 import { DiffEntry, FieldChange } from "../diffReport/diffReport.types";
 import { getEnvs } from "../env";
 import { logger } from "../logger";
-import { Tag } from "../tags/tag.types";
+import { Tag, TagResolveOptions } from "../tags/tag.types";
 import { buildTagPlaceholders, ensureTags, resolveTagNames } from "../tags/tags";
 import { InputConfigReleaseProfile } from "../types/config.types";
 import { ConfigValidationError } from "../validation";
 import { MappedReleaseProfile, ReleaseProfileShared, ReleaseProfilesDiff, ReleaseProfileSyncResult } from "./releaseProfile.types";
+
+export interface ReleaseProfileAdapter<Server extends ReleaseProfileShared, Request extends ReleaseProfileShared> {
+  mapToServer(profile: InputConfigReleaseProfile, serverTags: Tag[], indexers: IndexerListItem[], tagOptions?: TagResolveOptions): Request;
+  profileKey(profile: Server | Request, supportsName: boolean): string;
+  matches(mapped: Request, server: Server, supportsName: boolean): boolean;
+  compareFields(mapped: Request, server: Server, supportsName: boolean, placeholderLabels?: Map<number, string>): FieldChange[];
+  mergeForUpdate(mapped: Request, server: Server): Request;
+  tagLabels(profile: InputConfigReleaseProfile): string[];
+}
 
 export function normalizeTerms(value: unknown): string[] {
   if (value == null) {
@@ -134,33 +143,75 @@ export function resolveIndexerId(indexerName: string | undefined, indexers: Inde
   return found.id;
 }
 
-export class BaseReleaseProfileSync<T extends ReleaseProfileShared> {
+export function sharedReleaseProfileAdapter<Server extends ReleaseProfileShared>(): ReleaseProfileAdapter<Server, ReleaseProfileShared> {
+  return {
+    mapToServer(profile, serverTags, indexers, tagOptions) {
+      const { ids: tagIds } = resolveTagNames(profile.tags ?? [], serverTags, tagOptions);
+      return {
+        ...(profile.name?.trim() ? { name: profile.name.trim() } : {}),
+        enabled: profile.enabled ?? true,
+        required: normalizeTerms(profile.required),
+        ignored: normalizeTerms(profile.ignored),
+        indexerId: resolveIndexerId(profile.indexer, indexers),
+        tags: tagIds,
+      };
+    },
+    profileKey(profile, supportsName) {
+      return profileKey(profile, supportsName);
+    },
+    matches(mapped, server, _supportsName) {
+      return contentKey(mapped) === contentKey(server);
+    },
+    compareFields(mapped, server, supportsName, placeholderLabels) {
+      return compareFields(mapped, server, supportsName, placeholderLabels);
+    },
+    mergeForUpdate(mapped, server) {
+      return {
+        ...mapped,
+        id: server.id,
+        ...(mapped.name != null || server.name != null ? { name: mapped.name ?? server.name } : {}),
+      };
+    },
+    tagLabels(profile) {
+      return profile.tags ?? [];
+    },
+  };
+}
+
+export class BaseReleaseProfileSync<T extends ReleaseProfileShared, Request extends ReleaseProfileShared = ReleaseProfileShared> {
   private warnedAboutName = false;
 
   constructor(
-    protected readonly api: ReleaseProfilesApi<T>,
+    protected readonly api: ReleaseProfilesApi<T, Request>,
     protected readonly supportsName: boolean,
+    private readonly adapter: ReleaseProfileAdapter<T, Request>,
   ) {}
 
-  mapToServer(profile: InputConfigReleaseProfile, tagIds: number[], indexerId: number): ReleaseProfileShared {
+  async validateConfig(configs: InputConfigReleaseProfile[]): Promise<void> {
+    const unsupported = configs.find(
+      (profile) =>
+        profile.indexers !== undefined ||
+        profile.excluded_tags !== undefined ||
+        profile.air_date_restriction !== undefined ||
+        profile.air_date_grace_period !== undefined ||
+        profile.allow_season_pack_without_all_episodes_aired !== undefined,
+    );
+    if (unsupported) {
+      throw new ConfigValidationError("Sonarr v5 release-profile options are not supported by this *arr.");
+    }
+  }
+
+  mapToServer(profile: InputConfigReleaseProfile, serverTags: Tag[], indexers: IndexerListItem[], tagOptions?: TagResolveOptions): Request {
     const name = profile.name?.trim();
     if (!this.supportsName && name && !this.warnedAboutName) {
       logger.warn(`Release profile 'name' is not supported on this *arr and will be ignored.`);
       this.warnedAboutName = true;
     }
 
-    const mapped: ReleaseProfileShared = {
-      enabled: profile.enabled ?? true,
-      required: normalizeTerms(profile.required),
-      ignored: normalizeTerms(profile.ignored),
-      indexerId,
-      tags: tagIds,
-    };
-
-    if (this.supportsName && name) {
-      mapped.name = name;
+    const mapped = this.adapter.mapToServer(profile, serverTags, indexers, tagOptions);
+    if (!this.supportsName && name) {
+      delete mapped.name;
     }
-
     return mapped;
   }
 
@@ -168,7 +219,7 @@ export class BaseReleaseProfileSync<T extends ReleaseProfileShared> {
     const missingTags = new Set<string>();
     for (const config of configs) {
       // Configured casing wins: this is the label the server gets.
-      resolveTagNames(config.tags ?? [], serverCache.tags).missing.forEach((tag) => missingTags.add(tag));
+      resolveTagNames(this.adapter.tagLabels(config), serverCache.tags).missing.forEach((tag) => missingTags.add(tag));
     }
 
     if (missingTags.size === 0) {
@@ -182,21 +233,21 @@ export class BaseReleaseProfileSync<T extends ReleaseProfileShared> {
     configs: InputConfigReleaseProfile[],
     serverCache: ServerCache,
     placeholderMissingTags = getEnvs().DRY_RUN,
-  ): Promise<ReleaseProfilesDiff> {
+  ): Promise<ReleaseProfilesDiff<T, Request>> {
     const serverData = await this.api.getReleaseProfiles();
-    const needsIndexers = configs.some((config) => config.indexer != null && config.indexer !== "");
+    const needsIndexers = configs.some((config) => (config.indexer != null && config.indexer !== "") || (config.indexers?.length ?? 0) > 0);
     const indexers = needsIndexers ? await serverCache.getIndexers(() => this.api.getIndexers()) : [];
 
     const placeholders = placeholderMissingTags
       ? buildTagPlaceholders(
-          configs.flatMap((config) => config.tags ?? []),
+          configs.flatMap((config) => this.adapter.tagLabels(config)),
           serverCache.tags,
         )
       : undefined;
-    const mappedConfigs: MappedReleaseProfile[] = configs.map((config) => {
-      const { ids } = resolveTagNames(config.tags ?? [], serverCache.tags, { placeholders });
-      return { config, mapped: this.mapToServer(config, ids, resolveIndexerId(config.indexer, indexers)) };
-    });
+    const mappedConfigs: MappedReleaseProfile<Request>[] = configs.map((config) => ({
+      config,
+      mapped: this.mapToServer(config, serverCache.tags, indexers, { placeholders }),
+    }));
 
     // Inverted once every stand-in is assigned, so the report can name a stand-in id instead of
     // printing a number the server never handed out.
@@ -205,7 +256,7 @@ export class BaseReleaseProfileSync<T extends ReleaseProfileShared> {
 
     const seen = new Map<string, number>();
     mappedConfigs.forEach((entry, index) => {
-      const key = profileKey(entry.mapped, this.supportsName);
+      const key = this.adapter.profileKey(entry.mapped, this.supportsName);
       if (seen.has(key)) {
         throw new ConfigValidationError(`Duplicate release profile '${displayName(entry.config, index)}'.`);
       }
@@ -213,8 +264,8 @@ export class BaseReleaseProfileSync<T extends ReleaseProfileShared> {
     });
 
     const servers = serverData.map((profile) => ({ profile, claimed: false }));
-    const create: MappedReleaseProfile[] = [];
-    const update: ReleaseProfilesDiff["update"] = [];
+    const create: MappedReleaseProfile<Request>[] = [];
+    const update: ReleaseProfilesDiff<T, Request>["update"] = [];
 
     const named = mappedConfigs.filter((entry) => usesName(entry.mapped, this.supportsName));
     const nameless = mappedConfigs.filter((entry) => !usesName(entry.mapped, this.supportsName));
@@ -222,7 +273,7 @@ export class BaseReleaseProfileSync<T extends ReleaseProfileShared> {
     for (const entry of [...named, ...nameless]) {
       const match = usesName(entry.mapped, this.supportsName)
         ? servers.find((server) => !server.claimed && server.profile.name?.trim() === entry.mapped.name?.trim())
-        : servers.find((server) => !server.claimed && contentKey(server.profile) === contentKey(entry.mapped));
+        : servers.find((server) => !server.claimed && this.adapter.matches(entry.mapped, server.profile, this.supportsName));
 
       if (match == null) {
         create.push(entry);
@@ -230,7 +281,7 @@ export class BaseReleaseProfileSync<T extends ReleaseProfileShared> {
       }
 
       match.claimed = true;
-      const fieldChanges = compareFields(entry.mapped, match.profile, this.supportsName, placeholderLabels);
+      const fieldChanges = this.adapter.compareFields(entry.mapped, match.profile, this.supportsName, placeholderLabels);
       if (fieldChanges.length > 0) {
         update.push({ config: entry.config, server: match.profile, mapped: entry.mapped, fieldChanges });
       }
@@ -240,6 +291,7 @@ export class BaseReleaseProfileSync<T extends ReleaseProfileShared> {
   }
 
   async sync(configs: InputConfigReleaseProfile[], serverCache: ServerCache): Promise<ReleaseProfileSyncResult> {
+    await this.validateConfig(configs);
     // Validates duplicates and indexer names before any tag is created.
     const preview = await this.calculateDiff(configs, serverCache, true);
 
@@ -273,11 +325,7 @@ export class BaseReleaseProfileSync<T extends ReleaseProfileShared> {
         throw new Error("Release profile id missing from server; cannot update.");
       }
       logger.info(`Updating ReleaseProfile: '${displayName(item.config, updated)}'`);
-      await this.api.updateReleaseProfile(String(item.server.id), {
-        ...item.mapped,
-        id: item.server.id,
-        ...(item.mapped.name != null || item.server.name != null ? { name: item.mapped.name ?? item.server.name } : {}),
-      });
+      await this.api.updateReleaseProfile(String(item.server.id), this.adapter.mergeForUpdate(item.mapped, item.server));
       updated++;
     }
 
@@ -298,7 +346,9 @@ export class BaseReleaseProfileSync<T extends ReleaseProfileShared> {
   }
 }
 
-export function releaseProfilesToDiffEntries(diff: ReleaseProfilesDiff): DiffEntry[] {
+export function releaseProfilesToDiffEntries<Server extends ReleaseProfileShared, Request extends ReleaseProfileShared>(
+  diff: ReleaseProfilesDiff<Server, Request>,
+): DiffEntry[] {
   const entries: DiffEntry[] = [];
 
   diff.create.forEach((item, index) => {

@@ -28,6 +28,7 @@ const context = (): MediaSyncContext => {
     serverCache: new ServerCache(),
     collector: new DiffCollector(),
     syncs,
+    qualityDefinitionDefaults: [],
   };
 };
 

@@ -527,6 +527,34 @@ sonarr:
               - WEBRip-1080p
 ```
 
+Sonarr v5 stores size limits on each quality-profile quality instead of globally. Keep
+`quality_definition` for a shared default, then set `quality_sizes` on a profile only
+where it needs a different value. Per-profile values take precedence field by field;
+omitted fields inherit the global default, or keep Sonarr's current value when neither
+form configures that field. `quality_sizes` requires Sonarr v5; Configarr reports an
+error before applying changes if it is used with Sonarr v4.
+
+```yml
+sonarr:
+  instance1:
+    quality_definition:
+      qualities:
+        - quality: WEBDL-1080p
+          min: 5
+          preferred: 50
+          max: 199.9
+
+    quality_profiles:
+      - name: WEB-1080p
+        quality_sizes:
+          - quality: WEBDL-1080p
+            min: 0
+            preferred: 75
+```
+
+Quality selectors accept the quality name or display title shown in Sonarr. Only the
+configured fields are changed; zero is a valid size value.
+
 ### Quality Profile Rename {#quality-profile-rename}
 
 Support has been added to allow renaming quality profiles.
@@ -959,8 +987,16 @@ yourarr:
         ignored: # Must Not Contain
           - xvid
         indexer: MyIndexer # optional indexer name; omitted = any indexer
+        # Sonarr v5 only: use `indexers` instead of `indexer` to select multiple by name.
+        # An empty list, or omitting both selector fields, means any indexer.
+        # indexers: [Usenet, Torrents]
         tags:
           - hevc # tag labels; created if missing. Empty = all series/movies
+        # Sonarr v5 only; omitted policy fields keep their current server values on update.
+        # excluded_tags: [anime] # overrides `tags` when a series has a matching tag
+        # air_date_restriction: true
+        # air_date_grace_period: 12 # hours
+        # allow_season_pack_without_all_episodes_aired: true
 ```
 
 Notes:
@@ -971,6 +1007,9 @@ Notes:
 - Lidarr and Readarr have no name field, so a change to required/ignored/tags/indexer is treated as a new profile (delete + create).
 - Duplicate names (or duplicate nameless content) in the list fail validation
 - Unknown indexer names fail validation
+- Sonarr v5 also supports multiple `indexers`, `excluded_tags`, and air-date/season-pack policies. `indexer` and `indexers` cannot be used together; `indexers: []` means any indexer, as on the Sonarr server.
+- These added options require Sonarr v5. Configarr rejects them on Sonarr v4 rather than silently dropping them.
+- `excluded_tags` takes precedence over `tags`; a label cannot be present in both lists. `air_date_grace_period` is measured in hours. Omitted v5 policy fields preserve the existing server value on update and use Sonarr's default on create.
 - Preferred-word scoring still belongs in `custom_formats` / `quality_profiles`
 
 ## Download Clients <span className="theme-doc-version-badge badge badge--secondary configarr-badge">1.19.0</span>
@@ -1164,9 +1203,18 @@ Prowlarr download clients use the same `download_clients` block as the other \*A
   MediaManagement APIs:
   - https://radarr.video/docs/api/#/MediaManagementConfig/get_api_v3_config_mediamanagement
   - https://sonarr.tv/docs/api/#/MediaManagementConfig/get_api_v3_config_mediamanagement
+  - https://sonarr.tv/docs/api/
   - https://whisparr.com/docs/api/#/MediaManagementConfig/get_api_v3_config_mediamanagement
   - https://readarr.com/docs/api/#/MediaManagementConfig/get_api_v1_config_mediamanagement
   - https://lidarr.audio/docs/api/#/MediaManagementConfig/get_api_v1_config_mediamanagement
+
+  Sonarr v5 additionally supports these `media_management` fields:
+  - `skipFreeSpaceCheckWhenGrabbing`: skips the root-folder free-space check before grabbing a release. It is separate from `skipFreeSpaceCheckWhenImporting`.
+  - `seasonPackUpgrade`: `all`, `threshold`, or `any`; selects how many existing episodes in a season pack must qualify as upgrades.
+  - `seasonPackUpgradeThreshold`: percentage from `0` to `100`, used when `seasonPackUpgrade` is `threshold`.
+  - `userRejectedExtensions`: comma-separated additional file extensions (with or without leading dots). Sonarr rejects valid media and archive extensions from this list. To fail a download for a configured extension, enable the separate **User Defined Extensions** fail-download option on the applicable indexers.
+
+  These fields are Sonarr v5-only; Configarr rejects them on Sonarr v4 and other media managers before applying any sync changes.
 
 - Experimental support for `ui_config` (since v1.21.0)
   Allows configuring UI settings like theme, language, calendar preferences, etc.

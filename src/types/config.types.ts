@@ -54,8 +54,36 @@ export const InputConfigQualityProfileItemSchema = z.object({
 });
 export type InputConfigQualityProfileItem = z.infer<typeof InputConfigQualityProfileItemSchema>;
 
+export const InputConfigQualitySizeSchema = z
+  .object({
+    quality: z.string(),
+    min: z.number().optional(),
+    preferred: z.number().optional(),
+    max: z.number().optional(),
+  })
+  .refine(
+    ({ min, preferred, max }) => min !== undefined || preferred !== undefined || max !== undefined,
+    "At least one of min, preferred, or max must be configured.",
+  );
+export type InputConfigQualitySize = z.infer<typeof InputConfigQualitySizeSchema>;
+
 export const InputConfigQualityProfileSchema = z.object({
   name: z.string(),
+  quality_sizes: z
+    .array(InputConfigQualitySizeSchema)
+    .optional()
+    .superRefine((sizes, ctx) => {
+      const seen = new Set<string>();
+      for (const [index, size] of (sizes ?? []).entries()) {
+        const quality = size.quality.trim();
+        if (quality.length === 0) {
+          ctx.addIssue({ code: "custom", path: [index, "quality"], message: "Quality name must not be empty." });
+        } else if (seen.has(quality)) {
+          ctx.addIssue({ code: "custom", path: [index, "quality"], message: `Quality '${quality}' is listed more than once.` });
+        }
+        seen.add(quality);
+      }
+    }),
   reset_unmatched_scores: z
     .object({
       enabled: z.boolean(),
@@ -232,14 +260,57 @@ export const InputConfigDelayProfileSchema = z.preprocess(
 );
 export type InputConfigDelayProfile = z.infer<typeof InputConfigDelayProfileSchema>;
 
-export const InputConfigReleaseProfileSchema = z.object({
-  name: z.string().optional(),
-  enabled: z.boolean().optional(),
-  required: z.array(z.string()).optional(),
-  ignored: z.array(z.string()).optional(),
-  indexer: z.string().optional(),
-  tags: z.array(z.string()).optional(),
-});
+export const InputConfigReleaseProfileSchema = z
+  .object({
+    name: z.string().optional(),
+    enabled: z.boolean().optional(),
+    required: z.array(z.string()).optional(),
+    ignored: z.array(z.string()).optional(),
+    indexer: z.string().optional(),
+    indexers: z
+      .array(z.string())
+      .optional()
+      .superRefine((indexers, ctx) => {
+        const seen = new Set<string>();
+        for (const [index, name] of (indexers ?? []).entries()) {
+          const normalized = name.trim();
+          const comparisonName = normalized.toLowerCase();
+          if (normalized.length === 0) {
+            ctx.addIssue({ code: "custom", path: [index], message: "Indexer name must not be empty." });
+          } else if (seen.has(comparisonName)) {
+            ctx.addIssue({ code: "custom", path: [index], message: `Indexer '${normalized}' is listed more than once.` });
+          }
+          seen.add(comparisonName);
+        }
+      }),
+    tags: z.array(z.string()).optional(),
+    excluded_tags: z
+      .array(z.string())
+      .optional()
+      .superRefine((tags, ctx) => {
+        const seen = new Set<string>();
+        for (const [index, tag] of (tags ?? []).entries()) {
+          const normalized = tag.trim();
+          const comparisonTag = normalized.toLowerCase();
+          if (seen.has(comparisonTag)) {
+            ctx.addIssue({ code: "custom", path: [index], message: `Excluded tag '${normalized}' is listed more than once.` });
+          }
+          seen.add(comparisonTag);
+        }
+      }),
+    air_date_restriction: z.boolean().optional(),
+    air_date_grace_period: z.number().int().nonnegative().optional(),
+    allow_season_pack_without_all_episodes_aired: z.boolean().optional(),
+  })
+  .superRefine((profile, ctx) => {
+    if (profile.indexer !== undefined && profile.indexers !== undefined) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["indexers"],
+        message: "Use either 'indexer' or 'indexers', not both.",
+      });
+    }
+  });
 export type InputConfigReleaseProfile = z.infer<typeof InputConfigReleaseProfileSchema>;
 
 export const InputConfigRecyclarrReleaseProfileSchema = z.looseObject({ trash_ids: z.unknown() });
@@ -261,8 +332,15 @@ export const InputConfigDownloadClientSchema = z.object({
 });
 export type InputConfigDownloadClient = z.infer<typeof InputConfigDownloadClientSchema>;
 
-// APIs not consistent across different *arrs. Keeping empty/generic and open to arbitrary keys.
-export const MediaManagementTypeSchema = z.object({}).passthrough();
+// APIs are not consistent across different *arrs, so keep arbitrary server-defined keys available.
+export const MediaManagementTypeSchema = z
+  .object({
+    skipFreeSpaceCheckWhenGrabbing: z.boolean().optional(),
+    seasonPackUpgrade: z.enum(["all", "threshold", "any"]).optional(),
+    seasonPackUpgradeThreshold: z.number().min(0).max(100).optional(),
+    userRejectedExtensions: z.string().optional(),
+  })
+  .passthrough();
 export type MediaManagementType = z.infer<typeof MediaManagementTypeSchema>;
 
 export const UiConfigTypeSchema = z.object({}).passthrough();
@@ -543,9 +621,10 @@ export type ConfigArrInstance = OmitTyped<
 
 export type ConfigQualityProfile = OmitTyped<
   Required<InputConfigQualityProfile>,
-  "qualities" | "reset_unmatched_scores" | "language" | "score_set"
+  "qualities" | "quality_sizes" | "reset_unmatched_scores" | "language" | "score_set"
 > & {
   qualities: ConfigQualityProfileItem[];
+  quality_sizes?: InputConfigQualitySize[];
   reset_unmatched_scores?: InputConfigQualityProfile["reset_unmatched_scores"];
 } & Pick<InputConfigQualityProfile, "language" | "score_set">;
 

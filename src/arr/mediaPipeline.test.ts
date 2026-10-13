@@ -108,6 +108,9 @@ const qdSync = (order: Order) => ({
 });
 
 const mmSync = (order: Order) => ({
+  validateConfig: vi.fn(async () => {
+    order.push("validateMediaManagement");
+  }),
   persistNaming: vi.fn(async () => {
     order.push("naming");
     return null;
@@ -119,6 +122,9 @@ const mmSync = (order: Order) => ({
 });
 
 const qpSync = (order: Order, diff: QualityProfileDiffResult = emptyQpDiff()) => ({
+  validateConfig: vi.fn(async () => {
+    order.push("validate");
+  }),
   loadFromServer: vi.fn(async () => []),
   calculateQualityProfilesDiff: vi.fn(async () => diff),
   persist: vi.fn(async () => {
@@ -135,7 +141,10 @@ const syncs = (order: Order) =>
     mm: mmSync(order),
     qp: qpSync(order),
     delay: { calculateDiff: vi.fn(async () => null) },
-    releaseProfiles: { sync: vi.fn(async () => ({ diffEntries: [] })) },
+    releaseProfiles: {
+      validateConfig: vi.fn(async () => undefined),
+      sync: vi.fn(async () => ({ diffEntries: [] })),
+    },
     root: { syncRootFolders: vi.fn(async () => ({ added: 0, removed: 0, updated: 0, diffEntries: [] })) },
     downloadClients: { syncDownloadClients: vi.fn(async () => ({ added: 0, updated: 0, removed: 0, failed: 0, diffEntries: [] })) },
   }) as unknown as MediaFeatureSyncs;
@@ -165,9 +174,50 @@ describe("runMediaSyncToQualityProfiles", () => {
       return { diffEntries: [] } as never;
     });
 
-    await run(order, syncs(order));
+    const syncObjects = syncs(order);
+    await run(order, syncObjects);
 
-    expect(order).toEqual(["qd", "naming", "mediaManagement", "uiConfig", "qp"]);
+    expect(syncObjects.qp.validateConfig).toHaveBeenCalledOnce();
+    expect(order).toEqual(["validate", "validateMediaManagement", "qd", "naming", "mediaManagement", "uiConfig", "qp"]);
+  });
+
+  it("validates configuration before any mutating feature runs", async () => {
+    const order: Order = [];
+    const syncObjects = syncs(order);
+    vi.mocked(syncObjects.qp.validateConfig).mockRejectedValue(new Error("unsupported configuration"));
+
+    await expect(run(order, syncObjects)).rejects.toThrow("unsupported configuration");
+
+    expect(order).toEqual([]);
+    expect(syncObjects.qd.persist).not.toHaveBeenCalled();
+    expect(syncObjects.mm.persistNaming).not.toHaveBeenCalled();
+    expect(syncObjects.mm.persistMediamanagement).not.toHaveBeenCalled();
+    expect(syncObjects.qp.persist).not.toHaveBeenCalled();
+  });
+
+  it("validates release-profile capabilities before any mutating feature runs", async () => {
+    const order: Order = [];
+    const syncObjects = syncs(order);
+    vi.mocked(syncObjects.releaseProfiles.validateConfig).mockRejectedValue(new Error("unsupported release-profile option"));
+
+    await expect(run(order, syncObjects)).rejects.toThrow("unsupported release-profile option");
+
+    expect(order).toEqual(["validate", "validateMediaManagement"]);
+    expect(syncObjects.qd.persist).not.toHaveBeenCalled();
+    expect(syncObjects.mm.persistNaming).not.toHaveBeenCalled();
+  });
+
+  it("validates media-management capabilities before any mutating feature runs", async () => {
+    const order: Order = [];
+    const syncObjects = syncs(order);
+    vi.mocked(syncObjects.mm.validateConfig).mockRejectedValue(new Error("unsupported media-management option"));
+
+    await expect(run(order, syncObjects)).rejects.toThrow("unsupported media-management option");
+
+    expect(order).toEqual(["validate"]);
+    expect(syncObjects.qd.persist).not.toHaveBeenCalled();
+    expect(syncObjects.mm.persistNaming).not.toHaveBeenCalled();
+    expect(syncObjects.mm.persistMediamanagement).not.toHaveBeenCalled();
   });
 
   it("passes write=false to every write boundary on a dry run", async () => {
