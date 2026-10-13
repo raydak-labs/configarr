@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.35.0](https://github.com/raydak-labs/configarr/compare/v1.34.1...v1.35.0) (2026-10-13)
+
+### Features
+
+- add sonarr v5 support ([#564](https://github.com/raydak-labs/configarr/issues/564)) ([6af9dd3](https://github.com/raydak-labs/configarr/commit/6af9dd3a3ddd14281989353f3c2264f1fadf2b04))
+
 ## [1.34.1](https://github.com/raydak-labs/configarr/compare/v1.34.0...v1.34.1) (2026-10-08)
 
 ### Bug Fixes
