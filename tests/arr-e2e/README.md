@@ -21,11 +21,12 @@ The suite only runs through its own config (`vitest.arr-e2e.config.ts`); `pnpm t
 
 ## Layout and run order
 
-One file per *arr, each owning its container end to end. That is also what makes the run parallel:
+One file per *arr, each owning its container end to end. The regular suite runs the six per-*arr files in parallel, then the cross-arr pipeline and Sonarr v5 matrix run:
 
 - `pnpm test:e2e:arr:parallel` — the six per-*arr files, in parallel (~40s). Its config excludes the pipeline file, so a direct `vitest run --config vitest.arr-e2e.config.ts` cannot mix the two.
 - `pnpm test:e2e:arr:pipeline` — `pipeline.e2e.test.ts` alone through `vitest.arr-e2e.pipeline.config.ts`, since it drives every container from one config.yml (~15s).
-- `pnpm test:e2e:arr` — both, in that order.
+- `pnpm test:e2e:arr:sonarr-v5` — reruns the Sonarr feature file against the v5 container.
+- `pnpm test:e2e:arr` — all three stages in that order; both Sonarr v4 and v5 are included.
 
 `globalSetup.ts` waits for all APIs once and warms the Recyclarr/TRaSH clone; each file then copies that clone, because configarr checks out its pinned revision on every run and two files sharing one clone would race on `.git/index.lock`.
 
@@ -33,12 +34,10 @@ Each file cleans its *arr in `beforeAll`, snapshots the server-wide settings it 
 
 ## Ports / API key
 
-Override with `SONARR_BASE_URL`, `SONARR_API_KEY`, …, `PROWLARR_BASE_URL`, `PROWLARR_API_KEY`. The Sonarr test defaults to v4; to run its full feature suite against the pinned v5 beta instead, target the second container:
+Override with `SONARR_BASE_URL`, `SONARR_API_KEY`, …, `PROWLARR_BASE_URL`, `PROWLARR_API_KEY`. The normal suite tests Sonarr v4 and v5. The v5 stage defaults to port `18990` and the test API key; override it independently with `SONARR_V5_BASE_URL` and `SONARR_V5_API_KEY`. To run just the v5 Sonarr feature file:
 
 ```bash
-SONARR_BASE_URL=http://127.0.0.1:18990 \
-SONARR_API_KEY=e2etestapikey0123456789abcdef012 \
-pnpm exec vitest run --config vitest.arr-e2e.config.ts tests/arr-e2e/sonarr.e2e.test.ts
+pnpm test:e2e:arr:sonarr-v5
 ```
 
 The two Sonarr containers use separate config/database volumes. Do not share their volumes or use `docker compose down -v` if the local test databases should be retained.

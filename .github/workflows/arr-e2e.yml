@@ -79,12 +79,6 @@ jobs:
       - name: Run arr e2e suite
         run: pnpm test:e2e:arr
 
-      - name: Run Sonarr v5 e2e suite
-        env:
-          SONARR_BASE_URL: http://127.0.0.1:18990
-          SONARR_API_KEY: e2etestapikey0123456789abcdef012
-        run: pnpm exec vitest run --config vitest.arr-e2e.config.ts tests/arr-e2e/sonarr.e2e.test.ts
-
       - name: Dump compose logs on failure
         if: failure()
         working-directory: tests/arr-e2e
