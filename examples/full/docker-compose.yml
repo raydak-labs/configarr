@@ -19,12 +19,9 @@ services:
       - 6500:8989
     restart: unless-stopped
 
-  # Optional Sonarr v5 beta target; enable with --profile sonarr-v5.
-  # Keep its config volume separate from the v4 instance.
+  # Pinned Sonarr v5 beta example. Keep its config volume separate from v4.
   sonarr-v5:
     image: lscr.io/linuxserver/sonarr@sha256:2c1e9317f330e84a4c6e8c9295361b3a9ae425786295d8b3cfd12c7cbc008f53
-    profiles:
-      - sonarr-v5
     networks:
       - configarr-full
     environment:

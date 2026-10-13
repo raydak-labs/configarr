@@ -143,9 +143,14 @@ sonarr:
           local_path: "/downloads/2"
 
   instance-v5:
-    enabled: false # Set to true and start the sonarr-v5 Compose profile to use this instance.
+    enabled: true
     base_url: http://sonarr-v5:8989
     api_key: !secret SONARR_V5_API_KEY
+
+    include:
+      # TRaSH Guides WEB-1080p profile, including its custom-format scores and groups.
+      - template: 72dae194fc92bf828f32cde7744e51a1
+        source: TRASH
 
     quality_definition:
       type: series
@@ -155,11 +160,27 @@ sonarr:
           preferred: 50
           max: 199.9
 
+    root_folders:
+      - /app
+
+    ui_config:
+      firstDayOfWeek: 1
+
+    media_naming:
+      series: default
+      season: default
+      episodes:
+        rename: true
+        standard: default
+        daily: default
+        anime: default
+
     quality_profiles:
       - name: WEB-1080p v5 example
         upgrade:
           allowed: true
           until_quality: WEB 1080p
+          until_score: 0
         qualities:
           - name: WEB 1080p
             qualities:
