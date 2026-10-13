@@ -138,7 +138,10 @@ const syncs = (order: Order) =>
     mm: mmSync(order),
     qp: qpSync(order),
     delay: { calculateDiff: vi.fn(async () => null) },
-    releaseProfiles: { sync: vi.fn(async () => ({ diffEntries: [] })) },
+    releaseProfiles: {
+      validateConfig: vi.fn(async () => undefined),
+      sync: vi.fn(async () => ({ diffEntries: [] })),
+    },
     root: { syncRootFolders: vi.fn(async () => ({ added: 0, removed: 0, updated: 0, diffEntries: [] })) },
     downloadClients: { syncDownloadClients: vi.fn(async () => ({ added: 0, updated: 0, removed: 0, failed: 0, diffEntries: [] })) },
   }) as unknown as MediaFeatureSyncs;
@@ -187,6 +190,18 @@ describe("runMediaSyncToQualityProfiles", () => {
     expect(syncObjects.mm.persistNaming).not.toHaveBeenCalled();
     expect(syncObjects.mm.persistMediamanagement).not.toHaveBeenCalled();
     expect(syncObjects.qp.persist).not.toHaveBeenCalled();
+  });
+
+  it("validates release-profile capabilities before any mutating feature runs", async () => {
+    const order: Order = [];
+    const syncObjects = syncs(order);
+    vi.mocked(syncObjects.releaseProfiles.validateConfig).mockRejectedValue(new Error("unsupported release-profile option"));
+
+    await expect(run(order, syncObjects)).rejects.toThrow("unsupported release-profile option");
+
+    expect(order).toEqual(["validate"]);
+    expect(syncObjects.qd.persist).not.toHaveBeenCalled();
+    expect(syncObjects.mm.persistNaming).not.toHaveBeenCalled();
   });
 
   it("passes write=false to every write boundary on a dry run", async () => {

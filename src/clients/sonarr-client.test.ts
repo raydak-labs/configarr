@@ -155,4 +155,77 @@ describe("SonarrClient", () => {
 
     await expect(client.supportsProfileQualitySizes()).resolves.toBe(false);
   });
+
+  it("round-trips all Sonarr v5 release-profile fields through the generated v5 resource", async () => {
+    const profile = {
+      id: 3,
+      name: "HEVC",
+      enabled: true,
+      required: ["hevc"],
+      ignored: ["xvid"],
+      indexerIds: [7, 8],
+      tags: [4],
+      excludedTags: [5],
+      airDateRestriction: true,
+      airDateGracePeriod: 12,
+      allowSeasonPackWithoutAllEpisodesAired: true,
+    };
+    const requests: Array<{ method: string; path: string; body?: unknown }> = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (request: Request) => {
+        const url = new URL(request.url);
+        const body = request.method === "PUT" ? await request.json() : undefined;
+        requests.push({ method: request.method, path: url.pathname, body });
+        if (url.pathname === "/api") {
+          return Response.json({ current: "v5", deprecated: ["v3"] });
+        }
+        if (url.pathname === "/api/v5/releaseprofile" && request.method === "GET") {
+          return Response.json([profile]);
+        }
+        if (url.pathname === "/api/v5/releaseprofile/3" && request.method === "PUT") {
+          return Response.json(body);
+        }
+        throw new Error(`Unexpected request ${request.method} ${url.pathname}`);
+      }),
+    );
+    const client = new SonarrClient("http://sonarr.test", "api-key");
+    const [current] = await client.getReleaseProfiles();
+
+    if (!current) {
+      throw new Error("Expected one release profile from the v5 API.");
+    }
+    await client.updateReleaseProfile("3", { ...current, required: ["hevc", "x265"] });
+
+    expect(requests).toEqual([
+      { method: "GET", path: "/api", body: undefined },
+      { method: "GET", path: "/api/v5/releaseprofile", body: undefined },
+      {
+        method: "PUT",
+        path: "/api/v5/releaseprofile/3",
+        body: { ...profile, required: ["hevc", "x265"] },
+      },
+    ]);
+  });
+
+  it("projects the v3 release-profile resource for legacy Sonarr", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (request: Request) => {
+        const url = new URL(request.url);
+        if (url.pathname === "/api") {
+          return Response.json({ current: "v3", deprecated: [] });
+        }
+        if (url.pathname === "/api/v3/releaseprofile") {
+          return Response.json([{ id: 3, name: "HEVC", enabled: true, required: ["hevc"], ignored: [], indexerId: 7, tags: [4] }]);
+        }
+        throw new Error(`Unexpected request ${request.method} ${url.pathname}`);
+      }),
+    );
+    const client = new SonarrClient("http://sonarr.test", "api-key");
+
+    await expect(client.getReleaseProfiles()).resolves.toMatchObject([
+      { id: 3, name: "HEVC", indexerIds: [7], required: ["hevc"], tags: [4] },
+    ]);
+  });
 });

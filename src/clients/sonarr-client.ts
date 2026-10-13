@@ -98,7 +98,19 @@ function copyV5QualityProfileItem(item: SonarrQualityItemV5): NonNullable<Qualit
   };
 }
 
-function copyV5ReleaseProfile(profile: SonarrReleaseProfileV5): ReleaseProfileResource {
+function copyV3ReleaseProfile(profile: ReleaseProfileResource): SonarrReleaseProfileV5 {
+  return {
+    id: profile.id,
+    name: profile.name,
+    enabled: profile.enabled,
+    required: profile.required,
+    ignored: profile.ignored,
+    indexerIds: profile.indexerId == null || profile.indexerId <= 0 ? [] : [profile.indexerId],
+    tags: profile.tags,
+  };
+}
+
+function toV3ReleaseProfile(profile: SonarrReleaseProfileV5): ReleaseProfileResource {
   return {
     id: profile.id,
     name: profile.name,
@@ -297,7 +309,6 @@ export class SonarrClient
   private apiVersion?: Promise<"v3" | "v5">;
   private v5QualitySizes = new Map<string, QualitySize>();
   private v5QualityProfiles: SonarrQualityProfileV5[] = [];
-  private v5ReleaseProfiles: SonarrReleaseProfileV5[] = [];
   private v5CustomFormatSchema?: Promise<SonarrCustomFormatSpecificationV5[]>;
 
   constructor(baseUrl: string, apiKey: string) {
@@ -593,49 +604,28 @@ export class SonarrClient
     );
   }
 
-  async getReleaseProfiles(): Promise<ReleaseProfileResource[]> {
+  async supportsReleaseProfileControls(): Promise<boolean> {
+    return (await this.getApiVersion()) === "v5";
+  }
+
+  async getReleaseProfiles(): Promise<SonarrReleaseProfileV5[]> {
     return this.versioned(
-      () => this.apiV3.v3ReleaseprofileList(),
-      async () => {
-        this.v5ReleaseProfiles = await this.apiV5.v5ReleaseprofileList();
-        return this.v5ReleaseProfiles.map(copyV5ReleaseProfile);
-      },
+      async () => (await this.apiV3.v3ReleaseprofileList()).map(copyV3ReleaseProfile),
+      () => this.apiV5.v5ReleaseprofileList(),
     );
   }
 
-  async createReleaseProfile(profile: ReleaseProfileResource): Promise<ReleaseProfileResource> {
+  async createReleaseProfile(profile: SonarrReleaseProfileV5): Promise<SonarrReleaseProfileV5> {
     return this.versioned(
-      () => this.apiV3.v3ReleaseprofileCreate(profile),
-      async () => {
-        const created = await this.apiV5.v5ReleaseprofileCreate({
-          ...profile,
-          airDateGracePeriod: 0,
-          indexerIds: profile.indexerId === undefined || profile.indexerId <= 0 ? [] : [profile.indexerId],
-        });
-        this.v5ReleaseProfiles.push(created);
-        return copyV5ReleaseProfile(created);
-      },
+      async () => copyV3ReleaseProfile(await this.apiV3.v3ReleaseprofileCreate(toV3ReleaseProfile(profile))),
+      () => this.apiV5.v5ReleaseprofileCreate(profile),
     );
   }
 
-  async updateReleaseProfile(id: string, data: ReleaseProfileResource): Promise<ReleaseProfileResource> {
+  async updateReleaseProfile(id: string, data: SonarrReleaseProfileV5): Promise<SonarrReleaseProfileV5> {
     return this.versioned(
-      () => this.apiV3.v3ReleaseprofileUpdate(id, data),
-      async () => {
-        const current = this.v5ReleaseProfiles.find((profile) => profile.id === Number(id));
-        const updated = await this.apiV5.v5ReleaseprofileUpdate(id, {
-          ...data,
-          airDateGracePeriod: current?.airDateGracePeriod ?? 0,
-          indexerIds:
-            data.indexerId === undefined || data.indexerId <= 0
-              ? []
-              : current?.indexerIds?.[0] === data.indexerId
-                ? current.indexerIds
-                : [data.indexerId],
-        });
-        this.v5ReleaseProfiles = this.v5ReleaseProfiles.map((profile) => (profile.id === updated.id ? updated : profile));
-        return copyV5ReleaseProfile(updated);
-      },
+      async () => copyV3ReleaseProfile(await this.apiV3.v3ReleaseprofileUpdate(id, toV3ReleaseProfile(data))),
+      () => this.apiV5.v5ReleaseprofileUpdate(id, data),
     );
   }
 

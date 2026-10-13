@@ -64,7 +64,10 @@ const makeSyncs = (): MediaFeatureSyncs =>
       persist: vi.fn(async () => undefined),
     },
     delay: { calculateDiff: vi.fn(async () => null) },
-    releaseProfiles: { sync: vi.fn(async () => ({ added: 0, removed: 0, diffEntries: [] })) },
+    releaseProfiles: {
+      validateConfig: vi.fn(async () => undefined),
+      sync: vi.fn(async () => ({ added: 0, removed: 0, diffEntries: [] })),
+    },
     root: { syncRootFolders: vi.fn(async () => emptySyncResult) },
     downloadClients: {
       syncDownloadClients: vi.fn(async () => ({ added: 0, updated: 0, removed: 0, failed: 0, diffEntries: [] })),

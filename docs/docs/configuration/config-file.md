@@ -987,8 +987,16 @@ yourarr:
         ignored: # Must Not Contain
           - xvid
         indexer: MyIndexer # optional indexer name; omitted = any indexer
+        # Sonarr v5 only: use `indexers` instead of `indexer` to select multiple by name.
+        # An empty list, or omitting both selector fields, means any indexer.
+        # indexers: [Usenet, Torrents]
         tags:
           - hevc # tag labels; created if missing. Empty = all series/movies
+        # Sonarr v5 only; omitted policy fields keep their current server values on update.
+        # excluded_tags: [anime] # overrides `tags` when a series has a matching tag
+        # air_date_restriction: true
+        # air_date_grace_period: 12 # hours
+        # allow_season_pack_without_all_episodes_aired: true
 ```
 
 Notes:
@@ -999,6 +1007,9 @@ Notes:
 - Lidarr and Readarr have no name field, so a change to required/ignored/tags/indexer is treated as a new profile (delete + create).
 - Duplicate names (or duplicate nameless content) in the list fail validation
 - Unknown indexer names fail validation
+- Sonarr v5 also supports multiple `indexers`, `excluded_tags`, and air-date/season-pack policies. `indexer` and `indexers` cannot be used together; `indexers: []` means any indexer, as on the Sonarr server.
+- These added options require Sonarr v5. Configarr rejects them on Sonarr v4 rather than silently dropping them.
+- `excluded_tags` takes precedence over `tags`; a label cannot be present in both lists. `air_date_grace_period` is measured in hours. Omitted v5 policy fields preserve the existing server value on update and use Sonarr's default on create.
 - Preferred-word scoring still belongs in `custom_formats` / `quality_profiles`
 
 ## Download Clients <span className="theme-doc-version-badge badge badge--secondary configarr-badge">1.19.0</span>

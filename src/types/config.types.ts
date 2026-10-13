@@ -260,14 +260,57 @@ export const InputConfigDelayProfileSchema = z.preprocess(
 );
 export type InputConfigDelayProfile = z.infer<typeof InputConfigDelayProfileSchema>;
 
-export const InputConfigReleaseProfileSchema = z.object({
-  name: z.string().optional(),
-  enabled: z.boolean().optional(),
-  required: z.array(z.string()).optional(),
-  ignored: z.array(z.string()).optional(),
-  indexer: z.string().optional(),
-  tags: z.array(z.string()).optional(),
-});
+export const InputConfigReleaseProfileSchema = z
+  .object({
+    name: z.string().optional(),
+    enabled: z.boolean().optional(),
+    required: z.array(z.string()).optional(),
+    ignored: z.array(z.string()).optional(),
+    indexer: z.string().optional(),
+    indexers: z
+      .array(z.string())
+      .optional()
+      .superRefine((indexers, ctx) => {
+        const seen = new Set<string>();
+        for (const [index, name] of (indexers ?? []).entries()) {
+          const normalized = name.trim();
+          const comparisonName = normalized.toLowerCase();
+          if (normalized.length === 0) {
+            ctx.addIssue({ code: "custom", path: [index], message: "Indexer name must not be empty." });
+          } else if (seen.has(comparisonName)) {
+            ctx.addIssue({ code: "custom", path: [index], message: `Indexer '${normalized}' is listed more than once.` });
+          }
+          seen.add(comparisonName);
+        }
+      }),
+    tags: z.array(z.string()).optional(),
+    excluded_tags: z
+      .array(z.string())
+      .optional()
+      .superRefine((tags, ctx) => {
+        const seen = new Set<string>();
+        for (const [index, tag] of (tags ?? []).entries()) {
+          const normalized = tag.trim();
+          const comparisonTag = normalized.toLowerCase();
+          if (seen.has(comparisonTag)) {
+            ctx.addIssue({ code: "custom", path: [index], message: `Excluded tag '${normalized}' is listed more than once.` });
+          }
+          seen.add(comparisonTag);
+        }
+      }),
+    air_date_restriction: z.boolean().optional(),
+    air_date_grace_period: z.number().int().nonnegative().optional(),
+    allow_season_pack_without_all_episodes_aired: z.boolean().optional(),
+  })
+  .superRefine((profile, ctx) => {
+    if (profile.indexer !== undefined && profile.indexers !== undefined) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["indexers"],
+        message: "Use either 'indexer' or 'indexers', not both.",
+      });
+    }
+  });
 export type InputConfigReleaseProfile = z.infer<typeof InputConfigReleaseProfileSchema>;
 
 export const InputConfigRecyclarrReleaseProfileSchema = z.looseObject({ trash_ids: z.unknown() });

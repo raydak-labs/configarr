@@ -193,6 +193,7 @@ export const runMediaSyncToQualityProfiles = async <T extends MediaArrType>(
 
   const { config } = await mergeConfigsAndTemplates(globalConfig, instanceConfig, arrType);
   await qpSync.validateConfig(config);
+  await syncs.releaseProfiles.validateConfig(config.release_profiles ?? []);
 
   if (Telemetry.isEnabled()) {
     getTelemetryInstance().trackInstanceConfig(config, arrType);

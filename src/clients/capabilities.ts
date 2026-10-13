@@ -56,10 +56,13 @@ export interface DelayProfilesClient<DelayProfile extends DelayProfileShared = D
   getDelayProfiles(): Promise<DelayProfile[]>;
 }
 
-export interface ReleaseProfilesClient<ReleaseProfile extends ReleaseProfileShared = ReleaseProfileShared> {
+export interface ReleaseProfilesClient<
+  ReleaseProfile extends ReleaseProfileShared = ReleaseProfileShared,
+  ReleaseProfileRequest extends ReleaseProfileShared = ReleaseProfileShared,
+> {
   getReleaseProfiles(): Promise<ReleaseProfile[]>;
-  createReleaseProfile(profile: ReleaseProfileShared): Promise<unknown>;
-  updateReleaseProfile(id: string, profile: ReleaseProfileShared): Promise<unknown>;
+  createReleaseProfile(profile: ReleaseProfileRequest): Promise<unknown>;
+  updateReleaseProfile(id: string, profile: ReleaseProfileRequest): Promise<unknown>;
   deleteReleaseProfile(id: string): Promise<void>;
 }
 
@@ -69,9 +72,10 @@ export interface IndexersClient {
   getIndexers(): Promise<IndexerListItem[]>;
 }
 
-export type ReleaseProfilesApi<T extends ReleaseProfileShared = ReleaseProfileShared> = ReleaseProfilesClient<T> &
-  TagsClient &
-  IndexersClient;
+export type ReleaseProfilesApi<
+  T extends ReleaseProfileShared = ReleaseProfileShared,
+  Request extends ReleaseProfileShared = ReleaseProfileShared,
+> = ReleaseProfilesClient<T, Request> & TagsClient & IndexersClient;
 
 export interface RootFoldersClient<RootFolder extends { id?: number; path?: string | null } = { id?: number; path?: string | null }> {
   getRootfolders(): Promise<RootFolder[]>;

@@ -1,7 +1,7 @@
 import { describe, expect, test, vi, beforeEach } from "vitest";
 import { ServerCache } from "../cache";
 import { ConfigValidationError } from "../validation";
-import { BaseReleaseProfileSync, normalizeTerms, profileKey } from "./releaseProfileBase";
+import { BaseReleaseProfileSync, normalizeTerms, profileKey, sharedReleaseProfileAdapter } from "./releaseProfileBase";
 import { ReleaseProfileShared } from "./releaseProfile.types";
 
 vi.mock("../env", async (importOriginal) => {
@@ -25,7 +25,7 @@ const api = {
   getIndexers: vi.fn(),
 };
 
-const namedSync = () => new BaseReleaseProfileSync<ReleaseProfileShared>(api, true);
+const namedSync = () => new BaseReleaseProfileSync<ReleaseProfileShared>(api, true, sharedReleaseProfileAdapter());
 
 const cache = (tags: { id: number; label: string }[] = [], indexers?: { id: number; name: string }[]) =>
   new ServerCache({ tags, indexers });
@@ -296,7 +296,7 @@ describe("ReleaseProfiles", () => {
   });
 
   test("without names a content change is delete and create", async () => {
-    const sync = new BaseReleaseProfileSync<ReleaseProfileShared>(api, false);
+    const sync = new BaseReleaseProfileSync<ReleaseProfileShared>(api, false, sharedReleaseProfileAdapter());
     api.getReleaseProfiles.mockResolvedValue([{ id: 4, enabled: true, required: ["hevc"], ignored: [], indexerId: 0, tags: [] }]);
 
     const result = await sync.sync([{ required: ["hevc", "x265"] }], cache());
@@ -346,7 +346,7 @@ describe("ReleaseProfiles", () => {
     vi.mocked(getEnvs).mockReturnValue({ DRY_RUN: true, LOG_LEVEL: "silent", CONFIGARR_VERSION: "test" } as never);
     api.getReleaseProfiles.mockResolvedValue([{ id: 4, enabled: true, required: ["hevc"], ignored: [], indexerId: 0, tags: [7] }]);
 
-    const sync = new BaseReleaseProfileSync<ReleaseProfileShared>(api, false);
+    const sync = new BaseReleaseProfileSync<ReleaseProfileShared>(api, false, sharedReleaseProfileAdapter());
     const result = await sync.sync([{ required: ["hevc"], tags: ["existing"] }], cache([{ id: 7, label: "existing" }]));
 
     expect(result.added).toBe(0);

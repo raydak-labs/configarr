@@ -11,20 +11,23 @@ export type ReleaseProfileShared = {
   tags?: number[] | null;
 };
 
-export type MappedReleaseProfile = {
+export type MappedReleaseProfile<T extends ReleaseProfileShared = ReleaseProfileShared> = {
   config: InputConfigReleaseProfile;
-  mapped: ReleaseProfileShared;
+  mapped: T;
 };
 
-export type ReleaseProfilesDiff = {
-  create: MappedReleaseProfile[];
+export type ReleaseProfilesDiff<
+  Server extends ReleaseProfileShared = ReleaseProfileShared,
+  Request extends ReleaseProfileShared = ReleaseProfileShared,
+> = {
+  create: MappedReleaseProfile<Request>[];
   update: Array<{
     config: InputConfigReleaseProfile;
-    server: ReleaseProfileShared;
-    mapped: ReleaseProfileShared;
+    server: Server;
+    mapped: Request;
     fieldChanges: FieldChange[];
   }>;
-  remove: ReleaseProfileShared[];
+  remove: Server[];
 };
 
 export type ReleaseProfileSyncResult = {
