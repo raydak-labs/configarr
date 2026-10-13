@@ -4,6 +4,10 @@ export type QualityItem = {
   quality?: { id?: number; name?: string | null; resolution?: number };
   items?: QualityItem[] | null;
   allowed?: boolean;
+  // Sonarr v5 only. Absent means "leave whatever the server has", and null clears it.
+  minSize?: number | null;
+  maxSize?: number | null;
+  preferredSize?: number | null;
 };
 
 export type FormatItem = { id?: number; format?: number; name?: string | null; score?: number };

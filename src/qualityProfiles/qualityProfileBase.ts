@@ -176,6 +176,50 @@ export const mapQualityProfiles = ({ carrIdMapping }: CFProcessing, { custom_for
 };
 
 // TODO should we use clones or not?
+/** The size limits a config item asks for, in the resource's field names. */
+function mapItemSizes(item: { min?: number | null; preferred?: number | null; max?: number | null }): Partial<QualityItem> {
+  const sizes: Partial<QualityItem> = {};
+  if (item.min !== undefined) {
+    sizes.minSize = item.min;
+  }
+  if (item.max !== undefined) {
+    sizes.maxSize = item.max;
+  }
+  if (item.preferred !== undefined) {
+    sizes.preferredSize = item.preferred;
+  }
+  return sizes;
+}
+
+/**
+ * Carries each server item's size limits onto the mapped item that replaces it, so a size the config
+ * does not mention survives. The items array is assigned wholesale whenever the quality order
+ * differs, which is unrelated to sizes, so without this a run that adds a quality would null every
+ * size the server held. A configured size wins, and null clears.
+ */
+function carrySizesForward(mapped: QualityItem[], server: QualityItem[]): QualityItem[] {
+  return mapped.map((item) => {
+    const match = server.find((serverItem) => sameQualityIdentity(item, serverItem));
+
+    if (!match) {
+      return item;
+    }
+
+    const carried: QualityItem = { ...item };
+    if (item.minSize === undefined) {
+      carried.minSize = match.minSize;
+    }
+    if (item.maxSize === undefined) {
+      carried.maxSize = match.maxSize;
+    }
+    if (item.preferredSize === undefined) {
+      carried.preferredSize = match.preferredSize;
+    }
+
+    return { ...carried, items: carrySizesForward(item.items ?? [], match.items ?? []) };
+  });
+}
+
 export const mapQualities = (qd_source: QualityDefinitionShared[], value_source: ConfigQualityProfile) => {
   const qd = cloneWithJSON(qd_source);
   const value = cloneWithJSON(value_source);
@@ -191,11 +235,15 @@ export const mapQualities = (qd_source: QualityDefinitionShared[], value_source:
   });
 
   const allowedQualities = value.qualities.map<QualityItem>((obj, i) => {
+    // A size set on a configured group lands on that group item. The member qualities keep whatever
+    // the server has, because the config describes the group and not each quality inside it.
+    const sizes = mapItemSizes(obj);
     if (obj.qualities?.length && obj.qualities.length > 0) {
       return {
         allowed: obj.enabled ?? true,
         id: 1000 + i,
         name: obj.name,
+        ...sizes,
         items:
           obj.qualities
             ?.map<QualityItem>((obj2) => {
@@ -233,6 +281,7 @@ export const mapQualities = (qd_source: QualityDefinitionShared[], value_source:
       qdMap.delete(serverQD.quality?.name);
 
       const item: QualityItem = {
+        ...sizes,
         allowed: obj.enabled ?? true,
         items: [],
         quality: {
@@ -272,6 +321,29 @@ export const mapQualities = (qd_source: QualityDefinitionShared[], value_source:
   }
 };
 
+/** Whether two items are the same quality, matched the way the order comparison matches them. */
+function sameQualityIdentity(a: QualityItem, b: QualityItem): boolean {
+  if (a.name != null && b.name != null) {
+    return a.name === b.name;
+  }
+  return a.quality?.name != null && a.quality?.name === b.quality?.name;
+}
+
+/**
+ * Whether the sizes a mapped item asks for match the server's. Only configured sizes are compared,
+ * so an item the config says nothing about is never the reason for a write, and an explicit null
+ * still counts as a request to clear.
+ */
+function itemSizesEqual(mapped: QualityItem, server: QualityItem): boolean {
+  if (mapped.minSize !== undefined && mapped.minSize !== server.minSize) {
+    return false;
+  }
+  if (mapped.maxSize !== undefined && mapped.maxSize !== server.maxSize) {
+    return false;
+  }
+  return !(mapped.preferredSize !== undefined && mapped.preferredSize !== server.preferredSize);
+}
+
 export const isOrderOfQualitiesEqual = (arr1: QualityItem[], arr2: QualityItem[]) => {
   if (arr1.length !== arr2.length) {
     return false;
@@ -283,6 +355,10 @@ export const isOrderOfQualitiesEqual = (arr1: QualityItem[], arr2: QualityItem[]
     }
 
     if (element1.quality?.name !== element2.quality?.name) {
+      return false;
+    }
+
+    if (!itemSizesEqual(element1, element2)) {
       return false;
     }
 
@@ -512,6 +588,12 @@ export abstract class BaseQualityProfileSync<T extends QualityProfileShared> {
     fieldChanges: FieldChange[],
   ): boolean;
 
+  /**
+   * Overridden by the arr whose config carries per-item size limits. The base has no notion of a
+   * server version, and the other arrs have no such config key to gate.
+   */
+  protected async assertItemSizeLimitsSupported(_config: MergedConfigInstance, _serverCache: ServerCache): Promise<void> {}
+
   createOnServer(profile: QualityProfileShared) {
     return this.api.createQualityProfile(this.toServerProfile(profile));
   }
@@ -562,6 +644,8 @@ export abstract class BaseQualityProfileSync<T extends QualityProfileShared> {
     config: MergedConfigInstance,
     serverCache: ServerCache,
   ): Promise<QualityProfileDiffResult> {
+    await this.assertItemSizeLimitsSupported(config, serverCache);
+
     // TODO maybe improve?
     const scoring = mapQualityProfiles(cfMap, config);
     const qpMerged = new Map(config.quality_profiles.map((obj) => [obj.name, obj]));
@@ -670,7 +754,7 @@ export abstract class BaseQualityProfileSync<T extends QualityProfileShared> {
         diffExist = true;
 
         fieldChanges.push({ field: "items", from: serverMatch.items, to: mappedQualities });
-        updatedServerObject.items = mappedQualities;
+        updatedServerObject.items = carrySizesForward(mappedQualities, serverMatch.items || []);
       }
 
       const qualityToId = updatedServerObject.items!.reduce<Map<string, number>>((p, c) => {
