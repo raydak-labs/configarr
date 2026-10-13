@@ -43,8 +43,9 @@ import {
 } from "./capabilities";
 
 type QualitySize = Pick<QualityDefinitionResource, "minSize" | "maxSize" | "preferredSize">;
+type SonarrProfileQualitySizeValues = Pick<SonarrQualityItemV5, "minSize" | "maxSize" | "preferredSize">;
 
-export type SonarrProfileQualitySize = QualitySize & { quality: string };
+export type SonarrProfileQualitySize = SonarrProfileQualitySizeValues & { quality: string };
 
 export type SonarrMediaManagementResource = MediaManagementConfigResource | SonarrMediaManagementV5;
 
@@ -248,16 +249,30 @@ function commonQualitySizes(profiles: SonarrQualityProfileV5[]): Map<string, Qua
   return common;
 }
 
+function indexV5QualityItems(items: SonarrQualityProfileV5["items"]): Map<string, SonarrQualityItemV5> {
+  const indexed = new Map<string, SonarrQualityItemV5>();
+  for (const item of items ?? []) {
+    if (item.quality?.name && !indexed.has(item.quality.name)) {
+      indexed.set(item.quality.name, item);
+    }
+    for (const [qualityName, qualityItem] of indexV5QualityItems(item.items)) {
+      if (!indexed.has(qualityName)) indexed.set(qualityName, qualityItem);
+    }
+  }
+  return indexed;
+}
+
 function mergeV5QualityItems(
   desiredItems: QualityProfileResource["items"],
   currentItems: SonarrQualityProfileV5["items"],
   sizes: Map<string, QualitySize>,
+  qualityItems: ReadonlyMap<string, SonarrQualityItemV5> = indexV5QualityItems(currentItems),
 ): SonarrQualityItemV5[] {
   return (desiredItems ?? []).map((item) => {
     const qualityName = item.quality?.name;
-    const existing = currentItems?.find((candidate) =>
-      item.id != null ? candidate.id === item.id : qualityName ? candidate.quality?.name === qualityName : candidate.name === item.name,
-    );
+    const existing = qualityName
+      ? qualityItems.get(qualityName)
+      : currentItems?.find((candidate) => (item.id != null ? candidate.id === item.id : candidate.name === item.name));
     const configuredSize = qualityName ? sizes.get(qualityName) : undefined;
     const mergedSize: QualitySize = {};
 
@@ -273,7 +288,7 @@ function mergeV5QualityItems(
       id: item.id,
       name: item.name,
       quality: item.quality,
-      items: mergeV5QualityItems(item.items, existing?.items, sizes),
+      items: mergeV5QualityItems(item.items, existing?.items, sizes, qualityItems),
       allowed: item.allowed,
       ...mergedSize,
     };
@@ -412,7 +427,7 @@ export class SonarrClient
     if (current == null) {
       throw new Error(`Sonarr quality profile '${profileId}' was not found while updating quality sizes.`);
     }
-    const sizes = new Map(overrides.map(({ quality, ...size }) => [quality, size]));
+    const sizes = new Map<string, SonarrProfileQualitySizeValues>(overrides.map(({ quality, ...size }) => [quality, size]));
     await this.apiV5.v5QualityprofileUpdate(profileId, {
       ...current,
       items: mergeProfileQualitySizes(current.items, sizes),
@@ -607,7 +622,7 @@ export class SonarrClient
   async createReleaseProfile(profile: SonarrReleaseProfileV5): Promise<SonarrReleaseProfileV5> {
     return this.versioned(
       async () => copyV3ReleaseProfile(await this.apiV3.v3ReleaseprofileCreate(toV3ReleaseProfile(profile))),
-      () => this.apiV5.v5ReleaseprofileCreate(profile),
+      () => this.apiV5.v5ReleaseprofileCreate({ ...profile, airDateGracePeriod: profile.airDateGracePeriod ?? 0 }),
     );
   }
 

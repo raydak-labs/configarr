@@ -537,6 +537,7 @@ export type MediaBaseline = {
   naming: unknown;
   delayDefault: unknown;
   qualityDefinitions: unknown;
+  profileQualitySizes: Awaited<ReturnType<SonarrClient["getProfileQualitySizes"]>> | undefined;
   downloadClientConfig: unknown;
 };
 
@@ -549,6 +550,8 @@ export async function snapshotMediaBaseline(client: MediaArrClient): Promise<Med
     naming: await client.getNaming(),
     delayDefault: defaultDelayProfile(delays),
     qualityDefinitions: await client.getQualityDefinitions(),
+    profileQualitySizes:
+      client instanceof SonarrClient && (await client.supportsProfileQualitySizes()) ? await client.getProfileQualitySizes() : undefined,
     downloadClientConfig: await client.getDownloadClientConfig(),
   };
 }
@@ -573,6 +576,22 @@ export async function restoreMediaBaseline(client: MediaArrClient, snap: MediaBa
   const definitions = snap.qualityDefinitions;
   if (Array.isArray(definitions) && JSON.stringify(definitions) !== JSON.stringify(await client.getQualityDefinitions())) {
     await client.updateQualityDefinitions(definitions as never);
+  }
+
+  if (client instanceof SonarrClient && snap.profileQualitySizes) {
+    const currentProfiles = new Set((await client.getProfileQualitySizes()).map((profile) => profile.id));
+    for (const profile of snap.profileQualitySizes) {
+      if (!currentProfiles.has(profile.id)) continue;
+      await client.updateProfileQualitySizes(
+        String(profile.id),
+        profile.items.map((item) => ({
+          quality: item.quality,
+          minSize: item.minSize ?? null,
+          preferredSize: item.preferredSize ?? null,
+          maxSize: item.maxSize ?? null,
+        })),
+      );
+    }
   }
 }
 

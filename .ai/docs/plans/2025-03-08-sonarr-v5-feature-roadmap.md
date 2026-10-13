@@ -45,4 +45,4 @@ The v5 announcement is useful for identifying product areas, but OpenAPI contrac
 
 ## Status
 
-The v3/v5 compatibility layer and per-profile quality sizes are implemented and tested against v4 and the pinned v5 beta. Release-profile controls and media-management controls remain planned in the linked feature plans.
+The v3/v5 compatibility layer, per-profile quality sizes, release-profile controls, and media-management controls are implemented and covered by unit and v4/v5 e2e tests. The pinned beta remains the v5 compatibility target; rerun the version-matrix e2e suite when updating that target.

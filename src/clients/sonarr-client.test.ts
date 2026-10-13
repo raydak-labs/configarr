@@ -216,7 +216,10 @@ describe("SonarrClient", () => {
         ],
       },
     ]);
-    await client.updateProfileQualitySizes("1", [{ quality: "WEBDL-1080p", minSize: 0 }]);
+    await client.updateProfileQualitySizes("1", [
+      { quality: "WEBDL-1080p", minSize: 0 },
+      { quality: "WEBRip-1080p", minSize: null },
+    ]);
 
     const [groupItem, nullItemsItem] = profile.items;
     const leafItem = groupItem?.items?.[0];
@@ -232,12 +235,71 @@ describe("SonarrClient", () => {
           id: 10,
           items: [{ id: 11, quality: { name: "WEBDL-1080p" }, minSize: 0, preferredSize: 50, maxSize: 200 }],
         },
-        { id: 12, items: null, minSize: 3 },
+        { id: 12, items: null, minSize: null },
       ],
     });
     expect(sentProfile).toEqual({
       ...profile,
-      items: [{ ...groupItem, items: [{ ...leafItem, minSize: 0 }] }, nullItemsItem],
+      items: [
+        { ...groupItem, items: [{ ...leafItem, minSize: 0 }] },
+        { ...nullItemsItem, minSize: null },
+      ],
+    });
+  });
+
+  it("preserves v5 per-profile sizes when quality items move between groups", async () => {
+    const leaf = {
+      id: 11,
+      quality: { id: 11, name: "WEBDL-1080p" },
+      minSize: 2,
+      preferredSize: 60,
+      maxSize: 220,
+    };
+    const profile = {
+      id: 1,
+      name: "WEB-1080p",
+      upgradeAllowed: true,
+      items: [
+        { id: 10, name: "WEB 1080p", items: [leaf] },
+        { id: 20, name: "HD", items: [] },
+      ],
+    };
+    let sentProfile: Record<string, unknown> | undefined;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (request: Request) => {
+        const url = new URL(request.url);
+        if (url.pathname === "/api") {
+          return Response.json({ current: "v5", deprecated: ["v3"] });
+        }
+        if (url.pathname === "/api/v5/qualityprofile" && request.method === "GET") {
+          return Response.json([profile]);
+        }
+        if (url.pathname === "/api/v5/qualityprofile/1" && request.method === "PUT") {
+          sentProfile = await request.json();
+          return Response.json(sentProfile);
+        }
+        throw new Error(`Unexpected request ${request.method} ${url.pathname}`);
+      }),
+    );
+    const client = new SonarrClient("http://sonarr.test", "api-key");
+    await client.getQualityProfiles();
+    await client.updateQualityProfile("1", {
+      ...profile,
+      items: [
+        { id: 10, name: "WEB 1080p", items: [] },
+        { id: 20, name: "HD", items: [leaf] },
+      ],
+    });
+
+    expect(sentProfile).toMatchObject({
+      items: [
+        { id: 10, items: [] },
+        {
+          id: 20,
+          items: [{ quality: { name: "WEBDL-1080p" }, minSize: 2, preferredSize: 60, maxSize: 220 }],
+        },
+      ],
     });
   });
 
@@ -306,6 +368,29 @@ describe("SonarrClient", () => {
         body: { ...profile, required: ["hevc", "x265"] },
       },
     ]);
+  });
+
+  it("defaults the v5 release-profile grace period when creating a legacy-shaped profile", async () => {
+    let sentProfile: unknown;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (request: Request) => {
+        const url = new URL(request.url);
+        if (url.pathname === "/api") {
+          return Response.json({ current: "v5", deprecated: ["v3"] });
+        }
+        if (url.pathname === "/api/v5/releaseprofile" && request.method === "POST") {
+          sentProfile = await request.json();
+          return Response.json(sentProfile);
+        }
+        throw new Error(`Unexpected request ${request.method} ${url.pathname}`);
+      }),
+    );
+    const client = new SonarrClient("http://sonarr.test", "api-key");
+
+    await client.createReleaseProfile({ name: "HEVC", enabled: true, required: ["hevc"], ignored: [], indexerIds: [], tags: [] });
+
+    expect(sentProfile).toMatchObject({ name: "HEVC", airDateGracePeriod: 0 });
   });
 
   it("projects the v3 release-profile resource for legacy Sonarr", async () => {
