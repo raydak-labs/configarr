@@ -300,18 +300,49 @@ describe("sonarr (live)", () => {
   });
 
   test("media settings", async () => {
-    const created = await syncConfig(mediaConfig("SONARR", e2eMediaSettings(1)));
+    const supportsV5Controls = await client.supportsMediaManagementControls();
+    const mediaSettings = (firstDayOfWeek: number, seasonPackUpgradeThreshold: number) => ({
+      ...e2eMediaSettings(firstDayOfWeek),
+      media_management: {
+        recycleBin: "/tmp",
+        ...(supportsV5Controls
+          ? {
+              skipFreeSpaceCheckWhenGrabbing: true,
+              seasonPackUpgrade: "threshold",
+              seasonPackUpgradeThreshold,
+              userRejectedExtensions: ".dog",
+            }
+          : {}),
+      },
+    });
+    const created = await syncConfig(mediaConfig("SONARR", mediaSettings(1, 80.5)));
     assertPipelineSucceeded(created.result, ["SONARR"]);
     expect(((await client.getMediamanagement()) as { recycleBin?: string }).recycleBin).toBe("/tmp");
+    if (supportsV5Controls) {
+      expect(await client.getMediamanagement()).toMatchObject({
+        skipFreeSpaceCheckWhenGrabbing: true,
+        seasonPackUpgrade: "threshold",
+        seasonPackUpgradeThreshold: 80.5,
+        userRejectedExtensions: ".dog",
+      });
+    }
     expect(((await client.getNaming()) as { replaceIllegalCharacters?: boolean }).replaceIllegalCharacters).toBe(true);
     expect(((await client.getUiConfig()) as { firstDayOfWeek?: number }).firstDayOfWeek).toBe(1);
 
-    const updated = await syncConfig(mediaConfig("SONARR", e2eMediaSettings(0)), created.workspace);
+    const updated = await syncConfig(mediaConfig("SONARR", mediaSettings(0, 75.25)), created.workspace);
     assertPipelineSucceeded(updated.result, ["SONARR"]);
     expect(((await client.getUiConfig()) as { firstDayOfWeek?: number }).firstDayOfWeek).toBe(0);
     expect(((await client.getMediamanagement()) as { recycleBin?: string }).recycleBin).toBe("/tmp");
+    if (supportsV5Controls) {
+      expect(await client.getMediamanagement()).toMatchObject({
+        skipFreeSpaceCheckWhenGrabbing: true,
+        seasonPackUpgrade: "threshold",
+        seasonPackUpgradeThreshold: 75.25,
+        userRejectedExtensions: ".dog",
+      });
+    }
 
-    const second = await syncConfig(mediaConfig("SONARR", e2eMediaSettings(0)), created.workspace);
+    const second = await syncConfig(mediaConfig("SONARR", mediaSettings(0, 75.25)), created.workspace);
     assertPipelineSucceeded(second.result, ["SONARR"]);
     assertDiffUpToDate(second.result, ["SONARR"]);
   });

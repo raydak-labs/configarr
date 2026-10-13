@@ -1203,9 +1203,18 @@ Prowlarr download clients use the same `download_clients` block as the other \*A
   MediaManagement APIs:
   - https://radarr.video/docs/api/#/MediaManagementConfig/get_api_v3_config_mediamanagement
   - https://sonarr.tv/docs/api/#/MediaManagementConfig/get_api_v3_config_mediamanagement
+  - https://sonarr.tv/docs/api/
   - https://whisparr.com/docs/api/#/MediaManagementConfig/get_api_v3_config_mediamanagement
   - https://readarr.com/docs/api/#/MediaManagementConfig/get_api_v1_config_mediamanagement
   - https://lidarr.audio/docs/api/#/MediaManagementConfig/get_api_v1_config_mediamanagement
+
+  Sonarr v5 additionally supports these `media_management` fields:
+  - `skipFreeSpaceCheckWhenGrabbing`: skips the root-folder free-space check before grabbing a release. It is separate from `skipFreeSpaceCheckWhenImporting`.
+  - `seasonPackUpgrade`: `all`, `threshold`, or `any`; selects how many existing episodes in a season pack must qualify as upgrades.
+  - `seasonPackUpgradeThreshold`: percentage from `0` to `100`, used when `seasonPackUpgrade` is `threshold`.
+  - `userRejectedExtensions`: comma-separated additional file extensions (with or without leading dots). Sonarr rejects valid media and archive extensions from this list. To fail a download for a configured extension, enable the separate **User Defined Extensions** fail-download option on the applicable indexers.
+
+  These fields are Sonarr v5-only; Configarr rejects them on Sonarr v4 and other media managers before applying any sync changes.
 
 - Experimental support for `ui_config` (since v1.21.0)
   Allows configuring UI settings like theme, language, calendar preferences, etc.

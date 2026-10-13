@@ -46,6 +46,8 @@ type QualitySize = Pick<QualityDefinitionResource, "minSize" | "maxSize" | "pref
 
 export type SonarrProfileQualitySize = QualitySize & { quality: string };
 
+export type SonarrMediaManagementResource = MediaManagementConfigResource | SonarrMediaManagementV5;
+
 export type SonarrProfileQualitySizes = {
   id: number;
   name: string;
@@ -122,41 +124,24 @@ function toV3ReleaseProfile(profile: SonarrReleaseProfileV5): ReleaseProfileReso
   };
 }
 
-function copyV5MediaManagement(settings: SonarrMediaManagementV5): MediaManagementConfigResource {
-  return {
-    id: settings.id,
-    autoUnmonitorPreviouslyDownloadedEpisodes: settings.autoUnmonitorPreviouslyDownloadedEpisodes,
-    recycleBin: settings.recycleBin,
+function copyV5MediaManagementToV3(settings: SonarrMediaManagementResource): MediaManagementConfigResource {
+  const v3Settings = {
+    ...settings,
     recycleBinCleanupDays: settings.recycleBinCleanupDays ?? undefined,
-    downloadPropersAndRepacks: settings.downloadPropersAndRepacks,
-    createEmptySeriesFolders: settings.createEmptySeriesFolders,
-    deleteEmptyFolders: settings.deleteEmptyFolders,
-    fileDate: settings.fileDate,
-    rescanAfterRefresh: settings.rescanAfterRefresh,
-    setPermissionsLinux: settings.setPermissionsLinux,
-    chmodFolder: settings.chmodFolder,
-    chownGroup: settings.chownGroup,
-    episodeTitleRequired: settings.episodeTitleRequired,
-    skipFreeSpaceCheckWhenImporting: settings.skipFreeSpaceCheckWhenImporting,
     minimumFreeSpaceWhenImporting: settings.minimumFreeSpaceWhenImporting ?? undefined,
-    copyUsingHardlinks: settings.copyUsingHardlinks,
-    useScriptImport: settings.useScriptImport,
-    scriptImportPath: settings.scriptImportPath,
-    importExtraFiles: settings.importExtraFiles,
-    extraFileExtensions: settings.extraFileExtensions,
-    enableMediaInfo: settings.enableMediaInfo,
   };
+  for (const key of ["skipFreeSpaceCheckWhenGrabbing", "seasonPackUpgrade", "seasonPackUpgradeThreshold", "userRejectedExtensions"]) {
+    Reflect.deleteProperty(v3Settings, key);
+  }
+  return v3Settings;
 }
 
-function mergeV5MediaManagement(
-  settings: MediaManagementConfigResource,
-  current: SonarrMediaManagementV5 | undefined,
-): SonarrMediaManagementV5 {
+function mergeV5MediaManagement(settings: SonarrMediaManagementResource, current: SonarrMediaManagementV5): SonarrMediaManagementV5 {
   return {
     ...current,
     ...settings,
-    recycleBinCleanupDays: settings.recycleBinCleanupDays ?? current?.recycleBinCleanupDays ?? null,
-    minimumFreeSpaceWhenImporting: settings.minimumFreeSpaceWhenImporting ?? current?.minimumFreeSpaceWhenImporting ?? null,
+    recycleBinCleanupDays: settings.recycleBinCleanupDays ?? current.recycleBinCleanupDays ?? null,
+    minimumFreeSpaceWhenImporting: settings.minimumFreeSpaceWhenImporting ?? current.minimumFreeSpaceWhenImporting ?? null,
   };
 }
 
@@ -402,6 +387,10 @@ export class SonarrClient
     return (await this.getApiVersion()) === "v5";
   }
 
+  async supportsMediaManagementControls(): Promise<boolean> {
+    return (await this.getApiVersion()) === "v5";
+  }
+
   async getProfileQualitySizes(): Promise<SonarrProfileQualitySizes[]> {
     if (!(await this.supportsProfileQualitySizes())) {
       throw new Error("Sonarr per-profile quality sizes require the v5 API.");
@@ -519,19 +508,19 @@ export class SonarrClient
     );
   }
 
-  async getMediamanagement(): Promise<MediaManagementConfigResource> {
-    return this.versioned(
+  async getMediamanagement(): Promise<SonarrMediaManagementResource> {
+    return this.versioned<SonarrMediaManagementResource>(
       () => this.apiV3.v3ConfigMediamanagementList(),
-      async () => copyV5MediaManagement(await this.apiV5.v5SettingsMediamanagementList()),
+      () => this.apiV5.v5SettingsMediamanagementList(),
     );
   }
 
-  async updateMediamanagement(id: string, data: MediaManagementConfigResource): Promise<MediaManagementConfigResource> {
-    return this.versioned(
-      () => this.apiV3.v3ConfigMediamanagementUpdate(id, data),
+  async updateMediamanagement(id: string, data: SonarrMediaManagementResource): Promise<SonarrMediaManagementResource> {
+    return this.versioned<SonarrMediaManagementResource>(
+      () => this.apiV3.v3ConfigMediamanagementUpdate(id, copyV5MediaManagementToV3(data)),
       async () => {
         const current = await this.apiV5.v5SettingsMediamanagementList();
-        return copyV5MediaManagement(await this.apiV5.v5SettingsMediamanagementUpdate(id, mergeV5MediaManagement(data, current)));
+        return this.apiV5.v5SettingsMediamanagementUpdate(id, mergeV5MediaManagement(data, current));
       },
     );
   }

@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { SeasonPackUpgradeType } from "../__generated__/sonarr-v5/data-contracts";
 import { SonarrClient } from "./sonarr-client";
 
 describe("SonarrClient", () => {
@@ -54,6 +55,105 @@ describe("SonarrClient", () => {
 
     await expect(client.getNaming()).resolves.toMatchObject({ id: 1, renameEpisodes: true });
     expect(requests).toEqual(["GET /api", "GET /api/v3/config/naming"]);
+  });
+
+  it("reads and updates Sonarr v5 media-management controls without losing other settings", async () => {
+    const current = {
+      id: 1,
+      recycleBin: "/old",
+      skipFreeSpaceCheckWhenGrabbing: false,
+      seasonPackUpgrade: "all",
+      seasonPackUpgradeThreshold: 100,
+      userRejectedExtensions: "",
+    };
+    const requests: { method: string; path: string; body?: unknown }[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (request: Request) => {
+        const url = new URL(request.url);
+        const body = request.method === "PUT" ? await request.json() : undefined;
+        requests.push({ method: request.method, path: url.pathname, body });
+
+        if (url.pathname === "/api") {
+          return Response.json({ current: "v5", deprecated: ["v3"] });
+        }
+        if (url.pathname === "/api/v5/settings/mediamanagement" && request.method === "GET") {
+          return Response.json(current);
+        }
+        if (url.pathname === "/api/v5/settings/mediamanagement/1" && request.method === "PUT") {
+          return Response.json(body);
+        }
+        throw new Error(`Unexpected request ${request.method} ${url.pathname}`);
+      }),
+    );
+
+    const client = new SonarrClient("http://sonarr.test", "api-key");
+    const settings = await client.getMediamanagement();
+    expect(settings).toMatchObject({
+      seasonPackUpgrade: "all",
+      seasonPackUpgradeThreshold: 100,
+      userRejectedExtensions: "",
+    });
+
+    await client.updateMediamanagement("1", {
+      ...settings,
+      skipFreeSpaceCheckWhenGrabbing: true,
+      seasonPackUpgrade: SeasonPackUpgradeType.Threshold,
+      seasonPackUpgradeThreshold: 80,
+      userRejectedExtensions: ".exe,.bat",
+    });
+
+    expect(requests).toEqual([
+      { method: "GET", path: "/api", body: undefined },
+      { method: "GET", path: "/api/v5/settings/mediamanagement", body: undefined },
+      { method: "GET", path: "/api/v5/settings/mediamanagement", body: undefined },
+      {
+        method: "PUT",
+        path: "/api/v5/settings/mediamanagement/1",
+        body: {
+          ...current,
+          skipFreeSpaceCheckWhenGrabbing: true,
+          seasonPackUpgrade: "threshold",
+          seasonPackUpgradeThreshold: 80,
+          userRejectedExtensions: ".exe,.bat",
+          recycleBinCleanupDays: null,
+          minimumFreeSpaceWhenImporting: null,
+        },
+      },
+    ]);
+  });
+
+  it("preserves unmodeled Sonarr v4 media-management settings when updating", async () => {
+    const current = {
+      id: 1,
+      recycleBin: "/old",
+      futureV3Setting: true,
+    };
+    let sentSettings: Record<string, unknown> | undefined;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (request: Request) => {
+        const url = new URL(request.url);
+        if (url.pathname === "/api") {
+          return Response.json({ current: "v3", deprecated: [] });
+        }
+        if (url.pathname === "/api/v3/config/mediamanagement" && request.method === "GET") {
+          return Response.json(current);
+        }
+        if (url.pathname === "/api/v3/config/mediamanagement/1" && request.method === "PUT") {
+          sentSettings = await request.json();
+          return Response.json(sentSettings);
+        }
+        throw new Error(`Unexpected request ${request.method} ${url.pathname}`);
+      }),
+    );
+
+    const client = new SonarrClient("http://sonarr.test", "api-key");
+    const settings = await client.getMediamanagement();
+
+    await client.updateMediamanagement("1", { ...settings, createEmptySeriesFolders: true });
+
+    expect(sentSettings).toMatchObject({ ...current, createEmptySeriesFolders: true });
   });
 
   it("reads and updates nested quality sizes through the v5 quality-profile resource", async () => {

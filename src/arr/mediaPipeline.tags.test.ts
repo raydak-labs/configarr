@@ -56,7 +56,11 @@ const emptySyncResult = { added: 0, removed: 0, updated: 0, diffEntries: [] };
 const makeSyncs = (): MediaFeatureSyncs =>
   ({
     qd: { loadFromServer: vi.fn(async () => []) },
-    mm: { persistNaming: vi.fn(async () => undefined), persistMediamanagement: vi.fn(async () => undefined) },
+    mm: {
+      validateConfig: vi.fn(async () => undefined),
+      persistNaming: vi.fn(async () => undefined),
+      persistMediamanagement: vi.fn(async () => undefined),
+    },
     qp: {
       validateConfig: vi.fn(async () => undefined),
       loadFromServer: vi.fn(async () => []),

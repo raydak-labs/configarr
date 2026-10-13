@@ -9,23 +9,31 @@ Expose the v5 media-management settings that fit Configarr's existing `media_man
 
 ## Candidate settings
 
-The pinned v5 OpenAPI resource contains `seasonPackUpgrade`, `seasonPackUpgradeThreshold`, and `userRejectedExtensions`. The client currently preserves unmodeled v5 settings during read/modify/write, but users cannot declare these settings in Configarr. Confirm the official enum values and field behavior against the exact target release before adopting them.
+The pinned v5 OpenAPI resource contains `skipFreeSpaceCheckWhenGrabbing`, `seasonPackUpgrade`, `seasonPackUpgradeThreshold`, and `userRejectedExtensions`. The client preserves unmodeled settings during read/modify/write, but users cannot declare these settings in Configarr. Confirm the official enum values and field behavior against the exact target release before adopting them.
 
-The beta also advertises blocking malicious extensions. Determine whether that behavior is configured by `userRejectedExtensions` or another resource before treating it as the same feature; announcement language alone is not sufficient evidence.
+The fields were verified against Sonarr v5.0.0.2569 at source commit `57816c149d02f95543973fefb4780c4495f8121c`, and compared with v4.0.19.2979:
+
+- `skipFreeSpaceCheckWhenGrabbing` is a v5-only boolean that skips the root-folder capacity check before a release is grabbed. It is separate from the existing `skipFreeSpaceCheckWhenImporting` setting; its default is false.
+- `seasonPackUpgrade` accepts `all`, `threshold`, or `any`. `all` requires every existing episode in the pack to qualify as an upgrade; `threshold` uses the configured percentage; `any` requires at least one. Missing episodes count as upgradable.
+- `seasonPackUpgradeThreshold` is a percentage from 0 through 100, inclusive, with decimal values accepted. The mode only uses it for `threshold`.
+- `userRejectedExtensions` is a comma-separated string, accepts optional leading dots, and is normalized by Sonarr. The settings API rejects valid media and archive extensions.
+- None of these four fields exists in the pinned v4 media-management resource.
+
+`userRejectedExtensions` is **not** the built-in executable/potentially-dangerous extension control. It is an additional list; an indexer must also have its separate **User Defined Extensions** fail-download option enabled for matching releases to fail the download.
+
+Primary evidence: [pinned v5 OpenAPI](https://github.com/Sonarr/Sonarr/blob/57816c149d02f95543973fefb4780c4495f8121c/src/Sonarr.Api.V5/openapi.json), [season-pack upgrade decision](https://github.com/Sonarr/Sonarr/blob/57816c149d02f95543973fefb4780c4495f8121c/src/NzbDrone.Core/DecisionEngine/Specifications/UpgradeDiskSpecification.cs), [v5 settings validation](https://github.com/Sonarr/Sonarr/blob/57816c149d02f95543973fefb4780c4495f8121c/src/Sonarr.Api.V5/Settings/MediaManagementSettingsController.cs), [free-space grab check](https://github.com/Sonarr/Sonarr/blob/57816c149d02f95543973fefb4780c4495f8121c/src/NzbDrone.Core/DecisionEngine/Specifications/FreeSpaceSpecification.cs), the [free-space setting PR](https://github.com/Sonarr/Sonarr/pull/8802), and the [user extension feature PR](https://github.com/Sonarr/Sonarr/pull/7907).
 
 ## Implementation steps
 
-1. Probe the pinned v5 API for `GET /api/v5/settings/mediamanagement` and update behavior. Determine whether extension rules are represented as a string, list, or another contract and whether the setting is editable through this endpoint.
-2. Compare the final v4 and v5 contracts. Mark each candidate field as shared or v5-only; do not broaden shared media-management types with v5 generated resource types.
-3. Add optional Configarr fields to the existing media-management schema using documented enum values and units. Preserve current config defaults when fields are omitted.
-4. Extend the Sonarr client adapter to map configured fields into v5 settings and to preserve v5-only values during writes. For v4, reject explicitly configured v5-only fields with a clear unsupported-version error.
-5. Confirm the sync diff can represent new fields and that equality is stable for nullable values and list/string normalization. If the common `MediaManagementSync` currently strips the fields, add a narrowly typed capability at the Sonarr boundary rather than making other *arr clients implement fake fields.
-6. Add unit tests for schema values, v4/v5 mapping, omitted-field preservation, enum conversion, and unsupported settings on v4.
-7. Add v5 e2e coverage that persists the settings and verifies a subsequent run is idempotent. Keep existing media-management tests passing for all other arrs and v4.
-8. Document the setting names, accepted values, and version limitation. Avoid claiming the app’s malicious-extension protection is configured until runtime behavior confirms it.
+1. [x] Probe v5 `GET /api/v5/settings/mediamanagement`, compare OpenAPI with v4, and verify exact enum/range/string/boolean semantics from server source.
+2. [x] Add typed optional config fields and retain arbitrary server-managed fields.
+3. [x] Preserve these v5 fields through the Sonarr adapter’s read/modify/write path; reject configured controls on v4 and other media managers before mutations.
+4. [x] Add unit coverage for accepted/rejected schema values, version validation, v5 field round-trip, and preservation of unrelated v4 and v5 settings.
+5. [x] Extend Sonarr e2e media-settings coverage to create/update/read back the four controls and fractional thresholds, then verify a subsequent run is up to date on both v4 and v5.
+6. [x] Document field meanings, the v5 requirement, and the separate per-indexer prerequisite for failing downloads.
 
 ## Done when
 
 - Users can configure each verified v5-only media-management setting without losing unrelated settings.
-- Existing v4 and non-Sonarr media-management configuration remains unchanged.
-- The exact setting behavior is demonstrated by a v5 read-after-write e2e test.
+- Existing v4 and non-Sonarr media-management configuration remains unchanged; unsupported v5-only keys fail before the pipeline writes.
+- The exact setting behavior is demonstrated by v4 and v5 read-after-write e2e tests, including an idempotent second run.

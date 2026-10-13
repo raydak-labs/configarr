@@ -108,6 +108,9 @@ const qdSync = (order: Order) => ({
 });
 
 const mmSync = (order: Order) => ({
+  validateConfig: vi.fn(async () => {
+    order.push("validateMediaManagement");
+  }),
   persistNaming: vi.fn(async () => {
     order.push("naming");
     return null;
@@ -175,7 +178,7 @@ describe("runMediaSyncToQualityProfiles", () => {
     await run(order, syncObjects);
 
     expect(syncObjects.qp.validateConfig).toHaveBeenCalledOnce();
-    expect(order).toEqual(["validate", "qd", "naming", "mediaManagement", "uiConfig", "qp"]);
+    expect(order).toEqual(["validate", "validateMediaManagement", "qd", "naming", "mediaManagement", "uiConfig", "qp"]);
   });
 
   it("validates configuration before any mutating feature runs", async () => {
@@ -199,9 +202,22 @@ describe("runMediaSyncToQualityProfiles", () => {
 
     await expect(run(order, syncObjects)).rejects.toThrow("unsupported release-profile option");
 
+    expect(order).toEqual(["validate", "validateMediaManagement"]);
+    expect(syncObjects.qd.persist).not.toHaveBeenCalled();
+    expect(syncObjects.mm.persistNaming).not.toHaveBeenCalled();
+  });
+
+  it("validates media-management capabilities before any mutating feature runs", async () => {
+    const order: Order = [];
+    const syncObjects = syncs(order);
+    vi.mocked(syncObjects.mm.validateConfig).mockRejectedValue(new Error("unsupported media-management option"));
+
+    await expect(run(order, syncObjects)).rejects.toThrow("unsupported media-management option");
+
     expect(order).toEqual(["validate"]);
     expect(syncObjects.qd.persist).not.toHaveBeenCalled();
     expect(syncObjects.mm.persistNaming).not.toHaveBeenCalled();
+    expect(syncObjects.mm.persistMediamanagement).not.toHaveBeenCalled();
   });
 
   it("passes write=false to every write boundary on a dry run", async () => {

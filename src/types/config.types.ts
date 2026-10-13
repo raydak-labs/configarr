@@ -332,8 +332,15 @@ export const InputConfigDownloadClientSchema = z.object({
 });
 export type InputConfigDownloadClient = z.infer<typeof InputConfigDownloadClientSchema>;
 
-// APIs not consistent across different *arrs. Keeping empty/generic and open to arbitrary keys.
-export const MediaManagementTypeSchema = z.object({}).passthrough();
+// APIs are not consistent across different *arrs, so keep arbitrary server-defined keys available.
+export const MediaManagementTypeSchema = z
+  .object({
+    skipFreeSpaceCheckWhenGrabbing: z.boolean().optional(),
+    seasonPackUpgrade: z.enum(["all", "threshold", "any"]).optional(),
+    seasonPackUpgradeThreshold: z.number().min(0).max(100).optional(),
+    userRejectedExtensions: z.string().optional(),
+  })
+  .passthrough();
 export type MediaManagementType = z.infer<typeof MediaManagementTypeSchema>;
 
 export const UiConfigTypeSchema = z.object({}).passthrough();

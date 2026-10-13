@@ -2,7 +2,15 @@ import { DiffEntry, FieldChange } from "../diffReport/diffReport.types";
 import { logger } from "../logger";
 import type { MediaManagementClient } from "../clients/capabilities";
 import { MediaManagementType, MediaNamingApiType } from "../types/config.types";
+import { ConfigValidationError } from "../validation";
 import { compareObjectsCarr } from "../util";
+
+const SONARR_V5_ONLY_CONTROLS = [
+  "skipFreeSpaceCheckWhenGrabbing",
+  "seasonPackUpgrade",
+  "seasonPackUpgradeThreshold",
+  "userRejectedExtensions",
+] as const;
 
 export function calculateNamingDiffFor<T extends { id?: number }>(server: T, config: MediaNamingApiType) {
   const { changes, equal } = compareObjectsCarr(server, config);
@@ -51,6 +59,20 @@ export class MediaManagementSync<Naming extends { id?: number }, Management exte
 
   protected getApi() {
     return this.api;
+  }
+
+  protected hasSonarrV5OnlyControls(mediaManagement?: MediaManagementType): boolean {
+    return mediaManagement != null && SONARR_V5_ONLY_CONTROLS.some((field) => mediaManagement[field] !== undefined);
+  }
+
+  async validateConfig(mediaManagement?: MediaManagementType): Promise<void> {
+    if (!this.hasSonarrV5OnlyControls(mediaManagement)) {
+      return;
+    }
+
+    throw new ConfigValidationError(
+      "skipFreeSpaceCheckWhenGrabbing, seasonPackUpgrade, seasonPackUpgradeThreshold, and userRejectedExtensions require Sonarr v5.",
+    );
   }
 
   async calculateNamingDiff(mediaNaming?: MediaNamingApiType) {

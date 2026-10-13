@@ -4,7 +4,7 @@ import { StandardDelayProfileSync } from "../delayProfiles/delayProfileBase";
 import { InstanceDiffReport } from "../diffReport/diffReport.types";
 import { getEnvs } from "../env";
 import { SonarrDownloadClientSync } from "../downloadClients/downloadClientSonarr";
-import { MediaManagementSync } from "../mediaManagement/mediaManagement";
+import { SonarrMediaManagementSync } from "../mediaManagement/mediaManagementSonarr";
 import { QualityDefinitionSonarrSync } from "../qualityDefinitions/qualityDefinitionSonarr";
 import { QualityProfileSonarrSync } from "../qualityProfiles/qualityProfileSonarr";
 import { ReleaseProfileSonarrSync } from "../releaseProfiles/releaseProfileSonarr";
@@ -27,7 +27,7 @@ export class SonarrSyncer {
       client,
       syncs: {
         qd: new QualityDefinitionSonarrSync(client),
-        mm: new MediaManagementSync(client),
+        mm: new SonarrMediaManagementSync(client),
         qp: qualityProfiles,
         delay: new StandardDelayProfileSync(client, DownloadProtocol),
         releaseProfiles: new ReleaseProfileSonarrSync(client),

@@ -19,6 +19,7 @@ import { BaseDownloadClientSync } from "../downloadClients/downloadClientBase";
 import { getEnvs } from "../env";
 import { logger } from "../logger";
 import { MediaManagementSync, mediamanagementDiffToDiffEntries, namingDiffToDiffEntries } from "../mediaManagement/mediaManagement";
+import type { SonarrMediaManagementResource } from "../clients/sonarr-client";
 import { QualityDefinitionSync, qualityDefinitionsToDiffEntries } from "../qualityDefinitions/qualityDefinition";
 import { BaseQualityProfileSync, getUnmanagedQualityProfiles, qualityProfilesToDiffEntries } from "../qualityProfiles/qualityProfileBase";
 import { BaseReleaseProfileSync } from "../releaseProfiles/releaseProfileBase";
@@ -58,7 +59,6 @@ import type {
 } from "../__generated__/readarr/data-contracts";
 import type {
   DownloadClientResource as SonarrDownloadClientResource,
-  MediaManagementConfigResource as SonarrMediaManagementConfigResource,
   NamingConfigResource as SonarrNamingConfigResource,
   QualityDefinitionResource as SonarrQualityDefinitionResource,
   QualityProfileResource as SonarrQualityProfileResource,
@@ -111,7 +111,7 @@ type MediaArrResources = {
   SONARR: {
     qualityDefinition: SonarrQualityDefinitionResource;
     naming: SonarrNamingConfigResource;
-    mediaManagement: SonarrMediaManagementConfigResource;
+    mediaManagement: SonarrMediaManagementResource;
     qualityProfile: SonarrQualityProfileResource;
     releaseProfile: SonarrReleaseProfileResource;
     downloadClient: SonarrDownloadClientResource;
@@ -193,6 +193,7 @@ export const runMediaSyncToQualityProfiles = async <T extends MediaArrType>(
 
   const { config } = await mergeConfigsAndTemplates(globalConfig, instanceConfig, arrType);
   await qpSync.validateConfig(config);
+  await mmSync.validateConfig(config.media_management);
   await syncs.releaseProfiles.validateConfig(config.release_profiles ?? []);
 
   if (Telemetry.isEnabled()) {
