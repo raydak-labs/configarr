@@ -51,6 +51,11 @@ export const InputConfigQualityProfileItemSchema = z.object({
   name: z.string(),
   qualities: z.array(z.string()).optional(),
   enabled: z.boolean().optional(),
+  // Sonarr v5 only. The v5 contract moved quality size limits off the quality definition and onto
+  // profile items. An omitted size leaves the server value, and null clears one.
+  min: z.number().optional().nullable(),
+  preferred: z.number().optional().nullable(),
+  max: z.number().optional().nullable(),
 });
 export type InputConfigQualityProfileItem = z.infer<typeof InputConfigQualityProfileItemSchema>;
 
