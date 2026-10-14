@@ -11,6 +11,7 @@ import {
   ConfigCustomFormat,
   ConfigQualityProfile,
   ConfigQualityProfileItem,
+  InputConfigQualitySize,
   InputConfigCfGroupTrashGuideItem,
   InputConfigCustomFormatGroup,
   InputConfigIncludeItem,
@@ -444,7 +445,11 @@ export const loadTrashCFConflicts = async (arrType: TrashArrSupported): Promise<
 };
 
 // TODO merge two methods?
-export const transformTrashQPToTemplate = (data: TrashQP, useOldQualityOrder: boolean = false): ConfigQualityProfile => {
+export const transformTrashQPToTemplate = (
+  data: TrashQP,
+  useOldQualityOrder: boolean = false,
+  qualitySizes?: InputConfigQualitySize[],
+): ConfigQualityProfile => {
   const items = data.items
     .map((e): ConfigQualityProfileItem | null => {
       if (!e.allowed) {
@@ -471,6 +476,7 @@ export const transformTrashQPToTemplate = (data: TrashQP, useOldQualityOrder: bo
     upgrade: { allowed: data.upgradeAllowed, until_quality: data.cutoff, until_score: data.cutoffFormatScore },
     name: data.name,
     qualities,
+    ...(qualitySizes == null ? {} : { quality_sizes: qualitySizes }),
     quality_sort: "top", // default
     language: data.language,
   };

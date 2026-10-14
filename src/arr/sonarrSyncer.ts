@@ -25,6 +25,7 @@ export class SonarrSyncer {
       globalConfig,
       instanceConfig: instance,
       client,
+      supportsProfileQualitySizes: await client.supportsProfileQualitySizes(),
       syncs: {
         qd: new QualityDefinitionSonarrSync(client),
         mm: new SonarrMediaManagementSync(client),

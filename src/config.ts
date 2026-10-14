@@ -39,6 +39,7 @@ import {
   InputConfigRecyclarrReleaseProfile,
   InputConfigReleaseProfile,
   InputConfigRemotePath,
+  InputConfigQualitySize,
   InputConfigSchema,
   InputConfigSchemaSchema,
   MediaNamingType,
@@ -468,19 +469,49 @@ const includeTrashTemplate = (
   template: TrashQP,
   {
     mergedTemplates,
+    trashQD,
+    arrType,
+    supportsProfileQualitySizes,
     trashCFGroupMapping,
     useExcludeSemantics,
     autoTrashCfGroupOptions,
   }: {
     mergedTemplates: MappedMergedTemplates;
+    trashQD: Map<string, TrashQualityDefinition>;
+    arrType: ArrType;
+    supportsProfileQualitySizes: boolean;
     trashCFGroupMapping: TrashCFGroupMapping;
     useExcludeSemantics: boolean;
     autoTrashCfGroupOptions: TransformTrashQPCFGroupsOptions;
   },
 ) => {
+  let qualitySizes: InputConfigQualitySize[] | undefined;
+  if (arrType === "SONARR" && template.trash_quality_definition) {
+    if (supportsProfileQualitySizes) {
+      const references = Object.entries(template.trash_quality_definition);
+      if (references.length !== 1 || !/^[a-f\d]{32}$/i.test(references[0]?.[1] ?? "")) {
+        throw new ConfigValidationError(
+          `TRaSH quality profile '${template.name}' must contain exactly one valid trash_id in trash_quality_definition.`,
+        );
+      }
+      const [, trashId] = references[0]!;
+      const definition = trashQD.get(trashId.toLowerCase());
+      if (definition == null) {
+        throw new ConfigValidationError(
+          `TRaSH quality profile '${template.name}' references unknown quality definition '${trashId ?? "missing"}'.`,
+        );
+      }
+      qualitySizes = definition.qualities.map(({ quality, min, preferred, max }) => ({ quality, min, preferred, max }));
+    } else {
+      logger.warn(
+        `TRaSH quality profile '${template.name}' references '${Object.keys(template.trash_quality_definition)[0]}' quality sizes, which are only supported by Sonarr v5. Ignoring for this Sonarr instance.`,
+      );
+    }
+  }
+
   // useExcludeSemantics=true means use old TRaSH-Guides behavior (before Feb 2026)
   // This affects both CF groups semantics and quality ordering
-  mergedTemplates.quality_profiles.push(transformTrashQPToTemplate(template, useExcludeSemantics));
+  mergedTemplates.quality_profiles.push(transformTrashQPToTemplate(template, useExcludeSemantics, qualitySizes));
   mergedTemplates.custom_formats.push(transformTrashQPCFs(template));
 
   // For TrashGuide profiles, check and include default CF groups
@@ -525,6 +556,8 @@ const includeTemplateOrderDefault = async (
     local,
     trash,
     trashQD,
+    arrType,
+    supportsProfileQualitySizes,
     trashCFGroupMapping,
     useExcludeSemantics,
     cfGroupOptions,
@@ -534,6 +567,8 @@ const includeTemplateOrderDefault = async (
     local: Map<string, MappedTemplates>;
     trash: Map<string, TrashQP>;
     trashQD: Map<string, TrashQualityDefinition>;
+    arrType: ArrType;
+    supportsProfileQualitySizes: boolean;
     trashCFGroupMapping: TrashCFGroupMapping;
     useExcludeSemantics: boolean;
     cfGroupOptions?: TransformTrashCFGroupsOptions;
@@ -628,6 +663,9 @@ const includeTemplateOrderDefault = async (
       } else {
         includeTrashTemplate(resolvedTemplate as TrashQP, {
           mergedTemplates,
+          trashQD,
+          arrType,
+          supportsProfileQualitySizes,
           trashCFGroupMapping,
           useExcludeSemantics,
           autoTrashCfGroupOptions: resolveAutoTrashCfGroupOptions(e),
@@ -652,6 +690,9 @@ const includeTemplateOrderDefault = async (
     }
     includeTrashTemplate(resolvedTemplate, {
       mergedTemplates,
+      trashQD,
+      arrType,
+      supportsProfileQualitySizes,
       trashCFGroupMapping,
       useExcludeSemantics,
       autoTrashCfGroupOptions: resolveAutoTrashCfGroupOptions(e),
@@ -761,6 +802,7 @@ export const mergeConfigsAndTemplates = async (
   globalConfig: InputConfigSchema,
   instanceConfig: InputConfigArrInstance,
   arrType: ArrType,
+  options: { supportsProfileQualitySizes?: boolean } = {},
 ): Promise<{ config: MergedConfigInstance }> => {
   const localTemplateMap = loadLocalRecyclarrTemplate(arrType);
   let recyclarrTemplateMap: Map<string, MappedTemplates> = new Map();
@@ -785,6 +827,7 @@ export const mergeConfigsAndTemplates = async (
   // When true: use old "exclude" semantics (apply to all except excluded)
   // When false/undefined: use new "include" semantics (apply only to included)
   const useExcludeSemantics = globalConfig.compatibilityTrashGuide20260219Enabled === true;
+  const supportsProfileQualitySizes = arrType === "SONARR" && options.supportsProfileQualitySizes === true;
   const autoTrashCfGroupDefaults: TransformTrashQPCFGroupsOptions = {
     includeDefaultOptionalCfs: instanceConfig.trash_cfgroup_config?.include_optional ?? true,
     includeUnrequired: instanceConfig.trash_cfgroup_config?.include_unrequired ?? false,
@@ -803,6 +846,8 @@ export const mergeConfigsAndTemplates = async (
         local: localTemplateMap,
         trash: trashTemplates,
         trashQD: trashQDTemplates,
+        arrType,
+        supportsProfileQualitySizes,
         trashCFGroupMapping,
         useExcludeSemantics,
         cfGroupOptions,

@@ -13,7 +13,7 @@ import {
   transformTrashQPCFGroups,
 } from "./trash-guide";
 import { InputConfigCustomFormatGroup } from "./types/config.types";
-import { TrashCFGroupMapping, TrashQualityDefinition, TrashQP } from "./types/trashguide.types";
+import { TrashCFGroupMapping, TrashQualityDefinition, TrashQP, TrashQPSchema } from "./types/trashguide.types";
 import * as util from "./util";
 import { logger } from "./logger";
 import * as envModule from "./env";
@@ -139,12 +139,13 @@ describe("TrashGuide", async () => {
         trash_id: "base-profile-id",
         name: "Base Profile",
         language: "Any",
+        trash_quality_definition: { series: "bef99584217af744e404ed44a33af589" },
         upgradeAllowed: true,
         cutoff: "WEB 2160p",
         minFormatScore: 0,
         cutoffFormatScore: 10000,
         items: [{ name: "WEB 2160p", allowed: true, items: ["WEBDL-2160p"] }],
-        formatItems: { "IMAX Enhanced": "9f6cbff8cfe4ebbc1bde14c7b7bec0de" },
+        formatItems: {},
       };
 
       vi.spyOn(fs, "readdirSync").mockReturnValue(["base-profile.json"] as any);
@@ -155,6 +156,41 @@ describe("TrashGuide", async () => {
 
       expect(result.get("base-profile-id")).toEqual(mockQP);
       expect(warnSpy).not.toHaveBeenCalled();
+    });
+
+    test("requires exactly one valid trash_id in the optional quality-definition reference", () => {
+      const profile = {
+        trash_id: "profile-id",
+        name: "Profile",
+        upgradeAllowed: true,
+        cutoff: "WEB 2160p",
+        minFormatScore: 0,
+        cutoffFormatScore: 10000,
+        items: [],
+        formatItems: {},
+      };
+
+      expect(() =>
+        TrashQPSchema.parse({
+          ...profile,
+          trash_quality_definition: { series: "bef99584217af744e404ed44a33af589" },
+        }),
+      ).not.toThrow();
+      expect(() =>
+        TrashQPSchema.parse({
+          ...profile,
+          trash_quality_definition: {
+            series: "bef99584217af744e404ed44a33af589",
+            anime: "bef99584217af744e404ed44a33af580",
+          },
+        }),
+      ).toThrow();
+      expect(() =>
+        TrashQPSchema.parse({
+          ...profile,
+          trash_quality_definition: { series: "not-a-trash-id" },
+        }),
+      ).toThrow();
     });
 
     // TrashScoresSchema's key list had drifted 8 keys behind what TRaSH-Guides actually
