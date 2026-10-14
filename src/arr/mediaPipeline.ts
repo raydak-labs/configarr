@@ -166,12 +166,13 @@ export type MediaSyncToQualityProfilesArgs<T extends MediaArrType = MediaArrType
   client: ArrTypeToClient[T];
   syncs: MediaFeatureSyncs<T>;
   trash?: MediaTrashOps;
+  supportsProfileQualitySizes?: boolean;
 };
 
 export const runMediaSyncToQualityProfiles = async <T extends MediaArrType>(
   args: MediaSyncToQualityProfilesArgs<T>,
 ): Promise<MediaSyncContext<T>> => {
-  const { arrType, instanceName, globalConfig, instanceConfig, client, syncs, trash } = args;
+  const { arrType, instanceName, globalConfig, instanceConfig, client, syncs, trash, supportsProfileQualitySizes = false } = args;
   const { qd: qdSync, mm: mmSync, qp: qpSync } = syncs;
   const collector = new DiffCollector();
   let qualityDefinitionDefaults: TrashQualityDefinitionQuality[] = [];
@@ -191,7 +192,7 @@ export const runMediaSyncToQualityProfiles = async <T extends MediaArrType>(
 
   logger.info(`Server objects: CustomFormats ${serverCFs.length}`);
 
-  const { config } = await mergeConfigsAndTemplates(globalConfig, instanceConfig, arrType);
+  const { config } = await mergeConfigsAndTemplates(globalConfig, instanceConfig, arrType, { supportsProfileQualitySizes });
   await qpSync.validateConfig(config);
   await mmSync.validateConfig(config.media_management);
   await syncs.releaseProfiles.validateConfig(config.release_profiles ?? []);

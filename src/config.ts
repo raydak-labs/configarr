@@ -39,6 +39,7 @@ import {
   InputConfigRecyclarrReleaseProfile,
   InputConfigReleaseProfile,
   InputConfigRemotePath,
+  InputConfigQualitySize,
   InputConfigSchema,
   InputConfigSchemaSchema,
   MediaNamingType,
@@ -468,19 +469,47 @@ const includeTrashTemplate = (
   template: TrashQP,
   {
     mergedTemplates,
+    trashQD,
+    arrType,
+    supportsProfileQualitySizes,
     trashCFGroupMapping,
     useExcludeSemantics,
     autoTrashCfGroupOptions,
   }: {
     mergedTemplates: MappedMergedTemplates;
+    trashQD: Map<string, TrashQualityDefinition>;
+    arrType: ArrType;
+    supportsProfileQualitySizes: boolean;
     trashCFGroupMapping: TrashCFGroupMapping;
     useExcludeSemantics: boolean;
     autoTrashCfGroupOptions: TransformTrashQPCFGroupsOptions;
   },
 ) => {
+  let qualitySizes: InputConfigQualitySize[] | undefined;
+  if (arrType === "SONARR" && template.trash_quality_definition) {
+    if (supportsProfileQualitySizes) {
+      const references = Object.entries(template.trash_quality_definition);
+      if (references.length !== 1 || !/^[a-f\d]{32}$/i.test(references[0]?.[1] ?? "")) {
+        throw new ConfigValidationError(
+          `TRaSH quality profile '${template.name}' must contain exactly one valid trash_id in trash_quality_definition.`,
+        );
+      }
+      const [, trashId] = references[0]!;
+      const definition = trashQD.get(trashId.toLowerCase());
+      if (definition == null) {
+        throw new ConfigValidationError(`TRaSH quality profile '${template.name}' references unknown quality definition '${trashId}'.`);
+      }
+      qualitySizes = definition.qualities.map(({ quality, min, preferred, max }) => ({ quality, min, preferred, max }));
+    } else {
+      logger.warn(
+        `TRaSH quality profile '${template.name}' references '${Object.keys(template.trash_quality_definition)[0]}' quality sizes, which are only supported by Sonarr v5. Ignoring for this Sonarr instance.`,
+      );
+    }
+  }
+
   // useExcludeSemantics=true means use old TRaSH-Guides behavior (before Feb 2026)
   // This affects both CF groups semantics and quality ordering
-  mergedTemplates.quality_profiles.push(transformTrashQPToTemplate(template, useExcludeSemantics));
+  mergedTemplates.quality_profiles.push(transformTrashQPToTemplate(template, useExcludeSemantics, qualitySizes));
   mergedTemplates.custom_formats.push(transformTrashQPCFs(template));
 
   // For TrashGuide profiles, check and include default CF groups
@@ -525,6 +554,8 @@ const includeTemplateOrderDefault = async (
     local,
     trash,
     trashQD,
+    arrType,
+    supportsProfileQualitySizes,
     trashCFGroupMapping,
     useExcludeSemantics,
     cfGroupOptions,
@@ -534,6 +565,8 @@ const includeTemplateOrderDefault = async (
     local: Map<string, MappedTemplates>;
     trash: Map<string, TrashQP>;
     trashQD: Map<string, TrashQualityDefinition>;
+    arrType: ArrType;
+    supportsProfileQualitySizes: boolean;
     trashCFGroupMapping: TrashCFGroupMapping;
     useExcludeSemantics: boolean;
     cfGroupOptions?: TransformTrashCFGroupsOptions;
@@ -564,7 +597,7 @@ const includeTemplateOrderDefault = async (
 
       switch (current.source) {
         case "TRASH":
-          if (trash.has(current.template) || trashQD.has(current.template)) {
+          if (trash.has(current.template) || trashQD.has(current.template.toLowerCase())) {
             previous.trash.push(current);
           } else {
             warnOrThrowConfig(`Included 'TRASH' template: ${current.template} not found.`);
@@ -613,7 +646,8 @@ const includeTemplateOrderDefault = async (
     `Found ${include.length} templates to include. Mapped to [recyclarr]=${mappedIncludes.recyclarr.length}, [local]=${mappedIncludes.local.length}, [trash]=${mappedIncludes.trash.length}, [url]=${mappedIncludes.url.length} ...`,
   );
 
-  // Process URL templates
+  // Load URL templates up front so profiles can resolve quality definitions regardless of include order.
+  const urlTemplates: { include: InputConfigIncludeItem; template: MappedTemplates | TrashQP | TrashQualityDefinition }[] = [];
   for (const e of mappedIncludes.url) {
     const resolvedTemplate = await loadTemplateFromUrl(e.template, e.source);
     if (resolvedTemplate == null) {
@@ -621,6 +655,14 @@ const includeTemplateOrderDefault = async (
       continue;
     }
 
+    if (e.source === "TRASH" && isTrashQualityDefinition(resolvedTemplate)) {
+      trashQD.set(resolvedTemplate.trash_id.toLowerCase(), resolvedTemplate);
+    }
+    urlTemplates.push({ include: e, template: resolvedTemplate });
+  }
+
+  // Process URL templates in their configured order.
+  for (const { include: e, template: resolvedTemplate } of urlTemplates) {
     // Route to appropriate handler based on source
     if (e.source === "TRASH") {
       if (isTrashQualityDefinition(resolvedTemplate)) {
@@ -628,6 +670,9 @@ const includeTemplateOrderDefault = async (
       } else {
         includeTrashTemplate(resolvedTemplate as TrashQP, {
           mergedTemplates,
+          trashQD,
+          arrType,
+          supportsProfileQualitySizes,
           trashCFGroupMapping,
           useExcludeSemantics,
           autoTrashCfGroupOptions: resolveAutoTrashCfGroupOptions(e),
@@ -640,7 +685,7 @@ const includeTemplateOrderDefault = async (
 
   mappedIncludes.trash.forEach((e) => {
     // Check QD map first — quality definitions have a different structure than quality profiles
-    const qdTemplate = trashQD.get(e.template);
+    const qdTemplate = trashQD.get(e.template.toLowerCase());
     if (qdTemplate) {
       applyQualityDefinitionFromInclude(qdTemplate, e.preferred_ratio, mergedTemplates);
       return;
@@ -652,6 +697,9 @@ const includeTemplateOrderDefault = async (
     }
     includeTrashTemplate(resolvedTemplate, {
       mergedTemplates,
+      trashQD,
+      arrType,
+      supportsProfileQualitySizes,
       trashCFGroupMapping,
       useExcludeSemantics,
       autoTrashCfGroupOptions: resolveAutoTrashCfGroupOptions(e),
@@ -761,6 +809,7 @@ export const mergeConfigsAndTemplates = async (
   globalConfig: InputConfigSchema,
   instanceConfig: InputConfigArrInstance,
   arrType: ArrType,
+  options: { supportsProfileQualitySizes?: boolean } = {},
 ): Promise<{ config: MergedConfigInstance }> => {
   const localTemplateMap = loadLocalRecyclarrTemplate(arrType);
   let recyclarrTemplateMap: Map<string, MappedTemplates> = new Map();
@@ -785,6 +834,7 @@ export const mergeConfigsAndTemplates = async (
   // When true: use old "exclude" semantics (apply to all except excluded)
   // When false/undefined: use new "include" semantics (apply only to included)
   const useExcludeSemantics = globalConfig.compatibilityTrashGuide20260219Enabled === true;
+  const supportsProfileQualitySizes = arrType === "SONARR" && options.supportsProfileQualitySizes === true;
   const autoTrashCfGroupDefaults: TransformTrashQPCFGroupsOptions = {
     includeDefaultOptionalCfs: instanceConfig.trash_cfgroup_config?.include_optional ?? true,
     includeUnrequired: instanceConfig.trash_cfgroup_config?.include_unrequired ?? false,
@@ -803,6 +853,8 @@ export const mergeConfigsAndTemplates = async (
         local: localTemplateMap,
         trash: trashTemplates,
         trashQD: trashQDTemplates,
+        arrType,
+        supportsProfileQualitySizes,
         trashCFGroupMapping,
         useExcludeSemantics,
         cfGroupOptions,
