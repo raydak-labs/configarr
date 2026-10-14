@@ -497,9 +497,7 @@ const includeTrashTemplate = (
       const [, trashId] = references[0]!;
       const definition = trashQD.get(trashId.toLowerCase());
       if (definition == null) {
-        throw new ConfigValidationError(
-          `TRaSH quality profile '${template.name}' references unknown quality definition '${trashId ?? "missing"}'.`,
-        );
+        throw new ConfigValidationError(`TRaSH quality profile '${template.name}' references unknown quality definition '${trashId}'.`);
       }
       qualitySizes = definition.qualities.map(({ quality, min, preferred, max }) => ({ quality, min, preferred, max }));
     } else {
@@ -599,7 +597,7 @@ const includeTemplateOrderDefault = async (
 
       switch (current.source) {
         case "TRASH":
-          if (trash.has(current.template) || trashQD.has(current.template)) {
+          if (trash.has(current.template) || trashQD.has(current.template.toLowerCase())) {
             previous.trash.push(current);
           } else {
             warnOrThrowConfig(`Included 'TRASH' template: ${current.template} not found.`);
@@ -648,7 +646,8 @@ const includeTemplateOrderDefault = async (
     `Found ${include.length} templates to include. Mapped to [recyclarr]=${mappedIncludes.recyclarr.length}, [local]=${mappedIncludes.local.length}, [trash]=${mappedIncludes.trash.length}, [url]=${mappedIncludes.url.length} ...`,
   );
 
-  // Process URL templates
+  // Load URL templates up front so profiles can resolve quality definitions regardless of include order.
+  const urlTemplates: { include: InputConfigIncludeItem; template: MappedTemplates | TrashQP | TrashQualityDefinition }[] = [];
   for (const e of mappedIncludes.url) {
     const resolvedTemplate = await loadTemplateFromUrl(e.template, e.source);
     if (resolvedTemplate == null) {
@@ -656,6 +655,14 @@ const includeTemplateOrderDefault = async (
       continue;
     }
 
+    if (e.source === "TRASH" && isTrashQualityDefinition(resolvedTemplate)) {
+      trashQD.set(resolvedTemplate.trash_id.toLowerCase(), resolvedTemplate);
+    }
+    urlTemplates.push({ include: e, template: resolvedTemplate });
+  }
+
+  // Process URL templates in their configured order.
+  for (const { include: e, template: resolvedTemplate } of urlTemplates) {
     // Route to appropriate handler based on source
     if (e.source === "TRASH") {
       if (isTrashQualityDefinition(resolvedTemplate)) {
@@ -678,7 +685,7 @@ const includeTemplateOrderDefault = async (
 
   mappedIncludes.trash.forEach((e) => {
     // Check QD map first — quality definitions have a different structure than quality profiles
-    const qdTemplate = trashQD.get(e.template);
+    const qdTemplate = trashQD.get(e.template.toLowerCase());
     if (qdTemplate) {
       applyQualityDefinitionFromInclude(qdTemplate, e.preferred_ratio, mergedTemplates);
       return;

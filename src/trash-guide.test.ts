@@ -27,7 +27,7 @@ describe("TrashGuide", async () => {
   describe("loadAllQDsFromTrash", () => {
     test("should return a Map instance for a valid arrType", async () => {
       const mockQD: TrashQualityDefinition = {
-        trash_id: "aed34b9f60ee115dfa7918b742336277",
+        trash_id: "AED34B9F60EE115DFA7918B742336277",
         type: "movie",
         qualities: [{ quality: "SDTV", min: 2, preferred: 95, max: 100 }],
       };

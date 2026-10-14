@@ -222,7 +222,7 @@ export const loadAllQDsFromTrash = async (arrType: TrashArrSupported): Promise<M
       try {
         const rawQd = loadJsonFile(`${trashPath}/${item}`);
         const qd = validateExternal(TrashQualityDefinitionSchema, rawQd, `trash-qd/${arrType}/${item}`) as TrashQualityDefinition;
-        map.set(qd.trash_id, qd);
+        map.set(qd.trash_id.toLowerCase(), qd);
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : String(err);
         logger.warn(`(${arrType}) Failed loading TRaSH-Guides QualityDefinition from '${item}'. Skipping. ${message}`);
