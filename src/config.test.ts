@@ -407,6 +407,90 @@ describe("mergeConfigsAndTemplates", () => {
     expect(result.config.quality_profiles.length).toBe(3);
   });
 
+  test("applies referenced TRaSH quality sizes only to Sonarr v5 profiles", async () => {
+    const trashId = "bef99584217af744e404ed44a33af589";
+    const trashProfile: TrashQP = {
+      trash_id: "profile-id",
+      name: "Series",
+      trash_quality_definition: { readable_label: trashId.toUpperCase() },
+      upgradeAllowed: true,
+      cutoff: "HDTV-1080p",
+      minFormatScore: 0,
+      cutoffFormatScore: 1000,
+      items: [{ name: "HDTV-1080p", allowed: true }],
+      formatItems: {},
+    };
+    const definition: TrashQualityDefinition = {
+      trash_id: trashId,
+      type: "different-from-label",
+      qualities: [{ quality: "HDTV-1080p", min: 10, preferred: 50, max: 90 }],
+    };
+
+    vi.spyOn(reclarrImporter, "loadRecyclarrTemplates").mockReturnValue(new Map());
+    vi.spyOn(localImporter, "loadLocalRecyclarrTemplate").mockReturnValue(new Map());
+    vi.spyOn(trashGuide, "loadQPFromTrash").mockReturnValue(Promise.resolve(new Map([["profile-id", trashProfile]])));
+    vi.spyOn(trashGuide, "loadAllQDsFromTrash").mockReturnValue(Promise.resolve(new Map([[trashId, definition]])));
+    vi.spyOn(trashGuide, "loadTrashCustomFormatGroups").mockReturnValue(Promise.resolve(new Map()));
+
+    const inputConfig: InputConfigArrInstance = {
+      include: [{ template: "profile-id", source: "TRASH" }],
+      api_key: "test",
+      base_url: "http://sonarr:8989",
+    };
+    const sonarrV5 = await mergeConfigsAndTemplates({}, inputConfig, "SONARR", { supportsProfileQualitySizes: true });
+    const sonarrV4 = await mergeConfigsAndTemplates({}, inputConfig, "SONARR");
+    const radarr = await mergeConfigsAndTemplates({}, inputConfig, "RADARR", { supportsProfileQualitySizes: true });
+
+    expect(sonarrV5.config.quality_profiles[0]?.quality_sizes).toEqual([{ quality: "HDTV-1080p", min: 10, preferred: 50, max: 90 }]);
+    expect(sonarrV4.config.quality_profiles[0]?.quality_sizes).toBeUndefined();
+    expect(radarr.config.quality_profiles[0]?.quality_sizes).toBeUndefined();
+  });
+
+  test("explicit profile quality sizes override referenced TRaSH sizes and unknown IDs fail on Sonarr v5", async () => {
+    const trashId = "bef99584217af744e404ed44a33af589";
+    const trashProfile: TrashQP = {
+      trash_id: "profile-id",
+      name: "Series",
+      trash_quality_definition: { series: trashId },
+      upgradeAllowed: true,
+      cutoff: "HDTV-1080p",
+      minFormatScore: 0,
+      cutoffFormatScore: 1000,
+      items: [{ name: "HDTV-1080p", allowed: true }],
+      formatItems: {},
+    };
+    const definition: TrashQualityDefinition = {
+      trash_id: trashId,
+      type: "series",
+      qualities: [{ quality: "HDTV-1080p", min: 10, preferred: 50, max: 90 }],
+    };
+
+    vi.spyOn(reclarrImporter, "loadRecyclarrTemplates").mockReturnValue(new Map());
+    vi.spyOn(localImporter, "loadLocalRecyclarrTemplate").mockReturnValue(new Map());
+    vi.spyOn(trashGuide, "loadQPFromTrash").mockReturnValue(Promise.resolve(new Map([["profile-id", trashProfile]])));
+    vi.spyOn(trashGuide, "loadAllQDsFromTrash").mockReturnValue(Promise.resolve(new Map([[trashId, definition]])));
+    vi.spyOn(trashGuide, "loadTrashCustomFormatGroups").mockReturnValue(Promise.resolve(new Map()));
+
+    const inputConfig: InputConfigArrInstance = {
+      include: [{ template: "profile-id", source: "TRASH" }],
+      quality_profiles: [
+        {
+          name: "Series",
+          quality_sizes: [{ quality: "HDTV-1080p", preferred: 75 }],
+        },
+      ],
+      api_key: "test",
+      base_url: "http://sonarr:8989",
+    };
+    const merged = await mergeConfigsAndTemplates({}, inputConfig, "SONARR", { supportsProfileQualitySizes: true });
+    expect(merged.config.quality_profiles[0]?.quality_sizes).toEqual([{ quality: "HDTV-1080p", min: 10, preferred: 75, max: 90 }]);
+
+    vi.spyOn(trashGuide, "loadAllQDsFromTrash").mockReturnValue(Promise.resolve(new Map()));
+    await expect(mergeConfigsAndTemplates({}, inputConfig, "SONARR", { supportsProfileQualitySizes: true })).rejects.toThrow(
+      "TRaSH quality profile 'Series' references unknown quality definition",
+    );
+  });
+
   test("carries instance tags and delete_unmanaged_tags through the merge", async () => {
     // Regression: the merge copies instance keys one by one, and these two were missing, so the
     // block silently did nothing for any config file or template. The e2e caught it; a unit test
@@ -1068,6 +1152,51 @@ describe("mergeConfigsAndTemplates", () => {
     expect(result.config.quality_definition?.qualities?.[1]?.quality).toBe("Bluray-1080p");
   });
 
+  test("should resolve a TRaSH profile definition URL independent of include order", async () => {
+    const trashId = "bef99584217af744e404ed44a33af589";
+    const profileUrl = "https://example.com/profile.json";
+    const qualityDefinitionUrl = "https://example.com/quality-size.json";
+    const profile: TrashQP = {
+      trash_id: "profile-id",
+      name: "Series",
+      trash_quality_definition: { series: trashId },
+      upgradeAllowed: true,
+      cutoff: "HDTV-1080p",
+      minFormatScore: 0,
+      cutoffFormatScore: 1000,
+      items: [{ name: "HDTV-1080p", allowed: true }],
+      formatItems: {},
+    };
+    const definition: TrashQualityDefinition = {
+      trash_id: trashId,
+      type: "series",
+      qualities: [{ quality: "HDTV-1080p", min: 10, preferred: 50, max: 90 }],
+    };
+
+    mockKyGet.mockImplementation((url: string) => ({
+      text: async () => JSON.stringify(url === profileUrl ? profile : definition),
+    }));
+
+    vi.spyOn(reclarrImporter, "loadRecyclarrTemplates").mockReturnValue(new Map());
+    vi.spyOn(localImporter, "loadLocalRecyclarrTemplate").mockReturnValue(new Map());
+    vi.spyOn(trashGuide, "loadQPFromTrash").mockReturnValue(Promise.resolve(new Map()));
+    vi.spyOn(trashGuide, "loadAllQDsFromTrash").mockReturnValue(Promise.resolve(new Map()));
+    vi.spyOn(trashGuide, "loadTrashCustomFormatGroups").mockReturnValue(Promise.resolve(new Map()));
+
+    const inputConfig: InputConfigArrInstance = {
+      include: [
+        { template: profileUrl, source: "TRASH" },
+        { template: qualityDefinitionUrl, source: "TRASH" },
+      ],
+      api_key: "test",
+      base_url: "http://sonarr:8989",
+    };
+
+    const result = await mergeConfigsAndTemplates({}, inputConfig, "SONARR", { supportsProfileQualitySizes: true });
+
+    expect(result.config.quality_profiles[0]?.quality_sizes).toEqual([{ quality: "HDTV-1080p", min: 10, preferred: 50, max: 90 }]);
+  });
+
   test("should auto-detect QD JSON from TRASH URL and apply preferred_ratio", async () => {
     const qdTemplate: TrashQualityDefinition = {
       trash_id: "aed34b9f60ee115dfa7918b742336277",
@@ -1121,7 +1250,7 @@ describe("mergeConfigsAndTemplates", () => {
     vi.spyOn(trashGuide, "loadTrashCustomFormatGroups").mockReturnValue(Promise.resolve(new Map()));
 
     const inputConfig: InputConfigArrInstance = {
-      include: [{ template: trashId, source: "TRASH", preferred_ratio: 0.5 }],
+      include: [{ template: trashId.toUpperCase(), source: "TRASH", preferred_ratio: 0.5 }],
       custom_formats: [],
       quality_profiles: [],
       api_key: "test",

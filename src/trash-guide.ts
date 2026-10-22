@@ -11,6 +11,7 @@ import {
   ConfigCustomFormat,
   ConfigQualityProfile,
   ConfigQualityProfileItem,
+  InputConfigQualitySize,
   InputConfigCfGroupTrashGuideItem,
   InputConfigCustomFormatGroup,
   InputConfigIncludeItem,
@@ -221,7 +222,7 @@ export const loadAllQDsFromTrash = async (arrType: TrashArrSupported): Promise<M
       try {
         const rawQd = loadJsonFile(`${trashPath}/${item}`);
         const qd = validateExternal(TrashQualityDefinitionSchema, rawQd, `trash-qd/${arrType}/${item}`) as TrashQualityDefinition;
-        map.set(qd.trash_id, qd);
+        map.set(qd.trash_id.toLowerCase(), qd);
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : String(err);
         logger.warn(`(${arrType}) Failed loading TRaSH-Guides QualityDefinition from '${item}'. Skipping. ${message}`);
@@ -444,7 +445,11 @@ export const loadTrashCFConflicts = async (arrType: TrashArrSupported): Promise<
 };
 
 // TODO merge two methods?
-export const transformTrashQPToTemplate = (data: TrashQP, useOldQualityOrder: boolean = false): ConfigQualityProfile => {
+export const transformTrashQPToTemplate = (
+  data: TrashQP,
+  useOldQualityOrder: boolean = false,
+  qualitySizes?: InputConfigQualitySize[],
+): ConfigQualityProfile => {
   const items = data.items
     .map((e): ConfigQualityProfileItem | null => {
       if (!e.allowed) {
@@ -471,6 +476,7 @@ export const transformTrashQPToTemplate = (data: TrashQP, useOldQualityOrder: bo
     upgrade: { allowed: data.upgradeAllowed, until_quality: data.cutoff, until_score: data.cutoffFormatScore },
     name: data.name,
     qualities,
+    ...(qualitySizes == null ? {} : { quality_sizes: qualitySizes }),
     quality_sort: "top", // default
     language: data.language,
   };
