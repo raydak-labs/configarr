@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.36.0](https://github.com/raydak-labs/configarr/compare/v1.35.0...v1.36.0) (2026-10-22)
+
+### Features
+
+- support TRaSH profile quality sizes for Sonarr v5 ([#565](https://github.com/raydak-labs/configarr/issues/565)) ([42a540d](https://github.com/raydak-labs/configarr/commit/42a540d8a84a708ec6159c1ee294ca7a7d98d207))
+
 ## [1.35.0](https://github.com/raydak-labs/configarr/compare/v1.34.1...v1.35.0) (2026-10-13)
 
 ### Features
