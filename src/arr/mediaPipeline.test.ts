@@ -156,7 +156,7 @@ beforeEach(() => {
 });
 
 describe("runMediaSyncToQualityProfiles", () => {
-  const run = (order: Order, syncObjects: MediaFeatureSyncs, trash?: unknown) =>
+  const run = (order: Order, syncObjects: MediaFeatureSyncs, trash?: unknown, supportsProfileQualitySizes = false) =>
     runMediaSyncToQualityProfiles({
       arrType: "SONARR",
       instanceName: "test",
@@ -165,6 +165,7 @@ describe("runMediaSyncToQualityProfiles", () => {
       client: client() as never,
       syncs: syncObjects,
       trash: trash as never,
+      supportsProfileQualitySizes,
     });
 
   it("runs the feature writes in order: quality definitions, naming, media management, ui config, quality profiles", async () => {
@@ -179,6 +180,13 @@ describe("runMediaSyncToQualityProfiles", () => {
 
     expect(syncObjects.qp.validateConfig).toHaveBeenCalledOnce();
     expect(order).toEqual(["validate", "validateMediaManagement", "qd", "naming", "mediaManagement", "uiConfig", "qp"]);
+  });
+
+  it("passes Sonarr profile-size support to template merging", async () => {
+    const order: Order = [];
+    await run(order, syncs(order), undefined, true);
+
+    expect(mergeConfigsAndTemplates).toHaveBeenCalledWith({}, {}, "SONARR", { supportsProfileQualitySizes: true });
   });
 
   it("validates configuration before any mutating feature runs", async () => {

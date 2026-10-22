@@ -20,6 +20,10 @@ export const TrashQualityDefinitionSchema = z.object({
 });
 export type TrashQualityDefinition = z.infer<typeof TrashQualityDefinitionSchema>;
 
+const TrashQualityDefinitionReferenceSchema = z
+  .record(z.string().min(1), z.string().regex(/^[a-f\d]{32}$/i))
+  .refine((references) => Object.keys(references).length === 1, "Expected exactly one quality-definition reference.");
+
 // Keys audited directly against the real, currently-shipped TRaSH-Guides data (both
 // custom-formats' trash_scores and quality-profiles' trash_score_set) - this list had
 // drifted 8 keys behind what TRaSH-Guides actually ships, silently losing the intended
@@ -80,6 +84,7 @@ export const TrashQPSchema = z.object({
   // source of truth with InputConfigQualityProfileSchema.score_set - both are ultimately
   // "one of TrashScores' known keys, or unset".
   trash_score_set: TrashScoresSchema.keyof().optional(),
+  trash_quality_definition: TrashQualityDefinitionReferenceSchema.optional(),
   language: z.string().optional(),
   upgradeAllowed: z.boolean(),
   cutoff: z.string(),
