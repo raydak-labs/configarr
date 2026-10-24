@@ -19,18 +19,29 @@ const transformedLevelMap = Object.entries(levels.values).reduce((p, [key, value
   return p;
 }, new Map<string, string>());
 
-const stream = pretty({
-  levelFirst: true,
-  ignore: "hostname,pid",
-  // @ts-ignore Temporary weird error
-  customPrettifiers: {
-    level: (level, key, log, { colors, label, labelColorized }) => `${labelColorized}${transformedLevelMap.get(label)}`,
-  },
-});
+const isJsonFormat = getEnvs().LOG_FORMAT === "json";
+
+// LOG_FORMAT=json: no stream, so pino falls back to raw JSON lines on stdout
+const stream = isJsonFormat
+  ? undefined
+  : pretty({
+      levelFirst: true,
+      ignore: "hostname,pid",
+      // @ts-ignore Temporary weird error
+      customPrettifiers: {
+        level: (level, key, log, { colors, label, labelColorized }) => `${labelColorized}${transformedLevelMap.get(label)}`,
+      },
+    });
 
 export const logger = pino(
   {
     level: getEnvs().LOG_LEVEL,
+    // JSON: level as label ("info") instead of number (30). Spread so text mode keeps pino's defaults.
+    ...(isJsonFormat && {
+      formatters: {
+        level: (label) => ({ level: label }),
+      },
+    }),
     // transport: {
     //   target: "pino-pretty",
     //   options: {
@@ -41,20 +52,35 @@ export const logger = pino(
   stream,
 );
 
+// Decorations are for human-readable text output; JSON output only gets the plain title.
+export const logBlankLine = () => {
+  if (isJsonFormat) {
+    return;
+  }
+  logger.info("");
+};
+
 export const logSeparator = () => {
+  if (isJsonFormat) {
+    return;
+  }
   logger.info(`#############################################`);
 };
 
 export const logHeading = (title: string) => {
-  logger.info("");
+  if (isJsonFormat) {
+    logger.info(title);
+    return;
+  }
+  logBlankLine();
   logSeparator();
   logger.info(`### ${title}`);
   logSeparator();
-  logger.info("");
+  logBlankLine();
 };
 
 export const logInstanceHeading = (title: string) => {
-  logger.info(`### ${title}`);
+  logger.info(isJsonFormat ? title : `### ${title}`);
 };
 
 // For debugging how envs have been loaded

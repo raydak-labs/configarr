@@ -18,6 +18,10 @@ const schema = z.object({
     .enum(["trace", "debug", "info", "warn", "error", "fatal"] as const)
     .optional()
     .default("info"),
+  LOG_FORMAT: z
+    .enum(["text", "json"] as const)
+    .optional()
+    .default("text"),
   CONFIG_LOCATION: z.string().optional(),
   SECRETS_LOCATION: z.string().optional(),
   CONFIGARR_DIFF_OUTPUT_FILE: z.string().optional(),
