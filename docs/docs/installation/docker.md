@@ -102,6 +102,7 @@ docker-compose run --rm configarr
 Running the container will output logs to the console.
 With those you can see what is happening and if there are any issues.
 Increase the log level with the `LOG_LEVEL` environment variable to get more detailed logs.
+Set `LOG_FORMAT=json` to get one JSON object per line instead.
 
 ### Common Issues
 
