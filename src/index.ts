@@ -14,7 +14,7 @@ import { getConfig } from "./config";
 import { ConsoleDiffFormatter } from "./diffReport/formatters/consoleFormatter";
 import { writeJsonDiffReport } from "./diffReport/formatters/jsonFormatter";
 import { InstanceDiffReport } from "./diffReport/diffReport.types";
-import { logger, logHeading, logInstanceHeading } from "./logger";
+import { logBlankLine, logger, logHeading, logInstanceHeading } from "./logger";
 import { cloneRecyclarrTemplateRepo } from "./recyclarr-importer";
 import { getTelemetryInstance, Telemetry } from "./telemetry";
 import { cloneTrashRepo } from "./trash-guide";
@@ -75,7 +75,7 @@ const runInstances = async <TInstance extends { base_url: string; api_key: strin
       unsetApi();
     }
 
-    logger.info("");
+    logBlankLine();
   }
 
   return { status, reports };
@@ -156,7 +156,7 @@ const run = async () => {
     new ProwlarrSyncer().run(instance, name),
   );
 
-  logger.info(``);
+  logBlankLine();
   if (disabledArrs.length > 0) {
     logger.info(`Disabled Arrs: ${disabledArrs.join(", ")}`);
   }
