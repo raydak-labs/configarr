@@ -36,6 +36,12 @@ const stream = isJsonFormat
 export const logger = pino(
   {
     level: getEnvs().LOG_LEVEL,
+    // JSON: level as label ("info") instead of number (30). Spread so text mode keeps pino's defaults.
+    ...(isJsonFormat && {
+      formatters: {
+        level: (label) => ({ level: label }),
+      },
+    }),
     // transport: {
     //   target: "pino-pretty",
     //   options: {
