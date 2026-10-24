@@ -19,14 +19,18 @@ const transformedLevelMap = Object.entries(levels.values).reduce((p, [key, value
   return p;
 }, new Map<string, string>());
 
-const stream = pretty({
-  levelFirst: true,
-  ignore: "hostname,pid",
-  // @ts-ignore Temporary weird error
-  customPrettifiers: {
-    level: (level, key, log, { colors, label, labelColorized }) => `${labelColorized}${transformedLevelMap.get(label)}`,
-  },
-});
+// LOG_FORMAT=json: no stream, so pino falls back to raw JSON lines on stdout
+const stream =
+  getEnvs().LOG_FORMAT === "json"
+    ? undefined
+    : pretty({
+        levelFirst: true,
+        ignore: "hostname,pid",
+        // @ts-ignore Temporary weird error
+        customPrettifiers: {
+          level: (level, key, log, { colors, label, labelColorized }) => `${labelColorized}${transformedLevelMap.get(label)}`,
+        },
+      });
 
 export const logger = pino(
   {
