@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.37.0](https://github.com/raydak-labs/configarr/compare/v1.36.0...v1.37.0) (2026-10-25)
+
+### Features
+
+- add JSON Log Format Support ([#570](https://github.com/raydak-labs/configarr/issues/570)) ([f303a4d](https://github.com/raydak-labs/configarr/commit/f303a4d80fb0394fd6b76980002a60dd927c9ad9))
+
 ## [1.36.0](https://github.com/raydak-labs/configarr/compare/v1.35.0...v1.36.0) (2026-10-22)
 
 ### Features
