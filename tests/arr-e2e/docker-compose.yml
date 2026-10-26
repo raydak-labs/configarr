@@ -5,7 +5,7 @@
 # Whisparr's eros base ignores env overrides, so it seeds a fixture config.xml instead.
 services:
   sonarr:
-    image: lscr.io/linuxserver/sonarr:4.0.19
+    image: lscr.io/linuxserver/sonarr:4.0.20
     environment:
       - PUID=${PUID:-1000}
       - PGID=${PGID:-1000}
@@ -41,7 +41,7 @@ services:
       - "18990:8989"
 
   radarr:
-    image: lscr.io/linuxserver/radarr:6.2.1
+    image: lscr.io/linuxserver/radarr:6.4.4
     environment:
       - PUID=${PUID:-1000}
       - PGID=${PGID:-1000}
@@ -58,7 +58,7 @@ services:
       - "17878:7878"
 
   radarr-v5:
-    image: lscr.io/linuxserver/radarr:5.27.5
+    image: lscr.io/linuxserver/radarr:5.28.0
     environment:
       - PUID=${PUID:-1000}
       - PGID=${PGID:-1000}
@@ -96,7 +96,7 @@ services:
   # overrides and generates a random API key, so the fixture config.xml is copied into the
   # volume before the app starts. The v2 line (v2-2.2.0-release.231) passes this suite too.
   whisparr:
-    image: ghcr.io/hotio/whisparr:v3-3.5.0-release.1585
+    image: ghcr.io/hotio/whisparr:v3-3.6.5-release.1886
     environment:
       - PUID=${PUID:-1000}
       - PGID=${PGID:-1000}
@@ -112,7 +112,7 @@ services:
       - "16969:6969"
 
   readarr:
-    image: lscr.io/linuxserver/readarr:develop-0.4.3.2665-ls130
+    image: lscr.io/linuxserver/readarr:develop-0.4.18.2805-ls157
     environment:
       - PUID=${PUID:-1000}
       - PGID=${PGID:-1000}
@@ -147,7 +147,7 @@ services:
       - "18686:8686"
 
   prowlarr:
-    image: lscr.io/linuxserver/prowlarr:2.5.2
+    image: lscr.io/linuxserver/prowlarr:2.6.5
     environment:
       - PUID=${PUID:-1000}
       - PGID=${PGID:-1000}
@@ -165,7 +165,7 @@ services:
 
   # Indexer proxy for Prowlarr e2e (same image as examples/full). Not a download client.
   flaresolverr:
-    image: ghcr.io/flaresolverr/flaresolverr:v3.3.21
+    image: ghcr.io/flaresolverr/flaresolverr:v3.5.2
     environment:
       - LOG_LEVEL=info
       - TZ=Etc/UTC
