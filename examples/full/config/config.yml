@@ -361,16 +361,6 @@ radarr:
     include:
       - template: radarr-quality-profile-hd-bluray-web
       - template: radarr-custom-formats-hd-bluray-web
-    quality_profiles:
-      - name: Irish Movies
-        # Irish was added in Radarr v7; language names resolve against the server.
-        language: Irish
-        upgrade:
-          allowed: true
-          until_quality: WEBDL-1080p
-          until_score: 100
-        qualities:
-          - name: WEBDL-1080p
     media_management:
       recycleBin: /tmp
     media_naming_api:

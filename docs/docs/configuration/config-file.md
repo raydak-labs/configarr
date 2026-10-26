@@ -37,16 +37,12 @@ are configured through `quality_definition`; `quality_sizes` is specific to Sona
 Configarr continues to authenticate with your API key, including when Radarr v7 uses
 OIDC for browser login.
 
-Radarr v7 adds the `Irish` profile language. Set `language: Irish` on a quality
-profile; Configarr resolves its ID from the connected server. It requires a server
-that advertises that language. The [full example](https://github.com/raydak-labs/configarr/tree/main/examples/full)
-runs Radarr v6 and v7 side by side and demonstrates this setting.
+The [full example](https://github.com/raydak-labs/configarr/tree/main/examples/full)
+runs Radarr v6 and v7 side by side.
 
 V7 also changes import-time custom-format scoring to consider the renamed filename.
 Existing `custom_formats` and `media_naming` / `media_naming_api` settings configure
-those inputs. OIDC/PEM/localhost authentication options belong to Radarr General
-settings, Trakt Smart Lists to import lists, and Discover rating/sort options to
-browser preferences; Configarr does not manage those areas.
+those inputs.
 
 ## Configuration Structure
 

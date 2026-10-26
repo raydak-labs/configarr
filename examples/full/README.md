@@ -8,7 +8,7 @@ This example contains every feature provided by configarr.
    - Creates the shared network and starts the other arr containers
    - Whisparr seeds `whisparr.xml` because its image ignores the API-key environment overrides
 2. Run Configarr with `docker compose -f docker-compose.jobs.yml run --rm configarr`
-   - The Radarr v7 instance imports the HD Bluray + WEB profile and demonstrates the new Irish profile language.
+   - The Radarr v7 instance imports the HD Bluray + WEB profile.
    - The example syncs both Sonarr instances and imports the TRaSH Guides WEB-1080p profile on v5.
    - To run the source in this checkout instead of the published image, use `docker compose -f docker-compose.local.yml run --build --rm configarr`.
    - The API keys in `config/secrets.yml` are example-only.
@@ -28,7 +28,7 @@ Cleanup: `docker compose down -v`
 
 The v5 image is pinned to the same beta build used by the e2e tests. Its sample config covers TRaSH template import, quality definitions and per-profile sizes, release-profile controls, media-management settings, root folders, UI settings, and media naming. Update the image digest when choosing a newer beta.
 
-The Radarr v7 image is pinned to 7.0.0.10815, matching the live compatibility tests. Its YAML uses the same settings as v5/v6; `language: Irish` requires v7. Keep the v6 and v7 config volumes separate.
+The Radarr v7 image is pinned to 7.0.0.10815, matching the live compatibility tests. Its YAML uses the same settings as v5/v6. Keep the v6 and v7 config volumes separate.
 
 ## Development
 
