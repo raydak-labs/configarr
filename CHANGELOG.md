@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.38.0](https://github.com/raydak-labs/configarr/compare/v1.37.0...v1.38.0) (2026-10-26)
+
+### Features
+
+- add Radarr v7 support ([#572](https://github.com/raydak-labs/configarr/issues/572)) ([a8867c3](https://github.com/raydak-labs/configarr/commit/a8867c3b52985d37e5f0e59fd880a5902bfccb64))
+
+### Bug Fixes
+
+- **deps:** update dependencies (non-major) ([#577](https://github.com/raydak-labs/configarr/issues/577)) ([57a511c](https://github.com/raydak-labs/configarr/commit/57a511ca7474565129fecad1001066ec20742d2e))
+
 ## [1.37.0](https://github.com/raydak-labs/configarr/compare/v1.36.0...v1.37.0) (2026-10-25)
 
 ### Features
