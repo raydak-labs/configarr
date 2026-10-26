@@ -60,6 +60,27 @@ services:
       - 6501:7878
     restart: unless-stopped
 
+  # Radarr v7 (7.0.0.10815), isolated from the v6 example database.
+  radarr-v7:
+    image: lscr.io/linuxserver/radarr@sha256:13a914c574ff8b84b4f3c64fb2ed91d6ded9d90716c18f520d375b7d383b393b
+    networks:
+      - configarr-full
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+      - RADARR__APP__INSTANCENAME=Radarr v7
+      - RADARR__AUTH__APIKEY=d079c65e74fc41c793d5653d189073d8
+      - RADARR__AUTH__REQUIRED=DisabledForLocalAddresses
+      - RADARR__AUTH__METHOD=Forms
+    volumes:
+      - radarr-v7:/config
+      - radarr-download1:/downloads/1
+      - radarr-download2:/downloads/2
+    ports:
+      - 6507:7878
+    restart: unless-stopped
+
   # experimental
   # Whisparr's eros base ignores env overrides and generates a random API key, so
   # whisparr.xml is copied into the volume before the app starts.
@@ -165,6 +186,7 @@ volumes:
   sonarr:
   sonarr-v5:
   radarr:
+  radarr-v7:
   whisparr:
   readarr:
   lidarr:

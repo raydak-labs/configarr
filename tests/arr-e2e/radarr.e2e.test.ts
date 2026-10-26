@@ -126,6 +126,27 @@ describe("radarr (live)", () => {
     assertDiffUpToDate(second.result, ["RADARR"]);
   });
 
+  test("profile languages resolve against the server, including Irish on v7", async () => {
+    const major = Number((await client.getSystemStatus()).version?.split(".")[0]);
+    const language = major >= 7 ? "Irish" : "English";
+    const serverLanguage = (await client.getLanguages()).find((entry) => entry.name === language);
+    expect(serverLanguage).toBeDefined();
+    const profile = { ...qualityProfile(), name: "e2e-language", language };
+    const config = mediaConfig("RADARR", { quality_profiles: [profile] });
+    const first = await syncConfig(config);
+    assertPipelineSucceeded(first.result, ["RADARR"]);
+    expect(findNamed(await client.getQualityProfiles(), profile.name)?.language).toMatchObject({
+      id: serverLanguage?.id,
+      name: language,
+    });
+    const second = await syncConfig(config, first.workspace);
+    assertPipelineSucceeded(second.result, ["RADARR"]);
+    assertDiffUpToDate(second.result, ["RADARR"]);
+    const update = await syncConfig(mediaConfig("RADARR", { quality_profiles: [{ ...profile, language: "Any" }] }), first.workspace);
+    assertPipelineSucceeded(update.result, ["RADARR"]);
+    expect(findNamed(await client.getQualityProfiles(), profile.name)?.language?.name).toBe("Any");
+  });
+
   test("custom formats", async () => {
     const preexisting = nonE2eNames(await client.getCustomFormats());
     const withValue = (value: string) =>

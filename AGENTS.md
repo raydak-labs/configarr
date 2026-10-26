@@ -46,7 +46,7 @@ Specs are dated and fixed, not living documents — a spec is a record of the de
 
 The project supports multiple \*arr applications with varying feature support:
 
-- **Full Support**: Sonarr v4 and v5, Radarr v5/v6 and v7 prerelease
+- **Full Support**: Sonarr v4 and v5, Radarr v5/v6 and v7
 - **Experimental**: Lidarr, Readarr, Whisparr
 - **Experimental (Prowlarr v1)**: Applications, Indexers, Indexer Proxies, Download Clients
   (dedicated `prowlarr:` config block and its own minimal pipeline in `index.ts`; not a media

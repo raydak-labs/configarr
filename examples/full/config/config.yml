@@ -349,6 +349,36 @@ radarr:
           - name: ExampleProfile
             # score: 0 # Uncomment this line to disable prioritised IMAX Enhanced releases
 
+  # The same API v3 configuration also works on Radarr v7.
+  instance-v7:
+    base_url: http://radarr-v7:7878
+    api_key: !secret RADARR_V7_API_KEY
+    root_folders:
+      - "/app"
+    tags: ["v7-example"]
+    quality_definition:
+      type: movie
+    include:
+      - template: radarr-quality-profile-hd-bluray-web
+      - template: radarr-custom-formats-hd-bluray-web
+    quality_profiles:
+      - name: Irish Movies
+        # Irish was added in Radarr v7; language names resolve against the server.
+        language: Irish
+        upgrade:
+          allowed: true
+          until_quality: WEBDL-1080p
+          until_score: 100
+        qualities:
+          - name: WEBDL-1080p
+    media_management:
+      recycleBin: /tmp
+    media_naming_api:
+      renameMovies: true
+      replaceIllegalCharacters: true
+    ui_config:
+      firstDayOfWeek: 1
+
 whisparr:
   instance1: # Instance name (can be any unique identifier)
     base_url: http://whisparr:6969 # instance URL
