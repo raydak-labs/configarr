@@ -15,7 +15,10 @@ import {
   AlternativeTitleResource,
   ApiInfoResource,
   AutoTaggingResource,
+  AutoTaggingSpecificationSchema,
   BackupResource,
+  BackupRestoreErrorResource,
+  BackupRestoreResource,
   BlocklistBulkResource,
   BlocklistResource,
   BlocklistResourcePagingResource,
@@ -27,6 +30,7 @@ import {
   CustomFilterResource,
   CustomFormatBulkResource,
   CustomFormatResource,
+  CustomFormatSpecificationSchema,
   DelayProfileResource,
   DiskSpaceResource,
   DownloadClientBulkResource,
@@ -34,6 +38,9 @@ import {
   DownloadClientResource,
   DownloadProtocol,
   ExtraFileResource,
+  FileSystemMediaFileResource,
+  FileSystemResult,
+  FileSystemTypeResource,
   HealthResource,
   HistoryResource,
   HistoryResourcePagingResource,
@@ -43,6 +50,7 @@ import {
   ImportListExclusionBulkResource,
   ImportListExclusionResource,
   ImportListExclusionResourcePagingResource,
+  ImportListMoviesResource,
   ImportListResource,
   IndexerBulkResource,
   IndexerConfigResource,
@@ -60,12 +68,15 @@ import {
   MovieEditorResource,
   MovieFileListResource,
   MovieFileResource,
+  MovieFolderResource,
   MovieHistoryEventType,
   MovieResource,
   MovieResourcePagingResource,
   NamingConfigResource,
+  NamingExampleResource,
   NotificationResource,
   ParseResource,
+  ProviderTestAllResult,
   QualityDefinitionLimitsResource,
   QualityDefinitionResource,
   QualityProfileResource,
@@ -81,6 +92,8 @@ import {
   RootFolderResource,
   SortDirection,
   SystemResource,
+  SystemRestartResource,
+  SystemShutdownResource,
   TagDetailsResource,
   TagResource,
   TaskResource,
@@ -129,7 +142,7 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3AlttitleDetail = (id: number, params: RequestParams = {}) =>
-    this.http.request<AlternativeTitleResource, any>({
+    this.http.request<AlternativeTitleResource, void>({
       path: `/api/v3/alttitle/${id}`,
       method: "GET",
       secure: true,
@@ -161,7 +174,7 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3AutotaggingCreate = (data: AutoTaggingResource, params: RequestParams = {}) =>
-    this.http.request<AutoTaggingResource, any>({
+    this.http.request<AutoTaggingResource, void>({
       path: `/api/v3/autotagging`,
       method: "POST",
       body: data,
@@ -195,7 +208,7 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3AutotaggingUpdate = (id: string, data: AutoTaggingResource, params: RequestParams = {}) =>
-    this.http.request<AutoTaggingResource, any>({
+    this.http.request<AutoTaggingResource, void>({
       path: `/api/v3/autotagging/${id}`,
       method: "PUT",
       body: data,
@@ -228,7 +241,7 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3AutotaggingDetail = (id: number, params: RequestParams = {}) =>
-    this.http.request<AutoTaggingResource, any>({
+    this.http.request<AutoTaggingResource, void>({
       path: `/api/v3/autotagging/${id}`,
       method: "GET",
       secure: true,
@@ -244,10 +257,11 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3AutotaggingSchemaList = (params: RequestParams = {}) =>
-    this.http.request<void, any>({
+    this.http.request<AutoTaggingSpecificationSchema[], any>({
       path: `/api/v3/autotagging/schema`,
       method: "GET",
       secure: true,
+      format: "json",
       ...params,
     });
   /**
@@ -275,10 +289,11 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3SystemBackupDelete = (id: number, params: RequestParams = {}) =>
-    this.http.request<void, any>({
+    this.http.request<any, void>({
       path: `/api/v3/system/backup/${id}`,
       method: "DELETE",
       secure: true,
+      format: "json",
       ...params,
     });
   /**
@@ -290,10 +305,11 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3SystemBackupRestoreCreate = (id: number, params: RequestParams = {}) =>
-    this.http.request<void, any>({
+    this.http.request<BackupRestoreResource, void>({
       path: `/api/v3/system/backup/restore/${id}`,
       method: "POST",
       secure: true,
+      format: "json",
       ...params,
     });
   /**
@@ -305,10 +321,11 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3SystemBackupRestoreUploadCreate = (params: RequestParams = {}) =>
-    this.http.request<void, any>({
+    this.http.request<BackupRestoreResource, BackupRestoreErrorResource>({
       path: `/api/v3/system/backup/restore/upload`,
       method: "POST",
       secure: true,
+      format: "json",
       ...params,
     });
   /**
@@ -393,12 +410,13 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3BlocklistBulkDelete = (data: BlocklistBulkResource, params: RequestParams = {}) =>
-    this.http.request<void, any>({
+    this.http.request<any, any>({
       path: `/api/v3/blocklist/bulk`,
       method: "DELETE",
       body: data,
       secure: true,
       type: ContentType.Json,
+      format: "json",
       ...params,
     });
   /**
@@ -462,12 +480,13 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3CollectionUpdate = (data: CollectionUpdateResource, params: RequestParams = {}) =>
-    this.http.request<void, any>({
+    this.http.request<CollectionResource[], any>({
       path: `/api/v3/collection`,
       method: "PUT",
       body: data,
       secure: true,
       type: ContentType.Json,
+      format: "json",
       ...params,
     });
   /**
@@ -481,7 +500,7 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3CollectionUpdate2 = (id: string, data: CollectionResource, params: RequestParams = {}) =>
-    this.http.request<CollectionResource, any>({
+    this.http.request<CollectionResource, void>({
       path: `/api/v3/collection/${id}`,
       method: "PUT",
       body: data,
@@ -499,7 +518,7 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3CollectionDetail = (id: number, params: RequestParams = {}) =>
-    this.http.request<CollectionResource, any>({
+    this.http.request<CollectionResource, void>({
       path: `/api/v3/collection/${id}`,
       method: "GET",
       secure: true,
@@ -515,7 +534,7 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3CommandCreate = (data: CommandResource, params: RequestParams = {}) =>
-    this.http.request<CommandResource, any>({
+    this.http.request<CommandResource, void>({
       path: `/api/v3/command`,
       method: "POST",
       body: data,
@@ -564,7 +583,7 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3CommandDetail = (id: number, params: RequestParams = {}) =>
-    this.http.request<CommandResource, any>({
+    this.http.request<CommandResource, void>({
       path: `/api/v3/command/${id}`,
       method: "GET",
       secure: true,
@@ -588,11 +607,12 @@ export class Api<SecurityDataType = unknown> {
     },
     params: RequestParams = {},
   ) =>
-    this.http.request<void, any>({
+    this.http.request<CreditResource[], any>({
       path: `/api/v3/credit`,
       method: "GET",
       query: query,
       secure: true,
+      format: "json",
       ...params,
     });
   /**
@@ -604,7 +624,7 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3CreditDetail = (id: number, params: RequestParams = {}) =>
-    this.http.request<CreditResource, any>({
+    this.http.request<CreditResource, void>({
       path: `/api/v3/credit/${id}`,
       method: "GET",
       secure: true,
@@ -636,7 +656,7 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3CustomfilterCreate = (data: CustomFilterResource, params: RequestParams = {}) =>
-    this.http.request<CustomFilterResource, any>({
+    this.http.request<CustomFilterResource, void>({
       path: `/api/v3/customfilter`,
       method: "POST",
       body: data,
@@ -654,7 +674,7 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3CustomfilterUpdate = (id: string, data: CustomFilterResource, params: RequestParams = {}) =>
-    this.http.request<CustomFilterResource, any>({
+    this.http.request<CustomFilterResource, void>({
       path: `/api/v3/customfilter/${id}`,
       method: "PUT",
       body: data,
@@ -687,7 +707,7 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3CustomfilterDetail = (id: number, params: RequestParams = {}) =>
-    this.http.request<CustomFilterResource, any>({
+    this.http.request<CustomFilterResource, void>({
       path: `/api/v3/customfilter/${id}`,
       method: "GET",
       secure: true,
@@ -719,7 +739,7 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3CustomformatCreate = (data: CustomFormatResource, params: RequestParams = {}) =>
-    this.http.request<CustomFormatResource, any>({
+    this.http.request<CustomFormatResource, void>({
       path: `/api/v3/customformat`,
       method: "POST",
       body: data,
@@ -737,7 +757,7 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3CustomformatUpdate = (id: string, data: CustomFormatResource, params: RequestParams = {}) =>
-    this.http.request<CustomFormatResource, any>({
+    this.http.request<CustomFormatResource, void>({
       path: `/api/v3/customformat/${id}`,
       method: "PUT",
       body: data,
@@ -770,7 +790,7 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3CustomformatDetail = (id: number, params: RequestParams = {}) =>
-    this.http.request<CustomFormatResource, any>({
+    this.http.request<CustomFormatResource, void>({
       path: `/api/v3/customformat/${id}`,
       method: "GET",
       secure: true,
@@ -786,7 +806,7 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3CustomformatBulkUpdate = (data: CustomFormatBulkResource, params: RequestParams = {}) =>
-    this.http.request<CustomFormatResource, any>({
+    this.http.request<CustomFormatResource[], void>({
       path: `/api/v3/customformat/bulk`,
       method: "PUT",
       body: data,
@@ -804,12 +824,13 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3CustomformatBulkDelete = (data: CustomFormatBulkResource, params: RequestParams = {}) =>
-    this.http.request<void, any>({
+    this.http.request<any, any>({
       path: `/api/v3/customformat/bulk`,
       method: "DELETE",
       body: data,
       secure: true,
       type: ContentType.Json,
+      format: "json",
       ...params,
     });
   /**
@@ -821,10 +842,11 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3CustomformatSchemaList = (params: RequestParams = {}) =>
-    this.http.request<void, any>({
+    this.http.request<CustomFormatSpecificationSchema[], any>({
       path: `/api/v3/customformat/schema`,
       method: "GET",
       secure: true,
+      format: "json",
       ...params,
     });
   /**
@@ -871,7 +893,7 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3DelayprofileCreate = (data: DelayProfileResource, params: RequestParams = {}) =>
-    this.http.request<DelayProfileResource, any>({
+    this.http.request<DelayProfileResource, void>({
       path: `/api/v3/delayprofile`,
       method: "POST",
       body: data,
@@ -920,7 +942,7 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3DelayprofileUpdate = (id: string, data: DelayProfileResource, params: RequestParams = {}) =>
-    this.http.request<DelayProfileResource, any>({
+    this.http.request<DelayProfileResource, void>({
       path: `/api/v3/delayprofile/${id}`,
       method: "PUT",
       body: data,
@@ -938,7 +960,7 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3DelayprofileDetail = (id: number, params: RequestParams = {}) =>
-    this.http.request<DelayProfileResource, any>({
+    this.http.request<DelayProfileResource, void>({
       path: `/api/v3/delayprofile/${id}`,
       method: "GET",
       secure: true,
@@ -1017,7 +1039,7 @@ export class Api<SecurityDataType = unknown> {
     },
     params: RequestParams = {},
   ) =>
-    this.http.request<DownloadClientResource, any>({
+    this.http.request<DownloadClientResource, void>({
       path: `/api/v3/downloadclient`,
       method: "POST",
       query: query,
@@ -1044,7 +1066,7 @@ export class Api<SecurityDataType = unknown> {
     },
     params: RequestParams = {},
   ) =>
-    this.http.request<DownloadClientResource, any>({
+    this.http.request<DownloadClientResource, void>({
       path: `/api/v3/downloadclient/${id}`,
       method: "PUT",
       query: query,
@@ -1063,10 +1085,11 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3DownloadclientDelete = (id: number, params: RequestParams = {}) =>
-    this.http.request<void, any>({
+    this.http.request<any, any>({
       path: `/api/v3/downloadclient/${id}`,
       method: "DELETE",
       secure: true,
+      format: "json",
       ...params,
     });
   /**
@@ -1078,7 +1101,7 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3DownloadclientDetail = (id: number, params: RequestParams = {}) =>
-    this.http.request<DownloadClientResource, any>({
+    this.http.request<DownloadClientResource, void>({
       path: `/api/v3/downloadclient/${id}`,
       method: "GET",
       secure: true,
@@ -1094,7 +1117,7 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3DownloadclientBulkUpdate = (data: DownloadClientBulkResource, params: RequestParams = {}) =>
-    this.http.request<DownloadClientResource, any>({
+    this.http.request<DownloadClientResource[], void>({
       path: `/api/v3/downloadclient/bulk`,
       method: "PUT",
       body: data,
@@ -1112,12 +1135,13 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3DownloadclientBulkDelete = (data: DownloadClientBulkResource, params: RequestParams = {}) =>
-    this.http.request<void, any>({
+    this.http.request<any, any>({
       path: `/api/v3/downloadclient/bulk`,
       method: "DELETE",
       body: data,
       secure: true,
       type: ContentType.Json,
+      format: "json",
       ...params,
     });
   /**
@@ -1170,10 +1194,11 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3DownloadclientTestallCreate = (params: RequestParams = {}) =>
-    this.http.request<void, any>({
+    this.http.request<ProviderTestAllResult[], ProviderTestAllResult[]>({
       path: `/api/v3/downloadclient/testall`,
       method: "POST",
       secure: true,
+      format: "json",
       ...params,
     });
   /**
@@ -1185,7 +1210,7 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3DownloadclientActionCreate = (name: string, data: DownloadClientResource, params: RequestParams = {}) =>
-    this.http.request<void, any>({
+    this.http.request<any, void>({
       path: `/api/v3/downloadclient/action/${name}`,
       method: "POST",
       body: data,
@@ -1218,7 +1243,7 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3ConfigDownloadclientUpdate = (id: string, data: DownloadClientConfigResource, params: RequestParams = {}) =>
-    this.http.request<DownloadClientConfigResource, any>({
+    this.http.request<DownloadClientConfigResource, void>({
       path: `/api/v3/config/downloadclient/${id}`,
       method: "PUT",
       body: data,
@@ -1236,7 +1261,7 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3ConfigDownloadclientDetail = (id: number, params: RequestParams = {}) =>
-    this.http.request<DownloadClientConfigResource, any>({
+    this.http.request<DownloadClientConfigResource, void>({
       path: `/api/v3/config/downloadclient/${id}`,
       method: "GET",
       secure: true,
@@ -1284,11 +1309,12 @@ export class Api<SecurityDataType = unknown> {
     },
     params: RequestParams = {},
   ) =>
-    this.http.request<void, any>({
+    this.http.request<FileSystemResult, any>({
       path: `/api/v3/filesystem`,
       method: "GET",
       query: query,
       secure: true,
+      format: "json",
       ...params,
     });
   /**
@@ -1305,11 +1331,12 @@ export class Api<SecurityDataType = unknown> {
     },
     params: RequestParams = {},
   ) =>
-    this.http.request<void, any>({
+    this.http.request<FileSystemTypeResource, any>({
       path: `/api/v3/filesystem/type`,
       method: "GET",
       query: query,
       secure: true,
+      format: "json",
       ...params,
     });
   /**
@@ -1326,11 +1353,12 @@ export class Api<SecurityDataType = unknown> {
     },
     params: RequestParams = {},
   ) =>
-    this.http.request<void, any>({
+    this.http.request<FileSystemMediaFileResource[], any>({
       path: `/api/v3/filesystem/mediafiles`,
       method: "GET",
       query: query,
       secure: true,
+      format: "json",
       ...params,
     });
   /**
@@ -1449,10 +1477,11 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3HistoryFailedCreate = (id: number, params: RequestParams = {}) =>
-    this.http.request<void, any>({
+    this.http.request<any, any>({
       path: `/api/v3/history/failed/${id}`,
       method: "POST",
       secure: true,
+      format: "json",
       ...params,
     });
   /**
@@ -1480,7 +1509,7 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3ConfigHostUpdate = (id: string, data: HostConfigResource, params: RequestParams = {}) =>
-    this.http.request<HostConfigResource, any>({
+    this.http.request<HostConfigResource, void>({
       path: `/api/v3/config/host/${id}`,
       method: "PUT",
       body: data,
@@ -1498,7 +1527,7 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3ConfigHostDetail = (id: number, params: RequestParams = {}) =>
-    this.http.request<HostConfigResource, any>({
+    this.http.request<HostConfigResource, void>({
       path: `/api/v3/config/host/${id}`,
       method: "GET",
       secure: true,
@@ -1537,7 +1566,7 @@ export class Api<SecurityDataType = unknown> {
     },
     params: RequestParams = {},
   ) =>
-    this.http.request<ImportListResource, any>({
+    this.http.request<ImportListResource, void>({
       path: `/api/v3/importlist`,
       method: "POST",
       query: query,
@@ -1564,7 +1593,7 @@ export class Api<SecurityDataType = unknown> {
     },
     params: RequestParams = {},
   ) =>
-    this.http.request<ImportListResource, any>({
+    this.http.request<ImportListResource, void>({
       path: `/api/v3/importlist/${id}`,
       method: "PUT",
       query: query,
@@ -1583,10 +1612,11 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3ImportlistDelete = (id: number, params: RequestParams = {}) =>
-    this.http.request<void, any>({
+    this.http.request<any, any>({
       path: `/api/v3/importlist/${id}`,
       method: "DELETE",
       secure: true,
+      format: "json",
       ...params,
     });
   /**
@@ -1598,7 +1628,7 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3ImportlistDetail = (id: number, params: RequestParams = {}) =>
-    this.http.request<ImportListResource, any>({
+    this.http.request<ImportListResource, void>({
       path: `/api/v3/importlist/${id}`,
       method: "GET",
       secure: true,
@@ -1614,7 +1644,7 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3ImportlistBulkUpdate = (data: ImportListBulkResource, params: RequestParams = {}) =>
-    this.http.request<ImportListResource, any>({
+    this.http.request<ImportListResource[], void>({
       path: `/api/v3/importlist/bulk`,
       method: "PUT",
       body: data,
@@ -1632,12 +1662,13 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3ImportlistBulkDelete = (data: ImportListBulkResource, params: RequestParams = {}) =>
-    this.http.request<void, any>({
+    this.http.request<any, any>({
       path: `/api/v3/importlist/bulk`,
       method: "DELETE",
       body: data,
       secure: true,
       type: ContentType.Json,
+      format: "json",
       ...params,
     });
   /**
@@ -1690,10 +1721,11 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3ImportlistTestallCreate = (params: RequestParams = {}) =>
-    this.http.request<void, any>({
+    this.http.request<ProviderTestAllResult[], ProviderTestAllResult[]>({
       path: `/api/v3/importlist/testall`,
       method: "POST",
       secure: true,
+      format: "json",
       ...params,
     });
   /**
@@ -1705,7 +1737,7 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3ImportlistActionCreate = (name: string, data: ImportListResource, params: RequestParams = {}) =>
-    this.http.request<void, any>({
+    this.http.request<any, void>({
       path: `/api/v3/importlist/action/${name}`,
       method: "POST",
       body: data,
@@ -1738,7 +1770,7 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3ConfigImportlistUpdate = (id: string, data: ImportListConfigResource, params: RequestParams = {}) =>
-    this.http.request<ImportListConfigResource, any>({
+    this.http.request<ImportListConfigResource, void>({
       path: `/api/v3/config/importlist/${id}`,
       method: "PUT",
       body: data,
@@ -1756,7 +1788,7 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3ConfigImportlistDetail = (id: number, params: RequestParams = {}) =>
-    this.http.request<ImportListConfigResource, any>({
+    this.http.request<ImportListConfigResource, void>({
       path: `/api/v3/config/importlist/${id}`,
       method: "GET",
       secure: true,
@@ -1789,7 +1821,7 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3ExclusionsCreate = (data: ImportListExclusionResource, params: RequestParams = {}) =>
-    this.http.request<ImportListExclusionResource, any>({
+    this.http.request<ImportListExclusionResource, void>({
       path: `/api/v3/exclusions`,
       method: "POST",
       body: data,
@@ -1840,7 +1872,7 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3ExclusionsUpdate = (id: string, data: ImportListExclusionResource, params: RequestParams = {}) =>
-    this.http.request<ImportListExclusionResource, any>({
+    this.http.request<ImportListExclusionResource, void>({
       path: `/api/v3/exclusions/${id}`,
       method: "PUT",
       body: data,
@@ -1873,7 +1905,7 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3ExclusionsDetail = (id: number, params: RequestParams = {}) =>
-    this.http.request<ImportListExclusionResource, any>({
+    this.http.request<ImportListExclusionResource, void>({
       path: `/api/v3/exclusions/${id}`,
       method: "GET",
       secure: true,
@@ -1889,12 +1921,13 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3ExclusionsBulkCreate = (data: ImportListExclusionResource[], params: RequestParams = {}) =>
-    this.http.request<void, any>({
+    this.http.request<ImportListExclusionResource[], any>({
       path: `/api/v3/exclusions/bulk`,
       method: "POST",
       body: data,
       secure: true,
       type: ContentType.Json,
+      format: "json",
       ...params,
     });
   /**
@@ -1906,12 +1939,13 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3ExclusionsBulkDelete = (data: ImportListExclusionBulkResource, params: RequestParams = {}) =>
-    this.http.request<void, any>({
+    this.http.request<any, any>({
       path: `/api/v3/exclusions/bulk`,
       method: "DELETE",
       body: data,
       secure: true,
       type: ContentType.Json,
+      format: "json",
       ...params,
     });
   /**
@@ -1933,11 +1967,12 @@ export class Api<SecurityDataType = unknown> {
     },
     params: RequestParams = {},
   ) =>
-    this.http.request<void, any>({
+    this.http.request<ImportListMoviesResource[], any>({
       path: `/api/v3/importlist/movie`,
       method: "GET",
       query: query,
       secure: true,
+      format: "json",
       ...params,
     });
   /**
@@ -1949,12 +1984,13 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3ImportlistMovieCreate = (data: MovieResource[], params: RequestParams = {}) =>
-    this.http.request<void, any>({
+    this.http.request<MovieResource[], any>({
       path: `/api/v3/importlist/movie`,
       method: "POST",
       body: data,
       secure: true,
       type: ContentType.Json,
+      format: "json",
       ...params,
     });
   /**
@@ -1989,7 +2025,7 @@ export class Api<SecurityDataType = unknown> {
     },
     params: RequestParams = {},
   ) =>
-    this.http.request<IndexerResource, any>({
+    this.http.request<IndexerResource, void>({
       path: `/api/v3/indexer`,
       method: "POST",
       query: query,
@@ -2016,7 +2052,7 @@ export class Api<SecurityDataType = unknown> {
     },
     params: RequestParams = {},
   ) =>
-    this.http.request<IndexerResource, any>({
+    this.http.request<IndexerResource, void>({
       path: `/api/v3/indexer/${id}`,
       method: "PUT",
       query: query,
@@ -2035,10 +2071,11 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3IndexerDelete = (id: number, params: RequestParams = {}) =>
-    this.http.request<void, any>({
+    this.http.request<any, any>({
       path: `/api/v3/indexer/${id}`,
       method: "DELETE",
       secure: true,
+      format: "json",
       ...params,
     });
   /**
@@ -2050,7 +2087,7 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3IndexerDetail = (id: number, params: RequestParams = {}) =>
-    this.http.request<IndexerResource, any>({
+    this.http.request<IndexerResource, void>({
       path: `/api/v3/indexer/${id}`,
       method: "GET",
       secure: true,
@@ -2066,7 +2103,7 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3IndexerBulkUpdate = (data: IndexerBulkResource, params: RequestParams = {}) =>
-    this.http.request<IndexerResource, any>({
+    this.http.request<IndexerResource[], void>({
       path: `/api/v3/indexer/bulk`,
       method: "PUT",
       body: data,
@@ -2084,12 +2121,13 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3IndexerBulkDelete = (data: IndexerBulkResource, params: RequestParams = {}) =>
-    this.http.request<void, any>({
+    this.http.request<any, any>({
       path: `/api/v3/indexer/bulk`,
       method: "DELETE",
       body: data,
       secure: true,
       type: ContentType.Json,
+      format: "json",
       ...params,
     });
   /**
@@ -2142,10 +2180,11 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3IndexerTestallCreate = (params: RequestParams = {}) =>
-    this.http.request<void, any>({
+    this.http.request<ProviderTestAllResult[], ProviderTestAllResult[]>({
       path: `/api/v3/indexer/testall`,
       method: "POST",
       secure: true,
+      format: "json",
       ...params,
     });
   /**
@@ -2157,7 +2196,7 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3IndexerActionCreate = (name: string, data: IndexerResource, params: RequestParams = {}) =>
-    this.http.request<void, any>({
+    this.http.request<any, void>({
       path: `/api/v3/indexer/action/${name}`,
       method: "POST",
       body: data,
@@ -2190,7 +2229,7 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3ConfigIndexerUpdate = (id: string, data: IndexerConfigResource, params: RequestParams = {}) =>
-    this.http.request<IndexerConfigResource, any>({
+    this.http.request<IndexerConfigResource, void>({
       path: `/api/v3/config/indexer/${id}`,
       method: "PUT",
       body: data,
@@ -2208,7 +2247,7 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3ConfigIndexerDetail = (id: number, params: RequestParams = {}) =>
-    this.http.request<IndexerConfigResource, any>({
+    this.http.request<IndexerConfigResource, void>({
       path: `/api/v3/config/indexer/${id}`,
       method: "GET",
       secure: true,
@@ -2256,7 +2295,7 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3LanguageDetail = (id: number, params: RequestParams = {}) =>
-    this.http.request<LanguageResource, any>({
+    this.http.request<LanguageResource, void>({
       path: `/api/v3/language/${id}`,
       method: "GET",
       secure: true,
@@ -2272,11 +2311,10 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3LocalizationList = (params: RequestParams = {}) =>
-    this.http.request<string, any>({
+    this.http.request<void, any>({
       path: `/api/v3/localization`,
       method: "GET",
       secure: true,
-      format: "json",
       ...params,
     });
   /**
@@ -2354,7 +2392,7 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3LogFileDetail = (filename: string, params: RequestParams = {}) =>
-    this.http.request<void, any>({
+    this.http.request<string, void>({
       path: `/api/v3/log/file/${filename}`,
       method: "GET",
       secure: true,
@@ -2396,12 +2434,13 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3ManualimportCreate = (data: ManualImportReprocessResource[], params: RequestParams = {}) =>
-    this.http.request<void, any>({
+    this.http.request<ManualImportReprocessResource[], void>({
       path: `/api/v3/manualimport`,
       method: "POST",
       body: data,
       secure: true,
       type: ContentType.Json,
+      format: "json",
       ...params,
     });
   /**
@@ -2413,7 +2452,7 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3MediacoverDetail = (movieId: number, filename: string, params: RequestParams = {}) =>
-    this.http.request<void, any>({
+    this.http.request<any, void>({
       path: `/api/v3/mediacover/${movieId}/${filename}`,
       method: "GET",
       secure: true,
@@ -2444,7 +2483,7 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3ConfigMediamanagementUpdate = (id: string, data: MediaManagementConfigResource, params: RequestParams = {}) =>
-    this.http.request<MediaManagementConfigResource, any>({
+    this.http.request<MediaManagementConfigResource, void>({
       path: `/api/v3/config/mediamanagement/${id}`,
       method: "PUT",
       body: data,
@@ -2462,7 +2501,7 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3ConfigMediamanagementDetail = (id: number, params: RequestParams = {}) =>
-    this.http.request<MediaManagementConfigResource, any>({
+    this.http.request<MediaManagementConfigResource, void>({
       path: `/api/v3/config/mediamanagement/${id}`,
       method: "GET",
       secure: true,
@@ -2501,7 +2540,7 @@ export class Api<SecurityDataType = unknown> {
     },
     params: RequestParams = {},
   ) =>
-    this.http.request<MetadataResource, any>({
+    this.http.request<MetadataResource, void>({
       path: `/api/v3/metadata`,
       method: "POST",
       query: query,
@@ -2528,7 +2567,7 @@ export class Api<SecurityDataType = unknown> {
     },
     params: RequestParams = {},
   ) =>
-    this.http.request<MetadataResource, any>({
+    this.http.request<MetadataResource, void>({
       path: `/api/v3/metadata/${id}`,
       method: "PUT",
       query: query,
@@ -2547,10 +2586,11 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3MetadataDelete = (id: number, params: RequestParams = {}) =>
-    this.http.request<void, any>({
+    this.http.request<any, any>({
       path: `/api/v3/metadata/${id}`,
       method: "DELETE",
       secure: true,
+      format: "json",
       ...params,
     });
   /**
@@ -2562,7 +2602,7 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3MetadataDetail = (id: number, params: RequestParams = {}) =>
-    this.http.request<MetadataResource, any>({
+    this.http.request<MetadataResource, void>({
       path: `/api/v3/metadata/${id}`,
       method: "GET",
       secure: true,
@@ -2619,10 +2659,11 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3MetadataTestallCreate = (params: RequestParams = {}) =>
-    this.http.request<void, any>({
+    this.http.request<ProviderTestAllResult[], ProviderTestAllResult[]>({
       path: `/api/v3/metadata/testall`,
       method: "POST",
       secure: true,
+      format: "json",
       ...params,
     });
   /**
@@ -2634,7 +2675,7 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3MetadataActionCreate = (name: string, data: MetadataResource, params: RequestParams = {}) =>
-    this.http.request<void, any>({
+    this.http.request<any, void>({
       path: `/api/v3/metadata/action/${name}`,
       method: "POST",
       body: data,
@@ -2667,7 +2708,7 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3ConfigMetadataUpdate = (id: string, data: MetadataConfigResource, params: RequestParams = {}) =>
-    this.http.request<MetadataConfigResource, any>({
+    this.http.request<MetadataConfigResource, void>({
       path: `/api/v3/config/metadata/${id}`,
       method: "PUT",
       body: data,
@@ -2685,7 +2726,7 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3ConfigMetadataDetail = (id: number, params: RequestParams = {}) =>
-    this.http.request<MetadataConfigResource, any>({
+    this.http.request<MetadataConfigResource, void>({
       path: `/api/v3/config/metadata/${id}`,
       method: "GET",
       secure: true,
@@ -2763,7 +2804,7 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3MovieCreate = (data: MovieResource, params: RequestParams = {}) =>
-    this.http.request<MovieResource, any>({
+    this.http.request<MovieResource, void>({
       path: `/api/v3/movie`,
       method: "POST",
       body: data,
@@ -2789,7 +2830,7 @@ export class Api<SecurityDataType = unknown> {
     },
     params: RequestParams = {},
   ) =>
-    this.http.request<MovieResource, any>({
+    this.http.request<MovieResource, void>({
       path: `/api/v3/movie/${id}`,
       method: "PUT",
       query: query,
@@ -2833,7 +2874,7 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3MovieDetail = (id: number, params: RequestParams = {}) =>
-    this.http.request<MovieResource, any>({
+    this.http.request<MovieResource, void>({
       path: `/api/v3/movie/${id}`,
       method: "GET",
       secure: true,
@@ -2849,12 +2890,13 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3MovieEditorUpdate = (data: MovieEditorResource, params: RequestParams = {}) =>
-    this.http.request<void, any>({
+    this.http.request<MovieResource[], void>({
       path: `/api/v3/movie/editor`,
       method: "PUT",
       body: data,
       secure: true,
       type: ContentType.Json,
+      format: "json",
       ...params,
     });
   /**
@@ -2866,12 +2908,13 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3MovieEditorDelete = (data: MovieEditorResource, params: RequestParams = {}) =>
-    this.http.request<void, any>({
+    this.http.request<any, any>({
       path: `/api/v3/movie/editor`,
       method: "DELETE",
       body: data,
       secure: true,
       type: ContentType.Json,
+      format: "json",
       ...params,
     });
   /**
@@ -2889,7 +2932,7 @@ export class Api<SecurityDataType = unknown> {
     },
     params: RequestParams = {},
   ) =>
-    this.http.request<MovieFileResource[], any>({
+    this.http.request<MovieFileResource[], void>({
       path: `/api/v3/moviefile`,
       method: "GET",
       query: query,
@@ -2906,7 +2949,7 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3MoviefileUpdate = (id: string, data: MovieFileResource, params: RequestParams = {}) =>
-    this.http.request<MovieFileResource, any>({
+    this.http.request<MovieFileResource, void>({
       path: `/api/v3/moviefile/${id}`,
       method: "PUT",
       body: data,
@@ -2924,7 +2967,7 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3MoviefileDelete = (id: number, params: RequestParams = {}) =>
-    this.http.request<void, any>({
+    this.http.request<void, void>({
       path: `/api/v3/moviefile/${id}`,
       method: "DELETE",
       secure: true,
@@ -2939,7 +2982,7 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3MoviefileDetail = (id: number, params: RequestParams = {}) =>
-    this.http.request<MovieFileResource, any>({
+    this.http.request<MovieFileResource, void>({
       path: `/api/v3/moviefile/${id}`,
       method: "GET",
       secure: true,
@@ -2956,12 +2999,13 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3MoviefileEditorUpdate = (data: MovieFileListResource, params: RequestParams = {}) =>
-    this.http.request<void, any>({
+    this.http.request<MovieFileResource[], any>({
       path: `/api/v3/moviefile/editor`,
       method: "PUT",
       body: data,
       secure: true,
       type: ContentType.Json,
+      format: "json",
       ...params,
     });
   /**
@@ -2973,12 +3017,13 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3MoviefileBulkDelete = (data: MovieFileListResource, params: RequestParams = {}) =>
-    this.http.request<void, any>({
+    this.http.request<any, void>({
       path: `/api/v3/moviefile/bulk`,
       method: "DELETE",
       body: data,
       secure: true,
       type: ContentType.Json,
+      format: "json",
       ...params,
     });
   /**
@@ -2990,12 +3035,13 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3MoviefileBulkUpdate = (data: MovieFileResource[], params: RequestParams = {}) =>
-    this.http.request<void, any>({
+    this.http.request<MovieFileResource[], any>({
       path: `/api/v3/moviefile/bulk`,
       method: "PUT",
       body: data,
       secure: true,
       type: ContentType.Json,
+      format: "json",
       ...params,
     });
   /**
@@ -3007,10 +3053,11 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3MovieFolderList = (id: number, params: RequestParams = {}) =>
-    this.http.request<void, any>({
+    this.http.request<MovieFolderResource, any>({
       path: `/api/v3/movie/${id}/folder`,
       method: "GET",
       secure: true,
+      format: "json",
       ...params,
     });
   /**
@@ -3123,7 +3170,7 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3ConfigNamingUpdate = (id: string, data: NamingConfigResource, params: RequestParams = {}) =>
-    this.http.request<NamingConfigResource, any>({
+    this.http.request<NamingConfigResource, void>({
       path: `/api/v3/config/naming/${id}`,
       method: "PUT",
       body: data,
@@ -3141,7 +3188,7 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3ConfigNamingDetail = (id: number, params: RequestParams = {}) =>
-    this.http.request<NamingConfigResource, any>({
+    this.http.request<NamingConfigResource, void>({
       path: `/api/v3/config/naming/${id}`,
       method: "GET",
       secure: true,
@@ -3169,11 +3216,12 @@ export class Api<SecurityDataType = unknown> {
     },
     params: RequestParams = {},
   ) =>
-    this.http.request<void, any>({
+    this.http.request<NamingExampleResource, any>({
       path: `/api/v3/config/naming/examples`,
       method: "GET",
       query: query,
       secure: true,
+      format: "json",
       ...params,
     });
   /**
@@ -3208,7 +3256,7 @@ export class Api<SecurityDataType = unknown> {
     },
     params: RequestParams = {},
   ) =>
-    this.http.request<NotificationResource, any>({
+    this.http.request<NotificationResource, void>({
       path: `/api/v3/notification`,
       method: "POST",
       query: query,
@@ -3235,7 +3283,7 @@ export class Api<SecurityDataType = unknown> {
     },
     params: RequestParams = {},
   ) =>
-    this.http.request<NotificationResource, any>({
+    this.http.request<NotificationResource, void>({
       path: `/api/v3/notification/${id}`,
       method: "PUT",
       query: query,
@@ -3254,10 +3302,11 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3NotificationDelete = (id: number, params: RequestParams = {}) =>
-    this.http.request<void, any>({
+    this.http.request<any, any>({
       path: `/api/v3/notification/${id}`,
       method: "DELETE",
       secure: true,
+      format: "json",
       ...params,
     });
   /**
@@ -3269,7 +3318,7 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3NotificationDetail = (id: number, params: RequestParams = {}) =>
-    this.http.request<NotificationResource, any>({
+    this.http.request<NotificationResource, void>({
       path: `/api/v3/notification/${id}`,
       method: "GET",
       secure: true,
@@ -3326,10 +3375,11 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3NotificationTestallCreate = (params: RequestParams = {}) =>
-    this.http.request<void, any>({
+    this.http.request<ProviderTestAllResult[], ProviderTestAllResult[]>({
       path: `/api/v3/notification/testall`,
       method: "POST",
       secure: true,
+      format: "json",
       ...params,
     });
   /**
@@ -3341,7 +3391,7 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3NotificationActionCreate = (name: string, data: NotificationResource, params: RequestParams = {}) =>
-    this.http.request<void, any>({
+    this.http.request<any, void>({
       path: `/api/v3/notification/action/${name}`,
       method: "POST",
       body: data,
@@ -3380,7 +3430,7 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3QualitydefinitionUpdate = (id: string, data: QualityDefinitionResource, params: RequestParams = {}) =>
-    this.http.request<QualityDefinitionResource, any>({
+    this.http.request<QualityDefinitionResource, void>({
       path: `/api/v3/qualitydefinition/${id}`,
       method: "PUT",
       body: data,
@@ -3398,7 +3448,7 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3QualitydefinitionDetail = (id: number, params: RequestParams = {}) =>
-    this.http.request<QualityDefinitionResource, any>({
+    this.http.request<QualityDefinitionResource, void>({
       path: `/api/v3/qualitydefinition/${id}`,
       method: "GET",
       secure: true,
@@ -3430,12 +3480,13 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3QualitydefinitionUpdateUpdate = (data: QualityDefinitionResource[], params: RequestParams = {}) =>
-    this.http.request<void, any>({
+    this.http.request<QualityDefinitionResource[], any>({
       path: `/api/v3/qualitydefinition/update`,
       method: "PUT",
       body: data,
       secure: true,
       type: ContentType.Json,
+      format: "json",
       ...params,
     });
   /**
@@ -3463,7 +3514,7 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3QualityprofileCreate = (data: QualityProfileResource, params: RequestParams = {}) =>
-    this.http.request<QualityProfileResource, any>({
+    this.http.request<QualityProfileResource, void>({
       path: `/api/v3/qualityprofile`,
       method: "POST",
       body: data,
@@ -3512,7 +3563,7 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3QualityprofileUpdate = (id: string, data: QualityProfileResource, params: RequestParams = {}) =>
-    this.http.request<QualityProfileResource, any>({
+    this.http.request<QualityProfileResource, void>({
       path: `/api/v3/qualityprofile/${id}`,
       method: "PUT",
       body: data,
@@ -3530,7 +3581,7 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3QualityprofileDetail = (id: number, params: RequestParams = {}) =>
-    this.http.request<QualityProfileResource, any>({
+    this.http.request<QualityProfileResource, void>({
       path: `/api/v3/qualityprofile/${id}`,
       method: "GET",
       secure: true,
@@ -3575,7 +3626,7 @@ export class Api<SecurityDataType = unknown> {
     },
     params: RequestParams = {},
   ) =>
-    this.http.request<void, any>({
+    this.http.request<void, void>({
       path: `/api/v3/queue/${id}`,
       method: "DELETE",
       query: query,
@@ -3604,13 +3655,14 @@ export class Api<SecurityDataType = unknown> {
     },
     params: RequestParams = {},
   ) =>
-    this.http.request<void, any>({
+    this.http.request<any, any>({
       path: `/api/v3/queue/bulk`,
       method: "DELETE",
       query: query,
       body: data,
       secure: true,
       type: ContentType.Json,
+      format: "json",
       ...params,
     });
   /**
@@ -3664,10 +3716,11 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3QueueGrabCreate = (id: number, params: RequestParams = {}) =>
-    this.http.request<void, any>({
+    this.http.request<any, void>({
       path: `/api/v3/queue/grab/${id}`,
       method: "POST",
       secure: true,
+      format: "json",
       ...params,
     });
   /**
@@ -3679,12 +3732,13 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3QueueGrabBulkCreate = (data: QueueBulkResource, params: RequestParams = {}) =>
-    this.http.request<void, any>({
+    this.http.request<any, void>({
       path: `/api/v3/queue/grab/bulk`,
       method: "POST",
       body: data,
       secure: true,
       type: ContentType.Json,
+      format: "json",
       ...params,
     });
   /**
@@ -3737,12 +3791,13 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3ReleaseCreate = (data: ReleaseResource, params: RequestParams = {}) =>
-    this.http.request<void, any>({
+    this.http.request<ReleaseResource, void>({
       path: `/api/v3/release`,
       method: "POST",
       body: data,
       secure: true,
       type: ContentType.Json,
+      format: "json",
       ...params,
     });
   /**
@@ -3760,7 +3815,7 @@ export class Api<SecurityDataType = unknown> {
     },
     params: RequestParams = {},
   ) =>
-    this.http.request<ReleaseResource[], any>({
+    this.http.request<ReleaseResource[], void>({
       path: `/api/v3/release`,
       method: "GET",
       query: query,
@@ -3777,7 +3832,7 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3ReleaseprofileCreate = (data: ReleaseProfileResource, params: RequestParams = {}) =>
-    this.http.request<ReleaseProfileResource, any>({
+    this.http.request<ReleaseProfileResource, void>({
       path: `/api/v3/releaseprofile`,
       method: "POST",
       body: data,
@@ -3826,7 +3881,7 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3ReleaseprofileUpdate = (id: string, data: ReleaseProfileResource, params: RequestParams = {}) =>
-    this.http.request<ReleaseProfileResource, any>({
+    this.http.request<ReleaseProfileResource, void>({
       path: `/api/v3/releaseprofile/${id}`,
       method: "PUT",
       body: data,
@@ -3844,7 +3899,7 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3ReleaseprofileDetail = (id: number, params: RequestParams = {}) =>
-    this.http.request<ReleaseProfileResource, any>({
+    this.http.request<ReleaseProfileResource, void>({
       path: `/api/v3/releaseprofile/${id}`,
       method: "GET",
       secure: true,
@@ -3860,7 +3915,7 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3ReleasePushCreate = (data: ReleaseResource, params: RequestParams = {}) =>
-    this.http.request<ReleaseResource[], any>({
+    this.http.request<ReleaseResource[], void>({
       path: `/api/v3/release/push`,
       method: "POST",
       body: data,
@@ -3878,7 +3933,7 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3RemotepathmappingCreate = (data: RemotePathMappingResource, params: RequestParams = {}) =>
-    this.http.request<RemotePathMappingResource, any>({
+    this.http.request<RemotePathMappingResource, void>({
       path: `/api/v3/remotepathmapping`,
       method: "POST",
       body: data,
@@ -3927,7 +3982,7 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3RemotepathmappingUpdate = (id: string, data: RemotePathMappingResource, params: RequestParams = {}) =>
-    this.http.request<RemotePathMappingResource, any>({
+    this.http.request<RemotePathMappingResource, void>({
       path: `/api/v3/remotepathmapping/${id}`,
       method: "PUT",
       body: data,
@@ -3945,7 +4000,7 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3RemotepathmappingDetail = (id: number, params: RequestParams = {}) =>
-    this.http.request<RemotePathMappingResource, any>({
+    this.http.request<RemotePathMappingResource, void>({
       path: `/api/v3/remotepathmapping/${id}`,
       method: "GET",
       secure: true,
@@ -3966,7 +4021,7 @@ export class Api<SecurityDataType = unknown> {
     },
     params: RequestParams = {},
   ) =>
-    this.http.request<RenameMovieResource[], any>({
+    this.http.request<RenameMovieResource[], void>({
       path: `/api/v3/rename`,
       method: "GET",
       query: query,
@@ -3983,7 +4038,7 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3RootfolderCreate = (data: RootFolderResource, params: RequestParams = {}) =>
-    this.http.request<RootFolderResource, any>({
+    this.http.request<RootFolderResource, void>({
       path: `/api/v3/rootfolder`,
       method: "POST",
       body: data,
@@ -4032,7 +4087,7 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3RootfolderDetail = (id: number, params: RequestParams = {}) =>
-    this.http.request<RootFolderResource, any>({
+    this.http.request<RootFolderResource, void>({
       path: `/api/v3/rootfolder/${id}`,
       method: "GET",
       secure: true,
@@ -4064,7 +4119,7 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3SystemRoutesList = (params: RequestParams = {}) =>
-    this.http.request<void, any>({
+    this.http.request<string, any>({
       path: `/api/v3/system/routes`,
       method: "GET",
       secure: true,
@@ -4079,10 +4134,11 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3SystemRoutesDuplicateList = (params: RequestParams = {}) =>
-    this.http.request<void, any>({
+    this.http.request<Record<string, string[]>, any>({
       path: `/api/v3/system/routes/duplicate`,
       method: "GET",
       secure: true,
+      format: "json",
       ...params,
     });
   /**
@@ -4094,10 +4150,11 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3SystemShutdownCreate = (params: RequestParams = {}) =>
-    this.http.request<void, any>({
+    this.http.request<SystemShutdownResource, any>({
       path: `/api/v3/system/shutdown`,
       method: "POST",
       secure: true,
+      format: "json",
       ...params,
     });
   /**
@@ -4109,10 +4166,11 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3SystemRestartCreate = (params: RequestParams = {}) =>
-    this.http.request<void, any>({
+    this.http.request<SystemRestartResource, any>({
       path: `/api/v3/system/restart`,
       method: "POST",
       secure: true,
+      format: "json",
       ...params,
     });
   /**
@@ -4140,7 +4198,7 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3TagCreate = (data: TagResource, params: RequestParams = {}) =>
-    this.http.request<TagResource, any>({
+    this.http.request<TagResource, void>({
       path: `/api/v3/tag`,
       method: "POST",
       body: data,
@@ -4158,7 +4216,7 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3TagUpdate = (id: string, data: TagResource, params: RequestParams = {}) =>
-    this.http.request<TagResource, any>({
+    this.http.request<TagResource, void>({
       path: `/api/v3/tag/${id}`,
       method: "PUT",
       body: data,
@@ -4191,7 +4249,7 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3TagDetail = (id: number, params: RequestParams = {}) =>
-    this.http.request<TagResource, any>({
+    this.http.request<TagResource, void>({
       path: `/api/v3/tag/${id}`,
       method: "GET",
       secure: true,
@@ -4223,7 +4281,7 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3TagDetailDetail = (id: number, params: RequestParams = {}) =>
-    this.http.request<TagDetailsResource, any>({
+    this.http.request<TagDetailsResource, void>({
       path: `/api/v3/tag/detail/${id}`,
       method: "GET",
       secure: true,
@@ -4255,7 +4313,7 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3SystemTaskDetail = (id: number, params: RequestParams = {}) =>
-    this.http.request<TaskResource, any>({
+    this.http.request<TaskResource, void>({
       path: `/api/v3/system/task/${id}`,
       method: "GET",
       secure: true,
@@ -4271,7 +4329,7 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3ConfigUiUpdate = (id: string, data: UiConfigResource, params: RequestParams = {}) =>
-    this.http.request<UiConfigResource, any>({
+    this.http.request<UiConfigResource, void>({
       path: `/api/v3/config/ui/${id}`,
       method: "PUT",
       body: data,
@@ -4289,7 +4347,7 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3ConfigUiDetail = (id: number, params: RequestParams = {}) =>
-    this.http.request<UiConfigResource, any>({
+    this.http.request<UiConfigResource, void>({
       path: `/api/v3/config/ui/${id}`,
       method: "GET",
       secure: true,
@@ -4353,7 +4411,7 @@ export class Api<SecurityDataType = unknown> {
    * @secure
    */
   v3LogFileUpdateDetail = (filename: string, params: RequestParams = {}) =>
-    this.http.request<void, any>({
+    this.http.request<string, void>({
       path: `/api/v3/log/file/update/${filename}`,
       method: "GET",
       secure: true,

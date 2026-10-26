@@ -21,12 +21,13 @@ The suite only runs through its own config (`vitest.arr-e2e.config.ts`); `pnpm t
 
 ## Layout and run order
 
-One file per *arr, each owning its container end to end. The regular suite runs the six per-*arr files in parallel, then the cross-arr pipeline and Sonarr v5 matrix run:
+One file per *arr, each owning its container end to end. The regular suite runs the six per-*arr files in parallel, then the cross-arr pipeline and version matrix runs:
 
 - `pnpm test:e2e:arr:parallel` — the six per-*arr files, in parallel (~40s). Its config excludes the pipeline file, so a direct `vitest run --config vitest.arr-e2e.config.ts` cannot mix the two.
 - `pnpm test:e2e:arr:pipeline` — `pipeline.e2e.test.ts` alone through `vitest.arr-e2e.pipeline.config.ts`, since it drives every container from one config.yml (~15s).
 - `pnpm test:e2e:arr:sonarr-v5` — reruns the Sonarr feature file against the v5 container.
-- `pnpm test:e2e:arr` — all three stages in that order; both Sonarr v4 and v5 are included.
+- `pnpm test:e2e:arr:radarr` — reruns the Radarr feature file sequentially against v5, v6 and v7, asserting the connected major version. Uses its own setup, so only the three Radarr containers are needed.
+- `pnpm test:e2e:arr` — all stages in that order; Sonarr v4/v5 and Radarr v5/v6/v7 are included.
 
 `globalSetup.ts` waits for all APIs once and warms the Recyclarr/TRaSH clone; each file then copies that clone, because configarr checks out its pinned revision on every run and two files sharing one clone would race on `.git/index.lock`.
 
@@ -40,13 +41,29 @@ Override with `SONARR_BASE_URL`, `SONARR_API_KEY`, …, `PROWLARR_BASE_URL`, `PR
 pnpm test:e2e:arr:sonarr-v5
 ```
 
-The two Sonarr containers use separate config/database volumes. Do not share their volumes or use `docker compose down -v` if the local test databases should be retained.
+To run only the Radarr matrix:
+
+```bash
+PUID=$(id -u) PGID=$(id -g) docker compose -f tests/arr-e2e/docker-compose.yml up -d radarr radarr-v5 radarr-v7
+pnpm test:e2e:arr:radarr
+```
+
+Individual stages are `pnpm test:e2e:arr:radarr-v5`, `:radarr-v6` and `:radarr-v7`.
+Override their connections with `RADARR_V5_BASE_URL` / `RADARR_V5_API_KEY`
+(and `V6` / `V7` equivalents). The ordinary suite still uses `RADARR_BASE_URL`.
+V7 is pinned to prerelease 7.0.0.10815 by image digest; refresh it together with
+the API specification in `generate-api.ts`. The full Radarr coverage column below
+runs unchanged on each major, including templates, settings and CRUD/idempotency.
+
+The Radarr versions and the two Sonarr containers use separate config/database volumes. Do not share their volumes or use `docker compose down -v` if the local test databases should be retained.
 
 | App          | URL                    | API key                            |
 | ------------ | ---------------------- | ---------------------------------- |
 | Sonarr v4    | http://127.0.0.1:18989 | `e2etestapikey0123456789abcdef012` |
 | Sonarr v5    | http://127.0.0.1:18990 | same                               |
-| Radarr       | http://127.0.0.1:17878 | same                               |
+| Radarr v6    | http://127.0.0.1:17878 | same                               |
+| Radarr v5    | http://127.0.0.1:17879 | same                               |
+| Radarr v7    | http://127.0.0.1:17880 | same                               |
 | Whisparr     | http://127.0.0.1:16969 | same                               |
 | Readarr      | http://127.0.0.1:18787 | same                               |
 | Lidarr       | http://127.0.0.1:18686 | same                               |
@@ -57,7 +74,7 @@ The two Sonarr containers use separate config/database volumes. Do not share the
 
 | File                   | Role                                                                                                                 |
 | ---------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| `docker-compose.yml`   | Five media *arr + Prowlarr + FlareSolverr                                                                            |
+| `docker-compose.yml`   | Media *arr + Sonarr/Radarr version fixtures + Prowlarr + FlareSolverr                                                |
 | `globalSetup.ts`       | Wait for every API, warm the template repo clone                                                                     |
 | `helpers.ts`           | Clients, configarr runner, assertions, cleanup, snapshot/restore                                                     |
 | `config.ts`            | Only the config fragments that are identical for every *arr                                                          |
@@ -87,14 +104,14 @@ Feature × arr × create / update / delete / idempotent (second run Diff Report 
 | Download clients (blackhole)   | CUDI     | CUDI     | CUDI     | CUDI     | CUDI     | CUDI     |
 | DC config / remote paths       | CUI / CD | CUI / CD | CUI / CD | CUI / CD | CUI / CD | —        |
 | Metadata profiles              | —        | —        | —        | CUDI     | CUDI     | —        |
-| Tags                           | CDI      | —        | —        | —        | —        | CDI      |
+| Tags                           | CDI      | CDI      | —        | —        | —        | CDI      |
 | Sync profiles                  | —        | —        | —        | —        | —        | CUDI     |
 | Applications                   | —        | —        | —        | —        | —        | CUDI     |
 | Indexer proxies (FlareSolverr) | —        | —        | —        | —        | —        | CUDI     |
 | Indexers                       | —        | —        | —        | —        | —        | CUDI     |
 | TRaSH/Recyclarr templates      | C        | C        | —        | —        | —        | —        |
 
-Letters = asserted GET after a configarr write/omit. Root-folder **update** for Sonarr/Radarr/Whisparr is N/A (path identity). Lidarr/Readarr update the folder `name` via YAML. Tags have no update API. Media-arr **CD** is the instance `tags:` / `delete_unmanaged_tags:` block, asserted once on Sonarr in `pipeline.e2e.test.ts` rather than duplicated per \*arr: it drops a seeded orphan tag while keeping a label listed in `tags` and a label referenced only by a managed delay profile. It is the same schema on all five, so the other four are not re-asserted. Download clients and indexers stay `enable: false` (configuration only; no live download/search). Prowlarr indexer fields are matched ignoring case and underscores: `prowlarr.e2e.test.ts` writes `single_file_release_use_filename` on a live schema that spells it that way, then updates it through the camelCase alias. DC **U** is `priority`. The delay-profile mapper is additionally exercised directly per *arr (legacy payload, or `items[]` for Lidarr).
+Letters = asserted GET after a configarr write/omit. Root-folder **update** for Sonarr/Radarr/Whisparr is N/A (path identity). Lidarr/Readarr update the folder `name` via YAML. Tags have no update API. Media-arr **CD** is the instance `tags:` / `delete_unmanaged_tags:` block, asserted on Sonarr in `pipeline.e2e.test.ts` and on each Radarr major in `radarr.e2e.test.ts`: it drops a seeded orphan tag while keeping a label listed in `tags` and a label referenced only by a managed delay profile. It is the same schema on all five, so Whisparr, Readarr and Lidarr are not re-asserted. Download clients and indexers stay `enable: false` (configuration only; no live download/search). Prowlarr indexer fields are matched ignoring case and underscores: `prowlarr.e2e.test.ts` writes `single_file_release_use_filename` on a live schema that spells it that way, then updates it through the camelCase alias. DC **U** is `priority`. The delay-profile mapper is additionally exercised directly per *arr (legacy payload, or `items[]` for Lidarr).
 
 ## Rules for new sync features
 

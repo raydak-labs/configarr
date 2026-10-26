@@ -28,6 +28,15 @@ Configarr uses one required configuration file and one optional file for secrets
 
 Configarr will automatically load these configurations on startup and apply them to your Sonarr/Radarr instances.
 
+### Radarr version compatibility
+
+Radarr v5, v6 and the [v7 prerelease](https://github.com/Radarr/Radarr/releases/tag/v7.0.0.10815)
+use the same `radarr:` configuration block and API v3 routes. Existing configurations
+continue to work without a version selector. Quality size limits remain global and
+are configured through `quality_definition`; `quality_sizes` is specific to Sonarr v5.
+Configarr continues to authenticate with your API key, including when Radarr v7 uses
+OIDC for browser login.
+
 ## Configuration Structure
 
 We try to be mostly compatible with Recyclarr, but with some small differences.

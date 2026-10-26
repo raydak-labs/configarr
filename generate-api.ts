@@ -8,7 +8,7 @@ const PATH_TO_OUTPUT_DIR = path.resolve(process.cwd(), "./src/__generated__");
 const OPENAPI_SPECS = {
   sonarr: "https://raw.githubusercontent.com/Sonarr/Sonarr/develop/src/Sonarr.Api.V3/openapi.json",
   "sonarr-v5": "https://raw.githubusercontent.com/Sonarr/Sonarr/57816c149d02f95543973fefb4780c4495f8121c/src/Sonarr.Api.V5/openapi.json",
-  radarr: "https://raw.githubusercontent.com/Radarr/Radarr/develop/src/Radarr.Api.V3/openapi.json",
+  radarr: "https://raw.githubusercontent.com/Radarr/Radarr/v7.0.0.10815/src/Radarr.Api.V3/openapi.json",
   whisparr: "https://raw.githubusercontent.com/Whisparr/Whisparr/develop/src/Whisparr.Api.V3/openapi.json",
   readarr: "https://raw.githubusercontent.com/Readarr/Readarr/develop/src/Readarr.Api.V1/openapi.json",
   lidarr: "https://raw.githubusercontent.com/lidarr/Lidarr/develop/src/Lidarr.Api.V1/openapi.json",
