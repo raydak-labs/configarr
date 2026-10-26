@@ -369,7 +369,8 @@ You can find the full example at: [configarr/examples/full](https://github.com/r
 Once running, you can access the services at:
 
 - Sonarr: http://localhost:6500
-- Radarr: http://localhost:6501
+- Radarr v6: http://localhost:6501
+- Radarr v7: http://localhost:6507
 - Other instances check `docker-compose.yml`
 
 #### Cleanup

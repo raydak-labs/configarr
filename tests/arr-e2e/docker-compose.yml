@@ -57,6 +57,41 @@ services:
     ports:
       - "17878:7878"
 
+  radarr-v5:
+    image: lscr.io/linuxserver/radarr:5.27.5
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=Etc/UTC
+      - RADARR__APP__INSTANCENAME=Radarr v5
+      - RADARR__AUTH__APIKEY=e2etestapikey0123456789abcdef012
+      - RADARR__AUTH__METHOD=External
+      - RADARR__AUTH__REQUIRED=DisabledForLocalAddresses
+    volumes:
+      - radarr-v5-data:/config
+      - ./fixtures/media/e2e:/data/e2e
+      - ./fixtures/media/e2e-b:/data/e2e-b
+    ports:
+      - "17879:7878"
+
+  # Radarr 7.0.0.10815 prerelease; refresh the image digest and API contract together.
+  radarr-v7:
+    image: lscr.io/linuxserver/radarr@sha256:13a914c574ff8b84b4f3c64fb2ed91d6ded9d90716c18f520d375b7d383b393b
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=Etc/UTC
+      - RADARR__APP__INSTANCENAME=Radarr v7
+      - RADARR__AUTH__APIKEY=e2etestapikey0123456789abcdef012
+      - RADARR__AUTH__METHOD=External
+      - RADARR__AUTH__REQUIRED=DisabledForLocalAddresses
+    volumes:
+      - radarr-v7-data:/config
+      - ./fixtures/media/e2e:/data/e2e
+      - ./fixtures/media/e2e-b:/data/e2e-b
+    ports:
+      - "17880:7878"
+
   # Whisparr v3 (eros) is the image upstream recommends. Its base predates the sectioned env
   # overrides and generates a random API key, so the fixture config.xml is copied into the
   # volume before the app starts. The v2 line (v2-2.2.0-release.231) passes this suite too.
@@ -141,6 +176,8 @@ volumes:
   sonarr-data:
   sonarr-v5-data:
   radarr-data:
+  radarr-v5-data:
+  radarr-v7-data:
   whisparr-data:
   readarr-data:
   lidarr-data:

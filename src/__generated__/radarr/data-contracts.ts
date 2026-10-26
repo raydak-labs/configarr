@@ -64,6 +64,12 @@ export enum SortDirection {
   Descending = "descending",
 }
 
+export enum Severity {
+  Error = "error",
+  Warning = "warning",
+  Info = "info",
+}
+
 export enum RuntimeMode {
   Console = "console",
   Service = "service",
@@ -203,6 +209,13 @@ export enum HealthCheckResult {
   Error = "error",
 }
 
+export enum FileSystemEntityType {
+  Parent = "parent",
+  Drive = "drive",
+  Folder = "folder",
+  File = "file",
+}
+
 export enum FileDateType {
   None = "none",
   Cinemas = "cinemas",
@@ -290,11 +303,13 @@ export enum AuthenticationType {
   Basic = "basic",
   Forms = "forms",
   External = "external",
+  Oidc = "oidc",
 }
 
 export enum AuthenticationRequiredType {
   Enabled = "enabled",
   DisabledForLocalAddresses = "disabledForLocalAddresses",
+  DisabledForLocalhost = "disabledForLocalhost",
 }
 
 export enum ApplyTags {
@@ -315,6 +330,16 @@ export interface AddMovieOptions {
   monitor?: MonitorTypes;
   searchForMovie?: boolean;
   addMethod?: AddMovieMethod;
+}
+
+export interface AlternativeTitle {
+  /** @format int32 */
+  id?: number;
+  sourceType?: SourceType;
+  /** @format int32 */
+  movieMetadataId?: number;
+  title?: string | null;
+  cleanTitle?: string | null;
 }
 
 export interface AlternativeTitleResource {
@@ -363,6 +388,14 @@ export interface BackupResource {
   size?: number;
   /** @format date-time */
   time?: string;
+}
+
+export interface BackupRestoreErrorResource {
+  error?: string | null;
+}
+
+export interface BackupRestoreResource {
+  restartRequired?: boolean;
 }
 
 export interface BlocklistBulkResource {
@@ -649,7 +682,7 @@ export interface Field {
   helpText?: string | null;
   helpTextWarning?: string | null;
   helpLink?: string | null;
-  value?: any | null;
+  value?: any;
   type?: string | null;
   advanced?: boolean;
   selectOptions?: SelectOption[] | null;
@@ -659,6 +692,33 @@ export interface Field {
   privacy?: PrivacyLevel;
   placeholder?: string | null;
   isFloat?: boolean;
+}
+
+export interface FileSystemMediaFileResource {
+  path?: string | null;
+  relativePath?: string | null;
+  name?: string | null;
+}
+
+export interface FileSystemModel {
+  type?: FileSystemEntityType;
+  name?: string | null;
+  path?: string | null;
+  extension?: string | null;
+  /** @format int64 */
+  size?: number;
+  /** @format date-time */
+  lastModified?: string | null;
+}
+
+export interface FileSystemResult {
+  parent?: string | null;
+  directories?: FileSystemModel[] | null;
+  files?: FileSystemModel[] | null;
+}
+
+export interface FileSystemTypeResource {
+  type?: FileSystemEntityType;
 }
 
 export interface HealthResource {
@@ -714,10 +774,16 @@ export interface HostConfigResource {
   launchBrowser?: boolean;
   authenticationMethod?: AuthenticationType;
   authenticationRequired?: AuthenticationRequiredType;
+  allowedHosts?: string | null;
   analyticsEnabled?: boolean;
   username?: string | null;
   password?: string | null;
   passwordConfirmation?: string | null;
+  oidcAuthority?: string | null;
+  oidcClientId?: string | null;
+  oidcClientSecret?: string | null;
+  oidcUserIdentifier?: string | null;
+  oidcScopes?: string | null;
   logLevel?: string | null;
   /** @format int32 */
   logSizeLimit?: number;
@@ -725,8 +791,10 @@ export interface HostConfigResource {
   branch?: string | null;
   apiKey?: string | null;
   sslCertPath?: string | null;
+  sslKeyPath?: string | null;
   sslCertPassword?: string | null;
   urlBase?: string | null;
+  trustedNetworks?: string | null;
   instanceName?: string | null;
   applicationUrl?: string | null;
   updateAutomatically?: boolean;
@@ -803,6 +871,48 @@ export interface ImportListExclusionResourcePagingResource {
   /** @format int32 */
   totalRecords?: number;
   records?: ImportListExclusionResource[] | null;
+}
+
+export interface ImportListMoviesResource {
+  /** @format int32 */
+  id?: number;
+  title?: string | null;
+  sortTitle?: string | null;
+  originalLanguage?: Language;
+  status?: MovieStatusType;
+  overview?: string | null;
+  /** @format date-time */
+  inCinemas?: string | null;
+  /** @format date-time */
+  physicalRelease?: string | null;
+  /** @format date-time */
+  digitalRelease?: string | null;
+  images?: MediaCover[] | null;
+  website?: string | null;
+  remotePoster?: string | null;
+  /** @format int32 */
+  year?: number;
+  youTubeTrailerId?: string | null;
+  studio?: string | null;
+  /** @format int32 */
+  runtime?: number;
+  imdbId?: string | null;
+  /** @format int32 */
+  tmdbId?: number;
+  folder?: string | null;
+  certification?: string | null;
+  /** @format float */
+  popularity?: number;
+  genres?: string[] | null;
+  ratings?: Ratings;
+  collection?: MovieCollection;
+  isExcluded?: boolean;
+  isExisting?: boolean;
+  isTrending?: boolean;
+  isPopular?: boolean;
+  isRecommendation?: boolean;
+  /** @uniqueItems true */
+  lists?: number[] | null;
 }
 
 export interface ImportListResource {
@@ -1078,6 +1188,31 @@ export interface MetadataResource {
   enable?: boolean;
 }
 
+export interface MovieCollection {
+  /** @format int32 */
+  id?: number;
+  title?: string | null;
+  cleanTitle?: string | null;
+  sortTitle?: string | null;
+  /** @format int32 */
+  tmdbId?: number;
+  overview?: string | null;
+  monitored?: boolean;
+  /** @format int32 */
+  qualityProfileId?: number;
+  rootFolderPath?: string | null;
+  searchOnAdd?: boolean;
+  minimumAvailability?: MovieStatusType;
+  /** @format date-time */
+  lastInfoSync?: string | null;
+  images?: MediaCover[] | null;
+  /** @format date-time */
+  added?: string;
+  movies?: MovieMetadata[] | null;
+  /** @uniqueItems true */
+  tags?: number[] | null;
+}
+
 export interface MovieCollectionResource {
   title?: string | null;
   /** @format int32 */
@@ -1133,6 +1268,57 @@ export interface MovieFileResource {
   mediaInfo?: MediaInfoResource;
   originalFilePath?: string | null;
   qualityCutoffNotMet?: boolean;
+}
+
+export interface MovieFolderResource {
+  folder?: string | null;
+}
+
+export interface MovieMetadata {
+  /** @format int32 */
+  id?: number;
+  /** @format int32 */
+  tmdbId?: number;
+  images?: MediaCover[] | null;
+  genres?: string[] | null;
+  keywords?: string[] | null;
+  /** @format date-time */
+  inCinemas?: string | null;
+  /** @format date-time */
+  physicalRelease?: string | null;
+  /** @format date-time */
+  digitalRelease?: string | null;
+  certification?: string | null;
+  /** @format int32 */
+  year?: number;
+  ratings?: Ratings;
+  /** @format int32 */
+  collectionTmdbId?: number;
+  collectionTitle?: string | null;
+  /** @format date-time */
+  lastInfoSync?: string | null;
+  /** @format int32 */
+  runtime?: number;
+  website?: string | null;
+  imdbId?: string | null;
+  title?: string | null;
+  cleanTitle?: string | null;
+  sortTitle?: string | null;
+  status?: MovieStatusType;
+  overview?: string | null;
+  alternativeTitles?: AlternativeTitle[] | null;
+  translations?: MovieTranslation[] | null;
+  /** @format int32 */
+  secondaryYear?: number | null;
+  youTubeTrailerId?: string | null;
+  studio?: string | null;
+  originalTitle?: string | null;
+  cleanOriginalTitle?: string | null;
+  originalLanguage?: Language;
+  recommendations?: number[] | null;
+  /** @format float */
+  popularity?: number;
+  isRecentMovie?: boolean;
 }
 
 export interface MovieResource {
@@ -1222,6 +1408,18 @@ export interface MovieStatisticsResource {
   /** @format int64 */
   sizeOnDisk?: number;
   releaseGroups?: string[] | null;
+  movieFileQualities?: Quality[] | null;
+}
+
+export interface MovieTranslation {
+  /** @format int32 */
+  id?: number;
+  /** @format int32 */
+  movieMetadataId?: number;
+  title?: string | null;
+  cleanTitle?: string | null;
+  overview?: string | null;
+  language?: Language;
 }
 
 export interface NamingConfigResource {
@@ -1232,6 +1430,11 @@ export interface NamingConfigResource {
   colonReplacementFormat?: ColonReplacementFormat;
   standardMovieFormat?: string | null;
   movieFolderFormat?: string | null;
+}
+
+export interface NamingExampleResource {
+  movieExample?: string | null;
+  movieFolderExample?: string | null;
 }
 
 export interface NotificationResource {
@@ -1312,6 +1515,16 @@ export interface PingResource {
   status?: string | null;
 }
 
+export interface ProblemDetails {
+  type?: string | null;
+  title?: string | null;
+  /** @format int32 */
+  status?: number | null;
+  detail?: string | null;
+  instance?: string | null;
+  [key: string]: any;
+}
+
 export interface ProfileFormatItemResource {
   /** @format int32 */
   id?: number;
@@ -1325,6 +1538,13 @@ export interface ProfileFormatItemResource {
 export interface ProviderMessage {
   message?: string | null;
   type?: ProviderMessageType;
+}
+
+export interface ProviderTestAllResult {
+  /** @format int32 */
+  id?: number;
+  isValid?: boolean;
+  validationFailures?: ValidationFailure[] | null;
 }
 
 export interface Quality {
@@ -1479,13 +1699,20 @@ export interface Ratings {
   trakt?: RatingChild;
 }
 
+export interface ReleaseHistoryResource {
+  /** @format date-time */
+  grabbed?: string | null;
+  /** @format date-time */
+  failed?: string | null;
+}
+
 export interface ReleaseProfileResource {
   /** @format int32 */
   id?: number;
   name?: string | null;
   enabled?: boolean;
-  required?: any | null;
-  ignored?: any | null;
+  required?: any;
+  ignored?: any;
   /** @format int32 */
   indexerId?: number;
   /** @uniqueItems true */
@@ -1500,6 +1727,7 @@ export interface ReleaseResource {
   customFormats?: CustomFormatResource[] | null;
   /** @format int32 */
   customFormatScore?: number;
+  history?: ReleaseHistoryResource;
   /** @format int32 */
   qualityWeight?: number;
   /** @format int32 */
@@ -1547,7 +1775,7 @@ export interface ReleaseResource {
   /** @format int32 */
   leechers?: number | null;
   protocol?: DownloadProtocol;
-  indexerFlags?: any | null;
+  indexerFlags?: any;
   /** @format int32 */
   movieId?: number | null;
   /** @format int32 */
@@ -1622,6 +1850,7 @@ export interface SystemResource {
   isOsx?: boolean;
   isWindows?: boolean;
   isDocker?: boolean;
+  isContainerized?: boolean;
   mode?: RuntimeMode;
   branch?: string | null;
   databaseType?: DatabaseType;
@@ -1638,6 +1867,14 @@ export interface SystemResource {
   packageAuthor?: string | null;
   packageUpdateMechanism?: UpdateMechanism;
   packageUpdateMechanismMessage?: string | null;
+}
+
+export interface SystemRestartResource {
+  restarting?: boolean;
+}
+
+export interface SystemShutdownResource {
+  shuttingDown?: boolean;
 }
 
 export interface TagDetailsResource {
@@ -1728,4 +1965,16 @@ export interface UpdateResource {
   latest?: boolean;
   changes?: UpdateChanges;
   hash?: string | null;
+}
+
+export interface ValidationFailure {
+  propertyName?: string | null;
+  errorMessage?: string | null;
+  attemptedValue?: any;
+  customState?: any;
+  severity?: Severity;
+  errorCode?: string | null;
+  /** @deprecated */
+  formattedMessageArguments?: any[] | null;
+  formattedMessagePlaceholderValues?: Record<string, any> | null;
 }

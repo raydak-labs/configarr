@@ -11,6 +11,7 @@
  */
 
 import { ContentType, HttpClient, RequestParams } from "./../../ky-client";
+import { ProblemDetails } from "./data-contracts";
 
 export class Login<SecurityDataType = unknown> {
   http: HttpClient<SecurityDataType>;
@@ -19,6 +20,27 @@ export class Login<SecurityDataType = unknown> {
     this.http = http;
   }
 
+  /**
+   * No description
+   *
+   * @tags Authentication
+   * @name GetLogin
+   * @request GET:/login/sso
+   * @secure
+   */
+  getLogin = (
+    query?: {
+      returnUrl?: string;
+    },
+    params: RequestParams = {},
+  ) =>
+    this.http.request<any, void>({
+      path: `/login/sso`,
+      method: "GET",
+      query: query,
+      secure: true,
+      ...params,
+    });
   /**
    * No description
    *
@@ -38,7 +60,7 @@ export class Login<SecurityDataType = unknown> {
     },
     params: RequestParams = {},
   ) =>
-    this.http.request<void, any>({
+    this.http.request<any, void | ProblemDetails>({
       path: `/login`,
       method: "POST",
       query: query,

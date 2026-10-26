@@ -10,6 +10,9 @@ import { DownloadProtocol } from "../../src/__generated__/radarr/data-contracts"
 import { StandardDelayProfileSync } from "../../src/delayProfiles/delayProfileBase";
 import { InputConfigDelayProfileSchema } from "../../src/types/config.types";
 import {
+  E2E_TAG_LISTED,
+  E2E_TAG_ORPHAN,
+  E2E_TAG_REFERENCED,
   E2E_ROOT_A,
   E2E_ROOT_B,
   arrConnection,
@@ -18,6 +21,7 @@ import {
   e2eCustomFormatDefinition,
   e2eMediaSettings,
   mediaConfig,
+  instanceTagBlock,
 } from "./config";
 import {
   MediaBaseline,
@@ -30,6 +34,7 @@ import {
   defaultDelayProfile,
   findNamed,
   nonE2eNames,
+  nonE2eLabels,
   preservedRootFolderPaths,
   restoreMediaBaseline,
   snapshotMediaBaseline,
@@ -68,17 +73,76 @@ describe("radarr (live)", () => {
   const { baseUrl, apiKey } = arrConnection("RADARR");
   const client = new RadarrClient(baseUrl, apiKey);
   let baseline: MediaBaseline;
+  let setupComplete = false;
+  let preexistingDelayProfileIds = new Set<number>();
+  let preexistingTagIds = new Set<number>();
 
   beforeAll(async () => {
+    const status = await client.getSystemStatus();
+    if (process.env.RADARR_EXPECTED_MAJOR) {
+      expect(status.version?.split(".")[0]).toBe(process.env.RADARR_EXPECTED_MAJOR);
+    }
     await cleanupMediaE2e(client);
-    baseline = await snapshotMediaBaseline(client);
+    const snapshot = await snapshotMediaBaseline(client);
+    const [profiles, tags] = await Promise.all([client.getDelayProfiles(), client.getTags()]);
+    preexistingDelayProfileIds = new Set(profiles.flatMap((profile) => (profile.id == null ? [] : [profile.id])));
+    preexistingTagIds = new Set(tags.flatMap((tag) => (tag.id == null ? [] : [tag.id])));
+    baseline = snapshot;
+    setupComplete = true;
   }, 180_000);
 
   afterAll(async () => {
+    if (!setupComplete) return;
+    const snapshot = baseline;
     await teardown(
-      () => restoreMediaBaseline(client, baseline),
+      () => restoreMediaBaseline(client, snapshot),
       () => cleanupMediaE2e(client),
+      async () => {
+        const tags = await client.getTags();
+        const referenced = tags.find((tag) => tag.label === E2E_TAG_REFERENCED)?.id;
+        for (const profile of await client.getDelayProfiles()) {
+          if (
+            profile.id != null &&
+            !preexistingDelayProfileIds.has(profile.id) &&
+            referenced != null &&
+            profile.tags?.includes(referenced)
+          ) {
+            await client.deleteDelayProfile(String(profile.id));
+          }
+        }
+        for (const tag of tags) {
+          if (
+            tag.id != null &&
+            !preexistingTagIds.has(tag.id) &&
+            [E2E_TAG_LISTED, E2E_TAG_REFERENCED, E2E_TAG_ORPHAN].includes(tag.label ?? "")
+          ) {
+            await client.deleteTag(String(tag.id));
+          }
+        }
+      },
     );
+  });
+
+  test("instance tags preserve managed references and prune orphan labels", async () => {
+    await client.createTag({ label: E2E_TAG_ORPHAN });
+    const keepLabels = nonE2eLabels(await client.getTags());
+    const config = mediaConfig("RADARR", instanceTagBlock(keepLabels));
+    const first = await syncConfig(config);
+    assertPipelineSucceeded(first.result, ["RADARR"]);
+
+    const tags = await client.getTags();
+    const labels = tags.map((tag) => tag.label);
+    expect(labels).toContain(E2E_TAG_LISTED);
+    expect(labels).toContain(E2E_TAG_REFERENCED);
+    expect(labels).not.toContain(E2E_TAG_ORPHAN);
+    for (const label of keepLabels) expect(labels).toContain(label);
+    const referencedId = tags.find((tag) => tag.label === E2E_TAG_REFERENCED)?.id;
+    if (referencedId == null) throw new Error("Referenced tag was not created");
+    expect((await client.getDelayProfiles()).some((profile) => profile.tags?.includes(referencedId))).toBe(true);
+
+    const second = await syncConfig(config, first.workspace);
+    assertPipelineSucceeded(second.result, ["RADARR"]);
+    assertDiffUpToDate(second.result, ["RADARR"]);
   });
 
   test("custom formats", async () => {

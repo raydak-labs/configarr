@@ -29,7 +29,7 @@ export class Ping<SecurityDataType = unknown> {
    * @secure
    */
   pingList = (params: RequestParams = {}) =>
-    this.http.request<PingResource, any>({
+    this.http.request<PingResource, PingResource>({
       path: `/ping`,
       method: "GET",
       secure: true,
@@ -45,7 +45,7 @@ export class Ping<SecurityDataType = unknown> {
    * @secure
    */
   headPing = (params: RequestParams = {}) =>
-    this.http.request<PingResource, any>({
+    this.http.request<PingResource, PingResource>({
       path: `/ping`,
       method: "HEAD",
       secure: true,
