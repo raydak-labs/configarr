@@ -73,6 +73,9 @@ describe("radarr (live)", () => {
   const { baseUrl, apiKey } = arrConnection("RADARR");
   const client = new RadarrClient(baseUrl, apiKey);
   let baseline: MediaBaseline;
+  let setupComplete = false;
+  let preexistingDelayProfileIds = new Set<number>();
+  let preexistingTagIds = new Set<number>();
 
   beforeAll(async () => {
     const status = await client.getSystemStatus();
@@ -80,23 +83,39 @@ describe("radarr (live)", () => {
       expect(status.version?.split(".")[0]).toBe(process.env.RADARR_EXPECTED_MAJOR);
     }
     await cleanupMediaE2e(client);
-    baseline = await snapshotMediaBaseline(client);
+    const snapshot = await snapshotMediaBaseline(client);
+    const [profiles, tags] = await Promise.all([client.getDelayProfiles(), client.getTags()]);
+    preexistingDelayProfileIds = new Set(profiles.flatMap((profile) => (profile.id == null ? [] : [profile.id])));
+    preexistingTagIds = new Set(tags.flatMap((tag) => (tag.id == null ? [] : [tag.id])));
+    baseline = snapshot;
+    setupComplete = true;
   }, 180_000);
 
   afterAll(async () => {
+    if (!setupComplete) return;
+    const snapshot = baseline;
     await teardown(
-      () => restoreMediaBaseline(client, baseline),
+      () => restoreMediaBaseline(client, snapshot),
       () => cleanupMediaE2e(client),
       async () => {
         const tags = await client.getTags();
         const referenced = tags.find((tag) => tag.label === E2E_TAG_REFERENCED)?.id;
         for (const profile of await client.getDelayProfiles()) {
-          if (profile.id != null && referenced != null && profile.tags?.includes(referenced)) {
+          if (
+            profile.id != null &&
+            !preexistingDelayProfileIds.has(profile.id) &&
+            referenced != null &&
+            profile.tags?.includes(referenced)
+          ) {
             await client.deleteDelayProfile(String(profile.id));
           }
         }
         for (const tag of tags) {
-          if (tag.id != null && [E2E_TAG_LISTED, E2E_TAG_REFERENCED, E2E_TAG_ORPHAN].includes(tag.label ?? "")) {
+          if (
+            tag.id != null &&
+            !preexistingTagIds.has(tag.id) &&
+            [E2E_TAG_LISTED, E2E_TAG_REFERENCED, E2E_TAG_ORPHAN].includes(tag.label ?? "")
+          ) {
             await client.deleteTag(String(tag.id));
           }
         }
