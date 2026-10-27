@@ -1,3 +1,4 @@
+import { RadarrHostConfigSync } from "../hostConfig/hostConfigRadarr";
 import { DownloadProtocol } from "../__generated__/radarr/data-contracts";
 import { getClient } from "../clients/client";
 import { StandardDelayProfileSync } from "../delayProfiles/delayProfileBase";
@@ -24,6 +25,7 @@ export class RadarrSyncer {
       instanceConfig: instance,
       client,
       syncs: {
+        hostConfig: new RadarrHostConfigSync(client),
         qd: new QualityDefinitionPreferredSync(client),
         mm: new MediaManagementSync(client),
         qp: new QualityProfileRadarrSync(client),

@@ -2,6 +2,7 @@ import { KyHttpClient } from "../ky-client";
 import { Api } from "../__generated__/radarr/Api";
 import {
   DelayProfileResource,
+  HostConfigResource,
   MediaManagementConfigResource,
   NamingConfigResource,
   RootFolderResource,
@@ -56,6 +57,14 @@ export class RadarrClient
     });
 
     this.api = new Api(httpClient);
+  }
+
+  getHostConfig(): Promise<HostConfigResource> {
+    return this.api.v3ConfigHostList({ redactResponseErrors: true });
+  }
+
+  async updateHostConfig(id: string, data: HostConfigResource): Promise<void> {
+    await this.api.v3ConfigHostUpdate(id, data, { redactResponseErrors: true });
   }
 
   async getLanguages() {

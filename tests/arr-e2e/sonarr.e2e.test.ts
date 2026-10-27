@@ -157,6 +157,36 @@ describe("sonarr (live)", () => {
     );
   });
 
+  test("host settings sync on Sonarr v5 and reject v4 before writes", async () => {
+    const isV5 = await client.supportsMediaManagementControls();
+    if (!isV5) {
+      const before = await client.getUiConfig();
+      const run = await syncConfig(mediaConfig("SONARR", { host_config: { oidcScopes: "openid" }, ui_config: { firstDayOfWeek: 6 } }));
+      expect(run.result.exitCode).not.toBe(0);
+      expect(run.result.stdout + run.result.stderr).toContain("host_config requires Radarr v7 or Sonarr v5");
+      expect((await client.getUiConfig()).firstDayOfWeek).toBe(before.firstDayOfWeek);
+      return;
+    }
+    let original = await client.getHostConfig();
+    if (!original.allowedHosts) {
+      await client.updateHostConfig(String(original.id), { ...original, allowedHosts: "localhost,127.0.0.1" });
+      original = await client.getHostConfig();
+    }
+    const scopes = original.oidcScopes === "openid profile" ? "openid email" : "openid profile";
+    try {
+      const config = mediaConfig("SONARR", { host_config: { oidcScopes: scopes } });
+      const first = await syncConfig(config);
+      assertPipelineSucceeded(first.result, ["SONARR"]);
+      expect((await client.getHostConfig()).oidcScopes).toBe(scopes);
+      expect((await client.getHostConfig()).authenticationMethod).toBe(original.authenticationMethod);
+      const second = await syncConfig(config, first.workspace);
+      assertPipelineSucceeded(second.result, ["SONARR"]);
+      assertDiffUpToDate(second.result, ["SONARR"]);
+    } finally {
+      await client.updateHostConfig(String(original.id), original);
+    }
+  });
+
   test("custom formats", async () => {
     const preexisting = nonE2eNames(await client.getCustomFormats());
     const withValue = (value: string) =>

@@ -19,6 +19,7 @@ import {
 } from "../__generated__/sonarr/data-contracts";
 import type {
   ApiInfoResource as SonarrApiInfoV5,
+  GeneralSettingsResource as SonarrGeneralV5,
   CustomFormatResource as SonarrCustomFormatV5,
   CustomFormatSpecificationSchema as SonarrCustomFormatSpecificationV5,
   MediaManagementSettingsResource as SonarrMediaManagementV5,
@@ -344,6 +345,16 @@ export class SonarrClient
 
   private async versioned<T>(v3: () => Promise<T>, v5: () => Promise<T>): Promise<T> {
     return (await this.getApiVersion()) === "v3" ? v3() : v5();
+  }
+
+  async getHostConfig(): Promise<SonarrGeneralV5> {
+    if ((await this.getApiVersion()) !== "v5") throw new Error("Sonarr host settings require API v5");
+    return this.apiV5.v5SettingsGeneralList({ redactResponseErrors: true });
+  }
+
+  async updateHostConfig(id: string, data: SonarrGeneralV5): Promise<void> {
+    if ((await this.getApiVersion()) !== "v5") throw new Error("Sonarr host settings require API v5");
+    await this.apiV5.v5SettingsGeneralUpdate(id, data, { redactResponseErrors: true });
   }
 
   async getLanguages() {

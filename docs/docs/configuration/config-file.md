@@ -1201,6 +1201,45 @@ your config is the full source of truth. See the
 Prowlarr download clients use the same `download_clients` block as the other \*Arrs, minus the
 `config` and `remote_paths` sub-sections (Prowlarr has no equivalent endpoints).
 
+## General authentication and TLS settings
+
+`host_config` manages the authentication and TLS fields listed below on Radarr v7
+and Sonarr v5. Older Radarr and Sonarr versions reject this block before any sync
+changes. Omitted fields retain their current server values.
+
+```yaml
+radarr:
+  movies:
+    base_url: http://radarr:7878
+    api_key: !secret RADARR_API_KEY
+    host_config:
+      authenticationMethod: oidc
+      authenticationRequired: enabled
+      oidcAuthority: https://identity.example.com
+      oidcClientId: radarr
+      oidcClientSecret: !secret RADARR_OIDC_SECRET
+      oidcUserIdentifier: sub
+      oidcScopes: "openid profile email"
+      # enableSsl: true
+      # sslCertPath: /config/tls/cert.pem
+      # sslKeyPath: /config/tls/key.pem
+      # allowedHosts: localhost,127.0.0.1
+      # update_oidc_client_secret: true
+```
+
+Sonarr v5 uses the same block. Supported fields are `authenticationMethod`,
+`authenticationRequired`, `allowedHosts`, `oidcAuthority`, `oidcClientId`,
+`oidcClientSecret`, `oidcUserIdentifier`, `oidcScopes`, `enableSsl`, `sslCertPath`
+and `sslKeyPath`. Certificate paths are on the *arr server. The server validates
+authentication settings and certificates; some changes require a manual restart.
+Configarr does not change API keys or restart the server.
+
+The server masks an existing OIDC secret, so Configarr cannot compare it with your
+configured value. It sets a secret when the server has none and otherwise preserves
+the existing secret. Set `update_oidc_client_secret: true` to rotate it, then remove
+the flag: while it remains enabled Configarr submits the secret on every run. Secrets
+are redacted from the diff report. `DRY_RUN` reports changes without writing them.
+
 ## Experimental supported fields
 
 - Experimental support for `media_management` and `media_naming_api` (since v1.5.0)

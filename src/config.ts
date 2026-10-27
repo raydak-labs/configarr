@@ -908,6 +908,8 @@ export const mergeConfigsAndTemplates = async (
     mergedTemplates.media_management = { ...mergedTemplates.media_management, ...instanceConfig.media_management };
   }
 
+  if (instanceConfig.host_config !== undefined) mergedTemplates.host_config = instanceConfig.host_config;
+
   if (instanceConfig.ui_config && Object.keys(instanceConfig.ui_config).length > 0) {
     mergedTemplates.ui_config = { ...mergedTemplates.ui_config, ...instanceConfig.ui_config };
   }

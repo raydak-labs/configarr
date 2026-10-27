@@ -1,3 +1,5 @@
+import type { HostConfig } from "../hostConfig/hostConfigSync";
+import type { DiffEntry } from "../diffReport/diffReport.types";
 import fs from "node:fs";
 import { ServerCache } from "../cache";
 import { ArrTypeToClient } from "../clients/client";
@@ -29,7 +31,7 @@ import { TagDeletionError } from "../tags/tag.types";
 import { deleteUnmanagedInstanceTags, ensureTags, loadServerTags, syncInstanceTags } from "../tags/tags";
 import { getTelemetryInstance, Telemetry } from "../telemetry";
 import { MediaArrType } from "../types/common.types";
-import { InputConfigArrInstance, InputConfigSchema, MergedConfigInstance } from "../types/config.types";
+import { HostConfigSchema, InputConfigArrInstance, InputConfigSchema, MergedConfigInstance } from "../types/config.types";
 import { TrashQualityDefinitionQuality } from "../types/trashguide.types";
 import { syncUiConfig, uiConfigDiffToDiffEntries } from "../uiConfigs/uiConfigSyncer";
 import { ConfigValidationError } from "../validation";
@@ -127,6 +129,7 @@ type MediaArrResources = {
 };
 
 export type MediaFeatureSyncs<T extends MediaArrType = MediaArrType> = {
+  hostConfig?: { validate(config: HostConfig, version: string | undefined | null): void; sync(config: HostConfig): Promise<DiffEntry[]> };
   qd: QualityDefinitionSync<MediaArrResources[T]["qualityDefinition"]>;
   mm: MediaManagementSync<MediaArrResources[T]["naming"], MediaArrResources[T]["mediaManagement"]>;
   qp: BaseQualityProfileSync<MediaArrResources[T]["qualityProfile"]>;
@@ -193,6 +196,14 @@ export const runMediaSyncToQualityProfiles = async <T extends MediaArrType>(
   logger.info(`Server objects: CustomFormats ${serverCFs.length}`);
 
   const { config } = await mergeConfigsAndTemplates(globalConfig, instanceConfig, arrType, { supportsProfileQualitySizes });
+  if (config.host_config !== undefined) {
+    const parsed = HostConfigSchema.safeParse(config.host_config);
+    if (!parsed.success)
+      throw new ConfigValidationError("Invalid host_config: " + parsed.error.issues.map((issue) => issue.message).join("; "));
+    config.host_config = parsed.data;
+    if (!syncs.hostConfig) throw new ConfigValidationError("host_config requires Radarr v7 or Sonarr v5");
+    syncs.hostConfig.validate(config.host_config, system.version);
+  }
   await qpSync.validateConfig(config);
   await mmSync.validateConfig(config.media_management);
   await syncs.releaseProfiles.validateConfig(config.release_profiles ?? []);
@@ -551,6 +562,10 @@ export const completeMediaSync = async <T extends MediaArrType>(ctx: MediaSyncCo
         }
       }
     }
+  }
+
+  if (config.host_config && syncs.hostConfig) {
+    collector.add(await syncs.hostConfig.sync(config.host_config));
   }
 
   return { arrType, instanceName, entries: collector.getEntries() };
