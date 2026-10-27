@@ -544,6 +544,7 @@ export const InputConfigArrInstanceSchema = z.object({
   quality_profiles: z.array(InputConfigQualityProfileSchema).optional(),
   media_management: MediaManagementTypeSchema.optional(),
   ui_config: UiConfigTypeSchema.optional(),
+  // @experimental @since v1.39.0
   host_config: HostConfigSchema.optional(),
   media_naming_api: MediaNamingApiTypeSchema.optional(),
   renameQualityProfiles: z.array(z.object({ from: z.string(), to: z.string() })).optional(),

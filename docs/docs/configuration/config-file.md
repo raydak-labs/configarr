@@ -1203,6 +1203,10 @@ Prowlarr download clients use the same `download_clients` block as the other \*A
 
 ## General authentication and TLS settings
 
+:::warning Experimental since v1.39.0
+General authentication and TLS synchronization is experimental.
+:::
+
 `host_config` manages the authentication and TLS fields listed below on Radarr v7
 and Sonarr v5. Older Radarr and Sonarr versions reject this block before any sync
 changes. Omitted fields retain their current server values.
@@ -1212,6 +1216,7 @@ radarr:
   movies:
     base_url: http://radarr:7878
     api_key: !secret RADARR_API_KEY
+    # (experimental) since v1.39.0
     host_config:
       authenticationMethod: oidc
       authenticationRequired: enabled

@@ -146,7 +146,7 @@ sonarr:
     enabled: true
     base_url: http://sonarr-v5:8989
     api_key: !secret SONARR_V5_API_KEY
-    # Optional Sonarr v5 General settings (paths are inside the Sonarr container).
+    # (experimental) since v1.39.0. Optional Sonarr v5 General settings (paths are inside the Sonarr container).
     # host_config:
     #   oidcScopes: "openid profile email"
 
@@ -356,7 +356,7 @@ radarr:
   instance-v7:
     base_url: http://radarr-v7:7878
     api_key: !secret RADARR_V7_API_KEY
-    # Optional Radarr v7 General settings; see the configuration docs for OIDC/TLS.
+    # (experimental) since v1.39.0. Optional Radarr v7 General settings; see the configuration docs for OIDC/TLS.
     # host_config:
     #   oidcScopes: "openid profile email"
     root_folders:
