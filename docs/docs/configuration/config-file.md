@@ -1201,10 +1201,10 @@ your config is the full source of truth. See the
 Prowlarr download clients use the same `download_clients` block as the other \*Arrs, minus the
 `config` and `remote_paths` sub-sections (Prowlarr has no equivalent endpoints).
 
-## General authentication and TLS settings
+## General settings
 
 :::warning Experimental since v1.39.0
-General authentication and TLS synchronization is experimental.
+General settings synchronization is experimental.
 :::
 
 `host_config` manages the authentication and TLS fields listed below on Radarr v7
@@ -1244,6 +1244,19 @@ configured value. It sets a secret when the server has none and otherwise preser
 the existing secret. Set `update_oidc_client_secret: true` to rotate it, then remove
 the flag: while it remains enabled Configarr submits the secret on every run. Secrets
 are redacted from the diff report. `DRY_RUN` reports changes without writing them.
+
+Whisparr v3 supports the following separate allow-list in `host_config`:
+
+```yaml
+whisparr:
+  instance1:
+    # (experimental) since v1.39.0
+    host_config:
+      whisparrAutoMatchOnDate: false
+      whisparrCorruptFileDetection: true
+```
+
+Omitted fields retain their server values. Whisparr rejects authentication, credential, network and other host settings in this block. Configarr reads back the settings after an update and reports an error if the server did not save them. The server must expose the requested fields and accept its current General settings when validating the update.
 
 ## Experimental supported fields
 
