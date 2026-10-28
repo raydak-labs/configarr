@@ -58,6 +58,22 @@ export function downloadClientDiffToDiffEntries<T extends DownloadClientShared>(
   return entries;
 }
 
+export function filterUnmanagedDownloadClients<T extends DownloadClientShared>(
+  serverClients: T[],
+  configClients: InputConfigDownloadClient[],
+  deleteConfig: Exclude<MergedConfigInstance["download_clients"], undefined>["delete_unmanaged"],
+): T[] {
+  const { enabled = false, ignore = [] } = deleteConfig ?? {};
+  if (!enabled) return [];
+
+  const configKeys = new Set(configClients.filter((c) => c.name && c.type).map((c) => `${c.name}::${c.type.toLowerCase()}`));
+  return serverClients.filter((server) => {
+    const name = server.name ?? "";
+    const implementation = server.implementation?.toLowerCase() ?? "";
+    return !configKeys.has(`${name}::${implementation}`) && !ignore.includes(name);
+  });
+}
+
 export abstract class BaseDownloadClientSync<T extends DownloadClientShared> {
   protected readonly logger = logger;
   private schema: T[] | null = null;
@@ -323,22 +339,7 @@ export abstract class BaseDownloadClientSync<T extends DownloadClientShared> {
     configClients: InputConfigDownloadClient[],
     deleteConfig: Exclude<MergedConfigInstance["download_clients"], undefined>["delete_unmanaged"],
   ): T[] {
-    const { enabled = false, ignore = [] } = deleteConfig ?? {};
-
-    if (!enabled) {
-      return [];
-    }
-
-    // Create composite keys for managed clients (name + implementation)
-    const configKeys = new Set(configClients.filter((c) => c.name && c.type).map((c) => `${c.name}::${c.type.toLowerCase()}`));
-
-    return serverClients.filter((server) => {
-      const name = server.name ?? "";
-      const implementation = server.implementation?.toLowerCase() ?? "";
-      const key = `${name}::${implementation}`;
-
-      return !configKeys.has(key) && !ignore.includes(name);
-    });
+    return filterUnmanagedDownloadClients(serverClients, configClients, deleteConfig);
   }
 
   async calculateDiff(
