@@ -227,9 +227,10 @@ function configarrEnv(workspace: ConfigWorkspace): Record<string, string> {
 export async function syncConfig(
   config: unknown,
   reuse?: ConfigWorkspace,
+  options?: { dryRun?: boolean },
 ): Promise<{ workspace: ConfigWorkspace; result: ConfigarrRunResult }> {
   const workspace = writeConfigWorkspace(config, reuse);
-  const result = await runConfigarr(configarrEnv(workspace));
+  const result = await runConfigarr({ ...configarrEnv(workspace), ...(options?.dryRun ? { DRY_RUN: "true" } : {}) });
   return { workspace, result };
 }
 

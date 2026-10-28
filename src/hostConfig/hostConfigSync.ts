@@ -19,6 +19,8 @@ type HostResource = {
   enableSsl?: boolean;
   sslCertPath?: string | null;
   sslKeyPath?: string | null;
+  whisparrAutoMatchOnDate?: boolean;
+  whisparrCorruptFileDetection?: boolean;
 };
 type HostClient<T extends HostResource> = {
   getHostConfig(): Promise<T>;
@@ -35,6 +37,8 @@ const fields = [
   "enableSsl",
   "sslCertPath",
   "sslKeyPath",
+  "whisparrAutoMatchOnDate",
+  "whisparrCorruptFileDetection",
 ] as const;
 
 export async function syncHostConfig<T extends HostResource>(
@@ -74,6 +78,9 @@ export abstract class HostConfigSync<T extends HostResource> {
   protected abstract map(config: HostConfig): { data: Partial<T>; rotateSecret?: boolean };
 
   validate(config: HostConfig, version: string | undefined | null): void {
+    if (config.whisparrAutoMatchOnDate !== undefined || config.whisparrCorruptFileDetection !== undefined) {
+      throw new ConfigValidationError("Whisparr host settings are not supported by Radarr or Sonarr");
+    }
     const major = Number(version?.split(".")[0]);
     if (!(major >= this.minimumMajor)) throw new ConfigValidationError("host_config requires Radarr v7 or Sonarr v5");
     if (config.oidcClientSecret === SECRET_MASK) throw new ConfigValidationError("oidcClientSecret cannot be the masked placeholder");

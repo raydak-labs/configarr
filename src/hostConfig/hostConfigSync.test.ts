@@ -1,11 +1,13 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { RadarrClient } from "../clients/radarr-client";
 import { SonarrClient } from "../clients/sonarr-client";
+import { WhisparrClient } from "../clients/whisparr-client";
 import { initEnvs } from "../env";
 import { logger } from "../logger";
 import { syncHostConfig } from "./hostConfigSync";
 import { RadarrHostConfigSync } from "./hostConfigRadarr";
 import { SonarrHostConfigSync } from "./hostConfigSonarr";
+import { WhisparrHostConfigSync } from "./hostConfigWhisparr";
 
 describe("host settings synchronization", () => {
   afterEach(() => {
@@ -13,6 +15,51 @@ describe("host settings synchronization", () => {
     vi.unstubAllGlobals();
     vi.unstubAllEnvs();
     initEnvs();
+  });
+
+  test("rejects settings for the wrong application and unsupported Whisparr versions", () => {
+    const radarr = new RadarrHostConfigSync(new RadarrClient("http://radarr.test", "key"));
+    const sonarr = new SonarrHostConfigSync(new SonarrClient("http://sonarr.test", "key"));
+    const whisparr = new WhisparrHostConfigSync(new WhisparrClient("http://whisparr.test", "key"));
+    expect(() => radarr.validate({ whisparrAutoMatchOnDate: true }, "7.0.0")).toThrow("Whisparr host settings");
+    expect(() => sonarr.validate({ whisparrCorruptFileDetection: true }, "5.0.0")).toThrow("Whisparr host settings");
+    expect(() => whisparr.validate({ whisparrAutoMatchOnDate: true }, "2.0.0")).toThrow("requires Whisparr v3");
+    expect(() => whisparr.validate({ authenticationMethod: "none" }, "3.0.0")).toThrow("Unsupported Whisparr host_config fields");
+  });
+
+  test("rejects a Whisparr host setting that the server does not expose", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => Response.json({ id: 1 })),
+    );
+    const sync = new WhisparrHostConfigSync(new WhisparrClient("http://whisparr.test", "key"));
+    await expect(sync.sync({ whisparrAutoMatchOnDate: false })).rejects.toThrow("does not expose host setting");
+  });
+
+  test("checks Whisparr host settings were persisted", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => Response.json({ id: 1, whisparrAutoMatchOnDate: true, whisparrCorruptFileDetection: false })),
+    );
+    const client = new WhisparrClient("http://whisparr.test", "key");
+    await expect(
+      client.updateHostConfig("1", { id: 1, whisparrAutoMatchOnDate: false, whisparrCorruptFileDetection: false }),
+    ).rejects.toThrow("did not persist");
+  });
+
+  test("reports Whisparr field changes while preserving omitted values", async () => {
+    let stored = { id: 1, whisparrAutoMatchOnDate: true, whisparrCorruptFileDetection: false, logLevel: "info" };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (request: Request) => {
+        if (request.method === "PUT") stored = await request.json();
+        return Response.json(stored);
+      }),
+    );
+    const sync = new WhisparrHostConfigSync(new WhisparrClient("http://whisparr.test", "key"));
+    const diff = await sync.sync({ whisparrAutoMatchOnDate: false });
+    expect(diff[0]?.fieldChanges).toEqual([{ field: "whisparrAutoMatchOnDate", from: true, to: false }]);
+    expect(stored).toMatchObject({ whisparrAutoMatchOnDate: false, whisparrCorruptFileDetection: false, logLevel: "info" });
   });
 
   test("sets an initially empty OIDC secret without disclosing it in the diff", async () => {

@@ -80,6 +80,56 @@ describe("whisparr (live)", () => {
     );
   });
 
+  test("syncs allow-listed Whisparr host settings and preserves other settings", async () => {
+    const url = `${baseUrl}/api/v3/config/host`;
+    const headers = { "X-Api-Key": apiKey, "Content-Type": "application/json" };
+    const getHost = async (): Promise<Record<string, unknown>> => {
+      const response = await fetch(url, { headers });
+      if (!response.ok) throw new Error(`Failed to load host settings: ${response.status}`);
+      return response.json();
+    };
+    const original = await getHost();
+    expect(typeof original.whisparrAutoMatchOnDate).toBe("boolean");
+    expect(typeof original.whisparrCorruptFileDetection).toBe("boolean");
+    const desired = {
+      whisparrAutoMatchOnDate: !original.whisparrAutoMatchOnDate,
+      whisparrCorruptFileDetection: !original.whisparrCorruptFileDetection,
+    };
+    const config = mediaConfig("WHISPARR", { host_config: desired });
+    try {
+      const dryRun = await syncConfig(config, undefined, { dryRun: true });
+      assertPipelineSucceeded(dryRun.result, ["WHISPARR"]);
+      expect(await getHost()).toEqual(original);
+      const first = await syncConfig(config, dryRun.workspace);
+      assertPipelineSucceeded(first.result, ["WHISPARR"]);
+      expect(await getHost()).toEqual({ ...original, ...desired });
+      const second = await syncConfig(config, first.workspace);
+      assertPipelineSucceeded(second.result, ["WHISPARR"]);
+      assertDiffUpToDate(second.result, ["WHISPARR"]);
+      const partial = await syncConfig(
+        mediaConfig("WHISPARR", { host_config: { whisparrAutoMatchOnDate: original.whisparrAutoMatchOnDate } }),
+        first.workspace,
+      );
+      assertPipelineSucceeded(partial.result, ["WHISPARR"]);
+      const expected = { ...original, whisparrCorruptFileDetection: desired.whisparrCorruptFileDetection };
+      expect(await getHost()).toEqual(expected);
+      const beforeUi = await client.getUiConfig();
+      const invalid = await syncConfig(
+        mediaConfig("WHISPARR", {
+          host_config: { authenticationMethod: "none" },
+          ui_config: { firstDayOfWeek: beforeUi.firstDayOfWeek === 6 ? 5 : 6 },
+        }),
+        first.workspace,
+      );
+      expect(invalid.result.exitCode).not.toBe(0);
+      expect(await getHost()).toEqual(expected);
+      expect(await client.getUiConfig()).toEqual(beforeUi);
+    } finally {
+      const response = await fetch(`${url}/${original.id}`, { method: "PUT", headers, body: JSON.stringify(original) });
+      if (!response.ok) throw new Error(`Failed to restore host settings: ${response.status}`);
+    }
+  });
+
   test("custom formats", async () => {
     const preexisting = nonE2eNames(await client.getCustomFormats());
     const withValue = (value: string) =>

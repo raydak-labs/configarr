@@ -16,6 +16,7 @@ import {
   ReleaseProfileResource,
   UiConfigResource,
   CustomFormatResource,
+  HostConfigResource,
 } from "../__generated__/whisparr/data-contracts";
 import { logger } from "../logger";
 import type { CustomFormatRequest } from "../customFormats/customFormat.types";
@@ -29,6 +30,12 @@ import {
   SystemClient,
   TagsClient,
 } from "./capabilities";
+
+// The generated contract omits these Whisparr v3 fields.
+export type WhisparrHostConfigResource = HostConfigResource & {
+  whisparrAutoMatchOnDate?: boolean;
+  whisparrCorruptFileDetection?: boolean;
+};
 
 /**
  * Overwrite wrong types for now
@@ -66,6 +73,21 @@ export class WhisparrClient
     });
 
     this.api = new Api(httpClient);
+  }
+
+  getHostConfig(): Promise<WhisparrHostConfigResource> {
+    return this.api.v3ConfigHostList({ redactResponseErrors: true });
+  }
+
+  async updateHostConfig(id: string, data: WhisparrHostConfigResource): Promise<void> {
+    await this.api.v3ConfigHostUpdate(id, data, { redactResponseErrors: true });
+    const saved = await this.getHostConfig();
+    if (
+      saved.whisparrAutoMatchOnDate !== data.whisparrAutoMatchOnDate ||
+      saved.whisparrCorruptFileDetection !== data.whisparrCorruptFileDetection
+    ) {
+      throw new Error("Whisparr did not persist the requested host settings");
+    }
   }
 
   async getLanguages() {

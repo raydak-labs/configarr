@@ -6,6 +6,7 @@
   <ApiKey>e2etestapikey0123456789abcdef012</ApiKey>
   <AuthenticationMethod>None</AuthenticationMethod>
   <AuthenticationRequired>DisabledForLocalAddresses</AuthenticationRequired>
+  <AllowedHosts>localhost,127.0.0.1,whisparr</AllowedHosts>
   <Branch>eros</Branch>
   <LogLevel>info</LogLevel>
   <UrlBase></UrlBase>

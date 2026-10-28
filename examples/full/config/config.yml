@@ -380,6 +380,11 @@ whisparr:
     base_url: http://whisparr:6969 # instance URL
     api_key: !secret WHISPARR_API_KEY # Reference to API key in secrets.yml
 
+    # (experimental) since v1.39.0. Whisparr v3 General settings.
+    # host_config:
+    #   whisparrAutoMatchOnDate: false
+    #   whisparrCorruptFileDetection: true
+
     # not supported
     # quality_definition:
     #   type: movie # Quality definition type

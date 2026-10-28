@@ -512,6 +512,8 @@ export const HostConfigSchema = z
     sslKeyPath: z.string().optional(),
     oidcClientSecret: z.string().optional(),
     update_oidc_client_secret: z.boolean().optional(),
+    whisparrAutoMatchOnDate: z.boolean().optional(),
+    whisparrCorruptFileDetection: z.boolean().optional(),
   })
   .strict();
 
