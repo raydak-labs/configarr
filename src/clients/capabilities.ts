@@ -97,3 +97,11 @@ export interface MetadataProfilesClient<T extends { id?: number; name?: string |
   updateMetadataProfile(id: string, profile: T): Promise<T>;
   deleteMetadataProfile(id: string): Promise<void>;
 }
+
+export interface ImportListsClient<T extends { id?: number; name?: string | null }> {
+  getImportListSchema(): Promise<T[]>;
+  getImportLists(): Promise<T[]>;
+  createImportList(item: T): Promise<T>;
+  updateImportList(id: string, item: T): Promise<T>;
+  deleteImportList(id: string): Promise<void>;
+}

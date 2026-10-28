@@ -4,6 +4,7 @@
  * One file per *arr, each with its own literal payloads - the YAML differs per app, and a
  * shared factory would hide that behind branches. Shared code stays in `helpers.ts`.
  */
+import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
 import { SonarrClient } from "../../src/clients/sonarr-client";
 import { DownloadProtocol } from "../../src/__generated__/sonarr/data-contracts";
@@ -184,6 +185,322 @@ describe("sonarr (live)", () => {
       assertDiffUpToDate(second.result, ["SONARR"]);
     } finally {
       await client.updateHostConfig(String(original.id), original);
+    }
+  });
+
+  test("syncs host settings and an import list in one run", async () => {
+    if (!(await client.supportsMediaManagementControls())) return;
+    const original = await client.getHostConfig();
+    const profile = (await client.getQualityProfiles()).find((item) => item.name);
+    if (!original.id || !profile?.name) throw new Error("Host settings and a quality profile are required");
+    const name = `e2e-import-${randomUUID()}`;
+    const scopes = original.oidcScopes === "openid profile" ? "openid email" : "openid profile";
+    try {
+      const config = mediaConfig("SONARR", {
+        host_config: { oidcScopes: scopes },
+        root_folders: [E2E_ROOT_A, ...(await preservedRootFolderPaths(client))],
+        import_lists: {
+          data: [
+            {
+              name,
+              type: "CustomImport",
+              enable_auto: false,
+              language: "English",
+              quality_profile: profile.name,
+              root_folder: E2E_ROOT_A,
+              fields: { base_url: "http://127.0.0.1:1" },
+            },
+          ],
+        },
+      });
+      const first = await syncConfig(config);
+      assertPipelineSucceeded(first.result, ["SONARR"]);
+      expect((await client.getHostConfig()).oidcScopes).toBe(scopes);
+      expect((await client.getImportLists()).some((item) => item.name === name)).toBe(true);
+      const second = await syncConfig(config, first.workspace);
+      assertPipelineSucceeded(second.result, ["SONARR"]);
+      assertDiffUpToDate(second.result, ["SONARR"]);
+    } finally {
+      const list = (await client.getImportLists()).find((item) => item.name === name);
+      if (list?.id != null) await client.deleteImportList(String(list.id));
+      await client.updateHostConfig(String(original.id), original);
+    }
+  });
+
+  test("dry-runs a Sonarr import list referencing a new root folder", async () => {
+    const profile = (await client.getQualityProfiles()).find((item) => item.name);
+    if (!profile?.name) throw new Error("A quality profile is required for the import-list fixture");
+    const root = `/data/dry-run-${randomUUID()}`;
+    const name = `e2e-import-${randomUUID()}`;
+    const version = (await client.getSystemStatus()).version?.startsWith("5.") ? "v5" : "v3";
+    const result = await syncConfig(
+      mediaConfig("SONARR", {
+        root_folders: [root, ...(await preservedRootFolderPaths(client))],
+        import_lists: {
+          data: [
+            {
+              name,
+              type: "CustomImport",
+              enable_auto: false,
+              ...(version === "v5" ? { language: "English" } : {}),
+              quality_profile: profile.name,
+              root_folder: root,
+              fields: { base_url: "http://127.0.0.1:1" },
+            },
+          ],
+        },
+      }),
+      undefined,
+      { dryRun: true },
+    );
+    assertPipelineSucceeded(result.result, ["SONARR"]);
+    expect((await client.getImportLists()).some((item) => item.name === name)).toBe(false);
+    expect((await client.getRootfolders()).some((folder) => folder.path === root)).toBe(false);
+  });
+
+  test("rejects an invalid Sonarr list before writing any import lists", async () => {
+    const profile = (await client.getQualityProfiles()).find((item) => item.name);
+    if (!profile?.name) throw new Error("A quality profile is required for the import-list fixture");
+    const name = `e2e-import-${randomUUID()}`;
+    const version = (await client.getSystemStatus()).version?.startsWith("5.") ? "v5" : "v3";
+    const common = {
+      type: "CustomImport",
+      enable_auto: false,
+      ...(version === "v5" ? { language: "English" } : {}),
+      quality_profile: profile.name,
+      root_folder: E2E_ROOT_A,
+    };
+    try {
+      const result = await syncConfig(
+        mediaConfig(
+          "SONARR",
+          {
+            custom_formats: cfAssignBlock(),
+            root_folders: [E2E_ROOT_A, ...(await preservedRootFolderPaths(client))],
+            import_lists: {
+              data: [
+                { name, ...common, fields: { base_url: "http://127.0.0.1:1" } },
+                { name: `${name}-invalid`, ...common, fields: { unknown_field: "invalid" } },
+              ],
+            },
+          },
+          { customFormatDefinitions: [e2eCustomFormatDefinition()] },
+        ),
+      );
+      expect(result.result.exitCode).not.toBe(0);
+      expect(result.result.stderr).toContain("unknown field");
+      expect((await client.getImportLists()).some((item) => item.name === name)).toBe(false);
+      expect(findNamed(await client.getCustomFormats(), "e2e-rt")).toBeUndefined();
+    } finally {
+      const list = (await client.getImportLists()).find((item) => item.name === name);
+      if (list?.id != null) await client.deleteImportList(String(list.id));
+    }
+  });
+
+  test("rejects an invalid Sonarr import-list language before creating tags or other resources", async () => {
+    const profile = (await client.getQualityProfiles()).find((item) => item.name);
+    if (!profile?.name) throw new Error("A quality profile is required for the import-list fixture");
+    const name = `e2e-import-${randomUUID()}`;
+    const tag = `e2e-import-tag-${randomUUID()}`;
+    const version = (await client.getSystemStatus()).version?.startsWith("5.") ? "v5" : "v3";
+    const common = {
+      type: "CustomImport",
+      enable_auto: false,
+      quality_profile: profile.name,
+      root_folder: E2E_ROOT_A,
+      fields: { base_url: "http://127.0.0.1:1" },
+    };
+    try {
+      const result = await syncConfig(
+        mediaConfig(
+          "SONARR",
+          {
+            root_folders: [E2E_ROOT_A, ...(await preservedRootFolderPaths(client))],
+            custom_formats: cfAssignBlock(),
+            import_lists: {
+              data: [
+                { name, ...common, ...(version === "v5" ? { language: "English" } : {}) },
+                { name: `${name}-invalid`, ...common, language: "No Such Language", tags: [tag] },
+              ],
+            },
+          },
+          { customFormatDefinitions: [e2eCustomFormatDefinition()] },
+        ),
+      );
+      expect(result.result.exitCode).not.toBe(0);
+      expect(result.result.stderr).toContain(version === "v5" ? "language not found" : "language is only supported by Sonarr v5");
+      expect(findNamed(await client.getCustomFormats(), "e2e-rt")).toBeUndefined();
+      expect((await client.getTags()).some((item) => item.label === tag)).toBe(false);
+      expect((await client.getImportLists()).some((item) => item.name === name || item.name === `${name}-invalid`)).toBe(false);
+    } finally {
+      for (const item of await client.getImportLists())
+        if (item.id != null && (item.name === name || item.name === `${name}-invalid`)) await client.deleteImportList(String(item.id));
+      const createdTag = (await client.getTags()).find((item) => item.label === tag);
+      if (createdTag?.id != null) await client.deleteTag(String(createdTag.id));
+    }
+  });
+
+  test("rejects unsupported or missing Sonarr import-list language before any writes", async () => {
+    const profile = (await client.getQualityProfiles()).find((item) => item.name);
+    if (!profile?.name) throw new Error("A quality profile is required for the import-list fixture");
+    const name = `e2e-import-${randomUUID()}`;
+    const tag = `e2e-import-tag-${randomUUID()}`;
+    const version = (await client.getSystemStatus()).version?.startsWith("5.") ? "v5" : "v3";
+    const config = mediaConfig(
+      "SONARR",
+      {
+        custom_formats: cfAssignBlock(),
+        root_folders: [E2E_ROOT_A, ...(await preservedRootFolderPaths(client))],
+        import_lists: {
+          data: [
+            {
+              name,
+              type: "CustomImport",
+              enable_auto: false,
+              ...(version === "v3" ? { language: "English" } : {}),
+              quality_profile: profile.name,
+              root_folder: E2E_ROOT_A,
+              tags: [tag],
+              fields: { base_url: "http://127.0.0.1:1" },
+            },
+          ],
+        },
+      },
+      { customFormatDefinitions: [e2eCustomFormatDefinition()] },
+    );
+    try {
+      const result = await syncConfig(config);
+      expect(result.result.exitCode).not.toBe(0);
+      expect(result.result.stderr).toContain(version === "v5" ? "language is required" : "language is only supported by Sonarr v5");
+      expect(findNamed(await client.getCustomFormats(), "e2e-rt")).toBeUndefined();
+      expect((await client.getTags()).some((item) => item.label === tag)).toBe(false);
+      expect((await client.getImportLists()).some((item) => item.name === name)).toBe(false);
+    } finally {
+      const list = (await client.getImportLists()).find((item) => item.name === name);
+      if (list?.id != null) await client.deleteImportList(String(list.id));
+      const createdTag = (await client.getTags()).find((item) => item.label === tag);
+      if (createdTag?.id != null) await client.deleteTag(String(createdTag.id));
+    }
+  });
+
+  test("creates an import list using a profile and root folder from the same run", async () => {
+    const name = `e2e-import-${randomUUID()}`;
+    const profileName = `e2e-qp-${randomUUID()}`;
+    const version = (await client.getSystemStatus()).version?.startsWith("5.") ? "v5" : "v3";
+    try {
+      const result = await syncConfig(
+        mediaConfig("SONARR", {
+          root_folders: [E2E_ROOT_A, ...(await preservedRootFolderPaths(client))],
+          quality_profiles: [{ ...qualityProfile(), name: profileName }],
+          import_lists: {
+            data: [
+              {
+                name,
+                type: "CustomImport",
+                enable_auto: false,
+                ...(version === "v5" ? { language: "English" } : {}),
+                quality_profile: profileName,
+                root_folder: E2E_ROOT_A,
+                fields: { base_url: "http://127.0.0.1:1" },
+              },
+            ],
+          },
+        }),
+      );
+      assertPipelineSucceeded(result.result, ["SONARR"]);
+      const profile = (await client.getQualityProfiles()).find((item) => item.name === profileName);
+      expect(profile?.id).toBeDefined();
+      expect((await client.getImportLists()).find((item) => item.name === name)?.qualityProfileId).toBe(profile?.id);
+    } finally {
+      const list = (await client.getImportLists()).find((item) => item.name === name);
+      if (list?.id != null) await client.deleteImportList(String(list.id));
+      const profile = (await client.getQualityProfiles()).find((item) => item.name === profileName);
+      if (profile?.id != null) await client.deleteQualityProfile(String(profile.id));
+    }
+  });
+
+  test("creates and updates a schema-based import list", async () => {
+    const name = `e2e-import-${randomUUID()}`;
+    const tagName = `e2e-import-tag-${randomUUID()}`;
+    const profile = (await client.getQualityProfiles()).find((item) => item.id != null && item.name);
+    if (!profile?.name) throw new Error("A quality profile is required for the import-list fixture");
+    const version = (await client.getSystemStatus()).version?.startsWith("5.") ? "v5" : "v3";
+    const url = `${baseUrl}/api/${version}/importlist`;
+    const headers = { "X-Api-Key": apiKey };
+    const getLists = async (): Promise<
+      Array<{ id?: number; name?: string; tags?: number[]; fields?: Array<{ name?: string; value?: unknown }> }>
+    > => {
+      const response = await fetch(url, { headers });
+      if (!response.ok) throw new Error(`Failed to load import lists: ${response.status}`);
+      return response.json();
+    };
+    try {
+      const preserved = await preservedRootFolderPaths(client);
+      const existingNames = nonE2eNames(await getLists());
+      const config = (baseUrl: string) =>
+        mediaConfig("SONARR", {
+          root_folders: [E2E_ROOT_A, ...preserved],
+          import_lists: {
+            data: [
+              {
+                name,
+                type: "CustomImport",
+                enable_auto: false,
+                ...(version === "v5" ? { language: "English" } : {}),
+                quality_profile: profile.name,
+                root_folder: E2E_ROOT_A,
+                tags: [tagName],
+                fields: { base_url: baseUrl },
+              },
+            ],
+          },
+        });
+      const first = await syncConfig(config("http://127.0.0.1:1"));
+      assertPipelineSucceeded(first.result, ["SONARR"]);
+      expect(findNamed(await getLists(), name)?.fields?.find((field) => field.name === "baseUrl")?.value).toBe("http://127.0.0.1:1");
+      const tag = (await client.getTags()).find((item) => item.label === tagName);
+      expect(tag?.id).toBeDefined();
+      expect(findNamed(await getLists(), name)?.tags).toContain(tag?.id);
+      const second = await syncConfig(config("http://127.0.0.1:1"), first.workspace);
+      assertPipelineSucceeded(second.result, ["SONARR"]);
+      assertDiffUpToDate(second.result, ["SONARR"]);
+      if (version === "v5") {
+        const omitLanguage = await syncConfig(
+          mediaConfig("SONARR", {
+            root_folders: [E2E_ROOT_A, ...preserved],
+            import_lists: {
+              data: [
+                {
+                  name,
+                  type: "CustomImport",
+                  enable_auto: false,
+                  quality_profile: profile.name,
+                  root_folder: E2E_ROOT_A,
+                  tags: [tagName],
+                  fields: { base_url: "http://127.0.0.1:1" },
+                },
+              ],
+            },
+          }),
+          first.workspace,
+        );
+        assertPipelineSucceeded(omitLanguage.result, ["SONARR"]);
+        assertDiffUpToDate(omitLanguage.result, ["SONARR"]);
+      }
+      const changed = await syncConfig(config("http://127.0.0.1:2"), first.workspace);
+      assertPipelineSucceeded(changed.result, ["SONARR"]);
+      expect(findNamed(await getLists(), name)?.fields?.find((field) => field.name === "baseUrl")?.value).toBe("http://127.0.0.1:2");
+      const removed = await syncConfig(
+        mediaConfig("SONARR", { import_lists: { data: [], delete_unmanaged: { enabled: true, ignore: existingNames } } }),
+        first.workspace,
+      );
+      assertPipelineSucceeded(removed.result, ["SONARR"]);
+      expect(findNamed(await getLists(), name)).toBeUndefined();
+    } finally {
+      const list = findNamed(await getLists(), name);
+      if (list?.id != null) await fetch(`${url}/${list.id}`, { method: "DELETE", headers });
+      const tag = (await client.getTags()).find((item) => item.label === tagName);
+      if (tag?.id != null) await client.deleteTag(String(tag.id));
     }
   });
 

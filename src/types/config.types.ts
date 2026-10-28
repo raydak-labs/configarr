@@ -516,6 +516,24 @@ export const HostConfigSchema = z
     whisparrCorruptFileDetection: z.boolean().optional(),
   })
   .strict();
+export const InputConfigImportListSchema = z
+  .object({
+    name: z.string().min(1),
+    type: z.string().min(1),
+    enabled: z.boolean().optional(),
+    enable_auto: z.boolean().optional(),
+    search_on_add: z.boolean().optional(),
+    language: z.string().min(1).optional(),
+    quality_profile: z.string().optional(),
+    root_folder: z.string().optional(),
+    tags: z.array(z.union([z.string(), z.number()])).optional(),
+    fields: z.record(z.string(), z.unknown()).optional(),
+  })
+  .strict();
+export type InputConfigImportList = z.infer<typeof InputConfigImportListSchema>;
+export const InputConfigImportListsSchema = z
+  .object({ data: z.array(InputConfigImportListSchema).optional(), delete_unmanaged: DeleteUnmanagedSchema.optional() })
+  .strict();
 
 export const InputConfigArrInstanceSchema = z.object({
   base_url: z.string(),
@@ -548,6 +566,8 @@ export const InputConfigArrInstanceSchema = z.object({
   ui_config: UiConfigTypeSchema.optional(),
   // @experimental @since v1.39.0
   host_config: HostConfigSchema.optional(),
+  // @experimental @since v1.39.0
+  import_lists: InputConfigImportListsSchema.optional(),
   media_naming_api: MediaNamingApiTypeSchema.optional(),
   renameQualityProfiles: z.array(z.object({ from: z.string(), to: z.string() })).optional(),
   cloneQualityProfiles: z.array(z.object({ from: z.string(), to: z.string() })).optional(),

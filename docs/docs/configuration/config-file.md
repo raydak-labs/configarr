@@ -757,7 +757,7 @@ Notes:
 
 - available since `v1.34.0` for Sonarr, Radarr, Lidarr, Readarr and Whisparr. Prowlarr has the same block, see [Prowlarr](/docs/configuration/experimental-support#prowlarr-v1)
 - Tag labels are matched **case-insensitively**: a label that only differs in casing resolves to the existing server tag instead of creating a second one
-- `tags` is optional. The tags referenced by your managed features (`delay_profiles`, `release_profiles`, `root_folders`, `download_clients`) are created as well, so listing them here is a declarative way to see and keep all your labels in one place
+- `tags` is optional. The tags referenced by your managed features (`delay_profiles`, `release_profiles`, `root_folders`, `download_clients`, `import_lists`) are created as well, so listing them here is a declarative way to see and keep all your labels in one place
 - `delete_unmanaged_tags` deletes every server tag which is neither listed under `tags`, nor listed under `ignore`, nor referenced by one of the managed features listed above. If it stops part-way (a server error after some tags were already deleted), the report still lists the deletions that went through
 - A tag that is still in use by something configarr does not manage (for example an import list, notification or indexer) cannot be deleted. On media \*arrs the tag is left alone and a warning is logged, so the rest of the instance still syncs. On Prowlarr every tag-bearing resource is managed, so this case fails the Prowlarr instance instead
 - Prowlarr keeps its own set of referencing features: its tags are also read from `applications`, `indexers` and `indexer_proxies`
@@ -907,6 +907,41 @@ sonarr:
 Notes:
 
 - **experimental**, available since `v1.14.0`
+
+## Import Lists
+
+:::warning Experimental since v1.39.0
+Import-list synchronization is experimental.
+:::
+
+Radarr and Sonarr can synchronize import lists from the provider schemas exposed by the connected server. Provider types and fields depend on the application and version. Field names can use the server's camelCase names or snake_case.
+
+```yaml
+radarr:
+  movies:
+    # (experimental) since v1.39.0
+    import_lists:
+      data:
+        - name: IMDb watchlist
+          type: IMDbListImport
+          enabled: false
+          enable_auto: false
+          search_on_add: false
+          quality_profile: HD Bluray + WEB
+          root_folder: /movies
+          tags: [watchlist]
+          fields:
+            list_id: ls123456789
+      delete_unmanaged:
+        enabled: false
+        ignore: []
+```
+
+Use the implementation name supplied by the server as `type`. New lists need a quality profile and root folder that already exist or are configured for creation in the same run; configured tags are created if needed. Configarr validates list providers, fields, references, and Sonarr languages before making changes. Omitted settings and provider fields retain their existing values. When the server masks an existing provider secret, Configarr preserves it instead of replacing it with a configured value. Unmanaged lists are only deleted when `delete_unmanaged.enabled` is explicitly enabled; list names in `ignore` are retained.
+
+Sonarr uses `enable_auto` and `search_on_add` for its automatic-add and search settings. Sonarr v5 requires a `language` name for a new list unless its provider supplies a default; Sonarr v4 rejects `language`. The `enabled` setting is Radarr-only and is rejected by Sonarr.
+
+For an already-authorized Trakt list, Configarr preserves the server's OAuth credentials and refreshed tokens. To create a list with existing credentials, supply `access_token`, `refresh_token`, and `expires` under `fields`; use `!secret` or `!env` for tokens. These fields are used on creation only, so a later run cannot replace refreshed server tokens with stale values. Obtain the credentials separately; Configarr does not perform interactive Trakt authorization. For Radarr v7 Smart Lists, use `type: TraktSmartListImport` and provide the list's slug in `smart_list_id`.
 
 ## Delay Profiles
 
