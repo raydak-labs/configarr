@@ -1,3 +1,4 @@
+import { SonarrHostConfigSync } from "../hostConfig/hostConfigSonarr";
 import { DownloadProtocol } from "../__generated__/sonarr/data-contracts";
 import { getClient } from "../clients/client";
 import { StandardDelayProfileSync } from "../delayProfiles/delayProfileBase";
@@ -27,6 +28,7 @@ export class SonarrSyncer {
       client,
       supportsProfileQualitySizes: await client.supportsProfileQualitySizes(),
       syncs: {
+        hostConfig: new SonarrHostConfigSync(client),
         qd: new QualityDefinitionSonarrSync(client),
         mm: new SonarrMediaManagementSync(client),
         qp: qualityProfiles,

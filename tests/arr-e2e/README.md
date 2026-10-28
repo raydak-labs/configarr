@@ -90,6 +90,8 @@ Per-*arr files are deliberately duplicated instead of generated from a shared fa
 
 ## Coverage
 
+Host settings run on Sonarr v5 and Radarr v7; v4/v5/v6 reject the v7/v5-only block before other writes.
+
 Feature × arr × create / update / delete / idempotent (second run Diff Report `(up to date - no changes)` + GET). `C` create, `U` update, `D` delete, `I` idempotent. `—` not applicable.
 
 | Feature                        | Sonarr   | Radarr   | Whisparr | Readarr  | Lidarr   | Prowlarr |
@@ -99,6 +101,7 @@ Feature × arr × create / update / delete / idempotent (second run Diff Report 
 | Quality definitions            | CUI      | CUI      | CUI      | CUI      | CUI      | —        |
 | Root folders                   | CDI      | CDI      | CDI      | CUDI     | CUDI     | —        |
 | Media settings (MM/naming/UI)  | CUI      | CUI      | CUI      | CUI      | CUI      | —        |
+| General auth/TLS settings      | CUI      | CUI      | —        | —        | —        | —        |
 | Delay profiles                 | CUDI     | CUDI     | CUDI     | CUDI     | CUDI     | —        |
 | Release profiles               | CUDI     | CUDI     | CUDI     | CUDI     | CUDI     | —        |
 | Download clients (blackhole)   | CUDI     | CUDI     | CUDI     | CUDI     | CUDI     | CUDI     |

@@ -114,6 +114,8 @@ export type QueryParamsType = Record<string | number, unknown>;
 export interface FullRequestParams extends Omit<KyOptions, "json" | "body" | "searchParams"> {
   /** set parameter to `true` for call `securityWorker` for this request */
   secure?: boolean;
+  /** Suppress potentially sensitive server error details for this request. */
+  redactResponseErrors?: boolean;
   /** request path */
   path: string;
   /** content type of request body */
@@ -199,6 +201,7 @@ export class HttpClient<SecurityDataType = unknown> {
     query,
     format,
     body,
+    redactResponseErrors = false,
     ...options
   }: FullRequestParams): Promise<T> => {
     if (body) {
@@ -300,6 +303,12 @@ export class HttpClient<SecurityDataType = unknown> {
 
       return requestPromise.json();
     } catch (error: any) {
+      if (redactResponseErrors) {
+        const status = error instanceof HTTPError ? ` (HTTP ${error.response.status})` : "";
+        const message = `Request failed${status}; check server logs for details`;
+        logger.error(message);
+        throw new Error(message);
+      }
       logger.debug(`Error during request with error: ${error?.name}`);
 
       // Use createConnectionErrorParts for consistent error handling

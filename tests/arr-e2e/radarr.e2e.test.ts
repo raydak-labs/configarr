@@ -145,6 +145,81 @@ describe("radarr (live)", () => {
     assertDiffUpToDate(second.result, ["RADARR"]);
   });
 
+  test("host settings merge configured values and remain idempotent", async () => {
+    const major = Number((await client.getSystemStatus()).version?.split(".")[0]);
+    if (major < 7) return;
+    const headers = { "X-Api-Key": apiKey, "Content-Type": "application/json" };
+    const read = async (): Promise<Record<string, unknown>> => {
+      const response = await fetch(`${baseUrl}/api/v3/config/host`, { headers });
+      if (!response.ok) throw new Error(`Failed to load host settings: ${response.status}`);
+      return response.json();
+    };
+    let original = await read();
+    // The fixture disables local authentication; v7 requires a nonempty allowed-hosts
+    // list on any General-settings write, even when it booted with an empty default.
+    if (!original.allowedHosts) {
+      const response = await fetch(`${baseUrl}/api/v3/config/host/${original.id}`, {
+        method: "PUT",
+        headers,
+        body: JSON.stringify({ ...original, allowedHosts: "localhost,127.0.0.1" }),
+      });
+      if (!response.ok) throw new Error(`Failed to prepare host settings: ${response.status}`);
+      original = await read();
+    }
+    const scopes = original.oidcScopes === "openid profile" ? "openid email" : "openid profile";
+    try {
+      const config = mediaConfig("RADARR", { host_config: { oidcScopes: scopes } });
+      const first = await syncConfig(config);
+      assertPipelineSucceeded(first.result, ["RADARR"]);
+      const updated = await read();
+      expect(updated.oidcScopes).toBe(scopes);
+      expect(updated.authenticationMethod).toBe(original.authenticationMethod);
+      const second = await syncConfig(config, first.workspace);
+      assertPipelineSucceeded(second.result, ["RADARR"]);
+      assertDiffUpToDate(second.result, ["RADARR"]);
+    } finally {
+      const response = await fetch(`${baseUrl}/api/v3/config/host/${original.id}`, {
+        method: "PUT",
+        headers,
+        body: JSON.stringify(original),
+      });
+      if (!response.ok) throw new Error(`Failed to restore host settings: ${response.status}`);
+    }
+  });
+
+  test.each([
+    { label: "invalid enum", host_config: { authenticationMethod: "invalid" } },
+    { label: "unsupported field", host_config: { apiKey: "not-managed" } },
+  ])("rejects $label in host settings before applying other changes", async ({ host_config }) => {
+    const major = Number((await client.getSystemStatus()).version?.split(".")[0]);
+    if (major < 7) return;
+    const before = await client.getUiConfig();
+    const changed = before.firstDayOfWeek === 6 ? 5 : 6;
+    try {
+      const run = await syncConfig(
+        mediaConfig("RADARR", {
+          host_config,
+          ui_config: { firstDayOfWeek: changed },
+        }),
+      );
+      expect(run.result.exitCode).not.toBe(0);
+      expect((await client.getUiConfig()).firstDayOfWeek).toBe(before.firstDayOfWeek);
+    } finally {
+      await client.updateUiConfig(String(before.id), before);
+    }
+  });
+
+  test("rejects v7 host settings on older Radarr before applying other changes", async () => {
+    const major = Number((await client.getSystemStatus()).version?.split(".")[0]);
+    if (major >= 7) return;
+    const before = await client.getUiConfig();
+    const config = mediaConfig("RADARR", { host_config: { oidcScopes: "openid" }, ui_config: { firstDayOfWeek: 6 } });
+    const run = await syncConfig(config);
+    expect(run.result.exitCode).not.toBe(0);
+    expect(run.result.stdout + run.result.stderr).toContain("host_config requires Radarr v7 or Sonarr v5");
+    expect((await client.getUiConfig()).firstDayOfWeek).toBe(before.firstDayOfWeek);
+  });
+
   test("custom formats", async () => {
     const preexisting = nonE2eNames(await client.getCustomFormats());
     const withValue = (value: string) =>

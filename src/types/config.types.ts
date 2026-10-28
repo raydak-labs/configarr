@@ -498,6 +498,23 @@ export const InputConfigProwlarrInstanceSchema = z.object({
 });
 export type InputConfigProwlarrInstance = z.infer<typeof InputConfigProwlarrInstanceSchema>;
 
+export const HostConfigSchema = z
+  .object({
+    authenticationMethod: z.string().optional(),
+    authenticationRequired: z.string().optional(),
+    allowedHosts: z.string().optional(),
+    oidcAuthority: z.string().optional(),
+    oidcClientId: z.string().optional(),
+    oidcUserIdentifier: z.string().optional(),
+    oidcScopes: z.string().optional(),
+    enableSsl: z.boolean().optional(),
+    sslCertPath: z.string().optional(),
+    sslKeyPath: z.string().optional(),
+    oidcClientSecret: z.string().optional(),
+    update_oidc_client_secret: z.boolean().optional(),
+  })
+  .strict();
+
 export const InputConfigArrInstanceSchema = z.object({
   base_url: z.string(),
   api_key: z.string(),
@@ -527,6 +544,8 @@ export const InputConfigArrInstanceSchema = z.object({
   quality_profiles: z.array(InputConfigQualityProfileSchema).optional(),
   media_management: MediaManagementTypeSchema.optional(),
   ui_config: UiConfigTypeSchema.optional(),
+  // @experimental @since v1.39.0
+  host_config: HostConfigSchema.optional(),
   media_naming_api: MediaNamingApiTypeSchema.optional(),
   renameQualityProfiles: z.array(z.object({ from: z.string(), to: z.string() })).optional(),
   cloneQualityProfiles: z.array(z.object({ from: z.string(), to: z.string() })).optional(),
