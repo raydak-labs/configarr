@@ -16,6 +16,7 @@ import {
   TagResource,
   UiConfigResource,
   CustomFormatResource,
+  ImportListResource,
 } from "../__generated__/sonarr/data-contracts";
 import type {
   ApiInfoResource as SonarrApiInfoV5,
@@ -357,6 +358,43 @@ export class SonarrClient
     await this.apiV5.v5SettingsGeneralUpdate(id, data, { redactResponseErrors: true });
   }
 
+  getImportListSchema(): Promise<ImportListResource[]> {
+    return this.versioned(
+      () => this.apiV3.v3ImportlistSchemaList({ redactResponseErrors: true }),
+      () => this.apiV5.v5ImportlistSchemaList({ redactResponseErrors: true }),
+    );
+  }
+
+  getImportLists(): Promise<ImportListResource[]> {
+    return this.versioned(
+      () => this.apiV3.v3ImportlistList({ redactResponseErrors: true }),
+      () => this.apiV5.v5ImportlistList({ redactResponseErrors: true }),
+    );
+  }
+
+  createImportList(item: ImportListResource): Promise<ImportListResource> {
+    return this.versioned(
+      () => this.apiV3.v3ImportlistCreate(item, { forceSave: item.enableAutomaticAdd === false }, { redactResponseErrors: true }),
+      () => this.apiV5.v5ImportlistCreate(item, { skipTesting: item.enableAutomaticAdd === false }, { redactResponseErrors: true }),
+    );
+  }
+
+  updateImportList(id: string, item: ImportListResource): Promise<ImportListResource> {
+    return this.versioned(
+      () =>
+        this.apiV3.v3ImportlistUpdate(Number(id), item, { forceSave: item.enableAutomaticAdd === false }, { redactResponseErrors: true }),
+      () =>
+        this.apiV5.v5ImportlistUpdate(Number(id), item, { skipTesting: item.enableAutomaticAdd === false }, { redactResponseErrors: true }),
+    );
+  }
+
+  deleteImportList(id: string): Promise<void> {
+    return this.versioned(
+      () => this.apiV3.v3ImportlistDelete(Number(id), { redactResponseErrors: true }),
+      () => this.apiV5.v5ImportlistDelete(Number(id), { redactResponseErrors: true }),
+    );
+  }
+
   async getLanguages() {
     return this.versioned(
       () => this.apiV3.v3LanguageList(),
@@ -626,6 +664,10 @@ export class SonarrClient
   }
 
   async supportsReleaseProfileControls(): Promise<boolean> {
+    return (await this.getApiVersion()) === "v5";
+  }
+
+  async supportsImportListLanguage(): Promise<boolean> {
     return (await this.getApiVersion()) === "v5";
   }
 

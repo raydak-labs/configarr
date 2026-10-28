@@ -5,6 +5,7 @@
  * shared factory would hide that behind branches. Shared code stays in `helpers.ts`.
  */
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
+import { randomUUID } from "node:crypto";
 import { RadarrClient } from "../../src/clients/radarr-client";
 import { DownloadProtocol } from "../../src/__generated__/radarr/data-contracts";
 import { StandardDelayProfileSync } from "../../src/delayProfiles/delayProfileBase";
@@ -218,6 +219,283 @@ describe("radarr (live)", () => {
     expect(run.result.exitCode).not.toBe(0);
     expect(run.result.stdout + run.result.stderr).toContain("host_config requires Radarr v7 or Sonarr v5");
     expect((await client.getUiConfig()).firstDayOfWeek).toBe(before.firstDayOfWeek);
+  });
+
+  test("syncs host settings and an import list in one run", async () => {
+    if (Number((await client.getSystemStatus()).version?.split(".")[0]) < 7) return;
+    const original = await client.getHostConfig();
+    const profile = (await client.getQualityProfiles()).find((item) => item.name);
+    if (!original.id || !profile?.name) throw new Error("Host settings and a quality profile are required");
+    const name = `e2e-import-${randomUUID()}`;
+    const scopes = original.oidcScopes === "openid profile" ? "openid email" : "openid profile";
+    try {
+      const config = mediaConfig("RADARR", {
+        host_config: { oidcScopes: scopes },
+        root_folders: [E2E_ROOT_A, ...(await preservedRootFolderPaths(client))],
+        import_lists: {
+          data: [
+            {
+              name,
+              type: "IMDbListImport",
+              enabled: false,
+              quality_profile: profile.name,
+              root_folder: E2E_ROOT_A,
+              fields: { list_id: "ls123456789" },
+            },
+          ],
+        },
+      });
+      const first = await syncConfig(config);
+      assertPipelineSucceeded(first.result, ["RADARR"]);
+      expect((await client.getHostConfig()).oidcScopes).toBe(scopes);
+      expect((await client.getImportLists()).some((item) => item.name === name)).toBe(true);
+      const second = await syncConfig(config, first.workspace);
+      assertPipelineSucceeded(second.result, ["RADARR"]);
+      assertDiffUpToDate(second.result, ["RADARR"]);
+    } finally {
+      const list = (await client.getImportLists()).find((item) => item.name === name);
+      if (list?.id != null) await client.deleteImportList(String(list.id));
+      await client.updateHostConfig(String(original.id), original);
+    }
+  });
+
+  test("preserves Trakt credentials when updating a smart list", async () => {
+    const major = Number((await client.getSystemStatus()).version?.split(".")[0]);
+    if (major < 7) return;
+    const name = `e2e-trakt-${randomUUID()}`;
+    const profile = (await client.getQualityProfiles()).find((item) => item.name);
+    if (!profile?.name) throw new Error("A quality profile is required for the import-list fixture");
+    const existingRoots = await preservedRootFolderPaths(client);
+    const config = (slug: string, credentials: boolean) =>
+      mediaConfig("RADARR", {
+        root_folders: [E2E_ROOT_A, ...existingRoots],
+        import_lists: {
+          data: [
+            {
+              name,
+              type: "TraktSmartListImport",
+              enabled: false,
+              enable_auto: false,
+              quality_profile: profile.name,
+              root_folder: E2E_ROOT_A,
+              fields: {
+                smart_list_id: slug,
+                ...(credentials
+                  ? { access_token: "fixture-access-token", refresh_token: "fixture-refresh-token", expires: "2099-01-01T00:00:00Z" }
+                  : {}),
+              },
+            },
+          ],
+        },
+      });
+    try {
+      const first = await syncConfig(config("first-list", true));
+      assertPipelineSucceeded(first.result, ["RADARR"]);
+      expect(first.result.stdout).not.toContain("fixture-access-token");
+      expect(first.result.stdout).not.toContain("fixture-refresh-token");
+      const updated = await syncConfig(config("second-list", false), first.workspace);
+      assertPipelineSucceeded(updated.result, ["RADARR"]);
+      const fields = findNamed(await client.getImportLists(), name)?.fields;
+      expect(fields?.find((field) => field.name === "smartListId")?.value).toBe("second-list");
+      expect(fields?.find((field) => field.name === "accessToken")?.value).toBe("fixture-access-token");
+      expect(fields?.find((field) => field.name === "refreshToken")?.value).toBe("fixture-refresh-token");
+      expect(updated.result.stdout).not.toContain("fixture-access-token");
+      expect(updated.result.stdout).not.toContain("fixture-refresh-token");
+      const stored = findNamed(await client.getImportLists(), name);
+      if (stored?.id == null) throw new Error("Expected a stored Trakt list");
+      await client.updateImportList(String(stored.id), {
+        ...stored,
+        fields: stored.fields?.map((field) => (field.name === "refreshToken" ? { ...field, value: "fixture-refreshed-token" } : field)),
+      });
+      const repeated = await syncConfig(config("second-list", true), first.workspace);
+      assertPipelineSucceeded(repeated.result, ["RADARR"]);
+      assertDiffUpToDate(repeated.result, ["RADARR"]);
+      expect(findNamed(await client.getImportLists(), name)?.fields?.find((field) => field.name === "refreshToken")?.value).toBe(
+        "fixture-refreshed-token",
+      );
+    } finally {
+      const list = findNamed(await client.getImportLists(), name);
+      if (list?.id != null) await client.deleteImportList(String(list.id));
+    }
+  });
+
+  test("rejects an invalid list before writing any import lists", async () => {
+    const name = `e2e-import-${randomUUID()}`;
+    const profile = (await client.getQualityProfiles()).find((item) => item.name);
+    if (!profile?.name) throw new Error("A quality profile is required for the import-list fixture");
+    const config = mediaConfig(
+      "RADARR",
+      {
+        custom_formats: cfAssignBlock(),
+        root_folders: [E2E_ROOT_A, ...(await preservedRootFolderPaths(client))],
+        import_lists: {
+          data: [
+            {
+              name,
+              type: "IMDbListImport",
+              enabled: false,
+              quality_profile: profile.name,
+              root_folder: E2E_ROOT_A,
+              fields: { list_id: "ls123456789" },
+            },
+            {
+              name: `${name}-invalid`,
+              type: "IMDbListImport",
+              enabled: false,
+              quality_profile: profile.name,
+              root_folder: E2E_ROOT_A,
+              fields: { unknown_field: "invalid" },
+            },
+          ],
+        },
+      },
+      { customFormatDefinitions: [e2eCustomFormatDefinition()] },
+    );
+    try {
+      const result = await syncConfig(config);
+      expect(result.result.exitCode).not.toBe(0);
+      expect(result.result.stderr).toContain("unknown field");
+      expect(findNamed(await client.getImportLists(), name)).toBeUndefined();
+      expect(findNamed(await client.getCustomFormats(), "e2e-rt")).toBeUndefined();
+    } finally {
+      const list = findNamed(await client.getImportLists(), name);
+      if (list?.id != null) await client.deleteImportList(String(list.id));
+    }
+  });
+
+  test("dry-runs an import list referencing a root folder created in the same run", async () => {
+    const profile = (await client.getQualityProfiles()).find((item) => item.name);
+    if (!profile?.name) throw new Error("A quality profile is required for the import-list fixture");
+    const root = `/data/dry-run-${randomUUID()}`;
+    const name = `e2e-import-${randomUUID()}`;
+    const result = await syncConfig(
+      mediaConfig("RADARR", {
+        root_folders: [root, ...(await preservedRootFolderPaths(client))],
+        import_lists: {
+          data: [
+            {
+              name,
+              type: "IMDbListImport",
+              enabled: false,
+              quality_profile: profile.name,
+              root_folder: root,
+              fields: { list_id: "ls123456789" },
+            },
+          ],
+        },
+      }),
+      undefined,
+      { dryRun: true },
+    );
+    assertPipelineSucceeded(result.result, ["RADARR"]);
+    expect((await client.getImportLists()).some((list) => list.name === name)).toBe(false);
+    expect((await client.getRootfolders()).some((folder) => folder.path === root)).toBe(false);
+  });
+
+  test("creates an import list using a profile and root folder from the same run", async () => {
+    const name = `e2e-import-${randomUUID()}`;
+    const profileName = `e2e-qp-${randomUUID()}`;
+    try {
+      const result = await syncConfig(
+        mediaConfig("RADARR", {
+          root_folders: [E2E_ROOT_A, ...(await preservedRootFolderPaths(client))],
+          quality_profiles: [{ ...qualityProfile(), name: profileName }],
+          import_lists: {
+            data: [
+              {
+                name,
+                type: "IMDbListImport",
+                enabled: false,
+                quality_profile: profileName,
+                root_folder: E2E_ROOT_A,
+                fields: { list_id: "ls123456789" },
+              },
+            ],
+          },
+        }),
+      );
+      assertPipelineSucceeded(result.result, ["RADARR"]);
+      const profile = (await client.getQualityProfiles()).find((item) => item.name === profileName);
+      expect(profile?.id).toBeDefined();
+      expect((await client.getImportLists()).find((item) => item.name === name)?.qualityProfileId).toBe(profile?.id);
+    } finally {
+      const list = (await client.getImportLists()).find((item) => item.name === name);
+      if (list?.id != null) await client.deleteImportList(String(list.id));
+      const profile = (await client.getQualityProfiles()).find((item) => item.name === profileName);
+      if (profile?.id != null) await client.deleteQualityProfile(String(profile.id));
+    }
+  });
+
+  test("creates and updates a disabled schema-based import list", async () => {
+    const name = `e2e-import-${randomUUID()}`;
+    const tagName = `e2e-import-tag-${randomUUID()}`;
+    const originalTags = await client.getTags();
+    const profile = (await client.getQualityProfiles()).find((item) => item.id != null && item.name);
+    if (!profile?.name) throw new Error("A quality profile is required for the import-list fixture");
+    const headers = { "X-Api-Key": apiKey };
+    const getLists = async (): Promise<
+      Array<{
+        id?: number;
+        name?: string;
+        qualityProfileId?: number;
+        rootFolderPath?: string;
+        tags?: number[];
+        fields?: Array<{ name?: string; value?: unknown }>;
+      }>
+    > => {
+      const response = await fetch(`${baseUrl}/api/v3/importlist`, { headers });
+      if (!response.ok) throw new Error(`Failed to load import lists: ${response.status}`);
+      return response.json();
+    };
+    try {
+      const preserved = await preservedRootFolderPaths(client);
+      const existingNames = nonE2eNames(await getLists());
+      const config = (listId: string) =>
+        mediaConfig("RADARR", {
+          root_folders: [E2E_ROOT_A, ...preserved],
+          delete_unmanaged_tags: { enabled: true, ignore: originalTags.flatMap((tag) => (tag.label ? [tag.label] : [])) },
+          import_lists: {
+            data: [
+              {
+                name,
+                type: "IMDbListImport",
+                enabled: false,
+                enable_auto: false,
+                quality_profile: profile.name,
+                root_folder: E2E_ROOT_A,
+                tags: [tagName],
+                fields: { list_id: listId },
+              },
+            ],
+          },
+        });
+      const first = await syncConfig(config("ls123456789"));
+      assertPipelineSucceeded(first.result, ["RADARR"]);
+      const created = findNamed(await getLists(), name);
+      expect(created?.qualityProfileId).toBe(profile.id);
+      expect(created?.rootFolderPath).toBe(E2E_ROOT_A);
+      expect(created?.fields?.find((field) => field.name === "listId")?.value).toBe("ls123456789");
+      const tag = (await client.getTags()).find((item) => item.label === tagName);
+      expect(tag?.id).toBeDefined();
+      expect(created?.tags).toContain(tag?.id);
+      const second = await syncConfig(config("ls123456789"), first.workspace);
+      assertPipelineSucceeded(second.result, ["RADARR"]);
+      assertDiffUpToDate(second.result, ["RADARR"]);
+      const changed = await syncConfig(config("ls987654321"), first.workspace);
+      assertPipelineSucceeded(changed.result, ["RADARR"]);
+      expect(findNamed(await getLists(), name)?.fields?.find((field) => field.name === "listId")?.value).toBe("ls987654321");
+      const removed = await syncConfig(
+        mediaConfig("RADARR", { import_lists: { data: [], delete_unmanaged: { enabled: true, ignore: existingNames } } }),
+        first.workspace,
+      );
+      assertPipelineSucceeded(removed.result, ["RADARR"]);
+      expect(findNamed(await getLists(), name)).toBeUndefined();
+    } finally {
+      const list = findNamed(await getLists(), name);
+      if (list?.id != null) await fetch(`${baseUrl}/api/v3/importlist/${list.id}`, { method: "DELETE", headers });
+      const tag = (await client.getTags()).find((item) => item.label === tagName);
+      if (tag?.id != null) await client.deleteTag(String(tag.id));
+    }
   });
 
   test("custom formats", async () => {

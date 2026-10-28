@@ -5,6 +5,7 @@ import { StandardDelayProfileSync } from "../delayProfiles/delayProfileBase";
 import { InstanceDiffReport } from "../diffReport/diffReport.types";
 import { getEnvs } from "../env";
 import { SonarrDownloadClientSync } from "../downloadClients/downloadClientSonarr";
+import { SonarrImportListSync } from "../importLists/importListSonarr";
 import { SonarrMediaManagementSync } from "../mediaManagement/mediaManagementSonarr";
 import { QualityDefinitionSonarrSync } from "../qualityDefinitions/qualityDefinitionSonarr";
 import { QualityProfileSonarrSync } from "../qualityProfiles/qualityProfileSonarr";
@@ -36,6 +37,7 @@ export class SonarrSyncer {
         releaseProfiles: new ReleaseProfileSonarrSync(client),
         root: new PathRootFolderSync(client),
         downloadClients: new SonarrDownloadClientSync(client),
+        importLists: new SonarrImportListSync(client),
       },
       trash: createTrashOps(ARR),
     });

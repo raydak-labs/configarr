@@ -31,7 +31,13 @@ import { TagDeletionError } from "../tags/tag.types";
 import { deleteUnmanagedInstanceTags, ensureTags, loadServerTags, syncInstanceTags } from "../tags/tags";
 import { getTelemetryInstance, Telemetry } from "../telemetry";
 import { MediaArrType } from "../types/common.types";
-import { HostConfigSchema, InputConfigArrInstance, InputConfigSchema, MergedConfigInstance } from "../types/config.types";
+import {
+  HostConfigSchema,
+  InputConfigArrInstance,
+  InputConfigImportListsSchema,
+  InputConfigSchema,
+  MergedConfigInstance,
+} from "../types/config.types";
 import { TrashQualityDefinitionQuality } from "../types/trashguide.types";
 import { syncUiConfig, uiConfigDiffToDiffEntries } from "../uiConfigs/uiConfigSyncer";
 import { ConfigValidationError } from "../validation";
@@ -130,6 +136,14 @@ type MediaArrResources = {
 
 export type MediaFeatureSyncs<T extends MediaArrType = MediaArrType> = {
   hostConfig?: { validate(config: HostConfig, version: string | undefined | null): void; sync(config: HostConfig): Promise<DiffEntry[]> };
+  importLists?: {
+    validateConfig(config: NonNullable<MergedConfigInstance["import_lists"]>, instance: MergedConfigInstance): Promise<void>;
+    sync(
+      config: NonNullable<MergedConfigInstance["import_lists"]>,
+      cache: ServerCache,
+      instance: MergedConfigInstance,
+    ): Promise<DiffEntry[]>;
+  };
   qd: QualityDefinitionSync<MediaArrResources[T]["qualityDefinition"]>;
   mm: MediaManagementSync<MediaArrResources[T]["naming"], MediaArrResources[T]["mediaManagement"]>;
   qp: BaseQualityProfileSync<MediaArrResources[T]["qualityProfile"]>;
@@ -204,9 +218,15 @@ export const runMediaSyncToQualityProfiles = async <T extends MediaArrType>(
     if (!syncs.hostConfig) throw new ConfigValidationError("host_config requires Radarr v7 or Sonarr v5");
     syncs.hostConfig.validate(config.host_config, system.version);
   }
+  if (config.import_lists && !syncs.importLists) throw new ConfigValidationError("import_lists is not supported for this application");
+  if (config.import_lists) {
+    const parsed = InputConfigImportListsSchema.safeParse(config.import_lists);
+    if (!parsed.success) throw new ConfigValidationError(`Invalid import_lists configuration: ${parsed.error.message}`);
+  }
   await qpSync.validateConfig(config);
   await mmSync.validateConfig(config.media_management);
   await syncs.releaseProfiles.validateConfig(config.release_profiles ?? []);
+  if (config.import_lists && syncs.importLists) await syncs.importLists.validateConfig(config.import_lists, config);
 
   if (Telemetry.isEnabled()) {
     getTelemetryInstance().trackInstanceConfig(config, arrType);
@@ -527,6 +547,8 @@ export const completeMediaSync = async <T extends MediaArrType>(ctx: MediaSyncCo
     );
   }
 
+  if (config.import_lists && syncs.importLists) collector.add(await syncs.importLists.sync(config.import_lists, serverCache, config));
+
   // Tag cleanup runs last, after every resource that can hold a tag has been synced.
   if (config.delete_unmanaged_tags?.enabled) {
     if (downloadClientsFailed) {
@@ -545,6 +567,7 @@ export const completeMediaSync = async <T extends MediaArrType>(ctx: MediaSyncCo
             // Only the object form of `root_folders` carries tags.
             config.root_folders?.filter((folder) => typeof folder !== "string").flatMap((folder) => folder.tags ?? []),
             config.download_clients?.data?.flatMap((downloadClient) => downloadClient.tags ?? []),
+            config.import_lists?.data?.flatMap((item) => item.tags ?? []),
           ],
           onInUse: "skip",
         });

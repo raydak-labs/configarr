@@ -23,6 +23,7 @@ export type MappedTemplates = Partial<
     | "delay_profiles"
     | "release_profiles"
     | "download_clients"
+    | "import_lists"
     | "tags"
     | "delete_unmanaged_tags"
   >

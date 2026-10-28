@@ -71,6 +71,18 @@ sonarr:
     root_folders:
       - "/app"
 
+    # (experimental) since v1.39.0. Sonarr v5 requires a language for a new import list.
+    # import_lists:
+    #   data:
+    #     - name: My series list
+    #       type: CustomImport
+    #       enable_auto: false
+    #       language: English
+    #       quality_profile: ExampleProfile
+    #       root_folder: /app
+    #       fields:
+    #         base_url: https://example.com/list
+
     ui_config:
       firstDayOfWeek: 1
 
@@ -221,6 +233,32 @@ radarr:
     # since v1.14.0. Optional
     root_folders:
       - "/app"
+
+    # (experimental) since v1.39.0
+    # import_lists:
+    #   data:
+    #     - name: IMDb watchlist
+    #       type: IMDbListImport
+    #       enabled: false
+    #       enable_auto: false
+    #       quality_profile: ExampleProfile
+    #       root_folder: /app
+    #       tags: [watchlist]
+    #       fields:
+    #         list_id: ls123456789
+    #     # Radarr v7: create a Trakt Smart List with previously obtained credentials.
+    #     - name: Trakt favourites
+    #       type: TraktSmartListImport
+    #       enabled: false
+    #       quality_profile: ExampleProfile
+    #       root_folder: /app
+    #       fields:
+    #         smart_list_id: my-favourites
+    #         access_token: !secret TRAKT_ACCESS_TOKEN
+    #         refresh_token: !secret TRAKT_REFRESH_TOKEN
+    #         expires: "2099-01-01T00:00:00Z" # Replace with the real expiry.
+    #   delete_unmanaged:
+    #     enabled: false
 
     ui_config:
       firstDayOfWeek: 1

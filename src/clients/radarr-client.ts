@@ -3,6 +3,7 @@ import { Api } from "../__generated__/radarr/Api";
 import {
   DelayProfileResource,
   HostConfigResource,
+  ImportListResource,
   MediaManagementConfigResource,
   NamingConfigResource,
   RootFolderResource,
@@ -65,6 +66,26 @@ export class RadarrClient
 
   async updateHostConfig(id: string, data: HostConfigResource): Promise<void> {
     await this.api.v3ConfigHostUpdate(id, data, { redactResponseErrors: true });
+  }
+
+  getImportListSchema(): Promise<ImportListResource[]> {
+    return this.api.v3ImportlistSchemaList({ redactResponseErrors: true });
+  }
+
+  getImportLists(): Promise<ImportListResource[]> {
+    return this.api.v3ImportlistList({ redactResponseErrors: true });
+  }
+
+  createImportList(item: ImportListResource): Promise<ImportListResource> {
+    return this.api.v3ImportlistCreate(item, { forceSave: item.enabled === false }, { redactResponseErrors: true });
+  }
+
+  updateImportList(id: string, item: ImportListResource): Promise<ImportListResource> {
+    return this.api.v3ImportlistUpdate(Number(id), item, { forceSave: item.enabled === false }, { redactResponseErrors: true });
+  }
+
+  deleteImportList(id: string): Promise<void> {
+    return this.api.v3ImportlistDelete(Number(id), { redactResponseErrors: true });
   }
 
   async getLanguages() {

@@ -1,8 +1,23 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { RadarrClient } from "./radarr-client";
+import { logger } from "../logger";
 
 describe("RadarrClient API v3 compatibility", () => {
   afterEach(() => vi.unstubAllGlobals());
+
+  it("hides import-list server errors that can contain provider credentials", async () => {
+    const errorLog = vi.spyOn(logger, "error");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => Response.json({ message: "provider credential example-secret" }, { status: 400 })),
+    );
+    const client = new RadarrClient("http://radarr.test", "api-key");
+    await expect(client.createImportList({ name: "fixture", fields: [{ name: "apiKey", value: "example-secret" }] })).rejects.toThrow(
+      "Request failed (HTTP 400); check server logs for details",
+    );
+    expect(JSON.stringify(errorLog.mock.calls)).not.toContain("example-secret");
+    errorLog.mockRestore();
+  });
 
   it.each([
     { response: "200 JSON", createStatus: 200, updateStatus: 200 },

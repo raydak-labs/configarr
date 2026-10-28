@@ -909,6 +909,7 @@ export const mergeConfigsAndTemplates = async (
   }
 
   if (instanceConfig.host_config !== undefined) mergedTemplates.host_config = instanceConfig.host_config;
+  if (instanceConfig.import_lists !== undefined) mergedTemplates.import_lists = instanceConfig.import_lists;
 
   if (instanceConfig.ui_config && Object.keys(instanceConfig.ui_config).length > 0) {
     mergedTemplates.ui_config = { ...mergedTemplates.ui_config, ...instanceConfig.ui_config };
