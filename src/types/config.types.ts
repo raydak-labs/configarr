@@ -355,6 +355,22 @@ export const MetadataSettingsSchema = z
   .strict();
 export type MetadataSettings = z.infer<typeof MetadataSettingsSchema>;
 
+export const IndexerSettingsSchema = z
+  .object({
+    data: z.array(
+      z
+        .object({
+          name: z.string().min(1),
+          multi_languages: z.array(z.string().min(1)).optional(),
+          fail_downloads: z.array(z.string().min(1)).optional(),
+          download_client: z.string().min(1).nullable().optional(),
+        })
+        .strict(),
+    ),
+  })
+  .strict();
+export type IndexerSettings = z.infer<typeof IndexerSettingsSchema>;
+
 export const MediaNamingApiTypeSchema = z.object({}).passthrough();
 export type MediaNamingApiType = z.infer<typeof MediaNamingApiTypeSchema>;
 
@@ -579,6 +595,8 @@ export const InputConfigArrInstanceSchema = z.object({
   import_lists: InputConfigImportListsSchema.optional(),
   // @experimental @since v1.39.0
   metadata: MetadataSettingsSchema.optional(),
+  // @experimental @since v1.39.0
+  indexer_settings: IndexerSettingsSchema.optional(),
   media_naming_api: MediaNamingApiTypeSchema.optional(),
   renameQualityProfiles: z.array(z.object({ from: z.string(), to: z.string() })).optional(),
   cloneQualityProfiles: z.array(z.object({ from: z.string(), to: z.string() })).optional(),

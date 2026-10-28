@@ -40,6 +40,7 @@ export class SonarrSyncer {
         importLists: new SonarrImportListSync(client),
 
         metadata: client,
+        indexerSettings: client,
       },
       trash: createTrashOps(ARR),
     });

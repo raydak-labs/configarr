@@ -16,6 +16,7 @@ export type MappedTemplates = Partial<
     | "ui_config"
     | "host_config"
     | "metadata"
+    | "indexer_settings"
     | "delete_unmanaged_custom_formats"
     | "delete_unmanaged_quality_profiles"
     | "delete_unmanaged_metadata_profiles"

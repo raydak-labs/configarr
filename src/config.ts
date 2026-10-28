@@ -403,6 +403,7 @@ const includeRecyclarrTemplate = (
   }
 
   if (template.metadata !== undefined) mergedTemplates.metadata = template.metadata;
+  if (template.indexer_settings !== undefined) mergedTemplates.indexer_settings = template.indexer_settings;
 
   if (template.delete_unmanaged_metadata_profiles) {
     mergedTemplates.delete_unmanaged_metadata_profiles = template.delete_unmanaged_metadata_profiles;
@@ -917,6 +918,7 @@ export const mergeConfigsAndTemplates = async (
     mergedTemplates.ui_config = { ...mergedTemplates.ui_config, ...instanceConfig.ui_config };
   }
   if (instanceConfig.metadata !== undefined) mergedTemplates.metadata = instanceConfig.metadata;
+  if (instanceConfig.indexer_settings !== undefined) mergedTemplates.indexer_settings = instanceConfig.indexer_settings;
 
   if (instanceConfig.media_naming && Object.keys(instanceConfig.media_naming).length > 0) {
     mergedTemplates.media_naming_api = {

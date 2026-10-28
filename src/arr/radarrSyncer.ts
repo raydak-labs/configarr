@@ -36,6 +36,7 @@ export class RadarrSyncer {
         root: new PathRootFolderSync(client),
         downloadClients: new RadarrDownloadClientSync(client),
         metadata: client,
+        indexerSettings: client,
       },
       trash: createTrashOps(ARR),
     });

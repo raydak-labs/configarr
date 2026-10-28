@@ -35,6 +35,7 @@ import { getTelemetryInstance, Telemetry } from "../telemetry";
 import { MediaArrType } from "../types/common.types";
 import {
   HostConfigSchema,
+  IndexerSettingsSchema,
   InputConfigArrInstance,
   InputConfigImportListsSchema,
   InputConfigSchema,
@@ -44,6 +45,7 @@ import {
 import { TrashQualityDefinitionQuality } from "../types/trashguide.types";
 import { syncUiConfig, uiConfigDiffToDiffEntries } from "../uiConfigs/uiConfigSyncer";
 import { prepareMetadata, syncMetadata } from "../metadata/metadataSync";
+import { prepareIndexerSettings, syncIndexerSettings, type IndexerSettingsClient } from "../indexerSettings/indexerSettings";
 import { ConfigValidationError } from "../validation";
 import type {
   DownloadClientResource as LidarrDownloadClientResource,
@@ -150,6 +152,7 @@ export type MediaFeatureSyncs<T extends MediaArrType = MediaArrType> = {
   };
 
   metadata?: MetadataClient<MetadataResource>;
+  indexerSettings?: IndexerSettingsClient;
   qd: QualityDefinitionSync<MediaArrResources[T]["qualityDefinition"]>;
   mm: MediaManagementSync<MediaArrResources[T]["naming"], MediaArrResources[T]["mediaManagement"]>;
   qp: BaseQualityProfileSync<MediaArrResources[T]["qualityProfile"]>;
@@ -236,6 +239,13 @@ export const runMediaSyncToQualityProfiles = async <T extends MediaArrType>(
     config.metadata = parsed.data;
   }
   if (config.metadata && syncs.metadata) await prepareMetadata(syncs.metadata, config.metadata);
+  if (config.indexer_settings !== undefined) {
+    if (!syncs.indexerSettings) throw new ConfigValidationError("indexer_settings is supported only by Sonarr and Radarr");
+    const parsed = IndexerSettingsSchema.safeParse(config.indexer_settings);
+    if (!parsed.success) throw new ConfigValidationError(`Invalid indexer_settings configuration: ${parsed.error.message}`);
+    config.indexer_settings = parsed.data;
+    await prepareIndexerSettings(syncs.indexerSettings, config.indexer_settings, config, true);
+  }
   await qpSync.validateConfig(config);
   await mmSync.validateConfig(config.media_management);
   await syncs.releaseProfiles.validateConfig(config.release_profiles ?? []);
@@ -566,6 +576,8 @@ export const completeMediaSync = async <T extends MediaArrType>(ctx: MediaSyncCo
   }
 
   if (config.import_lists && syncs.importLists) collector.add(await syncs.importLists.sync(config.import_lists, serverCache, config));
+  if (config.indexer_settings && syncs.indexerSettings)
+    collector.add(await syncIndexerSettings(syncs.indexerSettings, config.indexer_settings, config));
 
   // Tag cleanup runs last, after every resource that can hold a tag has been synced.
   if (config.delete_unmanaged_tags?.enabled) {
