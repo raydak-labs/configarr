@@ -153,6 +153,19 @@ describe("BaseDownloadClientSync – sync accounting", () => {
       ),
     ).rejects.toBeInstanceOf(ConfigValidationError);
   });
+
+  test("allows advisory missing-field warnings under strict validation", async () => {
+    vi.mocked(getEnvs).mockReturnValue({ LOG_LEVEL: "fatal", CONFIGARR_ENFORCE_CONFIG_VALIDATION: true } as ReturnType<typeof getEnvs>);
+    const sync = new SyncingMock();
+    const client = { name: "bh", type: "TorrentBlackhole", fields: {} };
+    expect(sync.testValidateDownloadClient(client, await api.getDownloadClientSchema()).warnings).toContain(
+      "Field 'watch_folder' may be required for TorrentBlackhole",
+    );
+    const result = await sync.syncDownloadClients({ download_clients: { data: [client] } }, cache());
+
+    expect(result).toMatchObject({ added: 1, failed: 0 });
+    expect(api.createDownloadClient).toHaveBeenCalledOnce();
+  });
 });
 
 describe("BaseDownloadClientSync – utility methods", () => {
