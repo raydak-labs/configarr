@@ -3,6 +3,7 @@ import path from "node:path";
 import yaml from "yaml";
 import { getConfig } from "./config";
 import { logger } from "./logger";
+import { normalizeTemplateCustomFormats } from "./templateCustomFormats";
 import { ArrType, MappedTemplates } from "./types/common.types";
 import { RecyclarrTemplates } from "./types/recyclarr.types";
 
@@ -51,19 +52,7 @@ export const loadLocalRecyclarrTemplate = (arrType: ArrType): Map<string, Mapped
 
   return new Map(
     Array.from(map, ([k, v]) => {
-      const customFormats = v.custom_formats?.map((cf) => {
-        // Changes from Recyclarr 7.2.0: https://github.com/recyclarr/recyclarr/releases/tag/v7.2.0
-        if (cf.assign_scores_to == null && cf.quality_profiles == null) {
-          logger.warn(`Local Template "${k}" does not provide correct profile for custom format. Ignoring.`);
-        }
-
-        if (cf.quality_profiles) {
-          logger.warn(
-            `Deprecated: (Local Template '${k}') For custom_formats please rename 'quality_profiles' to 'assign_scores_to'. See recyclarr v7.2.0`,
-          );
-        }
-        return { ...cf, assign_scores_to: cf.assign_scores_to ?? cf.quality_profiles ?? [] };
-      });
+      const customFormats = normalizeTemplateCustomFormats(v.custom_formats, "Local Template", k);
 
       return [
         k,

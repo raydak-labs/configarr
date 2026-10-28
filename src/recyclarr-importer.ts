@@ -2,6 +2,7 @@ import { default as fs } from "node:fs";
 import yaml from "yaml";
 import { getConfig } from "./config";
 import { logger } from "./logger";
+import { normalizeTemplateCustomFormats } from "./templateCustomFormats";
 import { MappedTemplates } from "./types/common.types";
 import { RecyclarrArrSupported, RecyclarrTemplates } from "./types/recyclarr.types";
 import { cloneGitRepo, recyclarrRepoPaths } from "./util";
@@ -81,19 +82,7 @@ export const loadRecyclarrTemplates = (arrType: RecyclarrArrSupported): Map<stri
 
   return new Map(
     Array.from(map, ([k, v]) => {
-      const customFormats = v.custom_formats?.map((cf) => {
-        // Changes from Recyclarr 7.2.0: https://github.com/recyclarr/recyclarr/releases/tag/v7.2.0
-        if (cf.assign_scores_to == null && cf.quality_profiles == null) {
-          logger.warn(`Recyclarr Template "${k}" does not provide correct profile for custom format. Ignoring.`);
-        }
-
-        if (cf.quality_profiles) {
-          logger.warn(
-            `Deprecated: (Recyclarr Template '${k}') For custom_formats please rename 'quality_profiles' to 'assign_scores_to'. See recyclarr v7.2.0`,
-          );
-        }
-        return { ...cf, assign_scores_to: cf.assign_scores_to ?? cf.quality_profiles ?? [] };
-      });
+      const customFormats = normalizeTemplateCustomFormats(v.custom_formats, "Recyclarr Template", k);
 
       return [
         k,
