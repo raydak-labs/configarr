@@ -908,6 +908,27 @@ Notes:
 
 - **experimental**, available since `v1.14.0`
 
+## Indexer settings
+
+:::warning Experimental since v1.39.0
+Indexer settings synchronization is experimental.
+:::
+
+Sonarr and Radarr can update selected settings on existing indexers, including indexers synchronized by Prowlarr.
+
+```yaml
+sonarr:
+  series:
+    indexer_settings:
+      data:
+        - name: Example (Prowlarr) # exact indexer name in Sonarr
+          multi_languages: [Original, French]
+          fail_downloads: [Executables, Potentially Dangerous]
+          download_client: SABnzbd
+```
+
+Option names are matched case-insensitively against the connected indexer's available choices. `download_client` names an existing client, or one configured for creation in the same run; set it to `null` to use any client. Omitted settings are preserved, and empty option lists clear the selections. Missing indexers are warned about and skipped until a later run. Configarr runs Prowlarr after Sonarr and Radarr, so a newly synchronized indexer may only be updated on the next run. If Prowlarr recreates an indexer, a later Configarr run reapplies its settings. `DRY_RUN` reports changes without writing.
+
 ## Import Lists
 
 :::warning Experimental since v1.39.0

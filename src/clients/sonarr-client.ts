@@ -716,8 +716,15 @@ export class SonarrClient
 
   async getIndexers() {
     return this.versioned(
-      () => this.apiV3.v3IndexerList(),
-      () => this.apiV5.v5IndexerList(),
+      () => this.apiV3.v3IndexerList({ redactResponseErrors: true }),
+      () => this.apiV5.v5IndexerList({ redactResponseErrors: true }),
+    );
+  }
+
+  async updateIndexer(id: string, indexer: import("../__generated__/sonarr/data-contracts").IndexerResource) {
+    return this.versioned(
+      () => this.apiV3.v3IndexerUpdate(+id, indexer, { forceSave: true }, { redactResponseErrors: true }),
+      () => this.apiV5.v5IndexerUpdate(+id, indexer, { skipTesting: true }, { redactResponseErrors: true }),
     );
   }
 

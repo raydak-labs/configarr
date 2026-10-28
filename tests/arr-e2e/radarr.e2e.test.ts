@@ -4,7 +4,7 @@
  * One file per *arr, each with its own literal payloads - the YAML differs per app, and a
  * shared factory would hide that behind branches. Shared code stays in `helpers.ts`.
  */
-import { afterAll, beforeAll, describe, expect, test } from "vitest";
+import { afterAll, beforeAll, describe, expect, onTestFinished, test } from "vitest";
 import { randomUUID } from "node:crypto";
 import { RadarrClient } from "../../src/clients/radarr-client";
 import { DownloadProtocol } from "../../src/__generated__/radarr/data-contracts";
@@ -32,6 +32,7 @@ import {
   blackholeFromSchema,
   cfReleaseTitleValue,
   cleanupMediaE2e,
+  cleanupMediaIndexerFixtures,
   defaultDelayProfile,
   findNamed,
   nonE2eNames,
@@ -83,6 +84,7 @@ describe("radarr (live)", () => {
     if (process.env.RADARR_EXPECTED_MAJOR) {
       expect(status.version?.split(".")[0]).toBe(process.env.RADARR_EXPECTED_MAJOR);
     }
+    await cleanupMediaIndexerFixtures(client, baseUrl, apiKey, "v3");
     await cleanupMediaE2e(client);
     const snapshot = await snapshotMediaBaseline(client);
     const [profiles, tags] = await Promise.all([client.getDelayProfiles(), client.getTags()]);
@@ -97,6 +99,7 @@ describe("radarr (live)", () => {
     const snapshot = baseline;
     await teardown(
       () => restoreMediaBaseline(client, snapshot),
+      () => cleanupMediaIndexerFixtures(client, baseUrl, apiKey, "v3"),
       () => cleanupMediaE2e(client),
       async () => {
         const tags = await client.getTags();
@@ -573,6 +576,73 @@ describe("radarr (live)", () => {
       const response = await fetch(`${url}/${original.id}`, { method: "PUT", headers, body: JSON.stringify(original) });
       if (!response.ok) throw new Error(`Failed to restore metadata: ${response.status}`);
     }
+  });
+
+  test("updates existing indexer settings and preserves its credentials", async () => {
+    const version = "v3";
+    const url = `${baseUrl}/api/${version}/indexer`;
+    const headers = { "X-Api-Key": apiKey, "Content-Type": "application/json" };
+    const schemaResponse = await fetch(`${url}/schema`, { headers });
+    expect(schemaResponse.ok).toBe(true);
+    const schemas = await schemaResponse.json();
+    const schema = schemas.find((item: { implementation?: string }) => item.implementation === "Newznab");
+    if (!schema) throw new Error("Newznab indexer schema missing");
+    const name = `e2e-indexer-${randomUUID()}`;
+    const clientName = `e2e-download-${randomUUID()}`;
+    const blackhole = blackholeFromSchema(await client.getDownloadClientSchema());
+    if (!blackhole) throw new Error("Blackhole client schema missing");
+    const payload = {
+      ...schema,
+      id: 0,
+      name,
+      enableRss: false,
+      enableAutomaticSearch: false,
+      enableInteractiveSearch: false,
+      fields: schema.fields.map((field: { name: string; value: unknown }) => ({
+        ...field,
+        value: field.name === "baseUrl" ? "http://127.0.0.1:1" : field.name === "apiKey" ? "fixture-secret" : field.value,
+      })),
+    };
+    const created = await fetch(`${url}?forceSave=true&skipTesting=true`, { method: "POST", headers, body: JSON.stringify(payload) });
+    expect(created.ok).toBe(true);
+    const saved = await created.json();
+    onTestFinished(async () => {
+      await teardown(
+        async () => {
+          const response = await fetch(`${url}/${saved.id}`, { method: "DELETE", headers });
+          if (!response.ok) throw new Error(`Failed to delete test indexer: ${response.status}`);
+        },
+        async () => {
+          const downloadClient = (await client.getDownloadClients()).find((item) => item.name === clientName);
+          if (downloadClient?.id != null) await client.deleteDownloadClient(String(downloadClient.id));
+        },
+      );
+    });
+    const config = mediaConfig("RADARR", {
+      download_clients: { data: [{ name: clientName, type: blackhole.type, enable: false, fields: blackhole.fields }] },
+      indexer_settings: {
+        data: [{ name, multi_languages: ["Hindi", "English"], fail_downloads: ["Executables"], download_client: clientName }],
+      },
+    });
+    const dryRun = await syncConfig(config, undefined, { dryRun: true });
+    assertPipelineSucceeded(dryRun.result, ["RADARR"]);
+    expect((await client.getDownloadClients()).some((item) => item.name === clientName)).toBe(false);
+    expect((await client.getIndexers()).find((item) => item.id === saved.id)?.downloadClientId).toBe(saved.downloadClientId);
+    const first = await syncConfig(config);
+    assertPipelineSucceeded(first.result, ["RADARR"]);
+    const current = (await client.getIndexers()).find((item) => item.id === saved.id);
+    const downloadClient = (await client.getDownloadClients()).find((item) => item.name === clientName);
+    expect(downloadClient?.id).toBeDefined();
+    expect(current?.downloadClientId).toBe(downloadClient?.id);
+    const languages = current?.fields?.find((field) => field.name === "multiLanguages");
+    const failures = current?.fields?.find((field) => field.name === "failDownloads");
+    const hindi = languages?.selectOptions?.find((option) => option.name === "Hindi")?.value;
+    expect(languages?.value).toEqual(expect.arrayContaining([1, hindi]));
+    expect(failures?.value).toEqual([0]);
+    expect(current?.fields?.find((field) => field.name === "apiKey")?.value).toBe("********");
+    const second = await syncConfig(config, first.workspace);
+    assertPipelineSucceeded(second.result, ["RADARR"]);
+    assertDiffUpToDate(second.result, ["RADARR"]);
   });
 
   test("custom formats", async () => {

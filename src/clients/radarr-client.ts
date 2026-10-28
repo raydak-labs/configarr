@@ -230,7 +230,11 @@ export class RadarrClient
   }
 
   async getIndexers() {
-    return this.api.v3IndexerList();
+    return this.api.v3IndexerList({ redactResponseErrors: true });
+  }
+
+  async updateIndexer(id: string, indexer: import("../__generated__/radarr/data-contracts").IndexerResource) {
+    return this.api.v3IndexerUpdate(+id, indexer, { forceSave: true }, { redactResponseErrors: true });
   }
 
   async getTags(): Promise<TagResource[]> {

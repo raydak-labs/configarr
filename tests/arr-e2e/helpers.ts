@@ -408,6 +408,21 @@ export async function teardown(...steps: Array<() => Promise<unknown>>): Promise
   }
 }
 
+export async function cleanupMediaIndexerFixtures(
+  client: { getIndexers(): Promise<Array<{ id?: number; name?: string | null }>> },
+  baseUrl: string,
+  apiKey: string,
+  version: "v3" | "v5",
+): Promise<void> {
+  const indexers = (await client.getIndexers()).filter((item) => item.id != null && item.name?.startsWith("e2e-indexer-"));
+  await teardown(
+    ...indexers.map((item) => async () => {
+      const response = await fetch(`${baseUrl}/api/${version}/indexer/${item.id}`, { method: "DELETE", headers: { "X-Api-Key": apiKey } });
+      if (!response.ok) throw new Error(`Failed to delete test indexer '${item.name}': HTTP ${response.status}`);
+    }),
+  );
+}
+
 /** Deletes every `e2e-` resource this suite can create on a media *arr. Safe to call twice. */
 export async function cleanupMediaE2e(client: MediaArrClient): Promise<void> {
   const errors: string[] = [];

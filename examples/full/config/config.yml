@@ -86,6 +86,13 @@ sonarr:
     ui_config:
       firstDayOfWeek: 1
 
+    # indexer_settings: # experimental, since v1.39.0; existing Sonarr/Radarr indexers
+    #   data:
+    #     - name: Example (Prowlarr)
+    #       multi_languages: [Original, French]
+    #       fail_downloads: [Executables]
+    #       download_client: SABnzbd
+
     # (experimental) since v1.39.0. Generate Kodi/Emby-compatible metadata.
     # metadata:
     #   data:
@@ -238,6 +245,13 @@ radarr:
     # Set the URL/API Key to your actual instance
     base_url: http://radarr:7878
     api_key: !secret RADARR_API_KEY
+
+    # indexer_settings: # experimental, since v1.39.0
+    #   data:
+    #     - name: Example (Prowlarr)
+    #       multi_languages: [Original, French]
+    #       fail_downloads: [Executables]
+    #       download_client: SABnzbd
 
     # since v1.14.0. Optional
     root_folders:
