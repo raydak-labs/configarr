@@ -38,6 +38,8 @@ export class SonarrSyncer {
         root: new PathRootFolderSync(client),
         downloadClients: new SonarrDownloadClientSync(client),
         importLists: new SonarrImportListSync(client),
+
+        metadata: client,
       },
       trash: createTrashOps(ARR),
     });

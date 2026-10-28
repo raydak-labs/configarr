@@ -107,6 +107,7 @@ Feature × arr × create / update / delete / idempotent (second run Diff Report 
 | Download clients (blackhole)   | CUDI     | CUDI     | CUDI     | CUDI     | CUDI     | CUDI     |
 | DC config / remote paths       | CUI / CD | CUI / CD | CUI / CD | CUI / CD | CUI / CD | —        |
 | Metadata profiles              | —        | —        | —        | CUDI     | CUDI     | —        |
+| Metadata generation            | UI       | UI       | —        | —        | —        | —        |
 | Tags                           | CDI      | CDI      | —        | —        | —        | CDI      |
 | Sync profiles                  | —        | —        | —        | —        | —        | CUDI     |
 | Applications                   | —        | —        | —        | —        | —        | CUDI     |

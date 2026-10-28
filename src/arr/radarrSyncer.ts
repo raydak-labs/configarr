@@ -35,6 +35,7 @@ export class RadarrSyncer {
         releaseProfiles: new ReleaseProfileRadarrSync(client),
         root: new PathRootFolderSync(client),
         downloadClients: new RadarrDownloadClientSync(client),
+        metadata: client,
       },
       trash: createTrashOps(ARR),
     });

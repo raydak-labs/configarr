@@ -221,9 +221,11 @@ describe("radarr (live)", () => {
     expect((await client.getUiConfig()).firstDayOfWeek).toBe(before.firstDayOfWeek);
   });
 
-  test("syncs host settings and an import list in one run", async () => {
+  test("syncs host settings, metadata, and an import list in one run", async () => {
     if (Number((await client.getSystemStatus()).version?.split(".")[0]) < 7) return;
     const original = await client.getHostConfig();
+    const metadata = (await client.getMetadata()).find((item) => item.implementation === "XbmcMetadata");
+    if (!metadata?.id) throw new Error("Metadata provider is required");
     const profile = (await client.getQualityProfiles()).find((item) => item.name);
     if (!original.id || !profile?.name) throw new Error("Host settings and a quality profile are required");
     const name = `e2e-import-${randomUUID()}`;
@@ -231,6 +233,7 @@ describe("radarr (live)", () => {
     try {
       const config = mediaConfig("RADARR", {
         host_config: { oidcScopes: scopes },
+        metadata: { data: [{ type: "XbmcMetadata", enable: !metadata.enable }] },
         root_folders: [E2E_ROOT_A, ...(await preservedRootFolderPaths(client))],
         import_lists: {
           data: [
@@ -248,6 +251,7 @@ describe("radarr (live)", () => {
       const first = await syncConfig(config);
       assertPipelineSucceeded(first.result, ["RADARR"]);
       expect((await client.getHostConfig()).oidcScopes).toBe(scopes);
+      expect((await client.getMetadata()).find((item) => item.id === metadata.id)?.enable).toBe(!metadata.enable);
       expect((await client.getImportLists()).some((item) => item.name === name)).toBe(true);
       const second = await syncConfig(config, first.workspace);
       assertPipelineSucceeded(second.result, ["RADARR"]);
@@ -255,6 +259,7 @@ describe("radarr (live)", () => {
     } finally {
       const list = (await client.getImportLists()).find((item) => item.name === name);
       if (list?.id != null) await client.deleteImportList(String(list.id));
+      await client.updateMetadata(String(metadata.id), metadata);
       await client.updateHostConfig(String(original.id), original);
     }
   });
@@ -495,6 +500,78 @@ describe("radarr (live)", () => {
       if (list?.id != null) await fetch(`${baseUrl}/api/v3/importlist/${list.id}`, { method: "DELETE", headers });
       const tag = (await client.getTags()).find((item) => item.label === tagName);
       if (tag?.id != null) await client.deleteTag(String(tag.id));
+    }
+  });
+
+  test("syncs metadata provider settings", async () => {
+    const url = `${baseUrl}/api/v3/metadata`;
+    const headers = { "X-Api-Key": apiKey, "Content-Type": "application/json" };
+    const read = async (): Promise<
+      Array<{ id?: number; implementation?: string; enable?: boolean; fields?: Array<{ name?: string; value?: unknown }> }>
+    > => {
+      const response = await fetch(url, { headers });
+      if (!response.ok) throw new Error(`Failed to load metadata: ${response.status}`);
+      return response.json();
+    };
+    const providers = await read();
+    const original = providers.find((item) => item.implementation === "XbmcMetadata");
+    if (!original?.id) throw new Error("Metadata provider not available");
+    const existing = original.fields?.find((field) => field.name === "movieMetadata")?.value;
+    if (typeof existing !== "boolean") throw new Error("Metadata field not available");
+    try {
+      const config = mediaConfig("RADARR", {
+        metadata: { data: [{ type: "XbmcMetadata", enable: true, fields: { movie_metadata: !existing } }] },
+      });
+      const dryRun = await syncConfig(config, undefined, { dryRun: true });
+      assertPipelineSucceeded(dryRun.result, ["RADARR"]);
+      expect((await read()).find((item) => item.id === original.id)).toEqual(original);
+      const invalid = await syncConfig(
+        mediaConfig("RADARR", {
+          metadata: {
+            data: [
+              { type: "XbmcMetadata", enable: true },
+              { type: "missing-provider", enable: true },
+            ],
+          },
+        }),
+        dryRun.workspace,
+      );
+      expect(invalid.result.exitCode).not.toBe(0);
+      expect((await read()).find((item) => item.id === original.id)).toEqual(original);
+      const unknownField = await syncConfig(
+        mediaConfig(
+          "RADARR",
+          { custom_formats: cfAssignBlock(), metadata: { data: [{ type: "XbmcMetadata", fields: { bad_field: true } }] } },
+          { customFormatDefinitions: [e2eCustomFormatDefinition()] },
+        ),
+        dryRun.workspace,
+      );
+      expect(unknownField.result.exitCode).not.toBe(0);
+      expect((await read()).find((item) => item.id === original.id)).toEqual(original);
+      expect(findNamed(await client.getCustomFormats(), "e2e-rt")).toBeUndefined();
+      const first = await syncConfig(config);
+      assertPipelineSucceeded(first.result, ["RADARR"]);
+      const current = (await read()).find((item) => item.id === original.id);
+      expect(current?.enable).toBe(true);
+      expect(current?.fields?.find((field) => field.name === "movieMetadata")?.value).toBe(!existing);
+      expect(current?.fields?.filter((field) => field.name !== "movieMetadata")).toEqual(
+        original.fields?.filter((field) => field.name !== "movieMetadata"),
+      );
+      expect((await read()).filter((item) => item.id !== original.id)).toEqual(providers.filter((item) => item.id !== original.id));
+      const second = await syncConfig(config, first.workspace);
+      assertPipelineSucceeded(second.result, ["RADARR"]);
+      assertDiffUpToDate(second.result, ["RADARR"]);
+      const disabled = await syncConfig(
+        mediaConfig("RADARR", { metadata: { data: [{ type: "XbmcMetadata", enable: false }] } }),
+        first.workspace,
+      );
+      assertPipelineSucceeded(disabled.result, ["RADARR"]);
+      const disabledProvider = (await read()).find((item) => item.id === original.id);
+      expect(disabledProvider?.enable).toBe(false);
+      expect(disabledProvider?.fields?.find((field) => field.name === "movieMetadata")?.value).toBe(!existing);
+    } finally {
+      const response = await fetch(`${url}/${original.id}`, { method: "PUT", headers, body: JSON.stringify(original) });
+      if (!response.ok) throw new Error(`Failed to restore metadata: ${response.status}`);
     }
   });
 

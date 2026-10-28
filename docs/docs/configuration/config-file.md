@@ -943,6 +943,37 @@ Sonarr uses `enable_auto` and `search_on_add` for its automatic-add and search s
 
 For an already-authorized Trakt list, Configarr preserves the server's OAuth credentials and refreshed tokens. To create a list with existing credentials, supply `access_token`, `refresh_token`, and `expires` under `fields`; use `!secret` or `!env` for tokens. These fields are used on creation only, so a later run cannot replace refreshed server tokens with stale values. Obtain the credentials separately; Configarr does not perform interactive Trakt authorization. For Radarr v7 Smart Lists, use `type: TraktSmartListImport` and provide the list's slug in `smart_list_id`.
 
+## Metadata generation
+
+:::warning Experimental since v1.39.0
+Metadata generation settings are experimental.
+:::
+
+Sonarr and Radarr can manage their existing metadata providers, such as Kodi/Emby metadata used by Jellyfin. Specify the provider's implementation name as `type` and configure only the fields you want to change.
+
+```yaml
+sonarr:
+  series:
+    metadata:
+      data:
+        - type: XbmcMetadata
+          enable: true
+          fields:
+            series_metadata: true
+            episode_metadata: true
+
+radarr:
+  movies:
+    metadata:
+      data:
+        - type: XbmcMetadata
+          enable: true
+          fields:
+            movie_metadata: true
+```
+
+Provider and field availability depends on the connected server. Field names accept camelCase or snake_case. Omitted fields and unlisted providers are left unchanged. Configarr updates existing providers; it does not create or delete them. If more than one provider has the same implementation, Configarr rejects the ambiguous configuration. When multiple templates supply `metadata`, the last one processed takes effect; an instance block overrides templates. `DRY_RUN` reports changes without writing them.
+
 ## Delay Profiles
 
 You can configure and sync Delay Profiles directly in your config. This allows you to manage the download delay logic for Usenet and Torrent protocols, including protocol preference, delays, and tag-based rules.

@@ -5,6 +5,11 @@ import type { Tag } from "../tags/tag.types";
 
 export type { Tag };
 
+export interface MetadataClient<T> {
+  getMetadata(): Promise<T[]>;
+  updateMetadata(id: string, data: T): Promise<unknown>;
+}
+
 export interface SystemClient {
   getSystemStatus(): Promise<unknown>;
   testConnection(): Promise<boolean>;

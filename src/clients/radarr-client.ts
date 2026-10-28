@@ -18,6 +18,7 @@ import {
   ReleaseProfileResource,
   UiConfigResource,
   CustomFormatResource,
+  MetadataResource,
 } from "../__generated__/radarr/data-contracts";
 import { logger } from "../logger";
 import type { CustomFormatRequest } from "../customFormats/customFormat.types";
@@ -86,6 +87,14 @@ export class RadarrClient
 
   deleteImportList(id: string): Promise<void> {
     return this.api.v3ImportlistDelete(Number(id), { redactResponseErrors: true });
+  }
+
+  getMetadata(): Promise<MetadataResource[]> {
+    return this.api.v3MetadataList();
+  }
+
+  updateMetadata(id: string, data: MetadataResource): Promise<unknown> {
+    return this.api.v3MetadataUpdate(Number(id), data);
   }
 
   async getLanguages() {

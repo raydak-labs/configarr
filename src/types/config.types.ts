@@ -346,6 +346,15 @@ export type MediaManagementType = z.infer<typeof MediaManagementTypeSchema>;
 export const UiConfigTypeSchema = z.object({}).passthrough();
 export type UiConfigType = z.infer<typeof UiConfigTypeSchema>;
 
+export const MetadataSettingsSchema = z
+  .object({
+    data: z.array(
+      z.object({ type: z.string().min(1), enable: z.boolean().optional(), fields: z.record(z.string(), z.unknown()).optional() }).strict(),
+    ),
+  })
+  .strict();
+export type MetadataSettings = z.infer<typeof MetadataSettingsSchema>;
+
 export const MediaNamingApiTypeSchema = z.object({}).passthrough();
 export type MediaNamingApiType = z.infer<typeof MediaNamingApiTypeSchema>;
 
@@ -568,6 +577,8 @@ export const InputConfigArrInstanceSchema = z.object({
   host_config: HostConfigSchema.optional(),
   // @experimental @since v1.39.0
   import_lists: InputConfigImportListsSchema.optional(),
+  // @experimental @since v1.39.0
+  metadata: MetadataSettingsSchema.optional(),
   media_naming_api: MediaNamingApiTypeSchema.optional(),
   renameQualityProfiles: z.array(z.object({ from: z.string(), to: z.string() })).optional(),
   cloneQualityProfiles: z.array(z.object({ from: z.string(), to: z.string() })).optional(),
