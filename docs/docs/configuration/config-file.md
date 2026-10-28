@@ -972,7 +972,7 @@ radarr:
             movie_metadata: true
 ```
 
-Provider and field availability depends on the connected server. Field names accept camelCase or snake_case. Omitted fields and unlisted providers are left unchanged. Configarr updates existing providers; it does not create or delete them. When multiple templates supply `metadata`, the last one processed takes effect; an instance block overrides templates. `DRY_RUN` reports changes without writing them.
+Provider and field availability depends on the connected server. Field names accept camelCase or snake_case. Omitted fields and unlisted providers are left unchanged. Configarr updates existing providers; it does not create or delete them. If more than one provider has the same implementation, Configarr rejects the ambiguous configuration. When multiple templates supply `metadata`, the last one processed takes effect; an instance block overrides templates. `DRY_RUN` reports changes without writing them.
 
 ## Delay Profiles
 

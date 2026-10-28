@@ -221,9 +221,11 @@ describe("radarr (live)", () => {
     expect((await client.getUiConfig()).firstDayOfWeek).toBe(before.firstDayOfWeek);
   });
 
-  test("syncs host settings and an import list in one run", async () => {
+  test("syncs host settings, metadata, and an import list in one run", async () => {
     if (Number((await client.getSystemStatus()).version?.split(".")[0]) < 7) return;
     const original = await client.getHostConfig();
+    const metadata = (await client.getMetadata()).find((item) => item.implementation === "XbmcMetadata");
+    if (!metadata?.id) throw new Error("Metadata provider is required");
     const profile = (await client.getQualityProfiles()).find((item) => item.name);
     if (!original.id || !profile?.name) throw new Error("Host settings and a quality profile are required");
     const name = `e2e-import-${randomUUID()}`;
@@ -231,6 +233,7 @@ describe("radarr (live)", () => {
     try {
       const config = mediaConfig("RADARR", {
         host_config: { oidcScopes: scopes },
+        metadata: { data: [{ type: "XbmcMetadata", enable: !metadata.enable }] },
         root_folders: [E2E_ROOT_A, ...(await preservedRootFolderPaths(client))],
         import_lists: {
           data: [
@@ -248,6 +251,7 @@ describe("radarr (live)", () => {
       const first = await syncConfig(config);
       assertPipelineSucceeded(first.result, ["RADARR"]);
       expect((await client.getHostConfig()).oidcScopes).toBe(scopes);
+      expect((await client.getMetadata()).find((item) => item.id === metadata.id)?.enable).toBe(!metadata.enable);
       expect((await client.getImportLists()).some((item) => item.name === name)).toBe(true);
       const second = await syncConfig(config, first.workspace);
       assertPipelineSucceeded(second.result, ["RADARR"]);
@@ -255,6 +259,7 @@ describe("radarr (live)", () => {
     } finally {
       const list = (await client.getImportLists()).find((item) => item.name === name);
       if (list?.id != null) await client.deleteImportList(String(list.id));
+      await client.updateMetadata(String(metadata.id), metadata);
       await client.updateHostConfig(String(original.id), original);
     }
   });
@@ -534,11 +539,16 @@ describe("radarr (live)", () => {
       expect(invalid.result.exitCode).not.toBe(0);
       expect((await read()).find((item) => item.id === original.id)).toEqual(original);
       const unknownField = await syncConfig(
-        mediaConfig("RADARR", { metadata: { data: [{ type: "XbmcMetadata", fields: { bad_field: true } }] } }),
+        mediaConfig(
+          "RADARR",
+          { custom_formats: cfAssignBlock(), metadata: { data: [{ type: "XbmcMetadata", fields: { bad_field: true } }] } },
+          { customFormatDefinitions: [e2eCustomFormatDefinition()] },
+        ),
         dryRun.workspace,
       );
       expect(unknownField.result.exitCode).not.toBe(0);
       expect((await read()).find((item) => item.id === original.id)).toEqual(original);
+      expect(findNamed(await client.getCustomFormats(), "e2e-rt")).toBeUndefined();
       const first = await syncConfig(config);
       assertPipelineSucceeded(first.result, ["RADARR"]);
       const current = (await read()).find((item) => item.id === original.id);

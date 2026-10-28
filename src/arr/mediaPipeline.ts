@@ -43,7 +43,7 @@ import {
 } from "../types/config.types";
 import { TrashQualityDefinitionQuality } from "../types/trashguide.types";
 import { syncUiConfig, uiConfigDiffToDiffEntries } from "../uiConfigs/uiConfigSyncer";
-import { syncMetadata } from "../metadata/metadataSync";
+import { prepareMetadata, syncMetadata } from "../metadata/metadataSync";
 import { ConfigValidationError } from "../validation";
 import type {
   DownloadClientResource as LidarrDownloadClientResource,
@@ -229,6 +229,13 @@ export const runMediaSyncToQualityProfiles = async <T extends MediaArrType>(
     const parsed = InputConfigImportListsSchema.safeParse(config.import_lists);
     if (!parsed.success) throw new ConfigValidationError(`Invalid import_lists configuration: ${parsed.error.message}`);
   }
+  if (config.metadata !== undefined) {
+    if (!syncs.metadata) throw new ConfigValidationError("metadata is supported only by Sonarr and Radarr");
+    const parsed = MetadataSettingsSchema.safeParse(config.metadata);
+    if (!parsed.success) throw new ConfigValidationError(`Invalid metadata configuration: ${parsed.error.message}`);
+    config.metadata = parsed.data;
+  }
+  if (config.metadata && syncs.metadata) await prepareMetadata(syncs.metadata, config.metadata);
   await qpSync.validateConfig(config);
   await mmSync.validateConfig(config.media_management);
   await syncs.releaseProfiles.validateConfig(config.release_profiles ?? []);
@@ -387,7 +394,11 @@ export const runMediaSyncToQualityProfiles = async <T extends MediaArrType>(
 
   const uiConfigResult = await syncUiConfig(client, arrType, config.ui_config);
   collector.add(uiConfigDiffToDiffEntries(uiConfigResult));
-  if (config.metadata && syncs.metadata) collector.add(await syncMetadata(syncs.metadata, config.metadata));
+  if (config.metadata && syncs.metadata) {
+    // Refresh before writing so omitted fields retain any changes made since preflight.
+    const metadataPlan = await prepareMetadata(syncs.metadata, config.metadata);
+    collector.add(await syncMetadata(syncs.metadata, metadataPlan));
+  }
 
   const serverQP = await qpSync.loadFromServer();
   serverCache.qualityProfiles = serverQP;

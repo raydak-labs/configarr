@@ -11,10 +11,14 @@ type MetadataResource = {
   enable?: boolean;
   fields?: Array<{ name?: string | null; value?: unknown }> | null;
 };
+type MetadataPlan<T extends MetadataResource> = Array<{ provider: T; changes: FieldChange[]; data: T }>;
 
 const canonical = (name: string) => name.replace(/_/g, "").toLowerCase();
 
-export async function syncMetadata<T extends MetadataResource>(client: MetadataClient<T>, config: MetadataSettings): Promise<DiffEntry[]> {
+export async function prepareMetadata<T extends MetadataResource>(
+  client: MetadataClient<T>,
+  config: MetadataSettings,
+): Promise<MetadataPlan<T>> {
   if (config.data.length === 0) return [];
   const current = await client.getMetadata();
   const seen = new Set<string>();
@@ -22,7 +26,9 @@ export async function syncMetadata<T extends MetadataResource>(client: MetadataC
     const key = canonical(item.type);
     if (seen.has(key)) throw new ConfigValidationError(`Duplicate metadata provider '${item.type}'`);
     seen.add(key);
-    const provider = current.find((entry) => entry.implementation && canonical(entry.implementation) === key);
+    const matches = current.filter((entry) => entry.implementation && canonical(entry.implementation) === key);
+    if (matches.length > 1) throw new ConfigValidationError(`Ambiguous metadata provider '${item.type}'`);
+    const provider = matches[0];
     if (!provider?.id) throw new ConfigValidationError(`Metadata provider '${item.type}' not found`);
     const changes: FieldChange[] = [];
     if (item.enable !== undefined && item.enable !== provider.enable)
@@ -41,6 +47,10 @@ export async function syncMetadata<T extends MetadataResource>(client: MetadataC
     );
     return { provider, changes, data: { ...provider, enable: item.enable ?? provider.enable, fields } };
   });
+  return planned;
+}
+
+export async function syncMetadata<T extends MetadataResource>(client: MetadataClient<T>, planned: MetadataPlan<T>): Promise<DiffEntry[]> {
   const entries: DiffEntry[] = [];
   for (const { provider, changes, data } of planned) {
     if (!changes.length) continue;
