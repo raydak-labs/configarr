@@ -1,5 +1,6 @@
 import { getEnvs } from "../env";
 import { logger } from "../logger";
+import { filterUnmanagedDownloadClients } from "../downloadClients/downloadClientBase";
 import type { DiffEntry, FieldChange } from "../diffReport/diffReport.types";
 import type { IndexerSettings, MergedConfigInstance } from "../types/config.types";
 import { ConfigValidationError } from "../validation";
@@ -23,6 +24,9 @@ export async function prepareIndexerSettings(
 ) {
   if (!config.data.length) return [];
   const [indexers, clients] = await Promise.all([client.getIndexers(), client.getDownloadClients()]);
+  const unmanagedClients = preflight
+    ? filterUnmanagedDownloadClients(clients, instance.download_clients?.data ?? [], instance.download_clients?.delete_unmanaged)
+    : [];
   const seen = new Set<string>();
   return config.data.flatMap((item) => {
     const key = item.name.toLowerCase();
@@ -36,19 +40,13 @@ export async function prepareIndexerSettings(
       return [];
     }
     if (indexer.id == null) throw new ConfigValidationError(`Indexer '${item.name}' has no id`);
-    if (preflight && instance.download_clients?.delete_unmanaged?.enabled) {
-      const cleanup = instance.download_clients.delete_unmanaged;
-      const willDelete = (entry: (typeof clients)[number]) =>
-        !cleanup.ignore?.includes(entry.name ?? "") &&
-        !instance.download_clients?.data?.some(
-          (configured) => configured.name === entry.name && configured.type.toLowerCase() === entry.implementation?.toLowerCase(),
-        );
-      const referenced = clients.filter(
+    if (unmanagedClients.length) {
+      const referenced = unmanagedClients.filter(
         (entry) =>
           entry.id === indexer.downloadClientId ||
           (item.download_client != null && entry.name?.toLowerCase() === item.download_client.toLowerCase()),
       );
-      if (referenced.some(willDelete)) throw new ConfigValidationError(`Indexer '${item.name}': download client is scheduled for removal`);
+      if (referenced.length) throw new ConfigValidationError(`Indexer '${item.name}': download client is scheduled for removal`);
     }
     const changes: FieldChange[] = [];
     let downloadClientId = indexer.downloadClientId;

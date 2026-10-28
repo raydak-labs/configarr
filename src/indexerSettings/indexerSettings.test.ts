@@ -95,4 +95,22 @@ describe("indexer settings", () => {
       "scheduled for removal",
     );
   });
+  test.each([
+    { configuredType: "QBITTORRENT", ignore: [], removed: false },
+    { configuredType: "Transmission", ignore: [], removed: true },
+    { configuredType: "Transmission", ignore: ["Client"], removed: false },
+  ])(
+    "uses the download-client cleanup rules for referenced clients: $configuredType, $ignore",
+    async ({ configuredType, ignore, removed }) => {
+      vi.mocked(client.getDownloadClients).mockResolvedValueOnce([{ id: 4, name: "Client", implementation: "qBittorrent" }]);
+      const config = { data: [{ name: indexer.name, download_client: "Client" }] };
+      const cleanup = {
+        ...instance,
+        download_clients: { data: [{ name: "Client", type: configuredType }], delete_unmanaged: { enabled: true, ignore } },
+      };
+      const result = prepareIndexerSettings(client, config, cleanup, true);
+      if (removed) await expect(result).rejects.toThrow("scheduled for removal");
+      else await expect(result).resolves.toHaveLength(1);
+    },
+  );
 });
