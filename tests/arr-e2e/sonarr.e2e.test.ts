@@ -5,6 +5,10 @@
  * shared factory would hide that behind branches. Shared code stays in `helpers.ts`.
  */
 import { randomUUID } from "node:crypto";
+
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
 import { SonarrClient } from "../../src/clients/sonarr-client";
 import { DownloadProtocol } from "../../src/__generated__/sonarr/data-contracts";
@@ -501,6 +505,93 @@ describe("sonarr (live)", () => {
       if (list?.id != null) await fetch(`${url}/${list.id}`, { method: "DELETE", headers });
       const tag = (await client.getTags()).find((item) => item.label === tagName);
       if (tag?.id != null) await client.deleteTag(String(tag.id));
+    }
+  });
+
+  test("syncs metadata provider settings", async () => {
+    const version = (await client.getSystemStatus()).version?.startsWith("5.") ? "v5" : "v3";
+    const url = `${baseUrl}/api/${version}/metadata`;
+    const headers = { "X-Api-Key": apiKey, "Content-Type": "application/json" };
+    const read = async (): Promise<
+      Array<{ id?: number; implementation?: string; enable?: boolean; fields?: Array<{ name?: string; value?: unknown }> }>
+    > => {
+      const response = await fetch(url, { headers });
+      if (!response.ok) throw new Error(`Failed to load metadata: ${response.status}`);
+      return response.json();
+    };
+    const providers = await read();
+    const original = providers.find((item) => item.implementation === "XbmcMetadata");
+    if (!original?.id) throw new Error("Metadata provider not available");
+    const existing = original.fields?.find((field) => field.name === "seriesMetadata")?.value;
+    if (typeof existing !== "boolean") throw new Error("Metadata field not available");
+    const templates = mkdtempSync(join(tmpdir(), "configarr-metadata-"));
+    writeFileSync(join(templates, "metadata.yml"), "metadata:\n  data:\n    - type: XbmcMetadata\n      enable: true\n");
+    try {
+      const config = mediaConfig("SONARR", {
+        metadata: { data: [{ type: "XbmcMetadata", enable: true, fields: { series_metadata: !existing } }] },
+      });
+      const dryRun = await syncConfig(config, undefined, { dryRun: true });
+      assertPipelineSucceeded(dryRun.result, ["SONARR"]);
+      expect((await read()).find((item) => item.id === original.id)).toEqual(original);
+      const invalid = await syncConfig(
+        mediaConfig("SONARR", {
+          metadata: {
+            data: [
+              { type: "XbmcMetadata", enable: true },
+              { type: "missing-provider", enable: true },
+            ],
+          },
+        }),
+        dryRun.workspace,
+      );
+      expect(invalid.result.exitCode).not.toBe(0);
+      expect((await read()).find((item) => item.id === original.id)).toEqual(original);
+      const unknownField = await syncConfig(
+        mediaConfig("SONARR", { metadata: { data: [{ type: "XbmcMetadata", fields: { bad_field: true } }] } }),
+        dryRun.workspace,
+      );
+      expect(unknownField.result.exitCode).not.toBe(0);
+      expect((await read()).find((item) => item.id === original.id)).toEqual(original);
+      const first = await syncConfig(config);
+      assertPipelineSucceeded(first.result, ["SONARR"]);
+      const current = (await read()).find((item) => item.id === original.id);
+      expect(current?.enable).toBe(true);
+      expect(current?.fields?.find((field) => field.name === "seriesMetadata")?.value).toBe(!existing);
+      expect(current?.fields?.filter((field) => field.name !== "seriesMetadata")).toEqual(
+        original.fields?.filter((field) => field.name !== "seriesMetadata"),
+      );
+      expect((await read()).filter((item) => item.id !== original.id)).toEqual(providers.filter((item) => item.id !== original.id));
+      const second = await syncConfig(config, first.workspace);
+      assertPipelineSucceeded(second.result, ["SONARR"]);
+      assertDiffUpToDate(second.result, ["SONARR"]);
+      const disabled = await syncConfig(
+        mediaConfig("SONARR", { metadata: { data: [{ type: "XbmcMetadata", enable: false }] } }),
+        first.workspace,
+      );
+      assertPipelineSucceeded(disabled.result, ["SONARR"]);
+      const disabledProvider = (await read()).find((item) => item.id === original.id);
+      expect(disabledProvider?.enable).toBe(false);
+      expect(disabledProvider?.fields?.find((field) => field.name === "seriesMetadata")?.value).toBe(!existing);
+      const included = await syncConfig(
+        mediaConfig("SONARR", { include: [{ template: "metadata" }] }, { localConfigTemplatesPath: templates }),
+        first.workspace,
+      );
+      assertPipelineSucceeded(included.result, ["SONARR"]);
+      expect((await read()).find((item) => item.id === original.id)?.enable).toBe(true);
+      const overridden = await syncConfig(
+        mediaConfig(
+          "SONARR",
+          { include: [{ template: "metadata" }], metadata: { data: [{ type: "XbmcMetadata", enable: false }] } },
+          { localConfigTemplatesPath: templates },
+        ),
+        first.workspace,
+      );
+      assertPipelineSucceeded(overridden.result, ["SONARR"]);
+      expect((await read()).find((item) => item.id === original.id)?.enable).toBe(false);
+    } finally {
+      rmSync(templates, { recursive: true, force: true });
+      const response = await fetch(`${url}/${original.id}`, { method: "PUT", headers, body: JSON.stringify(original) });
+      if (!response.ok) throw new Error(`Failed to restore metadata: ${response.status}`);
     }
   });
 

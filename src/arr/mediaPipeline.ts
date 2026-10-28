@@ -3,6 +3,8 @@ import type { DiffEntry } from "../diffReport/diffReport.types";
 import fs from "node:fs";
 import { ServerCache } from "../cache";
 import { ArrTypeToClient } from "../clients/client";
+import type { MetadataClient } from "../clients/capabilities";
+import type { MetadataResource } from "../__generated__/sonarr/data-contracts";
 import { mergeConfigsAndTemplates } from "../config";
 import { CFIDToConfigGroup, CFProcessing, CustomFormatRef } from "../customFormats/customFormat.types";
 import {
@@ -37,9 +39,11 @@ import {
   InputConfigImportListsSchema,
   InputConfigSchema,
   MergedConfigInstance,
+  MetadataSettingsSchema,
 } from "../types/config.types";
 import { TrashQualityDefinitionQuality } from "../types/trashguide.types";
 import { syncUiConfig, uiConfigDiffToDiffEntries } from "../uiConfigs/uiConfigSyncer";
+import { syncMetadata } from "../metadata/metadataSync";
 import { ConfigValidationError } from "../validation";
 import type {
   DownloadClientResource as LidarrDownloadClientResource,
@@ -144,6 +148,8 @@ export type MediaFeatureSyncs<T extends MediaArrType = MediaArrType> = {
       instance: MergedConfigInstance,
     ): Promise<DiffEntry[]>;
   };
+
+  metadata?: MetadataClient<MetadataResource>;
   qd: QualityDefinitionSync<MediaArrResources[T]["qualityDefinition"]>;
   mm: MediaManagementSync<MediaArrResources[T]["naming"], MediaArrResources[T]["mediaManagement"]>;
   qp: BaseQualityProfileSync<MediaArrResources[T]["qualityProfile"]>;
@@ -381,6 +387,7 @@ export const runMediaSyncToQualityProfiles = async <T extends MediaArrType>(
 
   const uiConfigResult = await syncUiConfig(client, arrType, config.ui_config);
   collector.add(uiConfigDiffToDiffEntries(uiConfigResult));
+  if (config.metadata && syncs.metadata) collector.add(await syncMetadata(syncs.metadata, config.metadata));
 
   const serverQP = await qpSync.loadFromServer();
   serverCache.qualityProfiles = serverQP;

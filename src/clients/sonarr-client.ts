@@ -17,6 +17,7 @@ import {
   UiConfigResource,
   CustomFormatResource,
   ImportListResource,
+  MetadataResource,
 } from "../__generated__/sonarr/data-contracts";
 import type {
   ApiInfoResource as SonarrApiInfoV5,
@@ -392,6 +393,20 @@ export class SonarrClient
     return this.versioned(
       () => this.apiV3.v3ImportlistDelete(Number(id), { redactResponseErrors: true }),
       () => this.apiV5.v5ImportlistDelete(Number(id), { redactResponseErrors: true }),
+    );
+  }
+
+  getMetadata(): Promise<MetadataResource[]> {
+    return this.versioned(
+      () => this.apiV3.v3MetadataList(),
+      () => this.apiV5.v5MetadataList(),
+    );
+  }
+
+  updateMetadata(id: string, data: MetadataResource): Promise<unknown> {
+    return this.versioned(
+      () => this.apiV3.v3MetadataUpdate(Number(id), data),
+      () => this.apiV5.v5MetadataUpdate(Number(id), data),
     );
   }
 

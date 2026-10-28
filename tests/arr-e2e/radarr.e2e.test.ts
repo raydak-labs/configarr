@@ -498,6 +498,73 @@ describe("radarr (live)", () => {
     }
   });
 
+  test("syncs metadata provider settings", async () => {
+    const url = `${baseUrl}/api/v3/metadata`;
+    const headers = { "X-Api-Key": apiKey, "Content-Type": "application/json" };
+    const read = async (): Promise<
+      Array<{ id?: number; implementation?: string; enable?: boolean; fields?: Array<{ name?: string; value?: unknown }> }>
+    > => {
+      const response = await fetch(url, { headers });
+      if (!response.ok) throw new Error(`Failed to load metadata: ${response.status}`);
+      return response.json();
+    };
+    const providers = await read();
+    const original = providers.find((item) => item.implementation === "XbmcMetadata");
+    if (!original?.id) throw new Error("Metadata provider not available");
+    const existing = original.fields?.find((field) => field.name === "movieMetadata")?.value;
+    if (typeof existing !== "boolean") throw new Error("Metadata field not available");
+    try {
+      const config = mediaConfig("RADARR", {
+        metadata: { data: [{ type: "XbmcMetadata", enable: true, fields: { movie_metadata: !existing } }] },
+      });
+      const dryRun = await syncConfig(config, undefined, { dryRun: true });
+      assertPipelineSucceeded(dryRun.result, ["RADARR"]);
+      expect((await read()).find((item) => item.id === original.id)).toEqual(original);
+      const invalid = await syncConfig(
+        mediaConfig("RADARR", {
+          metadata: {
+            data: [
+              { type: "XbmcMetadata", enable: true },
+              { type: "missing-provider", enable: true },
+            ],
+          },
+        }),
+        dryRun.workspace,
+      );
+      expect(invalid.result.exitCode).not.toBe(0);
+      expect((await read()).find((item) => item.id === original.id)).toEqual(original);
+      const unknownField = await syncConfig(
+        mediaConfig("RADARR", { metadata: { data: [{ type: "XbmcMetadata", fields: { bad_field: true } }] } }),
+        dryRun.workspace,
+      );
+      expect(unknownField.result.exitCode).not.toBe(0);
+      expect((await read()).find((item) => item.id === original.id)).toEqual(original);
+      const first = await syncConfig(config);
+      assertPipelineSucceeded(first.result, ["RADARR"]);
+      const current = (await read()).find((item) => item.id === original.id);
+      expect(current?.enable).toBe(true);
+      expect(current?.fields?.find((field) => field.name === "movieMetadata")?.value).toBe(!existing);
+      expect(current?.fields?.filter((field) => field.name !== "movieMetadata")).toEqual(
+        original.fields?.filter((field) => field.name !== "movieMetadata"),
+      );
+      expect((await read()).filter((item) => item.id !== original.id)).toEqual(providers.filter((item) => item.id !== original.id));
+      const second = await syncConfig(config, first.workspace);
+      assertPipelineSucceeded(second.result, ["RADARR"]);
+      assertDiffUpToDate(second.result, ["RADARR"]);
+      const disabled = await syncConfig(
+        mediaConfig("RADARR", { metadata: { data: [{ type: "XbmcMetadata", enable: false }] } }),
+        first.workspace,
+      );
+      assertPipelineSucceeded(disabled.result, ["RADARR"]);
+      const disabledProvider = (await read()).find((item) => item.id === original.id);
+      expect(disabledProvider?.enable).toBe(false);
+      expect(disabledProvider?.fields?.find((field) => field.name === "movieMetadata")?.value).toBe(!existing);
+    } finally {
+      const response = await fetch(`${url}/${original.id}`, { method: "PUT", headers, body: JSON.stringify(original) });
+      if (!response.ok) throw new Error(`Failed to restore metadata: ${response.status}`);
+    }
+  });
+
   test("custom formats", async () => {
     const preexisting = nonE2eNames(await client.getCustomFormats());
     const withValue = (value: string) =>
