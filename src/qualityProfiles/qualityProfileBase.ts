@@ -10,7 +10,7 @@ import { ConfigQualityProfile, ConfigQualityProfileItem, MergedConfigInstance } 
 import type { TrashCFConflict } from "../types/trashguide.types";
 import { ANY_LANGUAGE_NAME, cloneWithJSON, loadJsonFile, zip } from "../util";
 import { ConfigValidationError, warnOrThrowConfig } from "../validation";
-import { CustomFormatRef, FormatItem, QualityItem, QualityProfileLanguage, QualityProfileShared } from "./qualityProfile.types";
+import { FormatItem, QualityItem, QualityProfileLanguage, QualityProfileShared } from "./qualityProfile.types";
 import type { QualityDefinitionShared } from "../qualityDefinitions/qualityDefinition.types";
 
 export type QualityProfileDiffResult<T extends QualityProfileShared = QualityProfileShared> = {
@@ -609,9 +609,7 @@ export abstract class BaseQualityProfileSync<T extends QualityProfileShared> {
           return p;
         }, new Map());
 
-        const cfs: Map<string, CustomFormatRef> = new Map(JSON.parse(JSON.stringify(Array.from(cfServerMap))));
-
-        const customFormatsMapped = Array.from(cfs.values()).map<FormatItem>((e) => {
+        const customFormatsMapped = Array.from(cfServerMap.values()).map<FormatItem>((e) => {
           let score = 0;
 
           if (scoringForQP) {

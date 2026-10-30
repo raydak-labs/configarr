@@ -1208,6 +1208,49 @@ describe("qualityProfileBase", async () => {
     });
   });
 
+  test("creates independent format items for each new profile without changing cached formats", async () => {
+    const formats = [
+      { id: 1, name: "Scored", specifications: [{ name: "rule" }] },
+      { id: 2, name: "Unscored" },
+      { id: 3, name: "Scored" },
+    ];
+    const cache = new ServerCache({
+      customFormats: formats,
+      qualityDefinitions: [{ id: 1, title: "HD", weight: 1, quality: { id: 1, name: "HD" } }],
+    });
+    const cfMap: CFProcessing = {
+      carrIdMapping: new Map([["scored", { carrConfig: { configarr_id: "scored", name: "Scored" }, requestConfig: {} }]]),
+      cfNameToCarrConfig: new Map(),
+    };
+    const config: MergedConfigInstance = {
+      custom_formats: [{ trash_ids: ["scored"], assign_scores_to: [{ name: "First", score: 42 }] }],
+      quality_profiles: ["First", "Second"].map((name) => ({
+        name,
+        min_format_score: 0,
+        qualities: [{ name: "HD" }],
+        quality_sort: "top" as const,
+        upgrade: { allowed: true, until_quality: "HD", until_score: 100 },
+        score_set: "default",
+      })),
+      customFormatDefinitions: [],
+      media_management: {},
+      media_naming: {},
+    };
+    const before = structuredClone(formats);
+    const { create } = await new QualityProfileRadarrSync(qpClient).calculateQualityProfilesDiff(cfMap, config, cache);
+
+    expect(create[0]?.formatItems).toEqual([
+      { name: "Scored", format: 3, score: 42 },
+      { name: "Unscored", format: 2, score: 0 },
+    ]);
+    expect(create[1]?.formatItems).toEqual([
+      { name: "Scored", format: 3, score: 0 },
+      { name: "Unscored", format: 2, score: 0 },
+    ]);
+    expect(create[0]?.formatItems).not.toBe(create[1]?.formatItems);
+    expect(cache.customFormats).toEqual(before);
+  });
+
   test("calculateQualityProfilesDiff - create throws when until_quality is missing on the server", async () => {
     const cfMap: CFProcessing = { carrIdMapping: new Map(), cfNameToCarrConfig: new Map() };
     const resources: QualityDefinitionShared[] = [{ id: 1, title: "HDTV-1080p", weight: 2, quality: { id: 1, name: "HDTV-1080p" } }];
