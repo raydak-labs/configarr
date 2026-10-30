@@ -326,6 +326,16 @@ describe("compareObjectsCarr", () => {
     expect(result.changes).toEqual([]);
   });
 
+  test("reports changes to numeric, boolean and null array elements", () => {
+    const result = compareObjectsCarr({ values: [1, true, null] }, { values: [2, false, 3] });
+    expect(result.changes).toEqual([
+      { field: "values[0]", from: 1, to: 2 },
+      { field: "values[1]", from: true, to: false },
+      { field: "values[2]", from: null, to: 3 },
+    ]);
+    expect(compareObjectsCarr({ values: [1, true, null] }, { values: [1, true, null] }).equal).toBe(true);
+  });
+
   test("a pure reorder of primitive array elements produces one FieldChange, not per-index noise", () => {
     const server = { tags: ["a", "b", "c", "d"] };
     const local = { tags: ["c", "a", "d", "b"] };
