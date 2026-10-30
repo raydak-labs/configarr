@@ -1,11 +1,9 @@
 {
   $schema: "https://docs.renovatebot.com/renovate-schema.json",
   extends: [
-    "config:recommended",
-    "customManagers:githubActionsVersions",
+    "github>blackdark/renovate-base//default.json5",
+    // Override base schedule:weekly — configarr bumps are intentionally rare.
     "schedule:monthly",
-    ":prConcurrentLimitNone",
-    ":prHourlyLimitNone",
     ":pinVersions",
     "security:minimumReleaseAgeNpm",
   ],
@@ -19,37 +17,25 @@
     // `tests/**` is not ignored: tests/arr-e2e/docker-compose.yml pins the *arr images the
     // live e2e suite runs against, and those need updates like any other dependency.
   ],
-  labels: ["dependencies"],
   packageRules: [
+    {
+      // Base maps dependencies → refactor, which would land in the release changelog.
+      matchDepTypes: ["dependencies"],
+      semanticCommitType: "chore",
+    },
     {
       matchUpdateTypes: ["minor", "patch", "pin"],
       automerge: true,
       addLabels: ["automerge"],
     },
     {
-      groupName: "devDependencies (non-major)",
-      matchDepTypes: ["devDependencies"],
-      matchUpdateTypes: ["patch", "minor"],
-    },
-    {
       matchPackageNames: ["swagger-typescript-api"],
       groupName: null,
-    },
-    {
-      groupName: "dependencies (non-major)",
-      matchDepTypes: ["dependencies"],
-      matchUpdateTypes: ["patch", "minor"],
     },
     {
       extends: ["monorepo:docusaurus"],
       groupName: "docusaurus monorepo",
       matchUpdateTypes: ["digest", "patch", "minor", "major"],
-    },
-    {
-      matchDatasources: ["docker"],
-      matchUpdateTypes: ["minor", "patch"],
-      groupName: "all docker updates (without major)",
-      groupSlug: "all-docker",
     },
     {
       // hotio tags are `v<branch>-<app version>[-release.<build>]`, e.g. v3-3.5.0-release.1585
