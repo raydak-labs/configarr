@@ -404,6 +404,21 @@ const includeRecyclarrTemplate = (
 
   if (template.metadata !== undefined) mergedTemplates.metadata = template.metadata;
   if (template.indexer_settings !== undefined) mergedTemplates.indexer_settings = template.indexer_settings;
+  if (template.indexer_config !== undefined) {
+    mergedTemplates.indexer_config = { ...mergedTemplates.indexer_config, ...template.indexer_config };
+  }
+  if (template.notifications) {
+    const existingData = mergedTemplates.notifications?.data || [];
+    const templateData = template.notifications.data || [];
+    const existingDeleteManaged = mergedTemplates.notifications?.delete_unmanaged;
+    const templateDeleteManaged = template.notifications.delete_unmanaged;
+
+    mergedTemplates.notifications = {
+      data: [...existingData, ...templateData],
+      update_password: template.notifications.update_password,
+      delete_unmanaged: templateDeleteManaged ? templateDeleteManaged : existingDeleteManaged,
+    };
+  }
 
   if (template.delete_unmanaged_metadata_profiles) {
     mergedTemplates.delete_unmanaged_metadata_profiles = template.delete_unmanaged_metadata_profiles;
@@ -919,6 +934,9 @@ export const mergeConfigsAndTemplates = async (
   }
   if (instanceConfig.metadata !== undefined) mergedTemplates.metadata = instanceConfig.metadata;
   if (instanceConfig.indexer_settings !== undefined) mergedTemplates.indexer_settings = instanceConfig.indexer_settings;
+  if (instanceConfig.indexer_config !== undefined) {
+    mergedTemplates.indexer_config = { ...mergedTemplates.indexer_config, ...instanceConfig.indexer_config };
+  }
 
   if (instanceConfig.media_naming && Object.keys(instanceConfig.media_naming).length > 0) {
     mergedTemplates.media_naming_api = {
@@ -1158,6 +1176,19 @@ export const mergeConfigsAndTemplates = async (
       config: instanceConfig_ ? { ...existingConfig, ...instanceConfig_ } : existingConfig,
       remote_paths: [...existingRemotePaths, ...instanceRemotePaths],
       delete_unmanaged_remote_paths: instanceConfig.download_clients.delete_unmanaged_remote_paths,
+    };
+  }
+
+  if (instanceConfig.notifications) {
+    const existingData = mergedTemplates.notifications?.data || [];
+    const instanceData = instanceConfig.notifications.data || [];
+    const existingDeleteManaged = mergedTemplates.notifications?.delete_unmanaged;
+    const instanceDeleteManaged = instanceConfig.notifications.delete_unmanaged;
+
+    mergedTemplates.notifications = {
+      data: [...existingData, ...instanceData],
+      update_password: instanceConfig.notifications.update_password,
+      delete_unmanaged: instanceDeleteManaged ? instanceDeleteManaged : existingDeleteManaged,
     };
   }
 

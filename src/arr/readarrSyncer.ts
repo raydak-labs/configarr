@@ -31,6 +31,7 @@ export class ReadarrSyncer {
         releaseProfiles: new ReleaseProfileReadarrSync(client),
         root: new ReadarrRootFolderSync(client),
         downloadClients: new ReadarrDownloadClientSync(client),
+        indexerConfig: client,
       },
     });
     const metadataSync = new ReadarrMetadataProfileSync(client);

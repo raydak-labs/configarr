@@ -37,6 +37,7 @@ export class RadarrSyncer {
         downloadClients: new RadarrDownloadClientSync(client),
         metadata: client,
         indexerSettings: client,
+        indexerConfig: client,
       },
       trash: createTrashOps(ARR),
     });
