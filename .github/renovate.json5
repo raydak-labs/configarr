@@ -4,6 +4,8 @@
     "github>blackdark/renovate-base//default.json5",
     // Override base schedule:weekly — configarr bumps are intentionally rare.
     "schedule:monthly",
+    // best-practices sets lockFileMaintenance weekly; schedule:monthly does not override it.
+    ":maintainLockFilesMonthly",
     ":pinVersions",
     "security:minimumReleaseAgeNpm",
   ],
@@ -53,7 +55,14 @@
       matchPackageNames: ["lscr.io/linuxserver/readarr"],
       versioning: "regex:^develop-(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)\\.(?<build>\\d+)-ls(?<revision>\\d+)$",
     },
-    // Lidarr stays on the floating `nightly` tag: protocol items[] (#481) are not in a release
-    // yet. Nothing to version there, so Renovate leaves it alone.
+    {
+      // Lidarr stays on the floating `nightly` tag: protocol items[] (#481) are not in a
+      // release yet. Base/best-practices enables pinDigests; keep nightly unpinned so e2e
+      // picks up new builds without waiting for a digest PR.
+      matchDatasources: ["docker"],
+      matchPackageNames: ["lscr.io/linuxserver/lidarr"],
+      pinDigests: false,
+    },
   ],
 }
+
