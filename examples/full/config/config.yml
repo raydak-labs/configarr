@@ -105,7 +105,7 @@ sonarr:
     #         on_health_issue: true
     #       include_health_warnings: false
     #       fields:
-    #         url: "https://hooks.slack.com/services/..."
+    #         url: "https://ops.example.com/sonarr-events"
     #         method: 1
     #       tags:
     #         - ops
