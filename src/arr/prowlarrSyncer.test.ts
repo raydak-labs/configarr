@@ -11,11 +11,17 @@ const deleteUnmanagedInstanceTags = vi.fn(async (..._args: unknown[]) => ({
 }));
 const syncDownloadClients = vi.fn(async () => ({ added: 0, updated: 0, removed: 0, failed: 0, diffEntries: [] }));
 const loadServerTags = vi.fn(async () => [{ id: 1, label: "keep" }]);
+const syncNotifications = vi.fn(async () => [{ resourceType: "Notification", name: "n", action: "create" as const }]);
+const validateNotifications = vi.fn(async () => undefined);
 
 const prowlarrClient = { getSystemStatus: vi.fn(async () => ({ version: "1" })) };
 vi.mock("../logger", () => ({ logger: { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
 vi.mock("../clients/client", () => ({ getClient: vi.fn(() => prowlarrClient) }));
 vi.mock("../prowlarr/prowlarrSyncer", () => ({ syncProwlarrProviders: (...args: unknown[]) => syncProviders(...(args as [])) }));
+vi.mock("../notifications/notifications", () => ({
+  syncNotifications: (...args: unknown[]) => syncNotifications(...(args as [])),
+  validateNotifications: (...args: unknown[]) => validateNotifications(...(args as [])),
+}));
 vi.mock("../tags/tags", () => ({
   loadServerTags: (...args: unknown[]) => loadServerTags(...(args as [])),
   deleteUnmanagedInstanceTags: (...args: unknown[]) => deleteUnmanagedInstanceTags(...(args as [])),
@@ -85,5 +91,29 @@ describe("ProwlarrSyncer", () => {
 
     expect(deleteUnmanagedInstanceTags).not.toHaveBeenCalled();
     expect(loadServerTags).toHaveBeenCalledTimes(1);
+  });
+
+  it("refuses indexer_config on Prowlarr", async () => {
+    await expect(new ProwlarrSyncer().run(instance({ indexer_config: { rss_sync_interval: 60 } }), "e2e")).rejects.toThrow(
+      "indexer_config is not supported on Prowlarr",
+    );
+  });
+
+  it("validates and syncs notifications on Prowlarr, passing notification tags to deleteUnmanagedInstanceTags", async () => {
+    const report = await new ProwlarrSyncer().run(
+      instance({
+        notifications: {
+          data: [{ name: "prowlarr-hook", type: "Webhook", tags: ["prowlarr-tag"] }],
+        },
+      }),
+      "e2e",
+    );
+
+    expect(validateNotifications).toHaveBeenCalledTimes(1);
+    expect(syncNotifications).toHaveBeenCalledTimes(1);
+    expect(deleteUnmanagedInstanceTags).toHaveBeenCalledTimes(1);
+    const deleteTagsOpts = deleteUnmanagedInstanceTags.mock.calls[0]![2] as { referencedTagLists: unknown[] };
+    expect(deleteTagsOpts.referencedTagLists).toContainEqual(["prowlarr-tag"]);
+    expect(report.entries.map((e) => e.resourceType)).toContain("Notification");
   });
 });

@@ -7,6 +7,7 @@ import {
   DownloadClientResource,
   IndexerProxyResource,
   IndexerResource,
+  NotificationResource,
   TagResource,
 } from "../__generated__/prowlarr/data-contracts";
 import { logger } from "../logger";
@@ -156,6 +157,26 @@ export class ProwlarrClient implements SystemClient, TagsClient<TagResource>, Do
 
   async deleteTag(id: string): Promise<void> {
     return this.api.v1TagDelete(+id);
+  }
+
+  async getNotificationSchema(): Promise<NotificationResource[]> {
+    return this.api.v1NotificationSchemaList();
+  }
+
+  async getNotifications(): Promise<NotificationResource[]> {
+    return this.api.v1NotificationList();
+  }
+
+  async createNotification(notification: NotificationResource): Promise<NotificationResource> {
+    return this.api.v1NotificationCreate(notification, { forceSave: true });
+  }
+
+  async updateNotification(id: string, notification: NotificationResource): Promise<NotificationResource> {
+    return this.api.v1NotificationUpdate(id, notification, { forceSave: true });
+  }
+
+  async deleteNotification(id: string): Promise<void> {
+    return this.api.v1NotificationDelete(+id);
   }
 
   getSystemStatus() {

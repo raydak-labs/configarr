@@ -17,6 +17,8 @@ import {
   ReleaseProfileResource,
   UiConfigResource,
   CustomFormatResource,
+  IndexerConfigResource,
+  NotificationResource,
 } from "../__generated__/readarr/data-contracts";
 import { logger } from "../logger";
 import type { CustomFormatRequest } from "../customFormats/customFormat.types";
@@ -199,6 +201,34 @@ export class ReadarrClient
 
   async getIndexers() {
     return this.api.v1IndexerList();
+  }
+
+  async getIndexerConfig(): Promise<IndexerConfigResource> {
+    return this.api.v1ConfigIndexerList();
+  }
+
+  async updateIndexerConfig(id: string, data: IndexerConfigResource): Promise<IndexerConfigResource> {
+    return this.api.v1ConfigIndexerUpdate(id, data);
+  }
+
+  async getNotificationSchema(): Promise<NotificationResource[]> {
+    return this.api.v1NotificationSchemaList();
+  }
+
+  async getNotifications(): Promise<NotificationResource[]> {
+    return this.api.v1NotificationList();
+  }
+
+  async createNotification(notification: NotificationResource): Promise<NotificationResource> {
+    return this.api.v1NotificationCreate(notification, { forceSave: true });
+  }
+
+  async updateNotification(id: string, notification: NotificationResource): Promise<NotificationResource> {
+    return this.api.v1NotificationUpdate(id, notification, { forceSave: true });
+  }
+
+  async deleteNotification(id: string): Promise<void> {
+    return this.api.v1NotificationDelete(+id);
   }
 
   async getTags(): Promise<TagResource[]> {

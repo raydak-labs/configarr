@@ -437,4 +437,50 @@ describe("SonarrClient", () => {
       { id: 3, name: "HEVC", indexerIds: [7], required: ["hevc"], tags: [4] },
     ]);
   });
+
+  it("routes indexer config through api v3 even when server advertises v5", async () => {
+    const requests: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (request: Request) => {
+        const url = new URL(request.url);
+        requests.push(`${request.method} ${url.pathname}`);
+        if (url.pathname === "/api") {
+          return Response.json({ current: "v5", deprecated: ["v3"] });
+        }
+        if (url.pathname === "/api/v3/config/indexer") {
+          return Response.json({ id: 1, rssSyncInterval: 60 });
+        }
+        throw new Error(`Unexpected request ${request.method} ${url.pathname}`);
+      }),
+    );
+    const client = new SonarrClient("http://sonarr.test", "api-key");
+    await expect(client.getIndexerConfig()).resolves.toMatchObject({ id: 1, rssSyncInterval: 60 });
+    expect(requests).toEqual(["GET /api/v3/config/indexer"]);
+  });
+
+  it("routes notifications through api v3 even when server advertises v5", async () => {
+    const requests: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (request: Request) => {
+        const url = new URL(request.url);
+        requests.push(`${request.method} ${url.pathname}`);
+        if (url.pathname === "/api") {
+          return Response.json({ current: "v5", deprecated: ["v3"] });
+        }
+        if (url.pathname === "/api/v3/notification/schema") {
+          return Response.json([{ id: 1, implementation: "Webhook" }]);
+        }
+        if (url.pathname === "/api/v3/notification") {
+          return Response.json([{ id: 10, name: "hook" }]);
+        }
+        throw new Error(`Unexpected request ${request.method} ${url.pathname}`);
+      }),
+    );
+    const client = new SonarrClient("http://sonarr.test", "api-key");
+    await client.getNotificationSchema();
+    await client.getNotifications();
+    expect(requests).toEqual(["GET /api/v3/notification/schema", "GET /api/v3/notification"]);
+  });
 });

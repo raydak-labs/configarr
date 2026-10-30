@@ -7,16 +7,30 @@ import { logger } from "../logger";
 import { syncProwlarrProviders } from "../prowlarr/prowlarrSyncer";
 import { deleteUnmanagedInstanceTags } from "../tags/tags";
 import { loadServerTags } from "../tags/tags";
-import { InputConfigProwlarrInstance } from "../types/config.types";
+import { InputConfigNotificationsSchema, InputConfigProwlarrInstance } from "../types/config.types";
 import { ConfigValidationError } from "../validation";
+import { validateNotifications, syncNotifications } from "../notifications/notifications";
 
 export class ProwlarrSyncer {
   async run(instance: InputConfigProwlarrInstance, instanceName: string): Promise<InstanceDiffReport> {
+    if (instance.indexer_config !== undefined) {
+      throw new ConfigValidationError("indexer_config is not supported on Prowlarr");
+    }
+
     const client = getClient("PROWLARR");
     const diffCollector = new DiffCollector();
 
     const system = await client.getSystemStatus();
     logger.info(`System status: ${JSON.stringify(system)}`);
+
+    if (instance.notifications !== undefined) {
+      const parsed = InputConfigNotificationsSchema.safeParse(instance.notifications);
+      if (!parsed.success) {
+        throw new ConfigValidationError(`Invalid notifications configuration: ${parsed.error.message}`);
+      }
+      instance.notifications = parsed.data;
+      await validateNotifications(client, instance.notifications);
+    }
 
     // ServerCache is media-manager shaped; Prowlarr only needs its tags and download-client schema slots.
     const serverCache = new ServerCache();
@@ -44,6 +58,10 @@ export class ProwlarrSyncer {
       }
     }
 
+    if (instance.notifications) {
+      diffCollector.add(await syncNotifications(client, instance.notifications, serverCache));
+    }
+
     if (instance.delete_unmanaged_tags?.enabled) {
       if (downloadClientsFailed) {
         // A client that survived its own sync may still hold a tag this run would drop,
@@ -62,6 +80,7 @@ export class ProwlarrSyncer {
                 instance.indexers?.data?.flatMap((indexer) => indexer.tags ?? []),
                 instance.indexer_proxies?.data?.flatMap((proxy) => proxy.tags ?? []),
                 instance.download_clients?.data?.flatMap((downloadClient) => downloadClient.tags ?? []),
+                instance.notifications?.data?.flatMap((notification) => notification.tags ?? []),
               ],
               onInUse: "throw",
             })

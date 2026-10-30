@@ -41,6 +41,7 @@ export class SonarrSyncer {
 
         metadata: client,
         indexerSettings: client,
+        indexerConfig: client,
       },
       trash: createTrashOps(ARR),
     });
