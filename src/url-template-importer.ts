@@ -1,6 +1,7 @@
 import ky from "ky";
 import yaml from "yaml";
 import { logger } from "./logger";
+import { normalizeTemplateCustomFormats } from "./templateCustomFormats";
 import { MappedTemplates } from "./types/common.types";
 import { TrashQualityDefinition, TrashQualityDefinitionSchema, TrashQP, TrashQPSchema } from "./types/trashguide.types";
 
@@ -60,20 +61,8 @@ const loadRecyclarrTemplateFromUrl = async (url: string): Promise<MappedTemplate
       return null;
     }
 
-    // Transform custom formats similar to local/recyclarr templates
     if (parsed.custom_formats) {
-      parsed.custom_formats = parsed.custom_formats.map((cf) => {
-        if (cf.assign_scores_to == null && cf.quality_profiles == null) {
-          logger.warn(`Template from URL "${url}" does not provide correct profile for custom format. Ignoring.`);
-        }
-
-        if (cf.quality_profiles) {
-          logger.warn(
-            `Deprecated: (Template from URL '${url}') For custom_formats please rename 'quality_profiles' to 'assign_scores_to'. See recyclarr v7.2.0`,
-          );
-        }
-        return { ...cf, assign_scores_to: cf.assign_scores_to ?? cf.quality_profiles ?? [] };
-      });
+      parsed.custom_formats = normalizeTemplateCustomFormats(parsed.custom_formats, "Template from URL", url);
     }
 
     logger.debug(`Successfully loaded template from URL: ${url}`);
