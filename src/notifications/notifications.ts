@@ -1,5 +1,4 @@
 import { getEnvs } from "../env";
-import { logger } from "../logger";
 import { ConfigValidationError } from "../validation";
 import { snakeToCamel } from "../util";
 import { isSecretFieldName, SECRET_MASK } from "../diffReport/redactSecrets";
@@ -8,7 +7,27 @@ import type { DiffEntry, FieldChange } from "../diffReport/diffReport.types";
 import type { InputConfigNotifications } from "../types/config.types";
 import type { NotificationsClient, TagsClient } from "../clients/capabilities";
 import type { ServerCache } from "../cache";
-import type { NotificationField, NotificationResourceItem } from "./notification.types";
+
+export type NotificationField = {
+  name?: string | null;
+  value?: unknown;
+  type?: string | null;
+  privacy?: string | null;
+  [key: string]: unknown;
+};
+
+export type NotificationResourceItem = {
+  id?: number;
+  name?: string | null;
+  implementation?: string | null;
+  implementationName?: string | null;
+  configContract?: string | null;
+  infoLink?: string | null;
+  tags?: number[] | null;
+  includeHealthWarnings?: boolean;
+  fields?: NotificationField[] | null;
+  [key: string]: unknown;
+};
 
 export function normalizeNotificationFields(configFields: Record<string, unknown>): Record<string, unknown> {
   const normalized: Record<string, unknown> = {};

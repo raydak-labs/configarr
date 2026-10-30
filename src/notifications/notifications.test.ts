@@ -1,12 +1,12 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { ServerCache } from "../cache";
 import { initEnvs } from "../env";
+import { DiffCollector } from "../diffReport/diffCollector";
 import { SECRET_MASK } from "../diffReport/redactSecrets";
 import { ConfigValidationError } from "../validation";
 import { InputConfigNotificationsSchema } from "../types/config.types";
-import { validateNotifications, syncNotifications } from "./notifications";
+import { validateNotifications, syncNotifications, type NotificationResourceItem } from "./notifications";
 import type { NotificationsClient, TagsClient } from "../clients/capabilities";
-import type { NotificationResourceItem } from "./notification.types";
 
 describe("notifications", () => {
   afterEach(() => {
@@ -602,6 +602,30 @@ describe("notifications", () => {
           fields: expect.arrayContaining([{ name: "url", value: "https://new.url" }]),
         }),
       );
+    });
+
+    // The documented limit of the secret guarantee: masking keys on privacy and name, not on content.
+    test("reports a changed webhook url in full, credentials included", async () => {
+      const oldUrl = "https://user:old-credential@hooks.example.com/services/old-path-token";
+      const newUrl = "https://user:new-credential@hooks.example.com/services/new-path-token";
+      const existing: NotificationResourceItem = {
+        id: 11,
+        name: "ops-hook",
+        implementation: "Webhook",
+        includeHealthWarnings: false,
+        fields: [{ name: "url", privacy: "normal", value: oldUrl }],
+      };
+      const client = mockClient({ existing: [existing] });
+
+      const diff = await syncNotifications(
+        client,
+        { data: [{ name: "ops-hook", type: "Webhook", fields: { url: newUrl } }] },
+        new ServerCache(),
+      );
+      const collector = new DiffCollector();
+      collector.add(diff);
+
+      expect(collector.getEntries()[0]?.fieldChanges).toEqual([{ field: "fields.url", from: oldUrl, to: newUrl }]);
     });
   });
 });

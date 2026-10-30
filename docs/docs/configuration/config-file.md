@@ -1238,7 +1238,7 @@ sonarr:
             on_health_issue: true
           include_health_warnings: false
           fields:
-            url: "https://hooks.slack.com/services/..."
+            url: "https://ops.example.com/sonarr-events"
             method: 1
           tags:
             - ops
@@ -1254,7 +1254,11 @@ Events not listed in the `events` map remain set to false when creating a notifi
 ### Secrets and Passwords
 
 Sensitive fields such as passwords, API keys, and usernames (marked as secret by the server schema) are masked with asterisks by the server.
-When `update_password` is `false` (default), Configarr treats masked remote values as unchanged and does not re-send or diff them. When `update_password` is set to `true`, secrets are always updated and sent. Secret values are never exposed in diff reports or log output.
+When `update_password` is `false` (default), Configarr treats masked remote values as unchanged and does not re-send or diff them. When `update_password` is set to `true`, secrets are always updated and sent. Values of secret fields are masked in diff reports and log output.
+
+:::warning
+Masking follows the server's privacy marker and the field name, not the content. A `url` field is not a secret field, so a changed webhook URL appears in full in diff reports and log output, including any credential or token it holds.
+:::
 
 ### Delete Unmanaged
 
