@@ -192,8 +192,16 @@ export function compareObjectsCarr(serverObject: any, localObject: any, parent?:
             continue;
           }
 
-          for (let i = 0; i < serverProperty.length; i++) {
-            const { changes: subChanges } = compareObjectsCarr(serverProperty[i], localProperty[i]);
+          for (let i = 0; i < localProperty.length; i++) {
+            const serverItem = serverProperty[i];
+            const localItem = localProperty[i];
+            if (localItem === null || typeof localItem !== "object" || serverItem === null || typeof serverItem !== "object") {
+              if (serverItem !== localItem) {
+                changes.push({ field: `${path}[${i}]`, from: serverItem, to: localItem });
+              }
+              continue;
+            }
+            const { changes: subChanges } = compareObjectsCarr(serverItem, localItem);
             changes.push(...subChanges.map((subChange) => ({ ...subChange, field: `${path}[${i}].${subChange.field}` })));
           }
         } else if (typeof localProperty === "object" && localProperty !== null) {

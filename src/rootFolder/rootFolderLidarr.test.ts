@@ -435,6 +435,22 @@ describe("LidarrRootFolderSync", () => {
       expect(result).toBeNull();
     });
 
+    it("updates a root folder when a default tag is replaced", async () => {
+      serverCache.tags = [
+        { id: 100, label: "old" },
+        { id: 200, label: "new" },
+      ];
+      mockApi.getRootfolders.mockResolvedValue([
+        { path: "/music", id: 1, name: "Folder", defaultMetadataProfileId: 10, defaultQualityProfileId: 1, defaultTags: [100] },
+      ]);
+      const result = await new LidarrRootFolderSync(mockApi).syncRootFolders(
+        [{ path: "/music", name: "Folder", metadata_profile: "Standard", quality_profile: "Any", tags: ["new"] }],
+        serverCache,
+      );
+      expect(result.updated).toBe(1);
+      expect(mockApi.updateRootFolder).toHaveBeenCalledWith("1", expect.objectContaining({ defaultTags: [200] }));
+    });
+
     it("does not create tags while calculating a dry-run diff", async () => {
       vi.mocked(getEnvs).mockReturnValue({ DRY_RUN: true, LOG_LEVEL: "fatal", CONFIGARR_VERSION: "test" } as never);
       mockApi.getRootfolders.mockResolvedValue([

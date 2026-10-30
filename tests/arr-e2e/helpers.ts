@@ -466,16 +466,16 @@ export async function cleanupMediaE2e(client: MediaArrClient): Promise<void> {
       await tryDelete(errors, "release", () => client.deleteReleaseProfile(String(profile.id)));
     }
   }
-  for (const tag of tags) {
-    if (tag.id != null && (tag.label === "e2e-release" || tag.label === "e2e-release-excluded")) {
-      await tryDelete(errors, "release tag", () => client.deleteTag(String(tag.id)));
-    }
-  }
-
   const folders = await client.getRootfolders();
   for (const folder of folders) {
     if (folder.id != null && folder.path?.includes("/data/e2e")) {
       await tryDelete(errors, "root", () => client.deleteRootFolder(String(folder.id)));
+    }
+  }
+
+  for (const tag of tags) {
+    if (tag.id != null && (tag.label === "e2e-release" || tag.label === "e2e-release-excluded")) {
+      await tryDelete(errors, "release tag", () => client.deleteTag(String(tag.id)));
     }
   }
 

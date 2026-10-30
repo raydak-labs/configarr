@@ -374,22 +374,38 @@ describe("lidarr (live)", () => {
       });
     const pathsOf = async () => (await client.getRootfolders()).map((f) => f.path ?? "");
 
-    const created = await syncConfig(yaml([rootFolder(E2E_ROOT_A, "e2e-root"), rootFolder(E2E_ROOT_B, "e2e-root-b")]));
+    const created = await syncConfig(
+      yaml([{ ...rootFolder(E2E_ROOT_A, "e2e-root"), tags: ["e2e-release"] }, rootFolder(E2E_ROOT_B, "e2e-root-b")]),
+    );
     assertPipelineSucceeded(created.result, ["LIDARR"]);
     expect(await pathsOf()).toEqual(expect.arrayContaining([E2E_ROOT_A, E2E_ROOT_B]));
 
-    const second = await syncConfig(yaml([rootFolder(E2E_ROOT_A, "e2e-root"), rootFolder(E2E_ROOT_B, "e2e-root-b")]), created.workspace);
+    const second = await syncConfig(
+      yaml([{ ...rootFolder(E2E_ROOT_A, "e2e-root"), tags: ["e2e-release"] }, rootFolder(E2E_ROOT_B, "e2e-root-b")]),
+      created.workspace,
+    );
     assertPipelineSucceeded(second.result, ["LIDARR"]);
     assertDiffUpToDate(second.result, ["LIDARR"]);
 
+    const tagChanged = await syncConfig(
+      yaml([{ ...rootFolder(E2E_ROOT_A, "e2e-root"), tags: ["e2e-release-excluded"] }, rootFolder(E2E_ROOT_B, "e2e-root-b")]),
+      created.workspace,
+    );
+    assertPipelineSucceeded(tagChanged.result, ["LIDARR"]);
+    const newTag = (await client.getTags()).find((tag) => tag.label === "e2e-release-excluded");
+    expect((await client.getRootfolders()).find((folder) => folder.path === E2E_ROOT_A)?.defaultTags).toEqual([newTag?.id]);
+
     const renamed = await syncConfig(
-      yaml([rootFolder(E2E_ROOT_A, "e2e-root-renamed"), rootFolder(E2E_ROOT_B, "e2e-root-b")]),
+      yaml([{ ...rootFolder(E2E_ROOT_A, "e2e-root-renamed"), tags: ["e2e-release-excluded"] }, rootFolder(E2E_ROOT_B, "e2e-root-b")]),
       created.workspace,
     );
     assertPipelineSucceeded(renamed.result, ["LIDARR"]);
     expect((await client.getRootfolders()).find((f) => f.path === E2E_ROOT_A)?.name).toBe("e2e-root-renamed");
 
-    const deleted = await syncConfig(yaml([rootFolder(E2E_ROOT_A, "e2e-root-renamed")]), created.workspace);
+    const deleted = await syncConfig(
+      yaml([{ ...rootFolder(E2E_ROOT_A, "e2e-root-renamed"), tags: ["e2e-release-excluded"] }]),
+      created.workspace,
+    );
     assertPipelineSucceeded(deleted.result, ["LIDARR"]);
     expect(await pathsOf()).toContain(E2E_ROOT_A);
     expect(await pathsOf()).not.toContain(E2E_ROOT_B);
