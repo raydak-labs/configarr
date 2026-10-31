@@ -36,6 +36,8 @@ import {
   InputConfigIncludeItem,
   InputConfigInstance,
   InputConfigMetadataProfile,
+  InputConfigNotification,
+  InputConfigNotifications,
   InputConfigRecyclarrReleaseProfile,
   InputConfigReleaseProfile,
   InputConfigRemotePath,
@@ -363,6 +365,35 @@ function filterConfigarrReleaseProfiles(
   return ours;
 }
 
+/**
+ * Merge a notifications block onto an earlier one. Entries with the same name (case-insensitive) are replaced by the
+ * later entry; update_password keeps the earlier value when the later block omits it; delete_unmanaged.ignore lists
+ * are united while the later block decides enabled.
+ */
+export const mergeNotifications = (
+  existing: InputConfigNotifications | undefined,
+  incoming: InputConfigNotifications,
+): InputConfigNotifications => {
+  const byName = new Map<string, InputConfigNotification>();
+  for (const entry of [...(existing?.data ?? []), ...(incoming.data ?? [])]) {
+    byName.set(entry.name.toLowerCase(), entry);
+  }
+
+  const existingDelete = existing?.delete_unmanaged;
+  const incomingDelete = incoming.delete_unmanaged;
+
+  return {
+    data: [...byName.values()],
+    update_password: incoming.update_password ?? existing?.update_password,
+    delete_unmanaged: incomingDelete
+      ? {
+          enabled: incomingDelete.enabled,
+          ignore: [...new Set([...(existingDelete?.ignore ?? []), ...(incomingDelete.ignore ?? [])])],
+        }
+      : existingDelete,
+  };
+};
+
 const includeRecyclarrTemplate = (
   template: MappedTemplates,
   {
@@ -408,16 +439,7 @@ const includeRecyclarrTemplate = (
     mergedTemplates.indexer_config = { ...mergedTemplates.indexer_config, ...template.indexer_config };
   }
   if (template.notifications) {
-    const existingData = mergedTemplates.notifications?.data || [];
-    const templateData = template.notifications.data || [];
-    const existingDeleteManaged = mergedTemplates.notifications?.delete_unmanaged;
-    const templateDeleteManaged = template.notifications.delete_unmanaged;
-
-    mergedTemplates.notifications = {
-      data: [...existingData, ...templateData],
-      update_password: template.notifications.update_password,
-      delete_unmanaged: templateDeleteManaged ? templateDeleteManaged : existingDeleteManaged,
-    };
+    mergedTemplates.notifications = mergeNotifications(mergedTemplates.notifications, template.notifications);
   }
 
   if (template.delete_unmanaged_metadata_profiles) {
@@ -1180,16 +1202,7 @@ export const mergeConfigsAndTemplates = async (
   }
 
   if (instanceConfig.notifications) {
-    const existingData = mergedTemplates.notifications?.data || [];
-    const instanceData = instanceConfig.notifications.data || [];
-    const existingDeleteManaged = mergedTemplates.notifications?.delete_unmanaged;
-    const instanceDeleteManaged = instanceConfig.notifications.delete_unmanaged;
-
-    mergedTemplates.notifications = {
-      data: [...existingData, ...instanceData],
-      update_password: instanceConfig.notifications.update_password,
-      delete_unmanaged: instanceDeleteManaged ? instanceDeleteManaged : existingDeleteManaged,
-    };
+    mergedTemplates.notifications = mergeNotifications(mergedTemplates.notifications, instanceConfig.notifications);
   }
 
   if (mergedTemplates.custom_formats && mergedTemplates.custom_formats.length > 0) {

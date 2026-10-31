@@ -168,11 +168,11 @@ export class ProwlarrClient implements SystemClient, TagsClient<TagResource>, Do
   }
 
   async createNotification(notification: NotificationResource): Promise<NotificationResource> {
-    return this.api.v1NotificationCreate(notification, { forceSave: true });
+    return this.api.v1NotificationCreate(notification, { forceSave: true }, { redactResponseErrors: true });
   }
 
   async updateNotification(id: string, notification: NotificationResource): Promise<NotificationResource> {
-    return this.api.v1NotificationUpdate(id, notification, { forceSave: true });
+    return this.api.v1NotificationUpdate(id, notification, { forceSave: true }, { redactResponseErrors: true });
   }
 
   async deleteNotification(id: string): Promise<void> {

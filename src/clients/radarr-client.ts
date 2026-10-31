@@ -256,11 +256,11 @@ export class RadarrClient
   }
 
   async createNotification(notification: NotificationResource): Promise<NotificationResource> {
-    return this.api.v3NotificationCreate(notification, { forceSave: true });
+    return this.api.v3NotificationCreate(notification, { forceSave: true }, { redactResponseErrors: true });
   }
 
   async updateNotification(id: string, notification: NotificationResource): Promise<NotificationResource> {
-    return this.api.v3NotificationUpdate(+id, notification, { forceSave: true });
+    return this.api.v3NotificationUpdate(+id, notification, { forceSave: true }, { redactResponseErrors: true });
   }
 
   async deleteNotification(id: string): Promise<void> {
