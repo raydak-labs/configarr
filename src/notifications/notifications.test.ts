@@ -499,7 +499,7 @@ describe("notifications", () => {
 
       const tagChange = diff[0]?.fieldChanges?.find((change) => change.field === "tags");
       expect(tagChange?.from).toEqual([7]);
-      expect(tagChange?.to).toEqual([-1, 7]);
+      expect(tagChange?.to).toEqual([7, "new-label"]);
       expect(client.updateMock).not.toHaveBeenCalled();
     });
 
