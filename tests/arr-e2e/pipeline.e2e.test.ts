@@ -77,7 +77,21 @@ const qualityProfile = (until_quality: string, qualities: Record<string, unknown
 
 /** One YAML with all five media instances and Prowlarr, mirroring a real multi-instance config. */
 function pipelineConfig(): Record<string, unknown> {
-  const shared = { custom_formats: cfAssignBlock(), ...e2eMediaSettings() };
+  const shared = {
+    custom_formats: cfAssignBlock(),
+    ...e2eMediaSettings(),
+    indexer_config: { rss_sync_interval: 60, retention: 30 },
+    notifications: {
+      data: [
+        {
+          name: "e2e-pipeline-notification",
+          type: "CustomScript",
+          events: { on_grab: true },
+          fields: { path: "/data/e2e/test.sh" },
+        },
+      ],
+    },
+  };
   return {
     telemetry: false,
     customFormatDefinitions: [e2eCustomFormatDefinition()],
@@ -110,6 +124,16 @@ function pipelineConfig(): Record<string, unknown> {
       e2e: {
         ...prowlarrConnection(),
         tags: ["e2e-tag"],
+        notifications: {
+          data: [
+            {
+              name: "e2e-pipeline-notification",
+              type: "CustomScript",
+              events: { on_grab: true },
+              fields: { path: "/data/e2e/test.sh" },
+            },
+          ],
+        },
         sync_profiles: {
           data: [
             {

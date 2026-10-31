@@ -17,7 +17,9 @@ import {
   UiConfigResource,
   CustomFormatResource,
   ImportListResource,
+  IndexerConfigResource,
   MetadataResource,
+  NotificationResource,
 } from "../__generated__/sonarr/data-contracts";
 import type {
   ApiInfoResource as SonarrApiInfoV5,
@@ -726,6 +728,34 @@ export class SonarrClient
       () => this.apiV3.v3IndexerUpdate(+id, indexer, { forceSave: true }, { redactResponseErrors: true }),
       () => this.apiV5.v5IndexerUpdate(+id, indexer, { skipTesting: true }, { redactResponseErrors: true }),
     );
+  }
+
+  async getIndexerConfig(): Promise<IndexerConfigResource> {
+    return this.apiV3.v3ConfigIndexerList();
+  }
+
+  async updateIndexerConfig(id: string, data: IndexerConfigResource): Promise<IndexerConfigResource> {
+    return this.apiV3.v3ConfigIndexerUpdate(id, data);
+  }
+
+  async getNotificationSchema(): Promise<NotificationResource[]> {
+    return this.apiV3.v3NotificationSchemaList();
+  }
+
+  async getNotifications(): Promise<NotificationResource[]> {
+    return this.apiV3.v3NotificationList();
+  }
+
+  async createNotification(notification: NotificationResource): Promise<NotificationResource> {
+    return this.apiV3.v3NotificationCreate(notification, { forceSave: true }, { redactResponseErrors: true });
+  }
+
+  async updateNotification(id: string, notification: NotificationResource): Promise<NotificationResource> {
+    return this.apiV3.v3NotificationUpdate(+id, notification, { forceSave: true }, { redactResponseErrors: true });
+  }
+
+  async deleteNotification(id: string): Promise<void> {
+    return this.apiV3.v3NotificationDelete(+id);
   }
 
   async getTags(): Promise<TagResource[]> {

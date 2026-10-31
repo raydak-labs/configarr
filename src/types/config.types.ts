@@ -371,6 +371,22 @@ export const IndexerSettingsSchema = z
   .strict();
 export type IndexerSettings = z.infer<typeof IndexerSettingsSchema>;
 
+export const IndexerConfigSchema = z
+  .object({
+    rss_sync_interval: z
+      .number()
+      .int()
+      .refine((val) => val === 0 || (val >= 10 && val <= 120), {
+        message: "rss_sync_interval must be between 10 and 120 or 0 to disable",
+      })
+      .optional(),
+    retention: z.number().int().min(0, "retention must be a nonnegative integer").optional(),
+    minimum_age: z.number().int().min(0, "minimum_age must be a nonnegative integer").optional(),
+    maximum_size: z.number().int().min(0, "maximum_size must be a nonnegative integer").optional(),
+  })
+  .strict();
+export type IndexerConfig = z.infer<typeof IndexerConfigSchema>;
+
 export const MediaNamingApiTypeSchema = z.object({}).passthrough();
 export type MediaNamingApiType = z.infer<typeof MediaNamingApiTypeSchema>;
 
@@ -484,6 +500,23 @@ export const InputConfigProwlarrDownloadClientsSchema = z.object({
 });
 export type InputConfigProwlarrDownloadClients = z.infer<typeof InputConfigProwlarrDownloadClientsSchema>;
 
+export const InputConfigNotificationSchema = z.object({
+  name: z.string().min(1),
+  type: z.string().min(1),
+  events: z.record(z.string(), z.boolean()).optional(),
+  include_health_warnings: z.boolean().optional(),
+  fields: z.record(z.string(), z.unknown()).optional(),
+  tags: z.array(z.union([z.string(), z.number()])).optional(),
+});
+export type InputConfigNotification = z.infer<typeof InputConfigNotificationSchema>;
+
+export const InputConfigNotificationsSchema = z.object({
+  data: z.array(InputConfigNotificationSchema).optional(),
+  update_password: z.boolean().optional(),
+  delete_unmanaged: DeleteUnmanagedSchema.optional(),
+});
+export type InputConfigNotifications = z.infer<typeof InputConfigNotificationsSchema>;
+
 export const InputConfigProwlarrInstanceSchema = z.object({
   base_url: z.string(),
   api_key: z.string(),
@@ -520,6 +553,8 @@ export const InputConfigProwlarrInstanceSchema = z.object({
     })
     .optional(),
   download_clients: InputConfigProwlarrDownloadClientsSchema.optional(),
+  notifications: InputConfigNotificationsSchema.optional(),
+  indexer_config: z.unknown().optional(),
 });
 export type InputConfigProwlarrInstance = z.infer<typeof InputConfigProwlarrInstanceSchema>;
 
@@ -597,6 +632,8 @@ export const InputConfigArrInstanceSchema = z.object({
   metadata: MetadataSettingsSchema.optional(),
   // @experimental @since v1.39.0
   indexer_settings: IndexerSettingsSchema.optional(),
+  indexer_config: IndexerConfigSchema.optional(),
+  notifications: InputConfigNotificationsSchema.optional(),
   media_naming_api: MediaNamingApiTypeSchema.optional(),
   renameQualityProfiles: z.array(z.object({ from: z.string(), to: z.string() })).optional(),
   cloneQualityProfiles: z.array(z.object({ from: z.string(), to: z.string() })).optional(),

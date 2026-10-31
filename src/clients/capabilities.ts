@@ -110,3 +110,26 @@ export interface ImportListsClient<T extends { id?: number; name?: string | null
   updateImportList(id: string, item: T): Promise<T>;
   deleteImportList(id: string): Promise<void>;
 }
+
+export interface IndexerConfigResourceShared {
+  id?: number;
+  minimumAge?: number;
+  retention?: number;
+  maximumSize?: number;
+  rssSyncInterval?: number;
+}
+
+export interface IndexerConfigClient<T extends IndexerConfigResourceShared = IndexerConfigResourceShared> {
+  getIndexerConfig(): Promise<T>;
+  updateIndexerConfig(id: string, data: T): Promise<unknown>;
+}
+
+export interface NotificationsClient<
+  Notification extends { id?: number; name?: string | null } = { id?: number; name?: string | null; implementation?: string | null },
+> {
+  getNotificationSchema(): Promise<Notification[]>;
+  getNotifications(): Promise<Notification[]>;
+  createNotification(notification: Notification): Promise<Notification>;
+  updateNotification(id: string, notification: Notification): Promise<Notification>;
+  deleteNotification(id: string): Promise<void>;
+}

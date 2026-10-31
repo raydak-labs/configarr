@@ -86,6 +86,30 @@ sonarr:
     ui_config:
       firstDayOfWeek: 1
 
+    # indexer_config: # global indexer configuration
+    #   rss_sync_interval: 60
+    #   retention: 0
+    #   minimum_age: 0
+    #   maximum_size: 0
+
+    # notifications: # notification connections
+    #   update_password: false
+    #   delete_unmanaged:
+    #     enabled: false
+    #     ignore: []
+    #   data:
+    #     - name: ops-webhook
+    #       type: Webhook
+    #       events:
+    #         on_grab: true
+    #         on_health_issue: true
+    #       include_health_warnings: false
+    #       fields:
+    #         url: "https://ops.example.com/sonarr-events"
+    #         method: 1
+    #       tags:
+    #         - ops
+
     # indexer_settings: # experimental, since v1.39.0; existing Sonarr/Radarr indexers
     #   data:
     #     - name: Example (Prowlarr)

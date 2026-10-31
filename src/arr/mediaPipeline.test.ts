@@ -52,6 +52,13 @@ vi.mock("../downloadClientConfig/downloadClientConfigSyncer", () => ({
   downloadClientConfigDiffToDiffEntries: vi.fn(() => []),
 }));
 vi.mock("../remotePaths/remotePathSyncer", () => ({ syncRemotePaths: vi.fn(async () => ({ diffEntries: [] })) }));
+vi.mock("../indexerConfig/indexerConfigSync", () => ({
+  syncIndexerConfig: vi.fn(async () => [{ resourceType: "IndexerConfig", name: "Global", action: "update" as const }]),
+}));
+vi.mock("../notifications/notifications", () => ({
+  validateNotifications: vi.fn(async () => undefined),
+  syncNotifications: vi.fn(async () => [{ resourceType: "Notification", name: "hook", action: "create" as const }]),
+}));
 
 import { mergeConfigsAndTemplates } from "../config";
 import { getEnvs } from "../env";
@@ -59,6 +66,8 @@ import { logger } from "../logger";
 import { syncDownloadClientConfig } from "../downloadClientConfig/downloadClientConfigSyncer";
 import { syncRemotePaths } from "../remotePaths/remotePathSyncer";
 import { syncUiConfig } from "../uiConfigs/uiConfigSyncer";
+import { syncIndexerConfig } from "../indexerConfig/indexerConfigSync";
+import { validateNotifications, syncNotifications } from "../notifications/notifications";
 
 type Order = string[];
 
@@ -500,5 +509,39 @@ describe("completeMediaSync", () => {
 
     expect(collector.add).toHaveBeenCalledWith([{ resourceType: "RootFolder", name: "/data", action: "create" }]);
     expect(collector.add).toHaveBeenCalledWith([{ resourceType: "DownloadClient", name: "qbit", action: "create" }]);
+  });
+
+  it("syncs indexer_config and notifications, passing notification tags to tag cleanup", async () => {
+    const order: Order = [];
+    const syncObjects = syncs(order);
+    const mockIndexerClient = { getIndexerConfig: vi.fn(), updateIndexerConfig: vi.fn() };
+    syncObjects.indexerConfig = mockIndexerClient as any;
+
+    const collector = { add: vi.fn(), getEntries: vi.fn(() => []) };
+    const deleteUnmanagedInstanceTags = vi.fn(async (..._args: unknown[]) => ({ added: 0, removed: 0, diffEntries: [] }));
+    const tagsModule = await import("../tags/tags");
+    vi.spyOn(tagsModule, "deleteUnmanagedInstanceTags").mockImplementation(deleteUnmanagedInstanceTags);
+
+    await completeMediaSync({
+      arrType: "SONARR",
+      instanceName: "test",
+      client: client() as never,
+      config: config({
+        indexer_config: { rss_sync_interval: 60 },
+        notifications: {
+          data: [{ name: "hook", type: "Webhook", tags: ["notif-tag"] }],
+        },
+        delete_unmanaged_tags: { enabled: true },
+      }),
+      serverCache: new ServerCache({ tags: [] }),
+      collector: collector as never,
+      syncs: syncObjects,
+    } as never);
+
+    expect(syncIndexerConfig).toHaveBeenCalledWith(mockIndexerClient, { rss_sync_interval: 60 });
+    expect(syncNotifications).toHaveBeenCalled();
+    expect(deleteUnmanagedInstanceTags).toHaveBeenCalled();
+    const deleteTagsOpts = deleteUnmanagedInstanceTags.mock.calls[0]?.[2] as { referencedTagLists: unknown[] };
+    expect(deleteTagsOpts.referencedTagLists).toContainEqual(["notif-tag"]);
   });
 });

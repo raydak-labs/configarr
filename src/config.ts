@@ -36,6 +36,8 @@ import {
   InputConfigIncludeItem,
   InputConfigInstance,
   InputConfigMetadataProfile,
+  InputConfigNotification,
+  InputConfigNotifications,
   InputConfigRecyclarrReleaseProfile,
   InputConfigReleaseProfile,
   InputConfigRemotePath,
@@ -363,6 +365,50 @@ function filterConfigarrReleaseProfiles(
   return ours;
 }
 
+/**
+ * Merge a notifications block onto an earlier one. Entries with the same name (case-insensitive) are replaced by the
+ * later entry; update_password keeps the earlier value when the later block omits it; delete_unmanaged.ignore lists
+ * are united while the later block decides enabled. Two entries with the same name inside one block are refused.
+ */
+export const mergeNotifications = (
+  existing: InputConfigNotifications | undefined,
+  incoming: InputConfigNotifications,
+): InputConfigNotifications => {
+  for (const block of [existing, incoming]) {
+    const seen = new Set<string>();
+    for (const entry of block?.data ?? []) {
+      const key = entry.name.toLowerCase();
+      if (seen.has(key)) {
+        throw new ConfigValidationError(`Duplicate notification '${entry.name}'`);
+      }
+      seen.add(key);
+    }
+  }
+
+  const byName = new Map<string, InputConfigNotification>();
+  for (const entry of [...(existing?.data ?? []), ...(incoming.data ?? [])]) {
+    byName.set(entry.name.toLowerCase(), entry);
+  }
+
+  const existingDelete = existing?.delete_unmanaged;
+  const incomingDelete = incoming.delete_unmanaged;
+
+  return {
+    data: [...byName.values()],
+    update_password: incoming.update_password ?? existing?.update_password,
+    delete_unmanaged: incomingDelete
+      ? {
+          enabled: incomingDelete.enabled,
+          ignore: [...new Set([...(existingDelete?.ignore ?? []), ...(incomingDelete.ignore ?? [])])],
+        }
+      : existingDelete,
+  };
+};
+
+/**
+ * Merge a single template into the accumulated instance template mapping.
+ * Applies template rules and settings into the target merged template object.
+ */
 const includeRecyclarrTemplate = (
   template: MappedTemplates,
   {
@@ -404,6 +450,12 @@ const includeRecyclarrTemplate = (
 
   if (template.metadata !== undefined) mergedTemplates.metadata = template.metadata;
   if (template.indexer_settings !== undefined) mergedTemplates.indexer_settings = template.indexer_settings;
+  if (template.indexer_config !== undefined) {
+    mergedTemplates.indexer_config = { ...mergedTemplates.indexer_config, ...template.indexer_config };
+  }
+  if (template.notifications) {
+    mergedTemplates.notifications = mergeNotifications(mergedTemplates.notifications, template.notifications);
+  }
 
   if (template.delete_unmanaged_metadata_profiles) {
     mergedTemplates.delete_unmanaged_metadata_profiles = template.delete_unmanaged_metadata_profiles;
@@ -808,6 +860,10 @@ function mergeQualitySizes(
   return [...merged.values()];
 }
 
+/**
+ * Merge global configuration, instance configuration, and referenced templates into a single instance configuration.
+ * Returns the merged configuration instance, or throws a ConfigValidationError if validation fails.
+ */
 export const mergeConfigsAndTemplates = async (
   globalConfig: InputConfigSchema,
   instanceConfig: InputConfigArrInstance,
@@ -919,6 +975,9 @@ export const mergeConfigsAndTemplates = async (
   }
   if (instanceConfig.metadata !== undefined) mergedTemplates.metadata = instanceConfig.metadata;
   if (instanceConfig.indexer_settings !== undefined) mergedTemplates.indexer_settings = instanceConfig.indexer_settings;
+  if (instanceConfig.indexer_config !== undefined) {
+    mergedTemplates.indexer_config = { ...mergedTemplates.indexer_config, ...instanceConfig.indexer_config };
+  }
 
   if (instanceConfig.media_naming && Object.keys(instanceConfig.media_naming).length > 0) {
     mergedTemplates.media_naming_api = {
@@ -1159,6 +1218,10 @@ export const mergeConfigsAndTemplates = async (
       remote_paths: [...existingRemotePaths, ...instanceRemotePaths],
       delete_unmanaged_remote_paths: instanceConfig.download_clients.delete_unmanaged_remote_paths,
     };
+  }
+
+  if (instanceConfig.notifications) {
+    mergedTemplates.notifications = mergeNotifications(mergedTemplates.notifications, instanceConfig.notifications);
   }
 
   if (mergedTemplates.custom_formats && mergedTemplates.custom_formats.length > 0) {
