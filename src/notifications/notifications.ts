@@ -29,6 +29,10 @@ export type NotificationResourceItem = {
   [key: string]: unknown;
 };
 
+/**
+ * Normalize notification field keys by mapping snake_case names to their camelCase equivalents.
+ * Returns a new object containing the camelCase mappings alongside original keys.
+ */
 export function normalizeNotificationFields(configFields: Record<string, unknown>): Record<string, unknown> {
   const normalized: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(configFields)) {
@@ -41,6 +45,10 @@ export function normalizeNotificationFields(configFields: Record<string, unknown
   return normalized;
 }
 
+/**
+ * Determine whether a notification field represents sensitive credentials based on schema privacy or name heuristics.
+ * Returns true if the field requires secret masking or redaction.
+ */
 export function isSecretNotificationField(privacy: string | null | undefined, name: string): boolean {
   if (privacy === "password" || privacy === "apiKey" || privacy === "userName") {
     return true;
@@ -48,11 +56,19 @@ export function isSecretNotificationField(privacy: string | null | undefined, na
   return isSecretFieldName(name);
 }
 
+/**
+ * Find the notification schema item corresponding to a given notification type name.
+ * Returns the matching schema definition if found, or undefined if no match exists.
+ */
 export function findNotificationSchema(schema: NotificationResourceItem[], typeName: string): NotificationResourceItem | undefined {
   const target = typeName.toLowerCase();
   return schema.find((s) => s.implementation?.toLowerCase() === target || s.implementationName?.toLowerCase() === target);
 }
 
+/**
+ * Validate configured notification entries against server schemas and existing notifications.
+ * Throws a ConfigValidationError if types are unknown, fields or events are unsupported, or notification names conflict.
+ */
 export async function validateNotifications(client: NotificationsClient, config: InputConfigNotifications): Promise<void> {
   const [schema, existing] = await Promise.all([
     client.getNotificationSchema() as Promise<NotificationResourceItem[]>,
@@ -128,6 +144,10 @@ export async function validateNotifications(client: NotificationsClient, config:
   }
 }
 
+/**
+ * Synchronize configured notifications with the remote *arr instance and prune unmanaged entries.
+ * Returns an array of diff entries representing all created, updated, and deleted notifications.
+ */
 export async function syncNotifications(
   client: NotificationsClient & TagsClient,
   config: InputConfigNotifications,

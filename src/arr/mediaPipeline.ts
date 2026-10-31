@@ -201,6 +201,10 @@ export type MediaSyncToQualityProfilesArgs<T extends MediaArrType = MediaArrType
   supportsProfileQualitySizes?: boolean;
 };
 
+/**
+ * Run initial media synchronization steps through quality profile diffing and validation.
+ * Returns the media sync context for downstream sync phases, or throws a ConfigValidationError if configuration fails validation.
+ */
 export const runMediaSyncToQualityProfiles = async <T extends MediaArrType>(
   args: MediaSyncToQualityProfilesArgs<T>,
 ): Promise<MediaSyncContext<T>> => {
@@ -483,6 +487,10 @@ export const runMediaSyncToQualityProfiles = async <T extends MediaArrType>(
   return { arrType, instanceName, client, config, serverCache, collector, syncs, qualityDefinitionDefaults };
 };
 
+/**
+ * Complete remaining synchronization steps for media *arr instances and prune unmanaged tags.
+ * Returns the final instance diff report containing all applied and planned resource changes.
+ */
 export const completeMediaSync = async <T extends MediaArrType>(ctx: MediaSyncContext<T>): Promise<InstanceDiffReport> => {
   const { arrType, instanceName, client, config, serverCache, collector, syncs } = ctx;
   const delaySync = syncs.delay;

@@ -12,6 +12,10 @@ import { ConfigValidationError } from "../validation";
 import { validateNotifications, syncNotifications } from "../notifications/notifications";
 
 export class ProwlarrSyncer {
+  /**
+   * Run synchronization for a Prowlarr instance across providers, download clients, notifications, and tags.
+   * Returns the accumulated instance diff report, or throws a ConfigValidationError if configuration is invalid.
+   */
   async run(instance: InputConfigProwlarrInstance, instanceName: string): Promise<InstanceDiffReport> {
     if (instance.indexer_config !== undefined) {
       throw new ConfigValidationError("indexer_config is not supported on Prowlarr");

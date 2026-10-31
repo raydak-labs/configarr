@@ -3,6 +3,10 @@ import type { DiffEntry, FieldChange } from "../diffReport/diffReport.types";
 import type { IndexerConfig } from "../types/config.types";
 import type { IndexerConfigClient, IndexerConfigResourceShared } from "../clients/capabilities";
 
+/**
+ * Synchronize global indexer configuration settings with the remote *arr instance.
+ * Returns an array of diff entries for any detected changes, or throws if the server config lacks an ID.
+ */
 export async function syncIndexerConfig(client: IndexerConfigClient, config: IndexerConfig): Promise<DiffEntry[]> {
   const current = await client.getIndexerConfig();
   const changes: FieldChange[] = [];
