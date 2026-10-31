@@ -1266,6 +1266,8 @@ When `delete_unmanaged.enabled` is `true`, any notifications present on the serv
 
 ### Templates
 
+Notification templates apply to the media managers only (Sonarr, Radarr, Lidarr, Readarr, Whisparr). A Prowlarr instance takes no `include`, so it defines its `notifications` directly.
+
 When templates and the instance both define `notifications`, entries with the same name (case-insensitive) are replaced by the later definition, the instance last. `update_password` keeps the earlier value unless a later block sets it. `delete_unmanaged.ignore` lists are combined, and the last block that sets `delete_unmanaged` decides `enabled`. Two entries with the same name inside one block are refused.
 
 ## Prowlarr <span className="theme-doc-version-badge badge badge--secondary configarr-badge">1.31.0</span>
