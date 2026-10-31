@@ -747,11 +747,11 @@ export class SonarrClient
   }
 
   async createNotification(notification: NotificationResource): Promise<NotificationResource> {
-    return this.apiV3.v3NotificationCreate(notification, { forceSave: true });
+    return this.apiV3.v3NotificationCreate(notification, { forceSave: true }, { redactResponseErrors: true });
   }
 
   async updateNotification(id: string, notification: NotificationResource): Promise<NotificationResource> {
-    return this.apiV3.v3NotificationUpdate(+id, notification, { forceSave: true });
+    return this.apiV3.v3NotificationUpdate(+id, notification, { forceSave: true }, { redactResponseErrors: true });
   }
 
   async deleteNotification(id: string): Promise<void> {
