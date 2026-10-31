@@ -27,10 +27,13 @@ export function hasUrlCredentials(value: unknown): boolean {
   }
   try {
     const parsed = new URL(value);
-    return Boolean(parsed.username || parsed.password);
+    if (parsed.username || parsed.password) {
+      return true;
+    }
   } catch {
-    return false;
+    // Fall through to check for embedded credential URL substring.
   }
+  return /[a-zA-Z][a-zA-Z0-9+.-]*:\/\/[^\s/?#]*[^\s/?#:][^\s/?#]*@[^\s/?#]+/.test(value);
 }
 
 /**
@@ -43,7 +46,8 @@ export function redactUrlValue(value: unknown): unknown {
     return value;
   }
   if (typeof value !== "string") {
-    return value;
+    // Redact nested secrets for non-string values (e.g. object/array).
+    return redactSecrets(value);
   }
   if (value === "" || value.trim() === "") {
     return value;
