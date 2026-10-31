@@ -475,11 +475,14 @@ export const InputConfigIndexerProxySchema = z.object({
 });
 export type InputConfigIndexerProxy = z.infer<typeof InputConfigIndexerProxySchema>;
 
+export const UpdatePasswordSchema = z.union([z.boolean(), z.literal("on_test_failure")]);
+export type UpdatePassword = z.infer<typeof UpdatePasswordSchema>;
+
 // Prowlarr has no download client config or remote path mappings, so this is a
 // narrower version of the arr instance's `download_clients` block.
 export const InputConfigProwlarrDownloadClientsSchema = z.object({
   data: z.array(InputConfigDownloadClientSchema).optional(),
-  update_password: z.boolean().optional(),
+  update_password: UpdatePasswordSchema.optional(),
   delete_unmanaged: DeleteUnmanagedSchema.optional(),
 });
 export type InputConfigProwlarrDownloadClients = z.infer<typeof InputConfigProwlarrDownloadClientsSchema>;
@@ -614,7 +617,7 @@ export const InputConfigArrInstanceSchema = z.object({
   download_clients: z
     .object({
       data: z.array(InputConfigDownloadClientSchema).optional(),
-      update_password: z.boolean().optional(),
+      update_password: UpdatePasswordSchema.optional(),
       delete_unmanaged: DeleteUnmanagedSchema.optional(),
       config: InputConfigDownloadClientConfigSchema.optional(),
       remote_paths: z.array(InputConfigRemotePathSchema).optional(),

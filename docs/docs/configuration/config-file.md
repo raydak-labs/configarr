@@ -1149,8 +1149,9 @@ sonarr:
             username: sonarr
             password: changeme
             tv_category: series-4k
-       # Set to true to always update password otherwise existing passwords will not be updated because we can not retrieve existing passwords
-       update_password: false
+       # Existing secrets can not be read back: true always sends them, false never does,
+       # on_test_failure sends them only when the client's connection test fails
+       update_password: on_test_failure
       # Delete unmanaged download clients
       delete_unmanaged:
         enabled: true
@@ -1164,6 +1165,18 @@ sonarr:
         # Radarr only: Check interval for finished downloads (in minutes)
         # check_for_finished_download_interval: 1
 ```
+
+### Secret field updates (`update_password`)
+
+Because \*Arr servers return stored secrets (passwords, API keys) masked as `********`, Configarr cannot read existing secrets from the server. The `update_password` setting controls when secret fields in `fields` are sent to existing download clients:
+
+| Value             | Behavior                                                                                |
+| ----------------- | --------------------------------------------------------------------------------------- |
+| `false` (default) | Preserves the server's stored secrets; masked secrets count as unchanged.               |
+| `true`            | Always overwrites secret fields with configured values on every run.                    |
+| `on_test_failure` | Tests the server's stored secret first; updates secret fields only when the test fails. |
+
+When set to `on_test_failure`, Configarr calls each matching client's connection test once per run to check if the stored secret still works before pushing an update.
 
 ### Download Client Configuration <span className="theme-doc-version-badge badge badge--secondary configarr-badge">1.19.0</span>
 

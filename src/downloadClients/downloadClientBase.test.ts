@@ -8,16 +8,24 @@ vi.mock("../env", async (importOriginal) => {
 });
 
 import { BaseDownloadClientSync } from "./downloadClientBase";
-import type { InputConfigDownloadClient } from "../types/config.types";
+import {
+  InputConfigArrInstanceSchema,
+  InputConfigProwlarrDownloadClientsSchema,
+  UpdatePasswordSchema,
+  type InputConfigDownloadClient,
+} from "../types/config.types";
 import type { ServerCache } from "../cache";
 import type { DownloadClientsClient, TagsClient } from "../clients/capabilities";
 import { getClient } from "../clients/client";
-import type { TagResource } from "../__generated__/radarr/data-contracts";
+import type { TagResource, DownloadClientResource } from "../__generated__/radarr/data-contracts";
 import { DownloadProtocol } from "../__generated__/radarr/data-contracts";
 import { ArrType } from "../types/common.types";
 import { MediaDownloadClientResource } from "./downloadClient.types";
 import { getEnvs } from "../env";
+import { logger } from "../logger";
+import { SECRET_MASK } from "../diffReport/redactSecrets";
 import { ConfigValidationError } from "../validation";
+import { RadarrDownloadClientSync } from "./downloadClientRadarr";
 
 class MockDownloadClientSync extends BaseDownloadClientSync<MediaDownloadClientResource> {
   public testValidateDownloadClient(config: InputConfigDownloadClient, schema: MediaDownloadClientResource[]) {
@@ -342,5 +350,275 @@ describe("BaseDownloadClientSync – utility methods", () => {
     test("getApi() returns the client handed to the constructor", () => {
       expect(sync.testGetApi()).toBe(sync.testInjectedApi);
     });
+  });
+});
+
+describe("update_password schema validation", () => {
+  test.each([
+    { value: true, valid: true },
+    { value: false, valid: true },
+    { value: "on_test_failure", valid: true },
+    { value: "other_string", valid: false },
+    { value: "always", valid: false },
+    { value: 123, valid: false },
+  ])("validates update_password=$value (valid=$valid)", ({ value, valid }) => {
+    const arrResult = InputConfigArrInstanceSchema.shape.download_clients.unwrap().safeParse({
+      update_password: value,
+    });
+    expect(arrResult.success).toBe(valid);
+
+    const prowlarrResult = InputConfigProwlarrDownloadClientsSchema.safeParse({
+      update_password: value,
+    });
+    expect(prowlarrResult.success).toBe(valid);
+
+    const directResult = UpdatePasswordSchema.safeParse(value);
+    expect(directResult.success).toBe(valid);
+  });
+});
+
+describe("BaseDownloadClientSync - update_password: 'on_test_failure'", () => {
+  const schemaClient: DownloadClientResource = {
+    id: 0,
+    name: "qBittorrent",
+    implementation: "qBittorrent",
+    protocol: DownloadProtocol.Torrent,
+    enable: true,
+    priority: 1,
+    fields: [
+      { name: "host", value: "" },
+      { name: "password", value: "" },
+    ],
+    tags: [],
+    removeCompletedDownloads: true,
+    removeFailedDownloads: true,
+    configContract: "QBittorrentSettings",
+  };
+
+  const createServerClient = (overrides: Partial<DownloadClientResource> = {}): DownloadClientResource => ({
+    id: 1,
+    name: "qBit",
+    implementation: "qBittorrent",
+    protocol: DownloadProtocol.Torrent,
+    enable: true,
+    priority: 1,
+    fields: [
+      { name: "host", value: "127.0.0.1" },
+      { name: "password", value: "********" },
+    ],
+    tags: [],
+    removeCompletedDownloads: true,
+    removeFailedDownloads: true,
+    configContract: "QBittorrentSettings",
+    ...overrides,
+  });
+
+  let api: any;
+  let cache: ServerCache;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(getEnvs).mockReturnValue({ LOG_LEVEL: "fatal", CONFIGARR_ENFORCE_CONFIG_VALIDATION: false } as ReturnType<typeof getEnvs>);
+    cache = { tags: [] } as unknown as ServerCache;
+    api = {
+      getDownloadClientSchema: vi.fn(async () => [schemaClient]),
+      getDownloadClients: vi.fn(async () => [createServerClient()]),
+      createDownloadClient: vi.fn(async (client) => client),
+      updateDownloadClient: vi.fn(async (_id, client) => client),
+      deleteDownloadClient: vi.fn(async () => {}),
+      testDownloadClient: vi.fn(async () => {}),
+      getTags: vi.fn(async () => []),
+      createTag: vi.fn(),
+      deleteTag: vi.fn(),
+    };
+  });
+
+  test("on_test_failure + test passes -> no update, test called once with the server resource", async () => {
+    api.testDownloadClient.mockResolvedValueOnce(undefined);
+    const sync = new RadarrDownloadClientSync(api);
+    const serverClient = createServerClient();
+    api.getDownloadClients.mockResolvedValueOnce([serverClient]);
+
+    const result = await sync.syncDownloadClients(
+      {
+        download_clients: {
+          update_password: "on_test_failure",
+          data: [
+            {
+              name: "qBit",
+              type: "qbittorrent",
+              fields: { host: "127.0.0.1", password: "NEW_CONFIG_SECRET" },
+            },
+          ],
+        },
+      },
+      cache,
+    );
+
+    expect(api.testDownloadClient).toHaveBeenCalledTimes(1);
+    expect(api.testDownloadClient).toHaveBeenCalledWith(serverClient);
+    expect(api.updateDownloadClient).not.toHaveBeenCalled();
+    expect(result.updated).toBe(0);
+    expect(result.diffEntries.filter((e) => e.action === "update")).toHaveLength(0);
+  });
+
+  test("on_test_failure + test throws -> one update whose payload carries the CONFIG secret; diff entry secret masked; log line has no secret value", async () => {
+    const secret = "SUPER_SECRET_NEW_PASSWORD";
+    api.testDownloadClient.mockRejectedValueOnce(new Error("Connection refused: bad credentials"));
+    const infoSpy = vi.spyOn(logger, "info");
+    const sync = new RadarrDownloadClientSync(api);
+    const serverClient = createServerClient();
+    api.getDownloadClients.mockResolvedValueOnce([serverClient]);
+
+    const result = await sync.syncDownloadClients(
+      {
+        download_clients: {
+          update_password: "on_test_failure",
+          data: [
+            {
+              name: "qBit",
+              type: "qbittorrent",
+              fields: { host: "127.0.0.1", password: secret },
+            },
+          ],
+        },
+      },
+      cache,
+    );
+
+    expect(api.testDownloadClient).toHaveBeenCalledTimes(1);
+    expect(api.testDownloadClient).toHaveBeenCalledWith(serverClient);
+    expect(result.updated).toBe(1);
+    expect(api.updateDownloadClient).toHaveBeenCalledTimes(1);
+
+    const [calledId, updatePayload] = api.updateDownloadClient.mock.calls[0];
+    expect(calledId).toBe("1");
+    const passwordField = updatePayload.fields?.find((f: any) => f.name === "password");
+    expect(passwordField?.value).toBe(secret);
+
+    const updateEntry = result.diffEntries.find((e) => e.name === "qBit" && e.action === "update");
+    expect(updateEntry).toBeDefined();
+    expect(updateEntry?.fieldChanges).toEqual([{ field: "fields.password", from: SECRET_MASK, to: SECRET_MASK }]);
+    expect(JSON.stringify(result.diffEntries)).not.toContain(secret);
+
+    const logged = infoSpy.mock.calls.map((call) => String(call[0])).join("\n");
+    expect(logged).toContain('Download client "qBit": connection test failed, updating secret fields');
+    expect(logged).not.toContain(secret);
+  });
+
+  test("on_test_failure + disabled server client -> no test call, no update", async () => {
+    const sync = new RadarrDownloadClientSync(api);
+    const serverClient = createServerClient({ enable: false });
+    api.getDownloadClients.mockResolvedValueOnce([serverClient]);
+
+    const result = await sync.syncDownloadClients(
+      {
+        download_clients: {
+          update_password: "on_test_failure",
+          data: [
+            {
+              name: "qBit",
+              type: "qbittorrent",
+              enable: false,
+              fields: { host: "127.0.0.1", password: "NEW_CONFIG_SECRET" },
+            },
+          ],
+        },
+      },
+      cache,
+    );
+
+    expect(api.testDownloadClient).not.toHaveBeenCalled();
+    expect(api.updateDownloadClient).not.toHaveBeenCalled();
+    expect(result.updated).toBe(0);
+  });
+
+  test("on_test_failure + non-secret change -> update as with false (stored secret kept), no test call", async () => {
+    const sync = new RadarrDownloadClientSync(api);
+    const serverClient = createServerClient();
+    api.getDownloadClients.mockResolvedValueOnce([serverClient]);
+
+    const result = await sync.syncDownloadClients(
+      {
+        download_clients: {
+          update_password: "on_test_failure",
+          data: [
+            {
+              name: "qBit",
+              type: "qbittorrent",
+              fields: { host: "different-host", password: "NEW_CONFIG_SECRET" },
+            },
+          ],
+        },
+      },
+      cache,
+    );
+
+    expect(api.testDownloadClient).not.toHaveBeenCalled();
+    expect(result.updated).toBe(1);
+    expect(api.updateDownloadClient).toHaveBeenCalledTimes(1);
+
+    const updatePayload = api.updateDownloadClient.mock.calls[0][1];
+    expect(updatePayload.fields?.find((f: any) => f.name === "host")?.value).toBe("different-host");
+    expect(updatePayload.fields?.find((f: any) => f.name === "password")?.value).toBe("********");
+  });
+
+  test("on_test_failure + no secret in config -> no test call", async () => {
+    const sync = new RadarrDownloadClientSync(api);
+    const serverClient = createServerClient();
+    api.getDownloadClients.mockResolvedValueOnce([serverClient]);
+
+    const result = await sync.syncDownloadClients(
+      {
+        download_clients: {
+          update_password: "on_test_failure",
+          data: [
+            {
+              name: "qBit",
+              type: "qbittorrent",
+              fields: { host: "127.0.0.1" },
+            },
+          ],
+        },
+      },
+      cache,
+    );
+
+    expect(api.testDownloadClient).not.toHaveBeenCalled();
+    expect(api.updateDownloadClient).not.toHaveBeenCalled();
+    expect(result.updated).toBe(0);
+  });
+
+  test("DRY_RUN + test throws -> reported, no update call", async () => {
+    vi.mocked(getEnvs).mockReturnValue({ DRY_RUN: true, LOG_LEVEL: "fatal" } as ReturnType<typeof getEnvs>);
+    api.testDownloadClient.mockRejectedValueOnce(new Error("Connection refused"));
+    const sync = new RadarrDownloadClientSync(api);
+    const serverClient = createServerClient();
+    api.getDownloadClients.mockResolvedValueOnce([serverClient]);
+
+    const result = await sync.syncDownloadClients(
+      {
+        download_clients: {
+          update_password: "on_test_failure",
+          data: [
+            {
+              name: "qBit",
+              type: "qbittorrent",
+              fields: { host: "127.0.0.1", password: "NEW_CONFIG_SECRET" },
+            },
+          ],
+        },
+      },
+      cache,
+    );
+
+    expect(api.testDownloadClient).toHaveBeenCalledTimes(1);
+    expect(api.testDownloadClient).toHaveBeenCalledWith(serverClient);
+    expect(api.updateDownloadClient).not.toHaveBeenCalled();
+    expect(result.updated).toBe(1);
+
+    const updateEntry = result.diffEntries.find((e) => e.name === "qBit" && e.action === "update");
+    expect(updateEntry).toBeDefined();
+    expect(updateEntry?.fieldChanges).toEqual([{ field: "fields.password", from: SECRET_MASK, to: SECRET_MASK }]);
   });
 });

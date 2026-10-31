@@ -1,7 +1,7 @@
 import { ServerCache } from "../cache";
 import { FieldChange } from "../diffReport/diffReport.types";
 import { MediaArrType } from "../types/common.types";
-import { InputConfigDownloadClient } from "../types/config.types";
+import { InputConfigDownloadClient, UpdatePassword } from "../types/config.types";
 import { DownloadClientDiff, MediaDownloadClientResource } from "./downloadClient.types";
 import { BaseDownloadClientSync } from "./downloadClientBase";
 
@@ -12,7 +12,7 @@ export abstract class MediaDownloadClientSync<T extends MediaDownloadClientResou
     config: InputConfigDownloadClient,
     server: T,
     cache: ServerCache,
-    updatePassword: boolean = false,
+    updatePassword: UpdatePassword = false,
   ): { equal: boolean; changes: FieldChange[] } => {
     if (config.name !== server.name || config.type.toLowerCase() !== server.implementation?.toLowerCase()) {
       return { equal: false, changes: [] };
@@ -59,7 +59,7 @@ export abstract class MediaDownloadClientSync<T extends MediaDownloadClientResou
     cache: ServerCache,
     serverClient?: T,
     partialUpdate: boolean = false,
-    updatePassword: boolean = true,
+    updatePassword: UpdatePassword = true,
   ): Promise<T> {
     const schema = await this.getDownloadClientSchema(cache);
     const template = this.findImplementationInSchema(schema, config.type);

@@ -2,11 +2,12 @@ import { z } from "zod";
 import { ServerCache } from "../cache";
 import type { DownloadClientsClient, TagsClient } from "../clients/capabilities";
 import { DiffEntry, FieldChange } from "../diffReport/diffReport.types";
+import { SECRET_MASK } from "../diffReport/redactSecrets";
 import { getEnvs } from "../env";
 import { logger } from "../logger";
 import { buildTagPlaceholders, ensureTags, resolveTagNames } from "../tags/tags";
 import { ArrType } from "../types/common.types";
-import { InputConfigDownloadClient, MergedConfigInstance } from "../types/config.types";
+import { InputConfigDownloadClient, MergedConfigInstance, UpdatePassword } from "../types/config.types";
 import { DownloadClientDiff, DownloadClientShared, DownloadClientSyncResult, ValidationResult } from "./downloadClient.types";
 import { camelToSnake, snakeToCamel } from "../util";
 import { ConfigValidationError } from "../validation";
@@ -91,7 +92,7 @@ export abstract class BaseDownloadClientSync<T extends DownloadClientShared> {
     config: InputConfigDownloadClient,
     server: T,
     cache: ServerCache,
-    updatePassword?: boolean,
+    updatePassword?: UpdatePassword,
   ): { equal: boolean; changes: FieldChange[] };
 
   public abstract shouldUsePartialUpdate(config: InputConfigDownloadClient): boolean;
@@ -101,7 +102,7 @@ export abstract class BaseDownloadClientSync<T extends DownloadClientShared> {
     cache: ServerCache,
     serverClient?: T,
     partialUpdate?: boolean,
-    updatePassword?: boolean,
+    updatePassword?: UpdatePassword,
   ): Promise<T>;
 
   public normalizeConfigFields(configFields: Record<string, unknown>, arrType: ArrType): Record<string, unknown> {
@@ -135,11 +136,54 @@ export abstract class BaseDownloadClientSync<T extends DownloadClientShared> {
 
     return ids.map((id) => (id < 0 ? (byId.get(id) ?? id) : id));
   }
+  protected isSecretField(fieldName: string): boolean {
+    const lower = fieldName.toLowerCase();
+    return lower.includes("password") || lower.includes("apikey");
+  }
+
+  private hasNonEmptySecretField(config: InputConfigDownloadClient): boolean {
+    if (!config.fields) {
+      return false;
+    }
+    const normalized = this.normalizeConfigFields(config.fields, this.getArrType());
+    return Object.entries(normalized).some(([key, value]) => {
+      return this.isSecretField(key) && typeof value === "string" && value.length > 0 && value !== SECRET_MASK;
+    });
+  }
+
+  private getMaskedSecretFieldChanges(config: InputConfigDownloadClient, serverClient: T, cache: ServerCache): FieldChange[] {
+    const rawChanges = this.isDownloadClientEqual(config, serverClient, cache, true).changes;
+    const masked = rawChanges
+      .filter((change) => this.isSecretField(change.field))
+      .map((change) => ({
+        field: change.field,
+        from: SECRET_MASK,
+        to: SECRET_MASK,
+      }));
+
+    if (masked.length > 0) {
+      return masked;
+    }
+
+    const normalized = this.normalizeConfigFields(config.fields || {}, this.getArrType());
+    const fallbackChanges: FieldChange[] = [];
+    for (const [key, value] of Object.entries(normalized)) {
+      if (this.isSecretField(key) && typeof value === "string" && value.length > 0 && value !== SECRET_MASK) {
+        fallbackChanges.push({
+          field: `fields.${key}`,
+          from: SECRET_MASK,
+          to: SECRET_MASK,
+        });
+      }
+    }
+    return fallbackChanges;
+  }
+
   protected collectSharedFieldChanges(
     config: InputConfigDownloadClient,
     server: T,
     cache: ServerCache,
-    updatePassword: boolean,
+    updatePassword: UpdatePassword = false,
   ): FieldChange[] {
     const changes: FieldChange[] = [];
 
@@ -164,13 +208,14 @@ export abstract class BaseDownloadClientSync<T extends DownloadClientShared> {
 
       let valuesMatch = JSON.stringify(configValue) === JSON.stringify(serverValue);
 
+      const shouldUpdatePassword = updatePassword === true;
       if (
         !valuesMatch &&
-        (fieldName.toLowerCase().includes("password") || fieldName.toLowerCase().includes("apikey")) &&
+        this.isSecretField(fieldName) &&
         serverValue === "********" &&
         typeof configValue === "string" &&
         configValue.length > 0 &&
-        !updatePassword
+        !shouldUpdatePassword
       ) {
         valuesMatch = true;
       }
@@ -231,15 +276,16 @@ export abstract class BaseDownloadClientSync<T extends DownloadClientShared> {
     arrType: ArrType,
     serverFields: F[] | null | undefined,
     partialUpdate = false,
-    updatePassword = true,
+    updatePassword: UpdatePassword = true,
   ): F[] {
     const normalizedFields = this.normalizeConfigFields(configFields, arrType);
     const baseFields = partialUpdate && serverFields ? serverFields : schemaFields;
 
     return baseFields.map((field) => {
       const fieldName = field.name ?? "";
-      const isSecret = fieldName.toLowerCase().includes("password") || fieldName.toLowerCase().includes("apikey");
-      if (!updatePassword && isSecret && serverFields) {
+      const isSecret = this.isSecretField(fieldName);
+      const shouldUpdatePassword = updatePassword === true;
+      if (!shouldUpdatePassword && isSecret && serverFields) {
         const serverField = serverFields.find((f) => f.name === fieldName);
         if (serverField) {
           return { ...field, value: serverField.value };
@@ -346,11 +392,14 @@ export abstract class BaseDownloadClientSync<T extends DownloadClientShared> {
     configClients: InputConfigDownloadClient[],
     serverClients: T[],
     cache: ServerCache,
-    updatePassword: boolean = false,
+    updatePassword: UpdatePassword = false,
   ): Promise<DownloadClientDiff<T>> {
     const create: InputConfigDownloadClient[] = [];
     const update: DownloadClientDiff<T>["update"] = [];
     const unchanged: { config: InputConfigDownloadClient; server: T }[] = [];
+
+    const isTestFailureMode = updatePassword === "on_test_failure";
+    const comparisonUpdatePassword = isTestFailureMode ? false : updatePassword;
 
     for (const config of configClients) {
       const serverClient = serverClients.find(
@@ -360,10 +409,32 @@ export abstract class BaseDownloadClientSync<T extends DownloadClientShared> {
       if (!serverClient) {
         create.push(config);
       } else {
-        const comparison = this.isDownloadClientEqual(config, serverClient, cache, updatePassword);
+        const comparison = this.isDownloadClientEqual(config, serverClient, cache, comparisonUpdatePassword);
         if (!comparison.equal) {
           const partialUpdate = this.shouldUsePartialUpdate(config);
-          update.push({ config, server: serverClient, partialUpdate, fieldChanges: comparison.changes });
+          update.push({
+            config,
+            server: serverClient,
+            partialUpdate,
+            fieldChanges: comparison.changes,
+            updatePassword: comparisonUpdatePassword,
+          });
+        } else if (isTestFailureMode && serverClient.enable !== false && this.hasNonEmptySecretField(config)) {
+          try {
+            await this.getApi().testDownloadClient(serverClient);
+            unchanged.push({ config, server: serverClient });
+          } catch {
+            this.logger.info(`Download client "${config.name}": connection test failed, updating secret fields`);
+            const partialUpdate = this.shouldUsePartialUpdate(config);
+            const fieldChanges = this.getMaskedSecretFieldChanges(config, serverClient, cache);
+            update.push({
+              config,
+              server: serverClient,
+              partialUpdate,
+              fieldChanges,
+              updatePassword: true,
+            });
+          }
         } else {
           unchanged.push({ config, server: serverClient });
         }
@@ -480,7 +551,7 @@ export abstract class BaseDownloadClientSync<T extends DownloadClientShared> {
   private async updateClients(
     updates: DownloadClientDiff<T>["update"],
     serverCache: ServerCache,
-    updatePassword: boolean,
+    updatePassword: UpdatePassword,
   ): Promise<DownloadClientDiff<T>["update"]> {
     const updated: DownloadClientDiff<T>["update"] = [];
 
@@ -490,7 +561,8 @@ export abstract class BaseDownloadClientSync<T extends DownloadClientShared> {
         const updateType = partialUpdate ? "partial" : "full";
         this.logger.info(`Updating download client: '${config.name}' (${updateType} update)...`);
 
-        const payload = await this.resolveConfig(config, serverCache, server, partialUpdate, updatePassword);
+        const itemUpdatePassword = item.updatePassword ?? updatePassword === true;
+        const payload = await this.resolveConfig(config, serverCache, server, partialUpdate, itemUpdatePassword);
         payload.id = server.id; // Preserve server ID
 
         await this.getApi().updateDownloadClient(server.id!.toString(), payload);
