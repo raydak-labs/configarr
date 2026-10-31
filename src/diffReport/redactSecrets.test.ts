@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { DiffEntry } from "./diffReport.types";
-import { isSecretFieldName, redactDiffEntry, redactSecrets, redactUrlValue, SECRET_MASK } from "./redactSecrets";
+import { hasUrlCredentials, isSecretFieldName, redactDiffEntry, redactSecrets, redactUrlValue, SECRET_MASK } from "./redactSecrets";
 
 describe("isSecretFieldName", () => {
   test("matches password, apikey, secret and token field names", () => {
@@ -219,6 +219,68 @@ describe("redactDiffEntry", () => {
       { field: "fields.apiKey", from: SECRET_MASK, to: SECRET_MASK },
       { field: "fields.secretUrl", from: SECRET_MASK, to: SECRET_MASK },
     ]);
+  });
+
+  test("redacts embedded credential url and leaves non-credential url or plain string intact", () => {
+    const entry: DiffEntry = {
+      resourceType: "DownloadClient",
+      name: "client",
+      action: "update",
+      fieldChanges: [
+        {
+          field: "fields.comment",
+          from: "old",
+          to: "see https://user:pass@example.com now",
+        },
+        {
+          field: "fields.notes",
+          from: "old",
+          to: "see https://example.com/x",
+        },
+        {
+          field: "fields.plain",
+          from: "old",
+          to: "plain string without url",
+        },
+      ],
+    };
+
+    expect(redactDiffEntry(entry).fieldChanges).toEqual([
+      { field: "fields.comment", from: "old", to: SECRET_MASK },
+      { field: "fields.notes", from: "old", to: "see https://example.com/x" },
+      { field: "fields.plain", from: "old", to: "plain string without url" },
+    ]);
+  });
+
+  test("masks secrets inside non-string notification url-field changes", () => {
+    const entry: DiffEntry = {
+      resourceType: "Notification",
+      name: "custom",
+      action: "update",
+      fieldChanges: [
+        {
+          field: "fields.url",
+          from: undefined,
+          to: { password: "secret", host: "h" },
+        },
+      ],
+    };
+
+    expect(redactDiffEntry(entry).fieldChanges).toEqual([
+      {
+        field: "fields.url",
+        from: undefined,
+        to: { password: SECRET_MASK, host: "h" },
+      },
+    ]);
+  });
+});
+
+describe("hasUrlCredentials", () => {
+  test("returns true for embedded credential URL and false without credentials", () => {
+    expect(hasUrlCredentials("see https://user:pass@example.com now")).toBe(true);
+    expect(hasUrlCredentials("see https://example.com/x")).toBe(false);
+    expect(hasUrlCredentials("plain string without url")).toBe(false);
   });
 });
 
