@@ -18,6 +18,17 @@ describe("mergeNotifications", () => {
     ]);
   });
 
+  it("refuses two entries with the same name inside one block", () => {
+    const dup = {
+      data: [
+        { name: "Hook", type: "Webhook" },
+        { name: "hook", type: "Webhook" },
+      ],
+    };
+    expect(() => mergeNotifications(undefined, dup)).toThrow("Duplicate notification 'hook'");
+    expect(() => mergeNotifications(dup, { data: [] })).toThrow("Duplicate notification 'hook'");
+  });
+
   it("keeps update_password when the later block omits it", () => {
     expect(mergeNotifications({ update_password: true }, { data: [] }).update_password).toBe(true);
     expect(mergeNotifications({ update_password: true }, { update_password: false }).update_password).toBe(false);
