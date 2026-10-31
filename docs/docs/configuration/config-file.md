@@ -1149,9 +1149,9 @@ sonarr:
             username: sonarr
             password: changeme
             tv_category: series-4k
-       # Existing secrets can not be read back: true always sends them, false never does,
-       # on_test_failure sends them only when the client's connection test fails
-       update_password: on_test_failure
+      # Existing secrets can not be read back: true always sends them, false never does,
+      # on_test_failure sends them only when the client's connection test fails
+      update_password: on_test_failure
       # Delete unmanaged download clients
       delete_unmanaged:
         enabled: true
