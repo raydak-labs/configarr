@@ -12,6 +12,9 @@ export class DiffCollector {
     this.entries.push(...entries.map(redactDiffEntry));
   }
 
+  /**
+   * Retrieves all collected diff entries. Returns an array of entries with sensitive values masked.
+   */
   getEntries(): DiffEntry[] {
     return this.entries;
   }

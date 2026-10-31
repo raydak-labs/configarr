@@ -274,6 +274,93 @@ describe("redactDiffEntry", () => {
       },
     ]);
   });
+
+  test("redacts nested URL in an object under a notification fields.url change", () => {
+    const entry: DiffEntry = {
+      resourceType: "Notification",
+      name: "webhook",
+      action: "update",
+      fieldChanges: [
+        {
+          field: "fields.url",
+          from: undefined,
+          to: { url: "https://hooks.example.com/services/token" },
+        },
+      ],
+    };
+
+    const result = redactDiffEntry(entry);
+    const toValue = result.fieldChanges?.[0]?.to as { url: string };
+    expect(toValue.url).toBe("https://hooks.example.com/********");
+    expect(JSON.stringify(toValue)).not.toContain("services/token");
+  });
+
+  test("redacts nested URLs in an array of objects under a notification fields.url change", () => {
+    const entry: DiffEntry = {
+      resourceType: "Notification",
+      name: "webhook",
+      action: "update",
+      fieldChanges: [
+        {
+          field: "fields.url",
+          from: undefined,
+          to: [{ url: "https://hooks.example.com/services/token" }],
+        },
+      ],
+    };
+
+    const result = redactDiffEntry(entry);
+    const toValue = result.fieldChanges?.[0]?.to as Array<{ url: string }>;
+    expect(toValue[0]?.url).toBe("https://hooks.example.com/********");
+    expect(JSON.stringify(toValue)).not.toContain("services/token");
+  });
+
+  test("redacts embedded credential url inside nested object under non-URL key", () => {
+    const entry: DiffEntry = {
+      resourceType: "Notification",
+      name: "custom",
+      action: "update",
+      fieldChanges: [
+        {
+          field: "fields.url",
+          from: undefined,
+          to: {
+            details: {
+              endpoint: "https://user:pass@hooks.example.com/path",
+            },
+          },
+        },
+      ],
+    };
+
+    const result = redactDiffEntry(entry);
+    const toValue = result.fieldChanges?.[0]?.to as { details: { endpoint: string } };
+    expect(toValue.details.endpoint).toBe("https://hooks.example.com/********");
+    expect(JSON.stringify(toValue)).not.toContain("user:pass");
+  });
+
+  test("does not mutate the input object with nested URL values", () => {
+    const inputObj = {
+      url: "https://hooks.example.com/services/token",
+      nested: { endpoint: "https://user:pass@example.com/path" },
+    };
+    const entry: DiffEntry = {
+      resourceType: "Notification",
+      name: "custom",
+      action: "update",
+      fieldChanges: [
+        {
+          field: "fields.url",
+          from: undefined,
+          to: inputObj,
+        },
+      ],
+    };
+
+    redactDiffEntry(entry);
+    expect(inputObj.url).toBe("https://hooks.example.com/services/token");
+    expect(inputObj.nested.endpoint).toBe("https://user:pass@example.com/path");
+  });
 });
 
 describe("hasUrlCredentials", () => {
