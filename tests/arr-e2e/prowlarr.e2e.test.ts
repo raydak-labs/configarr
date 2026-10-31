@@ -283,4 +283,72 @@ describe("prowlarr (live)", () => {
     assertPipelineSucceeded(deleted.result, ["PROWLARR"]);
     expect(findNamed(await client.getIndexers(), "e2e-snake")).toBeUndefined();
   }, 300_000);
+
+  test("indexer_config is rejected on Prowlarr", async () => {
+    const conn = prowlarrConnection();
+    const config = {
+      prowlarr: {
+        e2e: {
+          ...conn,
+          indexer_config: { rss_sync_interval: 60 },
+        },
+      },
+    };
+    const { result } = await syncConfig(config);
+    expect(result.exitCode).not.toBe(0);
+    expect(`${result.stdout}\n${result.stderr}`).toContain("indexer_config is not supported on Prowlarr");
+  });
+
+  test("notification connections", async () => {
+    const client = createProwlarrClient();
+    const conn = prowlarrConnection();
+    const preexisting = nonE2eNames(await client.getNotifications());
+    const yaml = (includeNotif: boolean, onHealthIssue = false, includeHealthWarnings = false) => ({
+      prowlarr: {
+        e2e: {
+          ...conn,
+          notifications: {
+            data: includeNotif
+              ? [
+                  {
+                    name: "e2e-notification",
+                    type: "CustomScript",
+                    events: { on_grab: true, on_health_issue: onHealthIssue },
+                    include_health_warnings: includeHealthWarnings,
+                    fields: { path: "/data/e2e/test.sh" },
+                    tags: ["e2e-notif-tag"],
+                  },
+                ]
+              : [],
+            delete_unmanaged: { enabled: true, ignore: preexisting },
+          },
+        },
+      },
+    });
+
+    const created = await syncConfig(yaml(true, false, false));
+    assertPipelineSucceeded(created.result, ["PROWLARR"]);
+    let notif = findNamed(await client.getNotifications(), "e2e-notification");
+    expect(notif, "e2e-notification did not persist").toBeTruthy();
+    expect(notif?.onGrab).toBe(true);
+    expect(notif?.onHealthIssue).toBe(false);
+    expect(notif?.includeHealthWarnings).toBe(false);
+    const pathField = notif?.fields?.find((f: { name?: string | null }) => f.name === "path");
+    expect(pathField?.value).toBe("/data/e2e/test.sh");
+
+    const updated = await syncConfig(yaml(true, true, true), created.workspace);
+    assertPipelineSucceeded(updated.result, ["PROWLARR"]);
+    notif = findNamed(await client.getNotifications(), "e2e-notification");
+    expect(notif?.onGrab).toBe(true);
+    expect(notif?.onHealthIssue).toBe(true);
+    expect(notif?.includeHealthWarnings).toBe(true);
+
+    const second = await syncConfig(yaml(true, true, true), created.workspace);
+    assertPipelineSucceeded(second.result, ["PROWLARR"]);
+    assertDiffUpToDate(second.result, ["PROWLARR"]);
+
+    const deleted = await syncConfig(yaml(false, false, false), created.workspace);
+    assertPipelineSucceeded(deleted.result, ["PROWLARR"]);
+    expect(findNamed(await client.getNotifications(), "e2e-notification")).toBeUndefined();
+  });
 });

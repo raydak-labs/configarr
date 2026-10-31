@@ -437,6 +437,11 @@ export async function cleanupMediaE2e(client: MediaArrClient): Promise<void> {
     if (dc.id != null && isE2eName(dc.name)) await tryDelete(errors, "dc", () => client.deleteDownloadClient(String(dc.id)));
   }
 
+  const notifications = await client.getNotifications();
+  for (const n of notifications) {
+    if (n.id != null && isE2eName(n.name)) await tryDelete(errors, "notification", () => client.deleteNotification(String(n.id)));
+  }
+
   const paths = await client.getRemotePathMappings();
   for (const mapping of paths) {
     const host = "host" in mapping ? String((mapping as { host?: string }).host ?? "") : "";
@@ -514,6 +519,9 @@ export async function cleanupProwlarrE2e(client: ProwlarrClient): Promise<void> 
   for (const dc of await client.getDownloadClients()) {
     if (dc.id != null && isE2eName(dc.name)) await tryDelete(errors, "pdc", () => client.deleteDownloadClient(String(dc.id)));
   }
+  for (const n of await client.getNotifications()) {
+    if (n.id != null && isE2eName(n.name)) await tryDelete(errors, "pnotif", () => client.deleteNotification(String(n.id)));
+  }
   for (const profile of await client.getAppProfiles()) {
     if (profile.id != null && isE2eName(profile.name) && profile.name !== "Standard") {
       await tryDelete(errors, "sync", () => client.deleteAppProfile(String(profile.id)));
@@ -555,6 +563,7 @@ export type MediaBaseline = {
   qualityDefinitions: unknown;
   profileQualitySizes: Awaited<ReturnType<SonarrClient["getProfileQualitySizes"]>> | undefined;
   downloadClientConfig: unknown;
+  indexerConfig: unknown;
 };
 
 /** Server-wide settings a feature run overwrites in place. Restored in each file's `afterAll`. */
@@ -569,6 +578,7 @@ export async function snapshotMediaBaseline(client: MediaArrClient): Promise<Med
     profileQualitySizes:
       client instanceof SonarrClient && (await client.supportsProfileQualitySizes()) ? await client.getProfileQualitySizes() : undefined,
     downloadClientConfig: await client.getDownloadClientConfig(),
+    indexerConfig: await client.getIndexerConfig(),
   };
 }
 
@@ -588,6 +598,7 @@ export async function restoreMediaBaseline(client: MediaArrClient, snap: MediaBa
   await restore(snap.downloadClientConfig, await client.getDownloadClientConfig(), (id, body) =>
     client.updateDownloadClientConfig(id, body),
   );
+  await restore(snap.indexerConfig, await client.getIndexerConfig(), (id, body) => client.updateIndexerConfig(id, body));
 
   const definitions = snap.qualityDefinitions;
   if (Array.isArray(definitions) && JSON.stringify(definitions) !== JSON.stringify(await client.getQualityDefinitions())) {

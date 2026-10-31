@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { DiffEntry } from "./diffReport.types";
-import { isSecretFieldName, redactDiffEntry, redactSecrets, SECRET_MASK } from "./redactSecrets";
+import { hasUrlCredentials, isSecretFieldName, redactDiffEntry, redactSecrets, redactUrlValue, SECRET_MASK } from "./redactSecrets";
 
 describe("isSecretFieldName", () => {
   test("matches password, apikey, secret and token field names", () => {
@@ -115,5 +115,309 @@ describe("redactDiffEntry", () => {
     redactDiffEntry(entry);
 
     expect(entry.fieldChanges![0]!.to).toBe("SUPERSECRET123");
+  });
+
+  test("redacts url fields for notifications", () => {
+    const entry: DiffEntry = {
+      resourceType: "Notification",
+      name: "discord",
+      action: "update",
+      fieldChanges: [
+        {
+          field: "fields.url",
+          from: "https://discord.com/api/webhooks/old/token",
+          to: "https://discord.com/api/webhooks/new/token",
+        },
+      ],
+    };
+
+    expect(redactDiffEntry(entry).fieldChanges).toEqual([
+      {
+        field: "fields.url",
+        from: "https://discord.com/********",
+        to: "https://discord.com/********",
+      },
+    ]);
+  });
+
+  test("redacts webhookUrl and serverUrl fields for notifications", () => {
+    const entry: DiffEntry = {
+      resourceType: "Notification",
+      name: "hook",
+      action: "update",
+      fieldChanges: [
+        {
+          field: "fields.webhookUrl",
+          from: "https://hooks.example.com/services/old",
+          to: "https://hooks.example.com/services/new",
+        },
+        {
+          field: "fields.serverUrl",
+          from: "https://server.example.com/push/old",
+          to: "https://server.example.com/push/new",
+        },
+      ],
+    };
+
+    expect(redactDiffEntry(entry).fieldChanges).toEqual([
+      {
+        field: "fields.webhookUrl",
+        from: "https://hooks.example.com/********",
+        to: "https://hooks.example.com/********",
+      },
+      {
+        field: "fields.serverUrl",
+        from: "https://server.example.com/********",
+        to: "https://server.example.com/********",
+      },
+    ]);
+  });
+
+  test("redacts strings with url credentials regardless of field name or resource", () => {
+    const entry: DiffEntry = {
+      resourceType: "DownloadClient",
+      name: "client",
+      action: "update",
+      fieldChanges: [
+        {
+          field: "fields.host",
+          from: "http://user:oldpw@host:8080/path",
+          to: "http://user:newpw@host:8080/path",
+        },
+      ],
+    };
+
+    expect(redactDiffEntry(entry).fieldChanges).toEqual([
+      {
+        field: "fields.host",
+        from: "http://host:8080/********",
+        to: "http://host:8080/********",
+      },
+    ]);
+  });
+
+  test("keeps secret-named field fully masked even if value is a URL", () => {
+    const entry: DiffEntry = {
+      resourceType: "Notification",
+      name: "webhook",
+      action: "update",
+      fieldChanges: [
+        {
+          field: "fields.apiKey",
+          from: "https://user:pw@example.com/key",
+          to: "https://user:pw@example.com/newkey",
+        },
+        {
+          field: "fields.secretUrl",
+          from: "https://user:pw@example.com/secret",
+          to: "https://user:pw@example.com/newsecret",
+        },
+      ],
+    };
+
+    expect(redactDiffEntry(entry).fieldChanges).toEqual([
+      { field: "fields.apiKey", from: SECRET_MASK, to: SECRET_MASK },
+      { field: "fields.secretUrl", from: SECRET_MASK, to: SECRET_MASK },
+    ]);
+  });
+
+  test("redacts embedded credential url and leaves non-credential url or plain string intact", () => {
+    const entry: DiffEntry = {
+      resourceType: "DownloadClient",
+      name: "client",
+      action: "update",
+      fieldChanges: [
+        {
+          field: "fields.comment",
+          from: "old",
+          to: "see https://user:pass@example.com now",
+        },
+        {
+          field: "fields.notes",
+          from: "old",
+          to: "see https://example.com/x",
+        },
+        {
+          field: "fields.plain",
+          from: "old",
+          to: "plain string without url",
+        },
+      ],
+    };
+
+    expect(redactDiffEntry(entry).fieldChanges).toEqual([
+      { field: "fields.comment", from: "old", to: SECRET_MASK },
+      { field: "fields.notes", from: "old", to: "see https://example.com/x" },
+      { field: "fields.plain", from: "old", to: "plain string without url" },
+    ]);
+  });
+
+  test("masks secrets inside non-string notification url-field changes", () => {
+    const entry: DiffEntry = {
+      resourceType: "Notification",
+      name: "custom",
+      action: "update",
+      fieldChanges: [
+        {
+          field: "fields.url",
+          from: undefined,
+          to: { password: "secret", host: "h" },
+        },
+      ],
+    };
+
+    expect(redactDiffEntry(entry).fieldChanges).toEqual([
+      {
+        field: "fields.url",
+        from: undefined,
+        to: { password: SECRET_MASK, host: "h" },
+      },
+    ]);
+  });
+
+  test("redacts nested URL in an object under a notification fields.url change", () => {
+    const entry: DiffEntry = {
+      resourceType: "Notification",
+      name: "webhook",
+      action: "update",
+      fieldChanges: [
+        {
+          field: "fields.url",
+          from: undefined,
+          to: { url: "https://hooks.example.com/services/token" },
+        },
+      ],
+    };
+
+    const result = redactDiffEntry(entry);
+    const toValue = result.fieldChanges?.[0]?.to as { url: string };
+    expect(toValue.url).toBe("https://hooks.example.com/********");
+    expect(JSON.stringify(toValue)).not.toContain("services/token");
+  });
+
+  test("redacts nested URLs in an array of objects under a notification fields.url change", () => {
+    const entry: DiffEntry = {
+      resourceType: "Notification",
+      name: "webhook",
+      action: "update",
+      fieldChanges: [
+        {
+          field: "fields.url",
+          from: undefined,
+          to: [{ url: "https://hooks.example.com/services/token" }],
+        },
+      ],
+    };
+
+    const result = redactDiffEntry(entry);
+    const toValue = result.fieldChanges?.[0]?.to as Array<{ url: string }>;
+    expect(toValue[0]?.url).toBe("https://hooks.example.com/********");
+    expect(JSON.stringify(toValue)).not.toContain("services/token");
+  });
+
+  test("redacts embedded credential url inside nested object under non-URL key", () => {
+    const entry: DiffEntry = {
+      resourceType: "Notification",
+      name: "custom",
+      action: "update",
+      fieldChanges: [
+        {
+          field: "fields.url",
+          from: undefined,
+          to: {
+            details: {
+              endpoint: "https://user:pass@hooks.example.com/path",
+            },
+          },
+        },
+      ],
+    };
+
+    const result = redactDiffEntry(entry);
+    const toValue = result.fieldChanges?.[0]?.to as { details: { endpoint: string } };
+    expect(toValue.details.endpoint).toBe("https://hooks.example.com/********");
+    expect(JSON.stringify(toValue)).not.toContain("user:pass");
+  });
+
+  test("does not mutate the input object with nested URL values", () => {
+    const inputObj = {
+      url: "https://hooks.example.com/services/token",
+      nested: { endpoint: "https://user:pass@example.com/path" },
+    };
+    const entry: DiffEntry = {
+      resourceType: "Notification",
+      name: "custom",
+      action: "update",
+      fieldChanges: [
+        {
+          field: "fields.url",
+          from: undefined,
+          to: inputObj,
+        },
+      ],
+    };
+
+    redactDiffEntry(entry);
+    expect(inputObj.url).toBe("https://hooks.example.com/services/token");
+    expect(inputObj.nested.endpoint).toBe("https://user:pass@example.com/path");
+  });
+});
+
+describe("hasUrlCredentials", () => {
+  test("returns true for embedded credential URL and false without credentials", () => {
+    expect(hasUrlCredentials("see https://user:pass@example.com now")).toBe(true);
+    expect(hasUrlCredentials("see https://example.com/x")).toBe(false);
+    expect(hasUrlCredentials("plain string without url")).toBe(false);
+  });
+});
+
+describe("redactUrlValue", () => {
+  test("masks userinfo and replaces path/query/fragment with SECRET_MASK", () => {
+    expect(redactUrlValue("https://user:pw@hooks.example.com/services/T/B/x?token=1")).toBe("https://hooks.example.com/********");
+    expect(redactUrlValue("https://user:pw@example.com")).toBe("https://example.com/********");
+    expect(redactUrlValue("https://user:pw@example.com/")).toBe("https://example.com/********");
+  });
+
+  test("masks sensitive query parameter on bare origin", () => {
+    expect(redactUrlValue("https://example.com/?token=secret123")).toBe("https://example.com/********");
+    expect(redactUrlValue("https://example.com?token=secret123")).toBe("https://example.com/********");
+  });
+
+  test("masks path token such as Discord webhook url", () => {
+    expect(redactUrlValue("https://discord.com/api/webhooks/123/abc")).toBe("https://discord.com/********");
+  });
+
+  test("preserves bare origin with and without trailing slash", () => {
+    expect(redactUrlValue("https://ntfy.sh")).toBe("https://ntfy.sh");
+    expect(redactUrlValue("https://ntfy.sh/")).toBe("https://ntfy.sh/");
+  });
+
+  test("keeps port in origin when redacting path or bare", () => {
+    expect(redactUrlValue("https://example.com:8443/webhook")).toBe("https://example.com:8443/********");
+    expect(redactUrlValue("https://example.com:8443")).toBe("https://example.com:8443");
+    expect(redactUrlValue("https://example.com:8443/")).toBe("https://example.com:8443/");
+  });
+
+  test("masks malformed string as SECRET_MASK", () => {
+    expect(redactUrlValue("not a url")).toBe(SECRET_MASK);
+    expect(redactUrlValue("http://")).toBe(SECRET_MASK);
+  });
+
+  test("masks mailto url as SECRET_MASK", () => {
+    expect(redactUrlValue("mailto:user@example.com")).toBe(SECRET_MASK);
+  });
+
+  test("leaves empty string and whitespace untouched", () => {
+    expect(redactUrlValue("")).toBe("");
+    expect(redactUrlValue("   ")).toBe("   ");
+  });
+
+  test("leaves null and undefined untouched", () => {
+    expect(redactUrlValue(null)).toBeNull();
+    expect(redactUrlValue(undefined)).toBeUndefined();
+  });
+
+  test("leaves non-string (number) unchanged", () => {
+    expect(redactUrlValue(123)).toBe(123);
   });
 });

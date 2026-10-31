@@ -30,6 +30,7 @@ export class LidarrSyncer {
         releaseProfiles: new ReleaseProfileLidarrSync(client),
         root: new LidarrRootFolderSync(client),
         downloadClients: new LidarrDownloadClientSync(client),
+        indexerConfig: client,
       },
     });
     const metadataSync = new LidarrMetadataProfileSync(client);

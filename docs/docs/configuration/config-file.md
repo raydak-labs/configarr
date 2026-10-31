@@ -908,6 +908,22 @@ Notes:
 
 - **experimental**, available since `v1.14.0`
 
+## Global Indexer Configuration
+
+Configarr can manage instance-wide indexer configuration via the `indexer_config` block. This setting applies to Sonarr (v4 and v5), Radarr (v5, v6, and v7), Lidarr, Readarr, and Whisparr. It is not supported on Prowlarr.
+
+```yaml
+sonarr:
+  series:
+    indexer_config:
+      rss_sync_interval: 60 # minutes; 0 disables, otherwise between 10 and 120
+      retention: 0 # days, nonnegative integer
+      minimum_age: 0 # minutes, nonnegative integer
+      maximum_size: 0 # MB, nonnegative integer
+```
+
+All fields are optional. When updating settings, Configarr preserves any extra application-specific server fields (such as Radarr availability delay or indexer flag preferences).
+
 ## Indexer settings
 
 :::warning Experimental since v1.39.0
@@ -1201,6 +1217,58 @@ radarr:
 - Mappings that exist on the server but not in config will be deleted
 
 For more details, check the \*Arr-specific API documentation under the `RemotePathMapping` resource endpoint.
+
+## Notification Connections
+
+Configarr can manage notification connections across Sonarr, Radarr, Lidarr, Readarr, Whisparr, and Prowlarr via the `notifications` block.
+
+```yaml title="config.yml"
+sonarr:
+  series:
+    notifications:
+      update_password: false
+      delete_unmanaged:
+        enabled: false
+        ignore: []
+      data:
+        - name: ops-webhook
+          type: Webhook
+          events:
+            on_grab: true
+            on_health_issue: true
+          include_health_warnings: false
+          fields:
+            url: "https://ops.example.com/sonarr-events"
+            method: 1
+          tags:
+            - ops
+```
+
+Changing the `type` of an existing notification is refused; rename the notification or remove the entry on the server first.
+
+### Events
+
+Event names are specified in `snake_case` (e.g. `on_grab`, `on_health_issue`, `on_download`) and mapped to the application's supported triggers.
+Events not listed in the `events` map remain set to false when creating a notification, and remain unchanged when updating an existing notification.
+
+### Secrets and Passwords
+
+Sensitive fields such as passwords, API keys, and usernames (marked as secret by the server schema) are masked with asterisks by the server.
+When `update_password` is `false` (default), Configarr treats masked remote values as unchanged and does not re-send or diff them. When `update_password` is set to `true`, secrets are always updated and sent. Values of secret fields are masked in diff reports and log output.
+
+:::warning
+Changed notification URLs mask sensitive path tokens, queries, fragments, and credentials in diff reports. For valid URLs with an authority, only the origin (`protocol//host`, including port) is kept, with any userinfo, path, query, or fragment replaced by `********`. Unparsable values and those without an authority are masked entirely. As a limit of this rule, credentials placed directly in the host name cannot be detected and will not be masked.
+:::
+
+### Delete Unmanaged
+
+When `delete_unmanaged.enabled` is `true`, any notifications present on the server that are not defined in Configarr (and not listed under `ignore`) will be deleted.
+
+### Templates
+
+Notification templates apply to the media managers only (Sonarr, Radarr, Lidarr, Readarr, Whisparr). A Prowlarr instance takes no `include`, so it defines its `notifications` directly.
+
+When templates and the instance both define `notifications`, entries with the same name (case-insensitive) are replaced by the later definition, the instance last. `update_password` keeps the earlier value unless a later block sets it. `delete_unmanaged.ignore` lists are combined, and the last block that sets `delete_unmanaged` decides `enabled`. Two entries with the same name inside one block are refused.
 
 ## Prowlarr <span className="theme-doc-version-badge badge badge--secondary configarr-badge">1.31.0</span>
 

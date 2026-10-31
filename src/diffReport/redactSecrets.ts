@@ -11,8 +11,134 @@ export const SECRET_MASK = "********";
  */
 const SECRET_FIELD_PATTERN = /password|api[_-]?key|secret|token/i;
 
+/**
+ * Determines whether a field name matches known secret field patterns.
+ * Returns true if the field name indicates a sensitive credential.
+ */
 export function isSecretFieldName(fieldName: string): boolean {
   return SECRET_FIELD_PATTERN.test(fieldName);
+}
+
+/**
+ * Checks whether a field path designates a notification URL.
+ * Returns true if the final segment of the field path represents a URL.
+ */
+export function isNotificationUrlFieldName(fieldName: string): boolean {
+  const afterFields = fieldName.includes("fields.") ? fieldName.slice(fieldName.lastIndexOf("fields.") + "fields.".length) : fieldName;
+  const lastSegment = afterFields.split(".").pop() ?? afterFields;
+  return /url/i.test(lastSegment);
+}
+
+/**
+ * Inspects a value for embedded user credentials in URL format.
+ * Returns true if the value is a string containing credentials in a URL scheme.
+ */
+export function hasUrlCredentials(value: unknown): boolean {
+  if (typeof value !== "string") {
+    return false;
+  }
+  try {
+    const parsed = new URL(value);
+    if (parsed.username || parsed.password) {
+      return true;
+    }
+  } catch {
+    // Fall through to check for embedded credential URL substring.
+  }
+  return /[a-zA-Z][a-zA-Z0-9+.-]*:\/\/[^\s/?#]*[^\s/?#:][^\s/?#]*@[^\s/?#]+/.test(value);
+}
+
+/** Pattern matching any URL scheme prefix. */
+const URL_SCHEME_PATTERN = /^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//;
+
+/**
+ * Checks whether a string value begins with a URL scheme.
+ * Returns true if the trimmed string matches a URI scheme prefix.
+ */
+function isSchemeUrl(value: string): boolean {
+  return URL_SCHEME_PATTERN.test(value.trim());
+}
+
+/**
+ * Recursively sanitizes non-string values such as objects and arrays in URL contexts.
+ * Returns a sanitized copy with secrets, URL fields, and credential strings masked without mutating the input.
+ */
+function redactUrlTree(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map(redactUrlTree);
+  }
+
+  if (typeof value === "string") {
+    return hasUrlCredentials(value) || isSchemeUrl(value) ? redactUrlValue(value) : value;
+  }
+
+  if (value === null || typeof value !== "object") {
+    return value;
+  }
+
+  const record = value as Record<string, unknown>;
+  const namedSecret = typeof record.name === "string" && isSecretFieldName(record.name);
+
+  return Object.fromEntries(
+    Object.entries(record).map(([key, nested]) => {
+      if (isSecretFieldName(key) || (namedSecret && key === "value")) {
+        return [key, SECRET_MASK];
+      }
+      if (isNotificationUrlFieldName(key)) {
+        return [key, redactUrlValue(nested)];
+      }
+      return [key, redactUrlTree(nested)];
+    }),
+  );
+}
+
+/**
+ * Redact credential-bearing or path/query token URL values.
+ *
+ * Reasoning: path and query tokens are provider-specific (Slack, Discord, Telegram, Gotify, ntfy), so only the origin is safe to show.
+ */
+export function redactUrlValue(value: unknown): unknown {
+  if (value === null || value === undefined) {
+    return value;
+  }
+  if (Array.isArray(value)) {
+    return value.map(redactUrlValue);
+  }
+  if (typeof value !== "string") {
+    return redactUrlTree(value);
+  }
+  if (value === "" || value.trim() === "") {
+    return value;
+  }
+
+  const trimmed = value.trim();
+  if (!isSchemeUrl(trimmed)) {
+    return SECRET_MASK;
+  }
+
+  try {
+    const parsed = new URL(trimmed);
+    if (!parsed.host) {
+      return SECRET_MASK;
+    }
+
+    const base = `${parsed.protocol}//${parsed.host}`;
+    const hasUserInfo = Boolean(parsed.username || parsed.password) || /^[^:]+:\/\/[^/]*@/.test(trimmed);
+    const hasPathOtherThanSlash = parsed.pathname !== "" && parsed.pathname !== "/";
+    const hasQuery = Boolean(parsed.search) || trimmed.includes("?");
+    const hasFragment = Boolean(parsed.hash) || trimmed.includes("#");
+
+    if (hasUserInfo || hasPathOtherThanSlash || hasQuery || hasFragment) {
+      return `${base}/${SECRET_MASK}`;
+    }
+
+    if (trimmed.endsWith("/")) {
+      return `${base}/`;
+    }
+    return base;
+  } catch {
+    return SECRET_MASK;
+  }
 }
 
 /**
@@ -28,6 +154,10 @@ export function isSecretFieldName(fieldName: string): boolean {
 export function redactSecrets(value: unknown): unknown {
   if (Array.isArray(value)) {
     return value.map(redactSecrets);
+  }
+
+  if (typeof value === "string" && hasUrlCredentials(value)) {
+    return redactUrlValue(value);
   }
 
   if (value === null || typeof value !== "object") {
@@ -59,12 +189,24 @@ export function redactDiffEntry(entry: DiffEntry): DiffEntry {
     return entry;
   }
 
+  const isNotification = entry.resourceType === "Notification";
+
   return {
     ...entry,
-    fieldChanges: entry.fieldChanges.map((change) =>
-      isSecretFieldName(change.field)
-        ? { ...change, from: SECRET_MASK, to: SECRET_MASK }
-        : { ...change, from: redactSecrets(change.from), to: redactSecrets(change.to) },
-    ),
+    fieldChanges: entry.fieldChanges.map((change) => {
+      if (isSecretFieldName(change.field)) {
+        return { ...change, from: SECRET_MASK, to: SECRET_MASK };
+      }
+
+      const isNotifUrl = isNotification && isNotificationUrlFieldName(change.field);
+      const fromIsUrl = isNotifUrl || hasUrlCredentials(change.from);
+      const toIsUrl = isNotifUrl || hasUrlCredentials(change.to);
+
+      return {
+        ...change,
+        from: fromIsUrl ? redactUrlValue(change.from) : redactSecrets(change.from),
+        to: toIsUrl ? redactUrlValue(change.to) : redactSecrets(change.to),
+      };
+    }),
   };
 }

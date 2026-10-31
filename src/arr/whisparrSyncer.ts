@@ -32,6 +32,7 @@ export class WhisparrSyncer {
         root: new PathRootFolderSync(client),
         downloadClients: new WhisparrDownloadClientSync(client),
         hostConfig: new WhisparrHostConfigSync(client),
+        indexerConfig: client,
       },
     });
     return completeMediaSync(ctx);
