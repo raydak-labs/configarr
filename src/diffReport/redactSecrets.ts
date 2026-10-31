@@ -15,6 +15,70 @@ export function isSecretFieldName(fieldName: string): boolean {
   return SECRET_FIELD_PATTERN.test(fieldName);
 }
 
+export function isNotificationUrlFieldName(fieldName: string): boolean {
+  const afterFields = fieldName.includes("fields.") ? fieldName.slice(fieldName.lastIndexOf("fields.") + "fields.".length) : fieldName;
+  const lastSegment = afterFields.split(".").pop() ?? afterFields;
+  return /url/i.test(lastSegment);
+}
+
+export function hasUrlCredentials(value: unknown): boolean {
+  if (typeof value !== "string") {
+    return false;
+  }
+  try {
+    const parsed = new URL(value);
+    return Boolean(parsed.username || parsed.password);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Redact credential-bearing or path/query token URL values.
+ *
+ * Reasoning: path and query tokens are provider-specific (Slack, Discord, Telegram, Gotify, ntfy), so only the origin is safe to show.
+ */
+export function redactUrlValue(value: unknown): unknown {
+  if (value === null || value === undefined) {
+    return value;
+  }
+  if (typeof value !== "string") {
+    return value;
+  }
+  if (value === "" || value.trim() === "") {
+    return value;
+  }
+
+  const trimmed = value.trim();
+  if (!/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(trimmed)) {
+    return SECRET_MASK;
+  }
+
+  try {
+    const parsed = new URL(trimmed);
+    if (!parsed.host) {
+      return SECRET_MASK;
+    }
+
+    const base = `${parsed.protocol}//${parsed.host}`;
+    const hasUserInfo = Boolean(parsed.username || parsed.password) || /^[^:]+:\/\/[^/]*@/.test(trimmed);
+    const hasPathOtherThanSlash = parsed.pathname !== "" && parsed.pathname !== "/";
+    const hasQuery = Boolean(parsed.search) || trimmed.includes("?");
+    const hasFragment = Boolean(parsed.hash) || trimmed.includes("#");
+
+    if (hasUserInfo || hasPathOtherThanSlash || hasQuery || hasFragment) {
+      return `${base}/${SECRET_MASK}`;
+    }
+
+    if (trimmed.endsWith("/")) {
+      return `${base}/`;
+    }
+    return base;
+  } catch {
+    return SECRET_MASK;
+  }
+}
+
 /**
  * Mask secret-named keys anywhere inside a value, and mask the `value` of an object whose
  * own `name` is secret-named.
@@ -59,12 +123,24 @@ export function redactDiffEntry(entry: DiffEntry): DiffEntry {
     return entry;
   }
 
+  const isNotification = entry.resourceType === "Notification";
+
   return {
     ...entry,
-    fieldChanges: entry.fieldChanges.map((change) =>
-      isSecretFieldName(change.field)
-        ? { ...change, from: SECRET_MASK, to: SECRET_MASK }
-        : { ...change, from: redactSecrets(change.from), to: redactSecrets(change.to) },
-    ),
+    fieldChanges: entry.fieldChanges.map((change) => {
+      if (isSecretFieldName(change.field)) {
+        return { ...change, from: SECRET_MASK, to: SECRET_MASK };
+      }
+
+      const isNotifUrl = isNotification && isNotificationUrlFieldName(change.field);
+      const fromIsUrl = isNotifUrl || hasUrlCredentials(change.from);
+      const toIsUrl = isNotifUrl || hasUrlCredentials(change.to);
+
+      return {
+        ...change,
+        from: fromIsUrl ? redactUrlValue(change.from) : redactSecrets(change.from),
+        to: toIsUrl ? redactUrlValue(change.to) : redactSecrets(change.to),
+      };
+    }),
   };
 }
