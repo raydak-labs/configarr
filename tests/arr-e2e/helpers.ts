@@ -505,6 +505,7 @@ export async function cleanupMetadataProfilesE2e(client: LidarrClient | ReadarrC
   throwCleanupErrors(errors);
 }
 
+/** Deletes every `e2e-` resource this suite can create on Prowlarr, keeping the `Standard` sync profile. Safe to call twice. */
 export async function cleanupProwlarrE2e(client: ProwlarrClient): Promise<void> {
   const errors: string[] = [];
   for (const app of await client.getApplications()) {
@@ -582,6 +583,7 @@ export async function snapshotMediaBaseline(client: MediaArrClient): Promise<Med
   };
 }
 
+/** Writes back each baseline setting a test changed; settings equal to the snapshot are not written. */
 export async function restoreMediaBaseline(client: MediaArrClient, snap: MediaBaseline): Promise<void> {
   // Only write back what a test actually changed. Whisparr 3.5.0 rejects its own default naming
   // config (folder formats must start with a literal subfolder), so a no-op PUT would 400.
