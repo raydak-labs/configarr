@@ -2,7 +2,7 @@ import { getEnvs } from "../env";
 import { ConfigValidationError } from "../validation";
 import { snakeToCamel } from "../util";
 import { isSecretFieldName, SECRET_MASK } from "../diffReport/redactSecrets";
-import { ensureTags, resolveTagNames } from "../tags/tags";
+import { buildTagPlaceholders, ensureTags, resolveTagNames } from "../tags/tags";
 import type { DiffEntry, FieldChange } from "../diffReport/diffReport.types";
 import type { InputConfigNotifications } from "../types/config.types";
 import type { NotificationsClient, TagsClient } from "../clients/capabilities";
@@ -149,6 +149,13 @@ export async function syncNotifications(
   if (allTags.length > 0) {
     await ensureTags(client, serverCache, allTags);
   }
+  // A dry run creates no tags, so missing labels get synthetic ids to show in the diff.
+  const placeholders = getEnvs().DRY_RUN
+    ? buildTagPlaceholders(
+        allTags.filter((tag): tag is string => typeof tag === "string"),
+        serverCache.tags,
+      )
+    : undefined;
 
   const diffEntries: DiffEntry[] = [];
   const updatePassword = config.update_password ?? false;
@@ -210,7 +217,7 @@ export async function syncNotifications(
       });
 
       if (item.tags !== undefined) {
-        const { ids } = resolveTagNames(item.tags, serverCache.tags);
+        const { ids } = resolveTagNames(item.tags, serverCache.tags, { placeholders });
         payload.tags = [...ids].sort();
       }
 
@@ -292,7 +299,7 @@ export async function syncNotifications(
       next.fields = updatedFields;
 
       if (item.tags !== undefined) {
-        const { ids: resolvedTagIds } = resolveTagNames(item.tags, serverCache.tags);
+        const { ids: resolvedTagIds } = resolveTagNames(item.tags, serverCache.tags, { placeholders });
         const sortedConfigTagIds = [...resolvedTagIds].sort();
         const sortedServerTagIds = [...(serverNotification.tags ?? [])].sort();
         if (JSON.stringify(sortedConfigTagIds) !== JSON.stringify(sortedServerTagIds)) {

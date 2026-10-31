@@ -481,6 +481,28 @@ describe("notifications", () => {
       expect(client.updateMock).not.toHaveBeenCalled();
     });
 
+    test("DRY_RUN shows a configured tag missing on the server as an added placeholder", async () => {
+      vi.stubEnv("DRY_RUN", "true");
+      initEnvs();
+
+      const existing: NotificationResourceItem = {
+        id: 10,
+        name: "ops-hook",
+        implementation: "Webhook",
+        tags: [7],
+      };
+      const client = mockClient({ existing: [existing], tags: [{ id: 7, label: "prod" }] });
+      const cache = new ServerCache();
+      cache.tags = [{ id: 7, label: "prod" }];
+
+      const diff = await syncNotifications(client, { data: [{ name: "ops-hook", type: "Webhook", tags: ["prod", "new-label"] }] }, cache);
+
+      const tagChange = diff[0]?.fieldChanges?.find((change) => change.field === "tags");
+      expect(tagChange?.from).toEqual([7]);
+      expect(tagChange?.to).toEqual([-1, 7]);
+      expect(client.updateMock).not.toHaveBeenCalled();
+    });
+
     test("create turns off events the schema enables by default", async () => {
       const client = mockClient({ schema: [{ ...webhookSchema, onDownload: true }] });
 
