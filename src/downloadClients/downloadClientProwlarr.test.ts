@@ -238,4 +238,61 @@ describe("ProwlarrDownloadClientSync", () => {
       expect(result.diffEntries).toEqual([{ resourceType: "DownloadClient", name: "qBittorrent", action: "create" }]);
     });
   });
+
+  describe("update_password: 'on_test_failure'", () => {
+    test("Prowlarr calls testDownloadClient and pushes config secret on failure", async () => {
+      const serverClient = qbitSchema({
+        id: 42,
+        name: "qBittorrent",
+        enable: true,
+        fields: [
+          { name: "host", value: "qbittorrent" },
+          { name: "password", value: "********" },
+        ],
+      });
+
+      const mockClient = {
+        getDownloadClientSchema: vi.fn(async () => [
+          qbitSchema({
+            fields: [
+              { name: "host", value: "" },
+              { name: "password", value: "" },
+            ],
+          }),
+        ]),
+        getDownloadClients: vi.fn(async () => [serverClient]),
+        updateDownloadClient: vi.fn(async (_id, payload) => payload),
+        testDownloadClient: vi.fn(async () => {
+          throw new Error("Prowlarr test connection failed");
+        }),
+        getTags: vi.fn(async () => []),
+        createTag: vi.fn(),
+      };
+
+      const sync = new ProwlarrDownloadClientSync(mockClient as never);
+      const secret = "PROWLARR_CONFIG_SECRET";
+      const result = await sync.syncDownloadClients(
+        {
+          download_clients: {
+            update_password: "on_test_failure",
+            data: [
+              {
+                name: "qBittorrent",
+                type: "qbittorrent",
+                fields: { host: "qbittorrent", password: secret },
+              },
+            ],
+          },
+        },
+        new ServerCache(),
+      );
+
+      expect(mockClient.testDownloadClient).toHaveBeenCalledTimes(1);
+      expect(mockClient.testDownloadClient).toHaveBeenCalledWith(serverClient);
+      expect(mockClient.updateDownloadClient).toHaveBeenCalledTimes(1);
+      const updatePayload = mockClient.updateDownloadClient.mock.calls[0]![1];
+      expect(updatePayload.fields.find((f: any) => f.name === "password")?.value).toBe(secret);
+      expect(result.updated).toBe(1);
+    });
+  });
 });

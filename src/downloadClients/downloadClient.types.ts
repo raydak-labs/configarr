@@ -54,7 +54,13 @@ export interface ConnectionTestResult {
 
 export type DownloadClientDiff<T extends DownloadClientShared> = {
   create: InputConfigDownloadClient[];
-  update: { config: InputConfigDownloadClient; server: T; partialUpdate: boolean; fieldChanges: FieldChange[] }[];
+  update: {
+    config: InputConfigDownloadClient;
+    server: T;
+    partialUpdate: boolean;
+    fieldChanges: FieldChange[];
+    updatePassword?: boolean;
+  }[];
   unchanged: { config: InputConfigDownloadClient; server: T }[];
   deleted: T[];
 };

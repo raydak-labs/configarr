@@ -1,7 +1,7 @@
 import type { DownloadClientResource } from "../__generated__/prowlarr/data-contracts";
 import { ServerCache } from "../cache";
 import { FieldChange } from "../diffReport/diffReport.types";
-import { InputConfigDownloadClient } from "../types/config.types";
+import { InputConfigDownloadClient, UpdatePassword } from "../types/config.types";
 import { BaseDownloadClientSync } from "./downloadClientBase";
 
 export class ProwlarrDownloadClientSync extends BaseDownloadClientSync<DownloadClientResource> {
@@ -13,7 +13,7 @@ export class ProwlarrDownloadClientSync extends BaseDownloadClientSync<DownloadC
     config: InputConfigDownloadClient,
     server: DownloadClientResource,
     cache: ServerCache,
-    updatePassword: boolean = false,
+    updatePassword: UpdatePassword = false,
   ): { equal: boolean; changes: FieldChange[] } => {
     if (config.name !== server.name || config.type.toLowerCase() !== server.implementation?.toLowerCase()) {
       return { equal: false, changes: [] };
@@ -42,7 +42,7 @@ export class ProwlarrDownloadClientSync extends BaseDownloadClientSync<DownloadC
     cache: ServerCache,
     serverClient?: DownloadClientResource,
     partialUpdate: boolean = false,
-    updatePassword: boolean = true,
+    updatePassword: UpdatePassword = true,
   ): Promise<DownloadClientResource> {
     const schema = await this.getDownloadClientSchema(cache);
     const template = this.findImplementationInSchema(schema, config.type);
