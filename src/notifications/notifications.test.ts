@@ -604,10 +604,9 @@ describe("notifications", () => {
       );
     });
 
-    // The documented limit of the secret guarantee: masking keys on privacy and name, not on content.
-    test("reports a changed webhook url in full, credentials included", async () => {
-      const oldUrl = "https://user:old-credential@hooks.example.com/services/old-path-token";
-      const newUrl = "https://user:new-credential@hooks.example.com/services/new-path-token";
+    test("redacts credential, path and query tokens in changed notification url diff report while sending original url to client", async () => {
+      const oldUrl = "https://user:old-credential@hooks.example.com/services/old-path-token?token=old-query-token";
+      const newUrl = "https://user:new-credential@hooks.example.com/services/new-path-token?token=new-query-token";
       const existing: NotificationResourceItem = {
         id: 11,
         name: "ops-hook",
@@ -625,7 +624,62 @@ describe("notifications", () => {
       const collector = new DiffCollector();
       collector.add(diff);
 
-      expect(collector.getEntries()[0]?.fieldChanges).toEqual([{ field: "fields.url", from: oldUrl, to: newUrl }]);
+      const entries = collector.getEntries();
+      const serialized = JSON.stringify(entries);
+
+      expect(serialized).not.toContain("old-credential");
+      expect(serialized).not.toContain("new-credential");
+      expect(serialized).not.toContain("old-path-token");
+      expect(serialized).not.toContain("new-path-token");
+      expect(serialized).not.toContain("old-query-token");
+      expect(serialized).not.toContain("new-query-token");
+
+      expect(entries[0]?.fieldChanges).toEqual([
+        {
+          field: "fields.url",
+          from: "https://hooks.example.com/********",
+          to: "https://hooks.example.com/********",
+        },
+      ]);
+
+      expect(client.updateMock).toHaveBeenCalledTimes(1);
+      const updatedPayload = client.updateMock.mock.calls[0]![1] as NotificationResourceItem;
+      const urlField = updatedPayload.fields?.find((f) => f.name === "url");
+      expect(urlField?.value).toBe(newUrl);
+    });
+
+    test("DRY_RUN masks changed notification url in reported entry without writing update", async () => {
+      vi.stubEnv("DRY_RUN", "true");
+      initEnvs();
+
+      const oldUrl = "https://user:old-credential@hooks.example.com/services/old-path-token?token=old-query-token";
+      const newUrl = "https://user:new-credential@hooks.example.com/services/new-path-token?token=new-query-token";
+      const existing: NotificationResourceItem = {
+        id: 11,
+        name: "ops-hook",
+        implementation: "Webhook",
+        includeHealthWarnings: false,
+        fields: [{ name: "url", privacy: "normal", value: oldUrl }],
+      };
+      const client = mockClient({ existing: [existing] });
+
+      const diff = await syncNotifications(
+        client,
+        { data: [{ name: "ops-hook", type: "Webhook", fields: { url: newUrl } }] },
+        new ServerCache(),
+      );
+      const collector = new DiffCollector();
+      collector.add(diff);
+
+      const entries = collector.getEntries();
+      expect(entries[0]?.fieldChanges).toEqual([
+        {
+          field: "fields.url",
+          from: "https://hooks.example.com/********",
+          to: "https://hooks.example.com/********",
+        },
+      ]);
+      expect(client.updateMock).not.toHaveBeenCalled();
     });
   });
 });

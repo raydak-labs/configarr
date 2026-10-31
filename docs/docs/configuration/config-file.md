@@ -1257,7 +1257,7 @@ Sensitive fields such as passwords, API keys, and usernames (marked as secret by
 When `update_password` is `false` (default), Configarr treats masked remote values as unchanged and does not re-send or diff them. When `update_password` is set to `true`, secrets are always updated and sent. Values of secret fields are masked in diff reports and log output.
 
 :::warning
-Masking follows the server's privacy marker and the field name, not the content. A `url` field is not a secret field, so a changed webhook URL appears in full in diff reports and log output, including any credential or token it holds.
+Changed notification URLs mask sensitive path tokens, queries, fragments, and credentials in diff reports. For valid URLs with an authority, only the origin (`protocol//host`, including port) is kept, with any userinfo, path, query, or fragment replaced by `********`. Unparsable values and those without an authority are masked entirely. As a limit of this rule, credentials placed directly in the host name cannot be detected and will not be masked.
 :::
 
 ### Delete Unmanaged
