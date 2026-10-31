@@ -405,6 +405,10 @@ export const mergeNotifications = (
   };
 };
 
+/**
+ * Merge a single template into the accumulated instance template mapping.
+ * Applies template rules and settings into the target merged template object.
+ */
 const includeRecyclarrTemplate = (
   template: MappedTemplates,
   {
@@ -856,6 +860,10 @@ function mergeQualitySizes(
   return [...merged.values()];
 }
 
+/**
+ * Merge global configuration, instance configuration, and referenced templates into a single instance configuration.
+ * Returns the merged configuration instance, or throws a ConfigValidationError if validation fails.
+ */
 export const mergeConfigsAndTemplates = async (
   globalConfig: InputConfigSchema,
   instanceConfig: InputConfigArrInstance,
