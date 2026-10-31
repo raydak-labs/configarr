@@ -1264,6 +1264,10 @@ Masking follows the server's privacy marker and the field name, not the content.
 
 When `delete_unmanaged.enabled` is `true`, any notifications present on the server that are not defined in Configarr (and not listed under `ignore`) will be deleted.
 
+### Templates
+
+When templates and the instance both define `notifications`, entries with the same name (case-insensitive) are replaced by the later definition, the instance last. `update_password` keeps the earlier value unless a later block sets it. `delete_unmanaged.ignore` lists are combined, and the last block that sets `delete_unmanaged` decides `enabled`.
+
 ## Prowlarr <span className="theme-doc-version-badge badge badge--secondary configarr-badge">1.31.0</span>
 
 Prowlarr uses a dedicated top-level `prowlarr:` block (see
