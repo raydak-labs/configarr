@@ -2,7 +2,7 @@ import { getEnvs } from "../env";
 import { ConfigValidationError } from "../validation";
 import { snakeToCamel } from "../util";
 import { isSecretFieldName, SECRET_MASK } from "../diffReport/redactSecrets";
-import { buildTagPlaceholders, ensureTags, resolveTagNames } from "../tags/tags";
+import { buildTagPlaceholders, ensureTags, renderTags, resolveTagNames } from "../tags/tags";
 import type { DiffEntry, FieldChange } from "../diffReport/diffReport.types";
 import type { InputConfigNotifications } from "../types/config.types";
 import type { NotificationsClient, TagsClient } from "../clients/capabilities";
@@ -303,7 +303,16 @@ export async function syncNotifications(
         const sortedConfigTagIds = [...resolvedTagIds].sort();
         const sortedServerTagIds = [...(serverNotification.tags ?? [])].sort();
         if (JSON.stringify(sortedConfigTagIds) !== JSON.stringify(sortedServerTagIds)) {
-          changes.push({ field: "tags", from: sortedServerTagIds, to: sortedConfigTagIds });
+          // Map placeholder ids to labels as written in config for dry-run diff reporting.
+          const placeholderLabels = placeholders
+            ? new Map(
+                [...placeholders].flatMap(([key, id]) => {
+                  const label = item.tags?.find((t): t is string => typeof t === "string" && t.toLowerCase() === key);
+                  return label !== undefined ? [[id, label]] : [];
+                }),
+              )
+            : undefined;
+          changes.push({ field: "tags", from: sortedServerTagIds, to: renderTags(sortedConfigTagIds, placeholderLabels) });
           next.tags = sortedConfigTagIds;
         }
       }

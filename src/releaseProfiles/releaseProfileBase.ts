@@ -4,7 +4,7 @@ import { DiffEntry, FieldChange } from "../diffReport/diffReport.types";
 import { getEnvs } from "../env";
 import { logger } from "../logger";
 import { Tag, TagResolveOptions } from "../tags/tag.types";
-import { buildTagPlaceholders, ensureTags, resolveTagNames } from "../tags/tags";
+import { buildTagPlaceholders, ensureTags, renderTags, resolveTagNames } from "../tags/tags";
 import { InputConfigReleaseProfile } from "../types/config.types";
 import { ConfigValidationError } from "../validation";
 import { MappedReleaseProfile, ReleaseProfileShared, ReleaseProfilesDiff, ReleaseProfileSyncResult } from "./releaseProfile.types";
@@ -74,21 +74,6 @@ export function displayName(profile: { name?: string | null; required?: unknown 
     return required.join(",");
   }
   return `profile-${index + 1}`;
-}
-
-/**
- * A tag that does not exist on the server yet has no id the server could ever assign it. A dry run
- * still needs a stable stand-in to match profiles by content, but it must not print that stand-in:
- * listing the tag by label keeps the report honest about what the real run will do. Mirrors the
- * convention in `providerResourceSync`.
- */
-function renderTags(ids: number[], placeholderLabels?: Map<number, string>): Array<number | string> {
-  if (placeholderLabels === undefined) {
-    return ids;
-  }
-  const resolved = ids.filter((id) => !placeholderLabels.has(id));
-  const pending = ids.filter((id) => placeholderLabels.has(id)).map((id) => placeholderLabels.get(id) as string);
-  return [...resolved, ...pending];
 }
 
 function compareFields(
