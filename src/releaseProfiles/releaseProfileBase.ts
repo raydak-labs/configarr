@@ -1,10 +1,11 @@
 import { ServerCache } from "../cache";
 import type { IndexerListItem, ReleaseProfilesApi } from "../clients/capabilities";
 import { DiffEntry, FieldChange } from "../diffReport/diffReport.types";
+import { renderTags } from "../diffReport/renderTags";
 import { getEnvs } from "../env";
 import { logger } from "../logger";
 import { Tag, TagResolveOptions } from "../tags/tag.types";
-import { buildTagPlaceholders, ensureTags, renderTags, resolveTagNames } from "../tags/tags";
+import { buildTagPlaceholders, ensureTags, resolveTagNames } from "../tags/tags";
 import { InputConfigReleaseProfile } from "../types/config.types";
 import { ConfigValidationError } from "../validation";
 import { MappedReleaseProfile, ReleaseProfileShared, ReleaseProfilesDiff, ReleaseProfileSyncResult } from "./releaseProfile.types";
