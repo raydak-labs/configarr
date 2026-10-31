@@ -1176,7 +1176,7 @@ Because \*Arr servers return stored secrets (passwords, API keys) masked as `***
 | `true`            | Always overwrites secret fields with configured values on every run.                    |
 | `on_test_failure` | Tests the server's stored secret first; updates secret fields only when the test fails. |
 
-When set to `on_test_failure`, Configarr calls each matching client's connection test once per run to check if the stored secret still works before pushing an update.
+When set to `on_test_failure`, Configarr runs the connection test once per run for each valid existing client matched by name and type. It runs only when the server client is enabled, its non-secret settings are unchanged (otherwise the normal update path runs, no test), and the configuration contains a non-empty secret that is not `********`. In `DRY_RUN` the test still runs; a failed test is reported as an update but nothing is sent.
 
 ### Download Client Configuration <span className="theme-doc-version-badge badge badge--secondary configarr-badge">1.19.0</span>
 
