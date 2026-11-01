@@ -7,8 +7,14 @@ import { getEnvs } from "../env";
 import { logger } from "../logger";
 import { buildTagPlaceholders, ensureTags, resolveTagNames } from "../tags/tags";
 import { ArrType } from "../types/common.types";
-import { InputConfigDownloadClient, MergedConfigInstance, UpdatePassword } from "../types/config.types";
-import { DownloadClientDiff, DownloadClientShared, DownloadClientSyncResult, ValidationResult } from "./downloadClient.types";
+import { InputConfigDownloadClient, MergedConfigInstance } from "../types/config.types";
+import {
+  DownloadClientDiff,
+  DownloadClientShared,
+  DownloadClientSyncResult,
+  SecretUpdateMode,
+  ValidationResult,
+} from "./downloadClient.types";
 import { camelToSnake, snakeToCamel } from "../util";
 import { ConfigValidationError } from "../validation";
 
@@ -92,7 +98,7 @@ export abstract class BaseDownloadClientSync<T extends DownloadClientShared> {
     config: InputConfigDownloadClient,
     server: T,
     cache: ServerCache,
-    updatePassword?: UpdatePassword,
+    updatePassword?: SecretUpdateMode,
   ): { equal: boolean; changes: FieldChange[] };
 
   public abstract shouldUsePartialUpdate(config: InputConfigDownloadClient): boolean;
@@ -102,7 +108,7 @@ export abstract class BaseDownloadClientSync<T extends DownloadClientShared> {
     cache: ServerCache,
     serverClient?: T,
     partialUpdate?: boolean,
-    updatePassword?: UpdatePassword,
+    updatePassword?: SecretUpdateMode,
   ): Promise<T>;
 
   public normalizeConfigFields(configFields: Record<string, unknown>, arrType: ArrType): Record<string, unknown> {
@@ -183,7 +189,7 @@ export abstract class BaseDownloadClientSync<T extends DownloadClientShared> {
     config: InputConfigDownloadClient,
     server: T,
     cache: ServerCache,
-    updatePassword: UpdatePassword = false,
+    updatePassword: SecretUpdateMode = false,
   ): FieldChange[] {
     const changes: FieldChange[] = [];
 
@@ -276,7 +282,7 @@ export abstract class BaseDownloadClientSync<T extends DownloadClientShared> {
     arrType: ArrType,
     serverFields: F[] | null | undefined,
     partialUpdate = false,
-    updatePassword: UpdatePassword = true,
+    updatePassword: SecretUpdateMode = true,
   ): F[] {
     const normalizedFields = this.normalizeConfigFields(configFields, arrType);
     const baseFields = partialUpdate && serverFields ? serverFields : schemaFields;
@@ -392,7 +398,7 @@ export abstract class BaseDownloadClientSync<T extends DownloadClientShared> {
     configClients: InputConfigDownloadClient[],
     serverClients: T[],
     cache: ServerCache,
-    updatePassword: UpdatePassword = false,
+    updatePassword: SecretUpdateMode = false,
   ): Promise<DownloadClientDiff<T>> {
     const create: InputConfigDownloadClient[] = [];
     const update: DownloadClientDiff<T>["update"] = [];
@@ -551,7 +557,7 @@ export abstract class BaseDownloadClientSync<T extends DownloadClientShared> {
   private async updateClients(
     updates: DownloadClientDiff<T>["update"],
     serverCache: ServerCache,
-    updatePassword: UpdatePassword,
+    updatePassword: SecretUpdateMode,
   ): Promise<DownloadClientDiff<T>["update"]> {
     const updated: DownloadClientDiff<T>["update"] = [];
 
@@ -605,7 +611,12 @@ export abstract class BaseDownloadClientSync<T extends DownloadClientShared> {
     serverCache: ServerCache,
   ): Promise<DownloadClientSyncResult> {
     const configClients = config.download_clients?.data ?? [];
-    const updatePassword = config.download_clients?.update_password ?? false;
+    const updatePassword: SecretUpdateMode =
+      config.download_clients?.update_password === true
+        ? true
+        : config.download_clients?.update_password_on_test_fail === true
+          ? "on_test_failure"
+          : false;
 
     if (configClients.length === 0 && !config.download_clients?.delete_unmanaged?.enabled) {
       this.logger.info("No download clients configured and delete_unmanaged not enabled, skipping");

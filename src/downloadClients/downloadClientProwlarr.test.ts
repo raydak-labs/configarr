@@ -239,7 +239,7 @@ describe("ProwlarrDownloadClientSync", () => {
     });
   });
 
-  describe("update_password: 'on_test_failure'", () => {
+  describe("update_password_on_test_fail", () => {
     test("Prowlarr calls testDownloadClient and pushes config secret on failure", async () => {
       const serverClient = qbitSchema({
         id: 42,
@@ -274,7 +274,7 @@ describe("ProwlarrDownloadClientSync", () => {
       const result = await sync.syncDownloadClients(
         {
           download_clients: {
-            update_password: "on_test_failure",
+            update_password_on_test_fail: true,
             data: [
               {
                 name: "qBittorrent",

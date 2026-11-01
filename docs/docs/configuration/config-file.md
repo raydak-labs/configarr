@@ -1149,9 +1149,10 @@ sonarr:
             username: sonarr
             password: changeme
             tv_category: series-4k
-      # Existing secrets can not be read back: true always sends them, false never does,
-      # on_test_failure sends them only when the client's connection test fails
-      update_password: on_test_failure
+      # Existing secrets can not be read back: update_password: true always sends them;
+      # update_password_on_test_fail: true sends them only when the client's connection test fails
+      update_password: false
+      update_password_on_test_fail: true
       # Delete unmanaged download clients
       delete_unmanaged:
         enabled: true
@@ -1166,17 +1167,18 @@ sonarr:
         # check_for_finished_download_interval: 1
 ```
 
-### Secret field updates (`update_password`)
+### Secret field updates (`update_password`, `update_password_on_test_fail`)
 
-Because \*Arr servers return stored secrets (passwords, API keys) masked as `********`, Configarr cannot read existing secrets from the server. The `update_password` setting controls when secret fields in `fields` are sent to existing download clients:
+Because \*Arr servers return stored secrets (passwords, API keys) masked as `********`, Configarr cannot read existing secrets from the server. Two settings control when secret fields in `fields` are sent to existing download clients:
 
-| Value             | Behavior                                                                                |
-| ----------------- | --------------------------------------------------------------------------------------- |
-| `false` (default) | Preserves the server's stored secrets; masked secrets count as unchanged.               |
-| `true`            | Always overwrites secret fields with configured values on every run.                    |
-| `on_test_failure` | Tests the server's stored secret first; updates secret fields only when the test fails. |
+| Setting                        | Default | Behavior                                                                                             |
+| ------------------------------ | ------- | ---------------------------------------------------------------------------------------------------- |
+| `update_password`              | `false` | When `true`, always overwrites secret fields with configured values on every run.                    |
+| `update_password_on_test_fail` | `false` | When `true`, tests the server's stored secret first; updates secret fields only when the test fails. |
 
-When set to `on_test_failure`, Configarr runs the connection test once per run for each valid existing client matched by name and type. It runs only when the server client is enabled, its non-secret settings are unchanged (otherwise the normal update path runs, no test), and the configuration contains a non-empty secret that is not `********`. In `DRY_RUN` the test still runs; a failed test is reported as an update but nothing is sent.
+`update_password: true` takes precedence over `update_password_on_test_fail`.
+
+When `update_password_on_test_fail: true` is enabled (and `update_password` is false or unset), Configarr runs the connection test once per run for each valid existing client matched by name and type. It runs only when the server client is enabled, its non-secret settings are unchanged (otherwise the normal update path runs, no test), and the configuration contains a non-empty secret that is not `********`. In `DRY_RUN` the test still runs; a failed test is reported as an update but nothing is sent.
 
 ### Download Client Configuration <span className="theme-doc-version-badge badge badge--secondary configarr-badge">1.19.0</span>
 

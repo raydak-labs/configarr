@@ -1154,6 +1154,7 @@ export const mergeConfigsAndTemplates = async (
     mergedTemplates.download_clients = {
       data: [...existingData, ...instanceData],
       update_password: instanceConfig.download_clients.update_password,
+      update_password_on_test_fail: instanceConfig.download_clients.update_password_on_test_fail,
       delete_unmanaged: instanceDeleteManaged ? instanceDeleteManaged : existingDeleteManaged,
       config: instanceConfig_ ? { ...existingConfig, ...instanceConfig_ } : existingConfig,
       remote_paths: [...existingRemotePaths, ...instanceRemotePaths],

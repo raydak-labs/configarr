@@ -11,7 +11,6 @@ import { BaseDownloadClientSync } from "./downloadClientBase";
 import {
   InputConfigArrInstanceSchema,
   InputConfigProwlarrDownloadClientsSchema,
-  UpdatePasswordSchema,
   type InputConfigDownloadClient,
 } from "../types/config.types";
 import type { ServerCache } from "../cache";
@@ -353,11 +352,11 @@ describe("BaseDownloadClientSync – utility methods", () => {
   });
 });
 
-describe("update_password schema validation", () => {
+describe("download_clients secret schema validation", () => {
   test.each([
     { value: true, valid: true },
     { value: false, valid: true },
-    { value: "on_test_failure", valid: true },
+    { value: "on_test_failure", valid: false },
     { value: "other_string", valid: false },
     { value: "always", valid: false },
     { value: 123, valid: false },
@@ -371,13 +370,28 @@ describe("update_password schema validation", () => {
       update_password: value,
     });
     expect(prowlarrResult.success).toBe(valid);
+  });
 
-    const directResult = UpdatePasswordSchema.safeParse(value);
-    expect(directResult.success).toBe(valid);
+  test.each([
+    { value: true, valid: true },
+    { value: false, valid: true },
+    { value: "yes", valid: false },
+    { value: "on_test_failure", valid: false },
+    { value: 123, valid: false },
+  ])("validates update_password_on_test_fail=$value (valid=$valid)", ({ value, valid }) => {
+    const arrResult = InputConfigArrInstanceSchema.shape.download_clients.unwrap().safeParse({
+      update_password_on_test_fail: value,
+    });
+    expect(arrResult.success).toBe(valid);
+
+    const prowlarrResult = InputConfigProwlarrDownloadClientsSchema.safeParse({
+      update_password_on_test_fail: value,
+    });
+    expect(prowlarrResult.success).toBe(valid);
   });
 });
 
-describe("BaseDownloadClientSync - update_password: 'on_test_failure'", () => {
+describe("BaseDownloadClientSync - secret update modes", () => {
   const schemaClient: DownloadClientResource = {
     id: 0,
     name: "qBittorrent",
@@ -433,7 +447,7 @@ describe("BaseDownloadClientSync - update_password: 'on_test_failure'", () => {
     };
   });
 
-  test("on_test_failure + test passes -> no update, test called once with the server resource", async () => {
+  test("positive: on_test_fail true + update_password unset + test passes -> no update, test called once with the server resource", async () => {
     api.testDownloadClient.mockResolvedValueOnce(undefined);
     const sync = new RadarrDownloadClientSync(api);
     const serverClient = createServerClient();
@@ -442,7 +456,7 @@ describe("BaseDownloadClientSync - update_password: 'on_test_failure'", () => {
     const result = await sync.syncDownloadClients(
       {
         download_clients: {
-          update_password: "on_test_failure",
+          update_password_on_test_fail: true,
           data: [
             {
               name: "qBit",
@@ -462,7 +476,7 @@ describe("BaseDownloadClientSync - update_password: 'on_test_failure'", () => {
     expect(result.diffEntries.filter((e) => e.action === "update")).toHaveLength(0);
   });
 
-  test("on_test_failure + test throws -> one update whose payload carries the CONFIG secret; diff entry secret masked; log line has no secret value", async () => {
+  test("positive: on_test_fail true + update_password unset + test throws -> one update whose payload carries the CONFIG secret; diff entry secret masked; log line has no secret value", async () => {
     const secret = "SUPER_SECRET_NEW_PASSWORD";
     api.testDownloadClient.mockRejectedValueOnce(new Error("Connection refused: bad credentials"));
     const infoSpy = vi.spyOn(logger, "info");
@@ -473,7 +487,7 @@ describe("BaseDownloadClientSync - update_password: 'on_test_failure'", () => {
     const result = await sync.syncDownloadClients(
       {
         download_clients: {
-          update_password: "on_test_failure",
+          update_password_on_test_fail: true,
           data: [
             {
               name: "qBit",
@@ -506,7 +520,93 @@ describe("BaseDownloadClientSync - update_password: 'on_test_failure'", () => {
     expect(logged).not.toContain(secret);
   });
 
-  test("on_test_failure + disabled server client -> no test call, no update", async () => {
+  test("positive: update_password true -> secrets sent, no connection test", async () => {
+    const sync = new RadarrDownloadClientSync(api);
+    const serverClient = createServerClient();
+    api.getDownloadClients.mockResolvedValueOnce([serverClient]);
+    const secret = "DIRECT_UPDATE_PASSWORD";
+
+    const result = await sync.syncDownloadClients(
+      {
+        download_clients: {
+          update_password: true,
+          data: [
+            {
+              name: "qBit",
+              type: "qbittorrent",
+              fields: { host: "127.0.0.1", password: secret },
+            },
+          ],
+        },
+      },
+      cache,
+    );
+
+    expect(api.testDownloadClient).not.toHaveBeenCalled();
+    expect(api.updateDownloadClient).toHaveBeenCalledTimes(1);
+    const updatePayload = api.updateDownloadClient.mock.calls[0][1];
+    expect(updatePayload.fields?.find((f: any) => f.name === "password")?.value).toBe(secret);
+    expect(result.updated).toBe(1);
+  });
+
+  test("boundary: both true -> behaves as update_password true (no test)", async () => {
+    const sync = new RadarrDownloadClientSync(api);
+    const serverClient = createServerClient();
+    api.getDownloadClients.mockResolvedValueOnce([serverClient]);
+    const secret = "BOTH_TRUE_PASSWORD";
+
+    const result = await sync.syncDownloadClients(
+      {
+        download_clients: {
+          update_password: true,
+          update_password_on_test_fail: true,
+          data: [
+            {
+              name: "qBit",
+              type: "qbittorrent",
+              fields: { host: "127.0.0.1", password: secret },
+            },
+          ],
+        },
+      },
+      cache,
+    );
+
+    expect(api.testDownloadClient).not.toHaveBeenCalled();
+    expect(api.updateDownloadClient).toHaveBeenCalledTimes(1);
+    const updatePayload = api.updateDownloadClient.mock.calls[0][1];
+    expect(updatePayload.fields?.find((f: any) => f.name === "password")?.value).toBe(secret);
+    expect(result.updated).toBe(1);
+  });
+
+  test("boundary: both false -> no secret sent, no test", async () => {
+    const sync = new RadarrDownloadClientSync(api);
+    const serverClient = createServerClient();
+    api.getDownloadClients.mockResolvedValueOnce([serverClient]);
+
+    const result = await sync.syncDownloadClients(
+      {
+        download_clients: {
+          update_password: false,
+          update_password_on_test_fail: false,
+          data: [
+            {
+              name: "qBit",
+              type: "qbittorrent",
+              fields: { host: "127.0.0.1", password: "NEW_SECRET_IGNORED" },
+            },
+          ],
+        },
+      },
+      cache,
+    );
+
+    expect(api.testDownloadClient).not.toHaveBeenCalled();
+    expect(api.updateDownloadClient).not.toHaveBeenCalled();
+    expect(result.updated).toBe(0);
+  });
+
+  test("on_test_fail true + disabled server client -> no test call, no update", async () => {
     const sync = new RadarrDownloadClientSync(api);
     const serverClient = createServerClient({ enable: false });
     api.getDownloadClients.mockResolvedValueOnce([serverClient]);
@@ -514,7 +614,7 @@ describe("BaseDownloadClientSync - update_password: 'on_test_failure'", () => {
     const result = await sync.syncDownloadClients(
       {
         download_clients: {
-          update_password: "on_test_failure",
+          update_password_on_test_fail: true,
           data: [
             {
               name: "qBit",
@@ -533,7 +633,7 @@ describe("BaseDownloadClientSync - update_password: 'on_test_failure'", () => {
     expect(result.updated).toBe(0);
   });
 
-  test("on_test_failure + non-secret change -> update as with false (stored secret kept), no test call", async () => {
+  test("on_test_fail true + non-secret change -> update as with false (stored secret kept), no test call", async () => {
     const sync = new RadarrDownloadClientSync(api);
     const serverClient = createServerClient();
     api.getDownloadClients.mockResolvedValueOnce([serverClient]);
@@ -541,7 +641,7 @@ describe("BaseDownloadClientSync - update_password: 'on_test_failure'", () => {
     const result = await sync.syncDownloadClients(
       {
         download_clients: {
-          update_password: "on_test_failure",
+          update_password_on_test_fail: true,
           data: [
             {
               name: "qBit",
@@ -563,7 +663,7 @@ describe("BaseDownloadClientSync - update_password: 'on_test_failure'", () => {
     expect(updatePayload.fields?.find((f: any) => f.name === "password")?.value).toBe("********");
   });
 
-  test("on_test_failure + no secret in config -> no test call", async () => {
+  test("on_test_fail true + no secret in config -> no test call", async () => {
     const sync = new RadarrDownloadClientSync(api);
     const serverClient = createServerClient();
     api.getDownloadClients.mockResolvedValueOnce([serverClient]);
@@ -571,7 +671,7 @@ describe("BaseDownloadClientSync - update_password: 'on_test_failure'", () => {
     const result = await sync.syncDownloadClients(
       {
         download_clients: {
-          update_password: "on_test_failure",
+          update_password_on_test_fail: true,
           data: [
             {
               name: "qBit",
@@ -599,7 +699,7 @@ describe("BaseDownloadClientSync - update_password: 'on_test_failure'", () => {
     const result = await sync.syncDownloadClients(
       {
         download_clients: {
-          update_password: "on_test_failure",
+          update_password_on_test_fail: true,
           data: [
             {
               name: "qBit",

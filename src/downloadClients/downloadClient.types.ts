@@ -1,6 +1,8 @@
 import { DiffEntry, FieldChange } from "../diffReport/diffReport.types";
 import { InputConfigDownloadClient } from "../types/config.types";
 
+export type SecretUpdateMode = boolean | "on_test_failure";
+
 export type DownloadClientField = {
   name?: string | null;
   value?: unknown;
