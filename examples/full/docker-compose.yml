@@ -21,7 +21,7 @@ services:
 
   # Pinned Sonarr v5 beta example. Keep its config volume separate from v4.
   sonarr-v5:
-    image: lscr.io/linuxserver/sonarr@sha256:2c1e9317f330e84a4c6e8c9295361b3a9ae425786295d8b3cfd12c7cbc008f53
+    image: lscr.io/linuxserver/sonarr@sha256:386c962ee6e260e3a5656b25df2ed056bcc9b6410e197d075f9547fd14c23bca
     networks:
       - configarr-full
     environment:
@@ -62,7 +62,7 @@ services:
 
   # Radarr v7 (7.0.0.10815), isolated from the v6 example database.
   radarr-v7:
-    image: lscr.io/linuxserver/radarr@sha256:13a914c574ff8b84b4f3c64fb2ed91d6ded9d90716c18f520d375b7d383b393b
+    image: lscr.io/linuxserver/radarr@sha256:084b3b2ab1d0ef930660727259546a241f2bdf67c9ed085d54bf1486a6887c9b
     networks:
       - configarr-full
     environment:
