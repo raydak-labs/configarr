@@ -61,8 +61,8 @@ importers:
         specifier: 21.1.1
         version: 21.1.1(@types/node@24.19.2)(magicast@0.5.2)(supports-color@7.2.0)
       swagger-typescript-api:
-        specifier: 13.12.6
-        version: 13.12.6(magicast@0.5.2)(react@19.2.5)
+        specifier: 13.13.0
+        version: 13.13.0(magicast@0.5.2)(react@19.2.5)
       typescript:
         specifier: 7.0.2
         version: 7.0.2
@@ -1985,8 +1985,8 @@ packages:
   swagger-schema-official@2.0.0-bab6bed:
     resolution: {integrity: sha512-rCC0NWGKr/IJhtRuPq/t37qvZHI/mH4I4sxflVM+qgVe5Z2uOCivzWaVbuioJaB61kvm5UvB7b49E+oBY0M8jA==}
 
-  swagger-typescript-api@13.12.6:
-    resolution: {integrity: sha512-BFnSbchubRZrxxBRKy506tHBL0//durBph8ZZohZ2RQg/BKOEGm449YMAbSM5DDTwqNpTUPhgCT59S/9d84pdQ==}
+  swagger-typescript-api@13.13.0:
+    resolution: {integrity: sha512-4CEj48R1Kk3Zvul4c8NVeLOUQ86WIRq1MgqRaB12jKI70IT/UUc4/xn+vd9pWK+I8eRALX2UnUI1ld0YQHn16A==}
     engines: {node: '>=20'}
     hasBin: true
 
@@ -3919,7 +3919,7 @@ snapshots:
 
   swagger-schema-official@2.0.0-bab6bed: {}
 
-  swagger-typescript-api@13.12.6(magicast@0.5.2)(react@19.2.5):
+  swagger-typescript-api@13.13.0(magicast@0.5.2)(react@19.2.5):
     dependencies:
       '@apidevtools/swagger-parser': 12.1.0(openapi-types@12.1.3)
       '@biomejs/js-api': 6.0.0(@biomejs/wasm-nodejs@2.5.2)
