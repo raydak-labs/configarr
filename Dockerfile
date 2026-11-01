@@ -1,6 +1,6 @@
 # https://github.com/nodejs/docker-node/blob/main/docs/BestPractices.md
 # TODO because multiarch build has problems with QEMU and Node we cannot use alpine here: https://github.com/nodejs/docker-node/issues/1798
-FROM node:24.22.1-slim AS base
+FROM node:24.22.2-slim@sha256:c86ecead9e55a5210ac1727de38a4ca840bf03dcaf34dc9749addbf383b1920c AS base
 WORKDIR /app
 
 ENV PNPM_HOME="/opt/pnpm"
@@ -49,7 +49,7 @@ ENV CONFIGARR_VERSION=${CONFIGARR_VERSION}
 
 CMD [ "pnpm", "start" ]
 # https://github.com/evanw/esbuild/issues/1921
-FROM node:24.22.1-alpine AS prod
+FROM node:24.22.2-alpine@sha256:8a32c8cf649a49915a66e81e7a609223c708d0adabf288ee3f4077d765542f85 AS prod
 WORKDIR /app
 
 RUN apk add --no-cache libstdc++ dumb-init git
