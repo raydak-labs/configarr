@@ -157,6 +157,18 @@ export abstract class BaseDownloadClientSync<T extends DownloadClientShared> {
     });
   }
 
+  private hasEmptyStoredSecretChange(changes: FieldChange[]): boolean {
+    return changes.some(
+      (change) =>
+        change.field.startsWith("fields.") &&
+        this.isSecretField(change.field.slice("fields.".length)) &&
+        (change.from === "" || change.from === null) &&
+        typeof change.to === "string" &&
+        change.to.length > 0 &&
+        change.to !== SECRET_MASK,
+    );
+  }
+
   private getMaskedSecretFieldChanges(config: InputConfigDownloadClient, serverClient: T, cache: ServerCache): FieldChange[] {
     const rawChanges = this.isDownloadClientEqual(config, serverClient, cache, true).changes;
     const masked = rawChanges
@@ -417,13 +429,25 @@ export abstract class BaseDownloadClientSync<T extends DownloadClientShared> {
       } else {
         const comparison = this.isDownloadClientEqual(config, serverClient, cache, comparisonUpdatePassword);
         if (!comparison.equal) {
+          const repairEmptySecret = isTestFailureMode && this.hasEmptyStoredSecretChange(comparison.changes);
+          if (repairEmptySecret) {
+            this.logger.info(`Download client "${config.name}": stored secret is empty, sending configured secret fields`);
+          }
+          const fieldChanges = repairEmptySecret
+            ? comparison.changes.map((change) => {
+                if (change.field.startsWith("fields.") && this.isSecretField(change.field.slice("fields.".length))) {
+                  return { field: change.field, from: SECRET_MASK, to: SECRET_MASK };
+                }
+                return change;
+              })
+            : comparison.changes;
           const partialUpdate = this.shouldUsePartialUpdate(config);
           update.push({
             config,
             server: serverClient,
             partialUpdate,
-            fieldChanges: comparison.changes,
-            updatePassword: comparisonUpdatePassword,
+            fieldChanges,
+            updatePassword: repairEmptySecret ? true : comparisonUpdatePassword,
           });
         } else if (isTestFailureMode && serverClient.enable !== false && this.hasNonEmptySecretField(config)) {
           try {

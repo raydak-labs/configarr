@@ -1180,6 +1180,8 @@ Because \*Arr servers return stored secrets (passwords, API keys) masked as `***
 
 When `update_password_on_test_fail: true` is enabled (and `update_password` is false or unset), Configarr runs the connection test once per run for each valid existing client matched by name and type. It runs only when the server client is enabled, its non-secret settings are unchanged (otherwise the normal update path runs, no test), and the configuration contains a non-empty secret that is not `********`. In `DRY_RUN` the test still runs; a failed test is reported as an update but nothing is sent.
 
+If the server reports a secret field as empty and the configuration sets it, Configarr sends the configured secret without a connection test, since an empty secret cannot pass one.
+
 ### Download Client Configuration <span className="theme-doc-version-badge badge badge--secondary configarr-badge">1.19.0</span>
 
 The `config` section allows you to manage global download client settings.

@@ -689,6 +689,198 @@ describe("BaseDownloadClientSync - secret update modes", () => {
     expect(result.updated).toBe(0);
   });
 
+  test("positive: on_test_fail true + stored secret empty + configured secret -> configured secret sent, no test, diff masked", async () => {
+    const secret = "EMPTY_STORED_REPAIR";
+    const infoSpy = vi.spyOn(logger, "info");
+    const sync = new RadarrDownloadClientSync(api);
+    const serverClient = createServerClient({
+      fields: [
+        { name: "host", value: "127.0.0.1" },
+        { name: "password", value: "" },
+      ],
+    });
+    api.getDownloadClients.mockResolvedValueOnce([serverClient]);
+
+    const result = await sync.syncDownloadClients(
+      {
+        download_clients: {
+          update_password_on_test_fail: true,
+          data: [
+            {
+              name: "qBit",
+              type: "qbittorrent",
+              fields: { host: "127.0.0.1", password: secret },
+            },
+          ],
+        },
+      },
+      cache,
+    );
+
+    expect(api.testDownloadClient).not.toHaveBeenCalled();
+    expect(result.updated).toBe(1);
+    expect(api.updateDownloadClient).toHaveBeenCalledTimes(1);
+
+    const updatePayload = api.updateDownloadClient.mock.calls[0][1];
+    expect(updatePayload.fields?.find((f: any) => f.name === "password")?.value).toBe(secret);
+
+    const updateEntry = result.diffEntries.find((e) => e.name === "qBit" && e.action === "update");
+    expect(updateEntry).toBeDefined();
+    expect(updateEntry?.fieldChanges).toEqual([{ field: "fields.password", from: SECRET_MASK, to: SECRET_MASK }]);
+    expect(JSON.stringify(result.diffEntries)).not.toContain(secret);
+
+    const logged = infoSpy.mock.calls.map((call) => String(call[0])).join("\n");
+    expect(logged).toContain("stored secret is empty");
+    expect(logged).not.toContain(secret);
+  });
+
+  test("positive: on_test_fail true + stored secret empty + non-secret change -> both sent", async () => {
+    const secret = "EMPTY_PLUS_HOST";
+    const sync = new RadarrDownloadClientSync(api);
+    const serverClient = createServerClient({
+      fields: [
+        { name: "host", value: "127.0.0.1" },
+        { name: "password", value: "" },
+      ],
+    });
+    api.getDownloadClients.mockResolvedValueOnce([serverClient]);
+
+    const result = await sync.syncDownloadClients(
+      {
+        download_clients: {
+          update_password_on_test_fail: true,
+          data: [
+            {
+              name: "qBit",
+              type: "qbittorrent",
+              fields: { host: "different-host", password: secret },
+            },
+          ],
+        },
+      },
+      cache,
+    );
+
+    expect(api.testDownloadClient).not.toHaveBeenCalled();
+    expect(result.updated).toBe(1);
+    expect(api.updateDownloadClient).toHaveBeenCalledTimes(1);
+
+    const updatePayload = api.updateDownloadClient.mock.calls[0][1];
+    expect(updatePayload.fields?.find((f: any) => f.name === "host")?.value).toBe("different-host");
+    expect(updatePayload.fields?.find((f: any) => f.name === "password")?.value).toBe(secret);
+
+    const updateEntry = result.diffEntries.find((e) => e.name === "qBit" && e.action === "update");
+    expect(updateEntry).toBeDefined();
+    expect(updateEntry?.fieldChanges).toEqual([
+      { field: "fields.host", from: "127.0.0.1", to: "different-host" },
+      { field: "fields.password", from: SECRET_MASK, to: SECRET_MASK },
+    ]);
+  });
+
+  test("boundary: on_test_fail true + stored secret null + configured secret -> configured secret sent", async () => {
+    const secret = "EMPTY_STORED_REPAIR_NULL";
+    const sync = new RadarrDownloadClientSync(api);
+    const serverClient = createServerClient({
+      fields: [
+        { name: "host", value: "127.0.0.1" },
+        { name: "password", value: null as any },
+      ],
+    });
+    api.getDownloadClients.mockResolvedValueOnce([serverClient]);
+
+    const result = await sync.syncDownloadClients(
+      {
+        download_clients: {
+          update_password_on_test_fail: true,
+          data: [
+            {
+              name: "qBit",
+              type: "qbittorrent",
+              fields: { host: "127.0.0.1", password: secret },
+            },
+          ],
+        },
+      },
+      cache,
+    );
+
+    expect(api.testDownloadClient).not.toHaveBeenCalled();
+    expect(result.updated).toBe(1);
+    expect(api.updateDownloadClient).toHaveBeenCalledTimes(1);
+
+    const updatePayload = api.updateDownloadClient.mock.calls[0][1];
+    expect(updatePayload.fields?.find((f: any) => f.name === "password")?.value).toBe(secret);
+
+    const updateEntry = result.diffEntries.find((e) => e.name === "qBit" && e.action === "update");
+    expect(updateEntry).toBeDefined();
+    expect(updateEntry?.fieldChanges).toEqual([{ field: "fields.password", from: SECRET_MASK, to: SECRET_MASK }]);
+  });
+
+  test("negative: on_test_fail true + stored secret empty + configured secret empty -> no update, no test", async () => {
+    const sync = new RadarrDownloadClientSync(api);
+    const serverClient = createServerClient({
+      fields: [
+        { name: "host", value: "127.0.0.1" },
+        { name: "password", value: "" },
+      ],
+    });
+    api.getDownloadClients.mockResolvedValueOnce([serverClient]);
+
+    const result = await sync.syncDownloadClients(
+      {
+        download_clients: {
+          update_password_on_test_fail: true,
+          data: [
+            {
+              name: "qBit",
+              type: "qbittorrent",
+              fields: { host: "127.0.0.1", password: "" },
+            },
+          ],
+        },
+      },
+      cache,
+    );
+
+    expect(api.testDownloadClient).not.toHaveBeenCalled();
+    expect(api.updateDownloadClient).not.toHaveBeenCalled();
+    expect(result.updated).toBe(0);
+  });
+
+  test("negative: update_password false (on_test_fail unset) + stored secret empty -> stored value kept", async () => {
+    const sync = new RadarrDownloadClientSync(api);
+    const serverClient = createServerClient({
+      fields: [
+        { name: "host", value: "127.0.0.1" },
+        { name: "password", value: "" },
+      ],
+    });
+    api.getDownloadClients.mockResolvedValueOnce([serverClient]);
+
+    const result = await sync.syncDownloadClients(
+      {
+        download_clients: {
+          update_password: false,
+          data: [
+            {
+              name: "qBit",
+              type: "qbittorrent",
+              fields: { host: "127.0.0.1", password: "IGNORED_WHEN_FALSE" },
+            },
+          ],
+        },
+      },
+      cache,
+    );
+
+    expect(api.testDownloadClient).not.toHaveBeenCalled();
+    expect(result.updated).toBe(1);
+    expect(api.updateDownloadClient).toHaveBeenCalledTimes(1);
+
+    const updatePayload = api.updateDownloadClient.mock.calls[0][1];
+    expect(updatePayload.fields?.find((f: any) => f.name === "password")?.value).toBe("");
+  });
+
   test("DRY_RUN + test throws -> reported, no update call", async () => {
     vi.mocked(getEnvs).mockReturnValue({ DRY_RUN: true, LOG_LEVEL: "fatal" } as ReturnType<typeof getEnvs>);
     api.testDownloadClient.mockRejectedValueOnce(new Error("Connection refused"));
