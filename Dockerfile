@@ -14,8 +14,9 @@ RUN apt-get update && apt-get install -y \
 
 COPY package.json pnpm-lock.yaml ./
 
-# Do it here to add the packageManager field to the package.json
-RUN corepack enable \
+# Node 26 images no longer ship corepack. corepack use writes packageManager into package.json.
+RUN npm install -g corepack@0.36.0 \
+    && corepack enable \
     && corepack prepare pnpm@10 --activate \
     && corepack use pnpm@10
 
