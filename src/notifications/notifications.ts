@@ -295,10 +295,11 @@ export async function syncNotifications<N extends NotificationResourceItem>(
         if (configValue === undefined) return serverField;
 
         const isSecret = isSecretNotificationField(serverField.privacy, fieldName);
-        const isMasked = serverField.value === "********" || serverField.value === SECRET_MASK;
+        const serverHasSecret = serverField.value != null && serverField.value !== "";
 
         let valuesMatch = JSON.stringify(configValue) === JSON.stringify(serverField.value);
-        if (!valuesMatch && isSecret && isMasked && !updatePassword) {
+        // A stored secret, masked or not, stays until update_password. Empty means the server has not stored one yet.
+        if (!valuesMatch && isSecret && serverHasSecret && !updatePassword) {
           valuesMatch = true;
         }
 

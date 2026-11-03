@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { RadarrClient } from "./radarr-client";
 import { logger } from "../logger";
+import { expectNotificationWriteRedacted } from "./notificationWriteRedaction";
+import { RadarrClient } from "./radarr-client";
 
 describe("RadarrClient API v3 compatibility", () => {
   afterEach(() => vi.unstubAllGlobals());
@@ -64,5 +65,11 @@ describe("RadarrClient API v3 compatibility", () => {
       "PUT /radarr/api/v3/customformat/42",
       "DELETE /radarr/api/v3/customformat/42",
     ]);
+  });
+});
+
+describe("RadarrClient notification writes", () => {
+  it("create and update keep the failure body out of logs and errors", async () => {
+    await expectNotificationWriteRedacted(new RadarrClient("http://arr.test", "api-key"));
   });
 });

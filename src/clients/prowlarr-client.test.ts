@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { expectNotificationWriteRedacted } from "./notificationWriteRedaction";
 import { ProwlarrClient } from "./prowlarr-client";
 
 vi.mock("../logger", () => ({ logger: { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
@@ -101,5 +102,14 @@ describe("ProwlarrClient", () => {
       await expect(client().testConnection()).resolves.toBe(false);
       expect(logger.error).toHaveBeenCalled();
     });
+  });
+});
+
+describe("ProwlarrClient notification writes", () => {
+  it("create and update keep the failure body out of logs and errors", async () => {
+    vi.doUnmock("../__generated__/prowlarr/Api");
+    vi.resetModules();
+    const { ProwlarrClient: RealClient } = await import("./prowlarr-client");
+    await expectNotificationWriteRedacted(new RealClient("http://arr.test", "api-key"));
   });
 });

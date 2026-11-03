@@ -332,6 +332,46 @@ describe("notifications", () => {
       expect(client.updateMock).not.toHaveBeenCalled();
     });
 
+    test("update_password: false leaves a stored plaintext secret unchanged", async () => {
+      const existing: NotificationResourceItem = {
+        id: 10,
+        name: "ops-hook",
+        implementation: "Webhook",
+        fields: [{ name: "password", privacy: "password", value: "stored-plain" }],
+      };
+      const client = mockClient({ existing: [existing] });
+
+      const diff = await syncNotifications(
+        client,
+        { update_password: false, data: [{ name: "ops-hook", type: "Webhook", fields: { password: "new-super-secret" } }] },
+        new ServerCache(),
+      );
+
+      expect(diff).toEqual([]);
+      expect(client.updateMock).not.toHaveBeenCalled();
+    });
+
+    test("update_password: false still writes a secret the server stored as empty", async () => {
+      const existing: NotificationResourceItem = {
+        id: 10,
+        name: "ops-hook",
+        implementation: "Webhook",
+        fields: [{ name: "password", privacy: "password", value: "" }],
+      };
+      const client = mockClient({ existing: [existing] });
+
+      const diff = await syncNotifications(
+        client,
+        { update_password: false, data: [{ name: "ops-hook", type: "Webhook", fields: { password: "new-super-secret" } }] },
+        new ServerCache(),
+      );
+
+      expect(diff[0]?.fieldChanges).toEqual([{ field: "fields.password", from: SECRET_MASK, to: SECRET_MASK }]);
+      expect(client.updateMock.mock.calls[0]?.[1].fields.find((field: { name?: string }) => field.name === "password").value).toBe(
+        "new-super-secret",
+      );
+    });
+
     test("update_password: true sends masked secret and redacts it in diff", async () => {
       const existing: NotificationResourceItem = {
         id: 10,

@@ -42,6 +42,11 @@ describe("mergeNotifications", () => {
     expect(merged.delete_unmanaged).toEqual({ enabled: false, ignore: ["a", "b", "c"] });
   });
 
+  it("refuses a string delete_unmanaged.ignore before it can be spread into characters", () => {
+    const incoming = { delete_unmanaged: { enabled: true, ignore: "Manual" } } as unknown as Parameters<typeof mergeNotifications>[1];
+    expect(() => mergeNotifications(undefined, incoming)).toThrow(/delete_unmanaged\.ignore/);
+  });
+
   it("keeps the earlier delete_unmanaged when the later block omits it", () => {
     const merged = mergeNotifications({ delete_unmanaged: { enabled: true, ignore: ["a"] } }, { data: [] });
     expect(merged.delete_unmanaged).toEqual({ enabled: true, ignore: ["a"] });
