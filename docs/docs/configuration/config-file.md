@@ -1149,9 +1149,9 @@ sonarr:
             username: sonarr
             password: changeme
             tv_category: series-4k
-      # Existing secrets can not be read back: update_password: true always sends them;
-      # update_password_on_test_fail: true sends them only when the client's connection test fails
+      # Existing secrets can not be read back: update_password: true always sends them.
       update_password: false
+      # (experimental) since v1.39.0. Sends configured secrets only when the connection test rejects the stored ones.
       update_password_on_test_fail: true
       # Delete unmanaged download clients
       delete_unmanaged:
@@ -1167,18 +1167,26 @@ sonarr:
         # check_for_finished_download_interval: 1
 ```
 
-### Secret field updates (`update_password`, `update_password_on_test_fail`)
+### Secret field updates
+
+`update_password` <span className="theme-doc-version-badge badge badge--secondary configarr-badge">1.19.0</span> overwrites stored secrets on every run when it is `true`.
+
+`update_password_on_test_fail` <span className="theme-doc-version-badge badge badge--secondary configarr-badge">1.39.0</span>
+
+:::warning Experimental since v1.39.0
+`update_password_on_test_fail` is experimental.
+:::
 
 Because \*Arr servers return stored secrets (passwords, API keys, `secretToken`, `appToken`) masked as `********`, Configarr cannot read existing secrets from the server. Two settings control when secret fields in `fields` are sent to existing download clients:
 
-| Setting                        | Default | Behavior                                                                                             |
-| ------------------------------ | ------- | ---------------------------------------------------------------------------------------------------- |
-| `update_password`              | `false` | When `true`, always overwrites secret fields with configured values on every run.                    |
-| `update_password_on_test_fail` | `false` | When `true`, tests the server's stored secret first; updates secret fields only when the test fails. |
+| Setting                        | Default | Behavior                                                                                                      |
+| ------------------------------ | ------- | ------------------------------------------------------------------------------------------------------------- |
+| `update_password`              | `false` | When `true`, always overwrites secret fields with configured values on every run. Available since v1.19.0.   |
+| `update_password_on_test_fail` | `false` | Experimental since v1.39.0. When `true`, tests the stored secret first and updates it only when that test rejects the credentials. |
 
 `update_password: true` takes precedence over `update_password_on_test_fail`.
 
-When `update_password_on_test_fail: true` is enabled (and `update_password` is false or unset), Configarr runs the connection test once per run for each valid existing client matched by name and type. It runs only when the server client is enabled, its non-secret settings are unchanged (otherwise the normal update path runs, no test), and the configuration contains a non-empty secret that is not `********`. In `DRY_RUN` the test still runs; a failed test is reported as an update but nothing is sent.
+When `update_password_on_test_fail: true` is enabled (and `update_password` is false or unset), Configarr runs the connection test once per run for each valid existing client matched by name and type. It runs only when the server client is enabled, its non-secret settings are unchanged (otherwise the normal update path runs, no test), and the configuration contains a non-empty secret that is not `********`. A stored secret returned in plaintext is treated like the mask: it is not compared to the configured value. The test posts the server resource, whose secret is usually `********`; *arr substitutes the stored secret. In `DRY_RUN` the test still runs. A credential rejection is reported as an update but nothing is sent. A down client, a timeout, or an *arr 5xx leaves the stored secret in place.
 
 If the server reports a secret field as empty and the configuration sets it, Configarr sends the configured secret without a connection test, since an empty secret cannot pass one.
 

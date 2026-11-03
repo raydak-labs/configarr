@@ -461,6 +461,19 @@ const includeRecyclarrTemplate = (
     }
   }
 
+  if (template.download_clients) {
+    const existing = mergedTemplates.download_clients;
+    mergedTemplates.download_clients = {
+      ...existing,
+      ...template.download_clients,
+      data: [...(existing?.data ?? []), ...(template.download_clients.data ?? [])],
+      remote_paths: [...(existing?.remote_paths ?? []), ...(template.download_clients.remote_paths ?? [])],
+      update_password: template.download_clients.update_password ?? existing?.update_password,
+      update_password_on_test_fail: template.download_clients.update_password_on_test_fail ?? existing?.update_password_on_test_fail,
+      delete_unmanaged: template.download_clients.delete_unmanaged ?? existing?.delete_unmanaged,
+    };
+  }
+
   // TODO Ignore recursive include for now
   if (template.include) {
     logger.warn(`Recursive includes not supported at the moment. Ignoring.`);
@@ -1153,8 +1166,9 @@ export const mergeConfigsAndTemplates = async (
 
     mergedTemplates.download_clients = {
       data: [...existingData, ...instanceData],
-      update_password: instanceConfig.download_clients.update_password,
-      update_password_on_test_fail: instanceConfig.download_clients.update_password_on_test_fail,
+      update_password: instanceConfig.download_clients.update_password ?? mergedTemplates.download_clients?.update_password,
+      update_password_on_test_fail:
+        instanceConfig.download_clients.update_password_on_test_fail ?? mergedTemplates.download_clients?.update_password_on_test_fail,
       delete_unmanaged: instanceDeleteManaged ? instanceDeleteManaged : existingDeleteManaged,
       config: instanceConfig_ ? { ...existingConfig, ...instanceConfig_ } : existingConfig,
       remote_paths: [...existingRemotePaths, ...instanceRemotePaths],

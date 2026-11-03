@@ -226,14 +226,9 @@ export abstract class BaseDownloadClientSync<T extends DownloadClientShared> {
       let valuesMatch = JSON.stringify(configValue) === JSON.stringify(serverValue);
 
       const shouldUpdatePassword = updatePassword === true;
-      if (
-        !valuesMatch &&
-        this.isSecretField(fieldName) &&
-        serverValue === "********" &&
-        typeof configValue === "string" &&
-        configValue.length > 0 &&
-        !shouldUpdatePassword
-      ) {
+      // A stored secret, masked or plaintext, is not comparable. Empty means the server has not stored one.
+      const storedSecret = this.isSecretField(fieldName) && typeof serverValue === "string" && serverValue.length > 0;
+      if (!valuesMatch && storedSecret && typeof configValue === "string" && configValue.length > 0 && !shouldUpdatePassword) {
         valuesMatch = true;
       }
 
@@ -414,6 +409,7 @@ export abstract class BaseDownloadClientSync<T extends DownloadClientShared> {
     const create: InputConfigDownloadClient[] = [];
     const update: DownloadClientDiff<T>["update"] = [];
     const unchanged: { config: InputConfigDownloadClient; server: T }[] = [];
+    const secretProbe: DownloadClientDiff<T>["secretProbe"] = [];
 
     const isTestFailureMode = updatePassword === "on_test_failure";
     const comparisonUpdatePassword = isTestFailureMode ? false : updatePassword;
@@ -449,21 +445,11 @@ export abstract class BaseDownloadClientSync<T extends DownloadClientShared> {
             updatePassword: repairEmptySecret ? true : comparisonUpdatePassword,
           });
         } else if (isTestFailureMode && serverClient.enable !== false && this.hasNonEmptySecretField(config)) {
-          try {
-            await this.getApi().testDownloadClient(serverClient);
-            unchanged.push({ config, server: serverClient });
-          } catch {
-            this.logger.info(`Download client "${config.name}": connection test failed, updating secret fields`);
-            const partialUpdate = this.shouldUsePartialUpdate(config);
-            const fieldChanges = this.getMaskedSecretFieldChanges(config, serverClient, cache);
-            update.push({
-              config,
-              server: serverClient,
-              partialUpdate,
-              fieldChanges,
-              updatePassword: true,
-            });
-          }
+          secretProbe.push({
+            config,
+            server: serverClient,
+            partialUpdate: this.shouldUsePartialUpdate(config),
+          });
         } else {
           unchanged.push({ config, server: serverClient });
         }
@@ -473,7 +459,38 @@ export abstract class BaseDownloadClientSync<T extends DownloadClientShared> {
     const configKeys = new Set(configClients.map((c) => `${c.name}::${c.type.toLowerCase()}`));
     const deleted = serverClients.filter((s) => !configKeys.has(`${s.name ?? ""}::${s.implementation?.toLowerCase() ?? ""}`));
 
-    return { create, update, unchanged, deleted };
+    return { create, update, unchanged, secretProbe, deleted };
+  }
+
+  /**
+   * Runs the connection tests `calculateDiff` only listed.
+   * A credential rejection schedules a secret update. A down client, a timeout, or an *arr 5xx does not.
+   */
+  private async resolveSecretProbes(diff: DownloadClientDiff<T>, cache: ServerCache): Promise<void> {
+    for (const probe of diff.secretProbe) {
+      try {
+        await this.getApi().testDownloadClient(probe.server);
+        diff.unchanged.push({ config: probe.config, server: probe.server });
+      } catch (error: unknown) {
+        if (!isCredentialTestFailure(error)) {
+          const status = httpStatus(error);
+          this.logger.info(
+            `Download client "${probe.config.name}": connection test failed (${status == null ? "no response" : `HTTP ${status}`}), leaving stored secret`,
+          );
+          diff.unchanged.push({ config: probe.config, server: probe.server });
+          continue;
+        }
+
+        this.logger.info(`Download client "${probe.config.name}": connection test rejected the stored secret, updating secret fields`);
+        diff.update.push({
+          config: probe.config,
+          server: probe.server,
+          partialUpdate: probe.partialUpdate,
+          fieldChanges: this.getMaskedSecretFieldChanges(probe.config, probe.server, cache),
+          updatePassword: true,
+        });
+      }
+    }
   }
 
   private async validateConfigClients(
@@ -673,6 +690,7 @@ export abstract class BaseDownloadClientSync<T extends DownloadClientShared> {
 
     // Calculate diff
     const diff = await this.calculateDiff(validClients, serverClients, serverCache, updatePassword);
+    await this.resolveSecretProbes(diff, serverCache);
 
     this.logger.info(
       `Download clients diff - Create: ${diff.create.length}, Update: ${diff.update.length}, Unchanged: ${diff.unchanged.length}`,
@@ -723,9 +741,42 @@ export abstract class BaseDownloadClientSync<T extends DownloadClientShared> {
       removed,
       failed,
       diffEntries: downloadClientDiffToDiffEntries(
-        { create: created, update: updatedItems, unchanged: diff.unchanged, deleted: [] },
+        { create: created, update: updatedItems, unchanged: diff.unchanged, secretProbe: [], deleted: [] },
         deletedItems,
       ),
     };
   }
 }
+
+/** Status from ky's HTTPError, which this client rethrows as `error.cause`. */
+const httpStatus = (error: unknown): number | undefined => {
+  const seen = new Set<unknown>();
+  let current: unknown = error;
+
+  while (current != null && typeof current === "object" && !seen.has(current)) {
+    seen.add(current);
+    const candidate = current as { response?: { status?: number }; status?: number; cause?: unknown };
+    const status = candidate.response?.status ?? candidate.status;
+    if (typeof status === "number") return status;
+    current = candidate.cause;
+  }
+
+  return undefined;
+};
+
+const CONNECTIVITY_FAILURE =
+  /unable to connect|connection refused|timed?\s*out|timeout|econnrefused|enetunreach|ehostunreach|no route|host unreachable|network is unreachable|getaddrinfo/i;
+const CREDENTIAL_FAILURE = /auth|credential|password|api[ _-]?key|unauthori[sz]ed|forbidden|invalid token|login|access denied/i;
+
+/**
+ * True only when *arr finished the test and rejected the stored credentials.
+ * HTTP 5xx, no response, and connection failures return false so a down client is left alone.
+ */
+export const isCredentialTestFailure = (error: unknown): boolean => {
+  const status = httpStatus(error);
+  if (status != null && status !== 400) return false;
+
+  const message = error instanceof Error ? error.message : "";
+  if (CONNECTIVITY_FAILURE.test(message)) return false;
+  return CREDENTIAL_FAILURE.test(message);
+};

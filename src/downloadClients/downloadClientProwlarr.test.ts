@@ -263,7 +263,7 @@ describe("ProwlarrDownloadClientSync", () => {
         getDownloadClients: vi.fn(async () => [serverClient]),
         updateDownloadClient: vi.fn(async (_id, payload) => payload),
         testDownloadClient: vi.fn(async () => {
-          throw new Error("Prowlarr test connection failed");
+          throw new Error("Authentication failed");
         }),
         getTags: vi.fn(async () => []),
         createTag: vi.fn(),
@@ -290,8 +290,10 @@ describe("ProwlarrDownloadClientSync", () => {
       expect(mockClient.testDownloadClient).toHaveBeenCalledTimes(1);
       expect(mockClient.testDownloadClient).toHaveBeenCalledWith(serverClient);
       expect(mockClient.updateDownloadClient).toHaveBeenCalledTimes(1);
-      const updatePayload = mockClient.updateDownloadClient.mock.calls[0]![1];
-      expect(updatePayload.fields.find((f: any) => f.name === "password")?.value).toBe(secret);
+      const updatePayload = mockClient.updateDownloadClient.mock.calls[0]![1] as {
+        fields?: { name?: string | null; value?: unknown }[];
+      };
+      expect(updatePayload.fields?.find((field) => field.name === "password")?.value).toBe(secret);
       expect(result.updated).toBe(1);
     });
   });

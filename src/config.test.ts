@@ -554,6 +554,49 @@ describe("mergeConfigsAndTemplates", () => {
     });
   });
 
+  test("an instance download_clients block keeps a template secret flag it does not set", async () => {
+    const templates: Map<string, MappedTemplates> = new Map([
+      [
+        "clients",
+        {
+          download_clients: {
+            update_password_on_test_fail: true,
+            data: [{ name: "from-template", type: "qbittorrent" }],
+          },
+        } as MappedTemplates,
+      ],
+    ]);
+    vi.spyOn(reclarrImporter, "loadRecyclarrTemplates").mockReturnValue(templates);
+    vi.spyOn(localImporter, "loadLocalRecyclarrTemplate").mockReturnValue(new Map());
+    vi.spyOn(trashGuide, "loadQPFromTrash").mockReturnValue(Promise.resolve(new Map()));
+    vi.spyOn(trashGuide, "loadTrashCustomFormatGroups").mockReturnValue(Promise.resolve(new Map()));
+
+    const kept = await mergeConfigsAndTemplates(
+      {},
+      {
+        api_key: "test",
+        base_url: "http://sonarr:8989",
+        include: [{ template: "clients", source: "RECYCLARR" }],
+        download_clients: { data: [{ name: "from-instance", type: "qbittorrent" }] },
+      },
+      "SONARR",
+    );
+    expect(kept.config.download_clients?.update_password_on_test_fail).toBe(true);
+    expect(kept.config.download_clients?.data?.map((client) => client.name)).toEqual(["from-template", "from-instance"]);
+
+    const overridden = await mergeConfigsAndTemplates(
+      {},
+      {
+        api_key: "test",
+        base_url: "http://sonarr:8989",
+        include: [{ template: "clients", source: "RECYCLARR" }],
+        download_clients: { update_password_on_test_fail: false, data: [] },
+      },
+      "SONARR",
+    );
+    expect(overridden.config.download_clients?.update_password_on_test_fail).toBe(false);
+  });
+
   test("a template can enable cleanup when the instance does not override it", async () => {
     // Same authority as delete_unmanaged_metadata_profiles: the block is opt-in wherever it is set.
     const templates: Map<string, MappedTemplates> = new Map([

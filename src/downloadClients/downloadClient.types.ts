@@ -64,6 +64,8 @@ export type DownloadClientDiff<T extends DownloadClientShared> = {
     updatePassword?: boolean;
   }[];
   unchanged: { config: InputConfigDownloadClient; server: T }[];
+  /** Equal, enabled clients whose stored secret still has to be tested. `calculateDiff` does not call the API. */
+  secretProbe: { config: InputConfigDownloadClient; server: T; partialUpdate: boolean }[];
   deleted: T[];
 };
 

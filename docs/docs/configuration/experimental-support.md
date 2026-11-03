@@ -426,6 +426,9 @@ prowlarr:
           fields:
             host: qbittorrent
             port: 8080
+      update_password: false
+      # (experimental) since v1.39.0. Send configured secrets only when the connection test rejects the stored ones.
+      update_password_on_test_fail: false
       delete_unmanaged:
         enabled: false
 ```
