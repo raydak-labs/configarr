@@ -74,6 +74,7 @@ jobs:
           wait_one readarr  http://127.0.0.1:18787 /api/v1/system/status
           wait_one lidarr   http://127.0.0.1:18686 /api/v1/system/status
           wait_one prowlarr http://127.0.0.1:19696 /api/v1/system/status
+          wait_one prowlarr-v3 http://127.0.0.1:19697 /api/v1/system/status
           wait_one flaresolverr http://127.0.0.1:18191 /
 
       - name: Run arr e2e suite

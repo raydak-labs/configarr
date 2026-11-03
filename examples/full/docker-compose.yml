@@ -169,6 +169,26 @@ services:
       - 6505:9696
     restart: unless-stopped
 
+  # Prowlarr v3 develop, same pin as the e2e suite. Keep its config volume separate from 2.x.
+  # Remove this service once stable v3 replaces 2.7 and the prowlarr image is bumped.
+  prowlarr-v3:
+    image: lscr.io/linuxserver/prowlarr:develop-3.0.0.5737-ls280@sha256:e2382127fec5c61ca6b6eb528fd4dcf8a8255ef2957ca334d782dbaf46d4c0c7
+    networks:
+      - configarr-full
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+      - PROWLARR__APP__INSTANCENAME=Prowlarr v3
+      - PROWLARR__AUTH__APIKEY=f1e2d3c4b5a6470891234567890ab3c3
+      - PROWLARR__AUTH__REQUIRED=DisabledForLocalAddresses
+      - PROWLARR__AUTH__METHOD=Forms
+    volumes:
+      - prowlarr-v3:/config
+    ports:
+      - 6508:9696
+    restart: unless-stopped
+
   # used by the Prowlarr indexer-proxy example
   flaresolverr:
     image: ghcr.io/flaresolverr/flaresolverr:v3.5.2@sha256:c80ae007ce2ccdcd217a12426e4f039ef763ff90738c808d38810c3e59323767
@@ -191,6 +211,7 @@ volumes:
   readarr:
   lidarr:
   prowlarr:
+  prowlarr-v3:
   sonarr-download1:
   sonarr-download2:
   radarr-download1:
