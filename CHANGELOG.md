@@ -2,6 +2,29 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.39.0](https://github.com/raydak-labs/configarr/compare/v1.38.0...v1.39.0) (2026-11-03)
+
+### Features
+
+- manage notification connections and global indexer settings ([#590](https://github.com/raydak-labs/configarr/issues/590)) ([4733ff9](https://github.com/raydak-labs/configarr/commit/4733ff907810006eeaae389e7a976519e0d07102)), closes [#591](https://github.com/raydak-labs/configarr/issues/591)
+- push download client secrets only when the stored one fails ([#593](https://github.com/raydak-labs/configarr/issues/593)) ([6d80b8d](https://github.com/raydak-labs/configarr/commit/6d80b8d2fabf95eac7b316c18a301338681cef78))
+- sync General authentication and TLS settings ([f0fd8c0](https://github.com/raydak-labs/configarr/commit/f0fd8c0da13c07c8754d81979150f93258241aeb))
+- sync metadata generation settings ([43e401b](https://github.com/raydak-labs/configarr/commit/43e401bdb5aa6d1831eae41af3b1cfa2a37aa43c))
+- sync settings for existing media indexers ([#583](https://github.com/raydak-labs/configarr/issues/583)) ([9ba53a4](https://github.com/raydak-labs/configarr/commit/9ba53a4d50da0be5e0fec752bf03af1b228beeaf))
+- sync Whisparr general settings ([45b46e1](https://github.com/raydak-labs/configarr/commit/45b46e15bf1ab30cdced8a7263f3c67efcf12d54))
+- synchronize Radarr and Sonarr import lists ([39580d9](https://github.com/raydak-labs/configarr/commit/39580d9e8ecc7b6490a3236bd79544166b5ec988))
+
+### Bug Fixes
+
+- detect changes in primitive arrays ([#587](https://github.com/raydak-labs/configarr/issues/587)) ([7207ca2](https://github.com/raydak-labs/configarr/commit/7207ca284efb75f4f1400c69737319c2e83dc550))
+- validate metadata before synchronization ([f0ead24](https://github.com/raydak-labs/configarr/commit/f0ead24a199b61f4655ed8121c1decb3c5af1849))
+
+### (internal) Refactorings
+
+- avoid cloning custom formats for new profiles ([#588](https://github.com/raydak-labs/configarr/issues/588)) ([94f8517](https://github.com/raydak-labs/configarr/commit/94f85174f09ef0def81789de776a2a0cd3ce4938))
+- share download client cleanup decisions ([060c6a1](https://github.com/raydak-labs/configarr/commit/060c6a1a9f5d9c6ec6a175939bc43841f9d2d485))
+- share template custom format normalization ([#585](https://github.com/raydak-labs/configarr/issues/585)) ([dc48a93](https://github.com/raydak-labs/configarr/commit/dc48a93d3d23e95fed88cd974bc3f81a99f9618d))
+
 ## [1.38.0](https://github.com/raydak-labs/configarr/compare/v1.37.0...v1.38.0) (2026-10-26)
 
 ### Features
