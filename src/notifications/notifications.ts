@@ -2,7 +2,7 @@ import { getEnvs } from "../env";
 import { ConfigValidationError } from "../validation";
 import { snakeToCamel } from "../util";
 import { isSecretFieldName, SECRET_MASK } from "../diffReport/redactSecrets";
-import { renderTags } from "../diffReport/renderTags";
+import { renderTags } from "../tags/renderTags";
 import { buildTagPlaceholders, ensureTags, resolveTagNames } from "../tags/tags";
 import type { DiffEntry, FieldChange } from "../diffReport/diffReport.types";
 import type { InputConfigNotifications } from "../types/config.types";
@@ -11,10 +11,10 @@ import type { ServerCache } from "../cache";
 
 export type NotificationField = {
   name?: string | null;
+  label?: string | null;
   value?: unknown;
   type?: string | null;
   privacy?: string | null;
-  [key: string]: unknown;
 };
 
 export type NotificationResourceItem = {
@@ -27,8 +27,24 @@ export type NotificationResourceItem = {
   tags?: number[] | null;
   includeHealthWarnings?: boolean;
   fields?: NotificationField[] | null;
-  [key: string]: unknown;
+  onGrab?: boolean;
+  onDownload?: boolean;
+  onUpgrade?: boolean;
+  supportsOnGrab?: boolean;
+  supportsOnDownload?: boolean;
+  supportsOnUpgrade?: boolean;
 };
+
+function readField(resource: object, key: string): unknown {
+  for (const [name, value] of Object.entries(resource)) {
+    if (name === key) return value;
+  }
+  return undefined;
+}
+
+function writeField(resource: object, key: string, value: unknown): void {
+  Object.assign(resource, { [key]: value });
+}
 
 /**
  * Normalize notification field keys by mapping snake_case names to their camelCase equivalents.
@@ -61,7 +77,7 @@ export function isSecretNotificationField(privacy: string | null | undefined, na
  * Find the notification schema item corresponding to a given notification type name.
  * Returns the matching schema definition if found, or undefined if no match exists.
  */
-export function findNotificationSchema(schema: NotificationResourceItem[], typeName: string): NotificationResourceItem | undefined {
+export function findNotificationSchema<N extends NotificationResourceItem>(schema: N[], typeName: string): N | undefined {
   const target = typeName.toLowerCase();
   return schema.find((s) => s.implementation?.toLowerCase() === target || s.implementationName?.toLowerCase() === target);
 }
@@ -70,11 +86,11 @@ export function findNotificationSchema(schema: NotificationResourceItem[], typeN
  * Validate configured notification entries against server schemas and existing notifications.
  * Throws a ConfigValidationError if types are unknown, fields or events are unsupported, or notification names conflict.
  */
-export async function validateNotifications(client: NotificationsClient, config: InputConfigNotifications): Promise<void> {
-  const [schema, existing] = await Promise.all([
-    client.getNotificationSchema() as Promise<NotificationResourceItem[]>,
-    client.getNotifications() as Promise<NotificationResourceItem[]>,
-  ]);
+export async function validateNotifications<N extends NotificationResourceItem>(
+  client: NotificationsClient<N>,
+  config: InputConfigNotifications,
+): Promise<void> {
+  const [schema, existing] = await Promise.all([client.getNotificationSchema(), client.getNotifications()]);
 
   const existingNames = new Set<string>();
   for (const entry of existing) {
@@ -119,7 +135,7 @@ export async function validateNotifications(client: NotificationsClient, config:
       for (const [eventKey] of Object.entries(item.events)) {
         const camelEvent = snakeToCamel(eventKey);
         const supportsKey = "supports" + camelEvent.charAt(0).toUpperCase() + camelEvent.slice(1);
-        if (!(camelEvent in schemaItem) || (schemaItem as any)[supportsKey] !== true) {
+        if (!(camelEvent in schemaItem) || readField(schemaItem, supportsKey) !== true) {
           throw new ConfigValidationError(`Notification '${item.name}': unsupported event '${eventKey}' for type '${item.type}'`);
         }
       }
@@ -149,8 +165,8 @@ export async function validateNotifications(client: NotificationsClient, config:
  * Synchronize configured notifications with the remote *arr instance and prune unmanaged entries.
  * Returns an array of diff entries representing all created, updated, and deleted notifications.
  */
-export async function syncNotifications(
-  client: NotificationsClient & TagsClient,
+export async function syncNotifications<N extends NotificationResourceItem>(
+  client: NotificationsClient<N> & TagsClient,
   config: InputConfigNotifications,
   serverCache: ServerCache,
 ): Promise<DiffEntry[]> {
@@ -161,10 +177,7 @@ export async function syncNotifications(
     return [];
   }
 
-  const [schema, existing] = await Promise.all([
-    client.getNotificationSchema() as Promise<NotificationResourceItem[]>,
-    client.getNotifications() as Promise<NotificationResourceItem[]>,
-  ]);
+  const [schema, existing] = await Promise.all([client.getNotificationSchema(), client.getNotifications()]);
 
   const allTags = data.flatMap((item) => item.tags ?? []);
   if (allTags.length > 0) {
@@ -207,10 +220,8 @@ export async function syncNotifications(
 
     if (!serverNotification) {
       // CREATE
-      const payload: NotificationResourceItem = {
-        ...schemaItem,
-        name: item.name,
-      };
+      const payload = structuredClone(schemaItem);
+      payload.name = item.name;
       delete payload.id;
 
       if (item.include_health_warnings !== undefined) {
@@ -221,12 +232,12 @@ export async function syncNotifications(
 
       for (const [key, val] of Object.entries(schemaItem)) {
         if (key.startsWith("on") && typeof val === "boolean") {
-          payload[key] = false;
+          writeField(payload, key, false);
         }
       }
       if (item.events) {
         for (const [eventKey, eventVal] of Object.entries(item.events)) {
-          payload[snakeToCamel(eventKey)] = eventVal;
+          writeField(payload, snakeToCamel(eventKey), eventVal);
         }
       }
 
@@ -244,12 +255,12 @@ export async function syncNotifications(
 
       diffEntries.push({ resourceType: "Notification", name: item.name, action: "create" });
       if (!getEnvs().DRY_RUN) {
-        await client.createNotification(payload as any);
+        await client.createNotification(payload);
       }
     } else {
       // UPDATE
       const changes: FieldChange[] = [];
-      const next: NotificationResourceItem = { ...serverNotification };
+      const next = structuredClone(serverNotification);
 
       if (serverNotification.name !== item.name) {
         changes.push({ field: "name", from: serverNotification.name, to: item.name });
@@ -268,10 +279,10 @@ export async function syncNotifications(
       if (item.events) {
         for (const [eventKey, eventVal] of Object.entries(item.events)) {
           const camelEvent = snakeToCamel(eventKey);
-          const currentVal = (serverNotification as any)[camelEvent];
+          const currentVal = readField(serverNotification, camelEvent);
           if (currentVal !== eventVal) {
             changes.push({ field: camelEvent, from: currentVal, to: eventVal });
-            (next as any)[camelEvent] = eventVal;
+            writeField(next, camelEvent, eventVal);
           }
         }
       }
@@ -346,7 +357,7 @@ export async function syncNotifications(
           fieldChanges: changes,
         });
         if (!getEnvs().DRY_RUN && serverNotification.id != null) {
-          await client.updateNotification(String(serverNotification.id), next as any);
+          await client.updateNotification(String(serverNotification.id), next);
         }
       }
     }

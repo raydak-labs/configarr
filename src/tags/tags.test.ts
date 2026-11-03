@@ -4,6 +4,7 @@ import type { TagsClient } from "../clients/capabilities";
 import type { Tag } from "./tag.types";
 import { TagDeletionError } from "./tag.types";
 import { buildTagPlaceholders, deleteUnmanagedInstanceTags, ensureTags, resolveTagNames, syncInstanceTags } from "./tags";
+import * as tagsModule from "./tags";
 
 // Hoisted so `vi.resetModules()` + a fresh `import("./tags")` still sees these same spies.
 const { getEnvsMock, loggerMock } = vi.hoisted(() => ({
@@ -398,5 +399,18 @@ describe("syncInstanceTags", () => {
       expect(result).toEqual({ added: 0, removed: 0, diffEntries: [] });
     }
     expect(mockClient.createTag).not.toHaveBeenCalled();
+  });
+});
+
+describe("tags module", () => {
+  it("exports exactly the six functions", () => {
+    expect(Object.keys(tagsModule).sort()).toEqual([
+      "buildTagPlaceholders",
+      "deleteUnmanagedInstanceTags",
+      "ensureTags",
+      "loadServerTags",
+      "resolveTagNames",
+      "syncInstanceTags",
+    ]);
   });
 });

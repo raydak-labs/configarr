@@ -910,11 +910,16 @@ Notes:
 
 ## Global Indexer Configuration
 
+:::warning Experimental since v1.39.0
+Global indexer configuration is experimental.
+:::
+
 Configarr can manage instance-wide indexer configuration via the `indexer_config` block. This setting applies to Sonarr (v4 and v5), Radarr (v5, v6, and v7), Lidarr, Readarr, and Whisparr. It is not supported on Prowlarr.
 
 ```yaml
 sonarr:
   series:
+    # (experimental) since v1.39.0
     indexer_config:
       rss_sync_interval: 60 # minutes; 0 disables, otherwise between 10 and 120
       retention: 0 # days, nonnegative integer
@@ -1220,11 +1225,16 @@ For more details, check the \*Arr-specific API documentation under the `RemotePa
 
 ## Notification Connections
 
+:::warning Experimental since v1.39.0
+Notification connections are experimental.
+:::
+
 Configarr can manage notification connections across Sonarr, Radarr, Lidarr, Readarr, Whisparr, and Prowlarr via the `notifications` block.
 
 ```yaml title="config.yml"
 sonarr:
   series:
+    # (experimental) since v1.39.0
     notifications:
       update_password: false
       delete_unmanaged:
@@ -1275,8 +1285,9 @@ When templates and the instance both define `notifications`, entries with the sa
 Prowlarr uses a dedicated top-level `prowlarr:` block (see
 [Experimental support › Prowlarr](/docs/configuration/experimental-support#prowlarr-v1)).
 Under each instance it can manage `tags`, `sync_profiles`, `indexer_proxies`, `indexers`,
-`applications` and `download_clients` (synced in that order). Each list section takes an optional
-`delete_unmanaged: { enabled, ignore }`.
+`applications`, `download_clients` and `notifications` (synced in that order). Each list section takes an optional
+`delete_unmanaged: { enabled, ignore }`. `notifications` is the same block as the media managers
+([experimental since v1.39.0](/docs/configuration/config-file#notification-connections)). `indexer_config` is not supported.
 
 `applications` manages the apps Prowlarr syncs its indexers to:
 

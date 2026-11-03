@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mergeNotifications } from "../config";
+import { mergeNotifications } from "./mergeNotifications";
 
 describe("mergeNotifications", () => {
   it("replaces an earlier entry with the same name, ignoring case", () => {

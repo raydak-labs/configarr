@@ -86,13 +86,13 @@ sonarr:
     ui_config:
       firstDayOfWeek: 1
 
-    # indexer_config: # global indexer configuration
+    # indexer_config: # (experimental) since v1.39.0. Global indexer configuration. Not supported on Prowlarr.
     #   rss_sync_interval: 60
     #   retention: 0
     #   minimum_age: 0
     #   maximum_size: 0
 
-    # notifications: # notification connections
+    # notifications: # (experimental) since v1.39.0. Notification connections. Prowlarr defines this on the instance; templates do not apply.
     #   update_password: false
     #   delete_unmanaged:
     #     enabled: false

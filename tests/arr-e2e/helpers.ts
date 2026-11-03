@@ -479,7 +479,7 @@ export async function cleanupMediaE2e(client: MediaArrClient): Promise<void> {
   }
 
   for (const tag of tags) {
-    if (tag.id != null && (tag.label === "e2e-release" || tag.label === "e2e-release-excluded")) {
+    if (tag.id != null && (tag.label === "e2e-release" || tag.label === "e2e-release-excluded" || tag.label === "e2e-notif-tag")) {
       await tryDelete(errors, "release tag", () => client.deleteTag(String(tag.id)));
     }
   }

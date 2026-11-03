@@ -415,7 +415,7 @@ describe("whisparr (live)", () => {
 
   test("notification connections", async () => {
     const preexisting = nonE2eNames(await client.getNotifications());
-    const yaml = (includeNotif: boolean, onHealthIssue = false, includeHealthWarnings = false) =>
+    const yaml = (includeNotif: boolean, onHealthIssue = false, includeHealthWarnings = false, listHealthEvent = true) =>
       mediaConfig("WHISPARR", {
         notifications: {
           data: includeNotif
@@ -423,9 +423,9 @@ describe("whisparr (live)", () => {
                 {
                   name: "e2e-notification",
                   type: "CustomScript",
-                  events: { on_grab: true, on_health_issue: onHealthIssue },
+                  events: listHealthEvent ? { on_grab: true, on_health_issue: onHealthIssue } : { on_grab: true },
                   include_health_warnings: includeHealthWarnings,
-                  fields: { path: "/data/e2e/test.sh" },
+                  fields: { path: "/data/e2e/e2e-notification.sh" },
                   tags: ["e2e-notif-tag"],
                 },
               ]
@@ -442,7 +442,10 @@ describe("whisparr (live)", () => {
     expect(notif?.onHealthIssue).toBe(false);
     expect(notif?.includeHealthWarnings).toBe(false);
     const pathField = notif?.fields?.find((f: { name?: string | null }) => f.name === "path");
-    expect(pathField?.value).toBe("/data/e2e/test.sh");
+    expect(pathField?.value).toBe("/data/e2e/e2e-notification.sh");
+    const tag = (await client.getTags()).find((item) => item.label === "e2e-notif-tag");
+    expect(tag?.id).toBeTruthy();
+    expect(notif?.tags).toContain(tag?.id);
 
     const updated = await syncConfig(yaml(true, true, true), created.workspace);
     assertPipelineSucceeded(updated.result, ["WHISPARR"]);
@@ -451,7 +454,14 @@ describe("whisparr (live)", () => {
     expect(notif?.onHealthIssue).toBe(true);
     expect(notif?.includeHealthWarnings).toBe(true);
 
-    const second = await syncConfig(yaml(true, true, true), created.workspace);
+    const omitted = await syncConfig(yaml(true, true, true, false), created.workspace);
+    assertPipelineSucceeded(omitted.result, ["WHISPARR"]);
+    notif = findNamed(await client.getNotifications(), "e2e-notification");
+    expect(notif?.onGrab).toBe(true);
+    expect(notif?.onHealthIssue).toBe(true);
+    expect(notif?.includeHealthWarnings).toBe(true);
+
+    const second = await syncConfig(yaml(true, true, true, false), created.workspace);
     assertPipelineSucceeded(second.result, ["WHISPARR"]);
     assertDiffUpToDate(second.result, ["WHISPARR"]);
 

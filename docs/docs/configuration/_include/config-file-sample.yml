@@ -161,6 +161,28 @@ sonarr:
 
     # naming from recyclarr: https://recyclarr.dev/wiki/yaml/config-reference/media-naming/
     #media_naming: {}
+    # (experimental) since v1.39.0. Global indexer configuration. Not supported on Prowlarr.
+    #indexer_config:
+    #  rss_sync_interval: 60
+    #  retention: 0
+    #  minimum_age: 0
+    #  maximum_size: 0
+
+    # (experimental) since v1.39.0. Notification connections.
+    #notifications:
+    #  update_password: false
+    #  delete_unmanaged:
+    #    enabled: false
+    #    ignore: []
+    #  data:
+    #    - name: ops-webhook
+    #      type: Webhook
+    #      events:
+    #        on_grab: true
+    #      fields:
+    #        url: "https://ops.example.com/sonarr-events"
+    #        method: 1
+
     # (experimental) Manage download clients
     #download_clients:
     #  - name: "Primary qBittorrent"

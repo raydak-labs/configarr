@@ -1,7 +1,7 @@
 import { ServerCache } from "../cache";
 import type { IndexerListItem, ReleaseProfilesApi } from "../clients/capabilities";
 import { DiffEntry, FieldChange } from "../diffReport/diffReport.types";
-import { renderTags } from "../diffReport/renderTags";
+import { renderTags } from "../tags/renderTags";
 import { getEnvs } from "../env";
 import { logger } from "../logger";
 import { Tag, TagResolveOptions } from "../tags/tag.types";
