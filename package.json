@@ -48,7 +48,7 @@
     "@vitest/coverage-v8": "4.1.12",
     "esbuild": "0.28.2",
     "prettier": "3.9.10",
-    "release-it": "21.1.1",
+    "release-it": "21.1.2",
     "swagger-typescript-api": "13.13.0",
     "typescript": "7.0.2",
     "vitest": "4.1.12"
