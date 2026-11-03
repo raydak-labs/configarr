@@ -3,26 +3,18 @@
 FROM node:26.13.0-slim@sha256:e4db4c914bf8ad241bd24804fc25d272d89bad97e68cdc8a1414862790a02c39 AS base
 WORKDIR /app
 
-ENV PNPM_HOME="/opt/pnpm"
-ENV COREPACK_HOME="/opt/corepack"
-ENV PATH="$PNPM_HOME:$PATH"
 ENV CI=true
 
 RUN apt-get update && apt-get install -y \
     git \
     && rm -rf /var/lib/apt/lists/*
 
-COPY package.json pnpm-lock.yaml ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
-# Node 26 images no longer ship corepack. corepack use writes packageManager into package.json.
-RUN npm install -g corepack@0.36.0 \
-    && corepack enable \
-    && corepack prepare pnpm@10 --activate \
-    && corepack use pnpm@10
+# Prod copies the bundle and runs node. pnpm is only for this build stage and the dev target.
+RUN npm install -g --allow-scripts=pnpm pnpm@12.16.1
 
-RUN pnpm config set store-dir ~/.pnpm-store
-
-RUN --mount=type=cache,id=pnpm,target=~/.pnpm-store pnpm install --frozen-lockfile
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile --store-dir /pnpm/store
 
 FROM base AS builder
 COPY src src/
