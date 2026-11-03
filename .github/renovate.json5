@@ -65,5 +65,22 @@
       matchPackageNames: ["lscr.io/linuxserver/lidarr"],
       pinDigests: false,
     },
+    {
+      // Compose pins more than one major of the same image (Sonarr 4 and develop-5,
+      // Radarr 5, 6, and develop-7, Lidarr 2, Prowlarr 2, Whisparr 3.x on the v3 channel).
+      // Minor, patch, build, and digest updates stay on. A major bump would merge those
+      // lines. Readarr is 0.4.x, so 0.5 is a minor and still allowed.
+      matchDatasources: ["docker"],
+      matchPackageNames: [
+        "lscr.io/linuxserver/sonarr",
+        "lscr.io/linuxserver/radarr",
+        "lscr.io/linuxserver/lidarr",
+        "lscr.io/linuxserver/readarr",
+        "lscr.io/linuxserver/prowlarr",
+        "ghcr.io/hotio/whisparr",
+      ],
+      matchUpdateTypes: ["major"],
+      enabled: false,
+    },
   ],
 }
