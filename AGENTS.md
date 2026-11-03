@@ -11,8 +11,8 @@ Rules below are defaults. A deviation needs the user's approval and a one-line c
 - Unit tests: Vitest, `<source>.test.ts` beside its source file; fixtures in `tests/samples/`; mock API clients.
 - Sync feature changes need e2e coverage per affected app, including an idempotent second run.
   Setup, matrix, `e2e-` fixtures and cleanup: [tests/arr-e2e/README.md](tests/arr-e2e/README.md). Run `pnpm test:e2e:arr` (separate from `pnpm test`).
-- Keep Sonarr v4/v5 and Radarr v5/v6/v7 working; guard version-specific features.
-  Sonarr changes: verify both versions. Radarr sync changes: `pnpm test:e2e:arr:radarr`.
+- Keep Sonarr v4/v5, Radarr v5/v6/v7, and Prowlarr 2.7/v3 working; guard version-specific features.
+  Sonarr changes: verify both versions. Radarr sync changes: `pnpm test:e2e:arr:radarr`. Prowlarr changes: `pnpm test:e2e:arr:prowlarr-v3` as well as the default suite. Once stable v3 replaces 2.7, drop the `prowlarr-v3` stack (`chore:`).
 
 ## Architecture
 

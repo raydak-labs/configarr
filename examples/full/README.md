@@ -5,6 +5,7 @@ This example contains every feature provided by configarr.
 1. Start arr containers with `docker compose up -d`
    - Starts Sonarr v4 and the pinned Sonarr v5 beta side by side, each with a separate config volume
    - Starts Radarr v6 and v7 side by side with separate config volumes
+   - Starts Prowlarr 2.7 and the pinned Prowlarr v3 develop build side by side, each with a separate config volume
    - Creates the shared network and starts the other arr containers
    - Whisparr seeds `whisparr.xml` because its image ignores the API-key environment overrides
 2. Run Configarr with `docker compose -f docker-compose.jobs.yml run --rm configarr`
@@ -23,12 +24,15 @@ URLs:
 - readarr: http://localhost:6503
 - lidarr: http://localhost:6504
 - prowlarr: http://localhost:6505
+- prowlarr-v3 (develop): http://localhost:6508
 
 Cleanup: `docker compose down -v`
 
 The v5 image is `develop-5.0.0.2941-ls207`, the same pin as the e2e tests. Its sample config covers TRaSH template import, quality definitions and per-profile sizes, release-profile controls, media-management settings, root folders, UI settings, and media naming.
 
 The Radarr v7 image is `develop-7.0.0.10815-ls275` (7.0.0.10815), matching the live compatibility tests. Its YAML uses the same settings as v5/v6. Keep the v6 and v7 config volumes separate.
+
+The Prowlarr v3 image is `develop-3.0.0.5737-ls280`, the same pin as the e2e tests. The sample config still targets the 2.7 container only.
 
 ## Development
 

@@ -162,6 +162,25 @@ services:
     ports:
       - "19696:9696"
 
+  # v3 develop. develop-<version>-ls<rev> keeps Renovate off the stable 2.x tags.
+  # Remove this service once stable v3 replaces 2.7 and the prowlarr image is bumped.
+  prowlarr-v3:
+    image: lscr.io/linuxserver/prowlarr:develop-3.0.0.5737-ls280@sha256:e2382127fec5c61ca6b6eb528fd4dcf8a8255ef2957ca334d782dbaf46d4c0c7
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=Etc/UTC
+      - PROWLARR__APP__INSTANCENAME=Prowlarr v3
+      - PROWLARR__AUTH__APIKEY=e2etestapikey0123456789abcdef012
+      - PROWLARR__AUTH__METHOD=External
+      - PROWLARR__AUTH__REQUIRED=DisabledForLocalAddresses
+    volumes:
+      - prowlarr-v3-data:/config
+      - ./fixtures/media/e2e:/data/e2e
+      - ./fixtures/media/e2e-b:/data/e2e-b
+    ports:
+      - "19697:9696"
+
   # Indexer proxy for Prowlarr e2e (same image as examples/full). Not a download client.
   flaresolverr:
     image: ghcr.io/flaresolverr/flaresolverr:v3.5.2@sha256:c80ae007ce2ccdcd217a12426e4f039ef763ff90738c808d38810c3e59323767
@@ -181,3 +200,4 @@ volumes:
   readarr-data:
   lidarr-data:
   prowlarr-data:
+  prowlarr-v3-data:

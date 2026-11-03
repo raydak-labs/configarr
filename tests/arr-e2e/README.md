@@ -26,8 +26,9 @@ One file per *arr, each owning its container end to end. The regular suite runs 
 - `pnpm test:e2e:arr:parallel` — the six per-*arr files, in parallel (~40s). Its config excludes the pipeline file, so a direct `vitest run --config vitest.arr-e2e.config.ts` cannot mix the two.
 - `pnpm test:e2e:arr:pipeline` — `pipeline.e2e.test.ts` alone through `vitest.arr-e2e.pipeline.config.ts`, since it drives every container from one config.yml (~15s).
 - `pnpm test:e2e:arr:sonarr-v5` — reruns the Sonarr feature file against the v5 container.
+- `pnpm test:e2e:arr:prowlarr-v3` — reruns the Prowlarr feature file against the v3 container.
 - `pnpm test:e2e:arr:radarr` — reruns the Radarr feature file sequentially against v5, v6 and v7, asserting the connected major version. Uses its own setup, so only the three Radarr containers are needed.
-- `pnpm test:e2e:arr` — all stages in that order; Sonarr v4/v5 and Radarr v5/v6/v7 are included.
+- `pnpm test:e2e:arr` — all stages in that order; Sonarr v4/v5, Radarr v5/v6/v7, and Prowlarr 2.7/v3 are included.
 
 `globalSetup.ts` waits for all APIs once and warms the Recyclarr/TRaSH clone; each file then copies that clone, because configarr checks out its pinned revision on every run and two files sharing one clone would race on `.git/index.lock`.
 
@@ -35,10 +36,11 @@ Each file cleans its *arr in `beforeAll`, snapshots the server-wide settings it 
 
 ## Ports / API key
 
-Override with `SONARR_BASE_URL`, `SONARR_API_KEY`, …, `PROWLARR_BASE_URL`, `PROWLARR_API_KEY`. The normal suite tests Sonarr v4 and v5. The v5 stage defaults to port `18990` and the test API key; override it independently with `SONARR_V5_BASE_URL` and `SONARR_V5_API_KEY`. To run just the v5 Sonarr feature file:
+Override with `SONARR_BASE_URL`, `SONARR_API_KEY`, …, `PROWLARR_BASE_URL`, `PROWLARR_API_KEY`. The normal suite tests Sonarr v4 and v5, and Prowlarr 2.7 and v3. The v5 stage defaults to port `18990` and the test API key; override it independently with `SONARR_V5_BASE_URL` and `SONARR_V5_API_KEY`. Prowlarr v3 defaults to port `19697`; override it with `PROWLARR_V3_BASE_URL` and `PROWLARR_V3_API_KEY`. To run just the v5 Sonarr feature file:
 
 ```bash
 pnpm test:e2e:arr:sonarr-v5
+pnpm test:e2e:arr:prowlarr-v3
 ```
 
 To run only the Radarr matrix:
@@ -52,7 +54,7 @@ Individual stages are `pnpm test:e2e:arr:radarr-v5`, `:radarr-v6` and `:radarr-v
 Override their connections with `RADARR_V5_BASE_URL` / `RADARR_V5_API_KEY`
 (and `V6` / `V7` equivalents). The ordinary suite still uses `RADARR_BASE_URL`.
 V7 is pinned to `develop-7.0.0.10815-ls275` (Radarr 7.0.0.10815). Refresh the tag, digest, and
-the API specification in `generate-api.ts` together. Sonarr v5 is `develop-5.0.0.2941-ls207` (`v5-nightly`). The full Radarr coverage column below
+the API specification in `generate-api.ts` together. Sonarr v5 is `develop-5.0.0.2941-ls207` (`v5-nightly`). Prowlarr v3 is `develop-3.0.0.5737-ls280`. Once a stable v3 release replaces 2.7 and this suite passes against it, delete the `prowlarr-v3` service and rerun, and bump the default `prowlarr` image. That cleanup is a `chore:`. The full Radarr coverage column below
 runs on each major, including templates, settings and CRUD/idempotency.
 
 The Radarr versions and the two Sonarr containers use separate config/database volumes. Do not share their volumes or use `docker compose down -v` if the local test databases should be retained.
@@ -67,7 +69,8 @@ The Radarr versions and the two Sonarr containers use separate config/database v
 | Whisparr     | http://127.0.0.1:16969 | same                               |
 | Readarr      | http://127.0.0.1:18787 | same                               |
 | Lidarr       | http://127.0.0.1:18686 | same                               |
-| Prowlarr     | http://127.0.0.1:19696 | same                               |
+| Prowlarr 2.7 | http://127.0.0.1:19696 | same                               |
+| Prowlarr v3  | http://127.0.0.1:19697 | same                               |
 | FlareSolverr | http://127.0.0.1:18191 | — (Prowlarr proxy only)            |
 
 ## File map
