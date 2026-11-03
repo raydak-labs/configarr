@@ -1,126 +1,48 @@
-# Configarr - AI Agent Quick Start Guide
+# Agent guidance
 
-## Project Overview
+Configarr is a TypeScript/Node.js tool that syncs YAML config and TRaSH/Recyclarr templates to \*arr apps.
+Full support: Sonarr, Radarr. Experimental: Lidarr, Readarr, Whisparr, Prowlarr.
 
-**Configarr** is a configuration and synchronization tool for \*arr applications (Sonarr, Radarr, Lidarr, Readarr, Whisparr). It integrates with TRaSH Guides to automate custom formats, quality profiles, and other settings.
+Rules below are defaults. A deviation needs the user's approval and a one-line comment in code saying why.
 
-- **Language**: TypeScript (Node.js)
-- **Package Manager**: **pnpm** (always use `pnpm`, never `npm` or `yarn`)
-- **Build Tool**: esbuild
-- **Test Framework**: Vitest
-- **Code Style**: Prettier
+## Commands and tests
 
-## Quick Setup
+- Use **pnpm**; scripts in [package.json](package.json). Done means `pnpm build && pnpm test && pnpm lint && pnpm typecheck` pass (`pnpm lint:fix` for Prettier).
+- Unit tests: Vitest, `<source>.test.ts` beside its source file; fixtures in `tests/samples/`; mock API clients.
+- Sync feature changes need e2e coverage per affected app, including an idempotent second run.
+  Setup, matrix, `e2e-` fixtures and cleanup: [tests/arr-e2e/README.md](tests/arr-e2e/README.md). Run `pnpm test:e2e:arr` (separate from `pnpm test`).
+- Keep Sonarr v4/v5 and Radarr v5/v6/v7 working; guard version-specific features.
+  Sonarr changes: verify both versions. Radarr sync changes: `pnpm test:e2e:arr:radarr`.
 
-```bash
-pnpm install
-```
+## Architecture
 
-Scripts are in `package.json` (`start`, `test`, `test:watch`, `build`, `lint`, `lint:fix`, `typecheck`, plus `coverage`, `generateApi`, `test:e2e:arr`, `release`).
+- Entry points: `src/index.ts`, `src/arr/*Syncer.ts`, the feature directory. Media apps share `src/arr/mediaPipeline.ts`; Prowlarr has its own pipeline without quality profiles or custom formats.
+- Features run load → diff → write → opt-in unmanaged cleanup. Keep dry-run and diff reporting intact.
+- The instance syncer calls `getClient("SONARR")` (literal type → concrete client) and injects it; feature code receives the client.
+  One handler instance per feature per run handles load, diff, write, and cleanup.
+- Feature shape by how apps differ:
+  - Fields or methods differ: typed `<feature>Base.ts` plus one thin `<feature><App>.ts` per app, constructed in that app's syncer. Model: `src/qualityProfiles/`.
+  - Identical across apps: one module of functions, client as first parameter (`manageCf(client, ...)`); pass differences in as arguments.
+  - Prowlarr provider resources: extend `src/prowlarr/providerResourceSync.ts`.
+- Shared client method sets: generic capabilities in `src/clients/capabilities.ts`. App-only methods stay on that app's client.
+- `src/tags/` owns tags for all apps; use only `tags.ts` exports and `renderTags.ts` for diff labels.
 
-## Development Rules
+## Types and naming
 
-Before considering work complete, all must pass: `pnpm build && pnpm test && pnpm lint && pnpm typecheck`.
+- Use generated resources from `src/__generated__/<app>/`; regenerate with `pnpm generateApi <app>`.
+- Fix mapper or class types until they fit; casts, `Merged*` cross-app types, and `any` hide the mismatch. `unknown` at untyped boundaries.
+  OpenAPI gaps: intersection type in that app's file only.
+- YAML/TRaSH strings → generated enums via `toEnumOrThrow` (`src/util.ts`) in the app's mapper.
+- `<feature>.types.ts` holds YAML, TRaSH, and diff types only.
+- One app per file/type name (`qualityProfileLidarr.ts`); shared behavior goes on the base. Import the defining module directly (no barrels).
+- Config: Zod schemas in `src/types/config.types.ts` and feature dirs; derive TS types. Merging lives in the feature (`src/notifications/mergeNotifications.ts`).
+  Stay backward compatible; deprecate with a warning.
+- Log via `logger` (`src/logger.ts`).
 
-- Use strict typing; `unknown` over `any`. Interfaces for public APIs, types for internal use.
-- Architecture: base classes abstract shared logic per feature; type-specific implementations extend them per \*arr type; a syncer orchestrates create/update/delete. See "Typed per-*arr clients" below for which pattern (A/B/C) a new feature needs and how construction works.
+## Docs and commits
 
-## AI-Internal Documentation
-
-Store design, architecture, and implementation planning documents created during agent-assisted development in `.ai/docs/` — not in `docs/` (user-facing documentation for configarr.de):
-
-- **`.ai/docs/specs/`** — feature design and architecture decisions
-- **`.ai/docs/plans/`** — step-by-step implementation plans
-- **`.ai/docs/tasks.md`** — brief active follow-ups; check before work and tell the user when a listed task is relevant.
-
-Specs are dated and fixed, not living documents — a spec is a record of the decision made at that time, not a description of current code (read the code for that). Do not edit a spec's decisions after the fact to match later changes.
-
-- Filename: `YYYY-MM-DD-feature-name-design.md` (specs) / `YYYY-MM-DD-feature-name.md` (plans).
-- Cross-link: plan links back to its spec at the top; spec links forward to its plan once one exists.
-- When a spec's implementation lands, add a one-line `Status: implemented (YYYY-MM-DD)` at the top — don't rewrite the body.
-- Superseding a past decision: write a new dated spec that links to the old one and states what changed and why. Never rewrite history in place.
-
-## Key Concepts
-
-### \*arr Type Support
-
-The project supports multiple \*arr applications with varying feature support:
-
-- **Full Support**: Sonarr v4 and v5, Radarr v5/v6 and v7
-- **Experimental**: Lidarr, Readarr, Whisparr
-- **Experimental (Prowlarr v1)**: Applications, Indexers, Indexer Proxies, Download Clients
-  (dedicated `prowlarr:` config block and its own minimal pipeline in `index.ts`; not a media
-  manager, so quality profiles / custom formats / etc. do not apply). Tags are supported for every
-  *arr including Prowlarr, but the mechanics live in `src/tags/`. Provider resources share a
-  generic base (`src/prowlarr/providerResourceSync.ts`); see `src/prowlarr/` and
-  `src/clients/prowlarr-client.ts`.
-
-- **Sonarr compatibility:** Preserve support for both v4 and v5 in every Sonarr change. When changing Sonarr code, config, API mappings, or tests, verify both versions with relevant coverage; keep v5-only behavior guarded on v4.
-
-- **Radarr compatibility:** Preserve v5/v6/v7 support using API v3. Run `pnpm test:e2e:arr:radarr` when changing Radarr sync behavior; its isolated containers exercise the same feature suite on all three majors.
-
-### Typed per-*arr clients
-
-Callers use `getClient<T>(arrType)` (`src/clients/client.ts`). A literal arr type returns that concrete class (`getClient("SONARR")` → `SonarrClient`). A variable `ArrType` / `MediaArrType` returns a union.
-
-Media clients implement small capabilities in `src/clients/capabilities.ts` (System, Tags, DownloadClients, QualityProfiles, CustomFormats, QualityDefinitions) plus their own methods. Prowlarr implements System + Tags + DownloadClients only — no media stubs.
-
-- **Pattern A** — fields or methods differ per arr: factory `switch` with **one case per arr** + literal `getClient("LIDARR")`. One class file per *arr (`qualityProfileLidarr.ts`). Shared _behavior_ lives on the base as unnamed helpers (`attachMinUpgradeOnCreate`, `PathRootFolderSync`). Do not mash products into filenames or type names (`qualityProfileLidarrReadarr.ts`, `QualityProfileRadarrWhisparrResource`).
-  - Do not put per-arr classes in a `*Generic.ts` file. If 3+ arrs share behavior (path-only root folders, media naming persist), put that behavior on the typed base and keep one thin class file per arr. Pass-through CRUD belongs on the base via `getApi()` plus a capability generic (`DelayProfilesClient<T>`, `QualityDefinitionsClient<T>`) — same as download clients. YAML string → generated string enum uses `toEnumOrThrow(Enum, value, label)` with that arr’s enum object (`getClient("RADARR")` still binds the arr). A variable `arrType` cannot carry five distinct enums. Shared lifecycle lives on the typed base (`BaseDelayProfileSync`, `QualityDefinitionPreferredSync`, `MediaManagementSync`).
-- Pipeline: for Pattern A media features (`qd`, `mm`, `qp`, `delay`, `root`, `downloadClients` in each `src/arr/*Syncer.ts`), the instance syncer constructs the feature class directly with the injected typed client — no factory, no runtime `switch(arrType)`. **One** instance per feature per instance run; load, diff, persist, and delete all go through that object (`persist` / `persistNaming` on the instance, `syncs.downloadClients.syncDownloadClients(...)` for download clients). Do not `new` a second handler to write. Pattern B stages (custom formats, tags, UI config, download-client config, remote paths) take the injected client as a parameter instead of a constructor, since they're plain functions, not classes — see below.
-- **Pattern B** — same method set **and** same field set (custom formats, tags): one module. Capability generic (`CustomFormatsClient<CF>`). The request type must be assignable to each arr’s generated resource so the client passes it to swagger as-is. Do not split into 5 handlers. Takes the injected client as its first parameter (`manageCf(client, ...)`, `loadServerTags(client)`, `syncUiConfig(client, arrType, ...)`, `syncDownloadClientConfig(client, arrType, ...)`, `syncRemotePaths(client, arrType, ...)`) — no internal `getClient(arrType)`. `arrType` stays only where the function needs it for something other than client lookup (logging, per-arr field filtering, result shape). `src/tags/` owns tags for all arrs. `tags.ts` exports exactly six functions: `loadServerTags`, `resolveTagNames`, `buildTagPlaceholders`, `ensureTags`, `syncInstanceTags(client, serverCache, labels)` and `deleteUnmanagedInstanceTags(client, serverCache, { deleteConfig, instanceLabels, referencedTagLists, onInUse })` (`instanceLabels` are always kept — they are what the run just ensured exist). Everything else in the module (`collectTagLabels`, `collectTagIds`, the raw prune) is private; do not import it. `tag.types.ts` holds the shared types. Do not add a separate syncer module. Diff tag labels are `renderTags` in `src/tags/renderTags.ts`, not an export of `tags.ts` and not under `diffReport/`. A feature's config merge lives in that feature (`src/notifications/mergeNotifications.ts`), not in `config.ts`. Config tag entries are labels by default (numeric ids deprecated). Per-pipeline differences are passed in, not branched on: the keep-set comes from `referencedTagLists`, and `onInUse` is `"skip"` for media *arrs (some tag-bearing resources like import lists and indexers are not fully managed) vs `"throw"` for Prowlarr (every tag-bearing resource there is).
-- **Pattern C** — Prowlarr-only (`src/prowlarr/providerResourceSync.ts`). Media managers do not get a Pattern C.
-
-Client methods take that arr’s generated resource from `__generated__/<arr>/data-contracts` (same type the handler in that arr’s class file uses). YAML/TRaSH strings become generated enums in that arr’s mapper (`toEnumOrThrow(DownloadProtocol, value, "preferredProtocol")`, or `toDownloadProtocol` when undefined should default). OpenAPI gaps are an intersection in that arr file only (`DelayProfileResource & { items: ... }` in `delayProfileLidarr.ts`).
-
-Shared `src/<feature>/*.types.ts` holds YAML, TRaSH, and diff types — not product payloads (`ProwlarrDownloadClientResource`). Prowlarr uses `__generated__/prowlarr` `DownloadClientResource` in `downloadClientProwlarr.ts` / `prowlarr-client.ts`.
-
-Import the real module (`qualityProfileBase.ts`). Do not add barrels that only re-export.
-
-Do not introduce `Merged*` intersection types for client or cache returns. Do not assert mapping types onto generated resources (`as QualityProfileResource`); if it is not assignable, fix the mapper or the class’s type.
-
-### Configuration System
-
-- **YAML-based** configuration with `config.yml`
-- **Template support** - Recyclarr templates, TRaSH Guides, local files, URLs
-- **Secrets management** - `!secret`, `!env` and `!file` tags for sensitive data
-- **Type-safe** - Zod schemas for validation
-
-### Sync Architecture
-
-Each feature (quality profiles, custom formats, metadata profiles, root folders) follows:
-
-1. **Load** - Fetch current server state
-2. **Calculate Diff** - Compare config vs. server
-3. **Sync** - Create/update/delete resources
-4. **Cleanup** - Optionally delete unmanaged items
-
-## Testing
-
-- Unit tests: `<source>.test.ts` beside that source file. No middle word (`redactSecrets.class.test.ts`) and no test whose basename is not a source file (`notification-redaction.test.ts`). Samples: `tests/samples/`. Mock API clients with Vitest.
-- Live *arr e2e: `tests/arr-e2e/` (`pnpm test:e2e:arr`, needs the compose stack up). Adding or changing a sync feature requires matching e2e coverage; matrix in `tests/arr-e2e/README.md`. Fixture filenames use the `e2e-` prefix.
-
-## Adding a New \*arr Feature
-
-Add methods on the concrete \*arr clients (shared method sets go in `src/clients/capabilities.ts`), pick a pattern (A/B/C, see above), implement base + type-specific classes, construct the new class in each `*Syncer.ts`, update the pipeline in `index.ts`, add tests.
-
-## Important Notes
-
-- **Never edit `CHANGELOG.md` manually** — generated by CI release automation. Describe user-facing changes in commits/PRs instead.
-- **Backward compatibility** — maintain existing APIs when refactoring.
-- **Logging** — use the `logger` instance, not `console`.
-
-## Commit Message Conventions
-
-`release-it` + `@release-it/conventional-changelog` (see `.release-it.json`) auto-generate `CHANGELOG.md` and GitHub Release notes from commit messages. Only `feat`, `fix`, and `refactor` (as "(internal) Refactorings") produce changelog entries — every other type is silently omitted. Pick the type based on whether a **user** of configarr would care:
-
-- `feat:` / `fix:` — user-facing changes only: new features, behavior changes, bugs that affected the running application.
-- `ci:` or `chore(ci):` — GitHub Actions workflows, release pipeline, zizmor, etc. Never `fix(ci):` or `feat(ci):`, even when fixing a real bug in a workflow — it's not user-facing and would add a bogus entry to the changelog.
-- `docs:` — documentation-only changes.
-- `chore:` — tooling/maintenance with no functional impact (dependency bumps are already handled by Renovate as `chore(deps):` / `fix(deps):`).
-- `test:` / `style:` — test-only or formatting-only changes.
-
-## Resources
-
-- Docs: https://configarr.de · Repo: https://github.com/raydak-labs/configarr · TRaSH Guides: https://trash-guides.info/
-- Recyclarr config templates are compatible.
+- User-visible changes update `docs/docs/` (https://configarr.de) and `examples/` where relevant.
+- Agent docs: `.ai/docs/specs/YYYY-MM-DD-<name>-design.md`, `.ai/docs/plans/YYYY-MM-DD-<name>.md`, cross-linked, one each per PR unless the user agrees otherwise.
+  Specs are historical: mark `Status: implemented (YYYY-MM-DD)` at the top; changed decisions go in a new spec linking the old.
+- `CHANGELOG.md` is generated from commits by release-it. `feat:`/`fix:` user-facing, `refactor:` internal (all three hit release notes);
+  `docs:`, `test:`, `style:`, `chore:` otherwise; CI fixes use `ci:` or `chore(ci):`.
