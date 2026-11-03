@@ -1,6 +1,6 @@
 # https://github.com/denoland/deno_docker/blob/main/example/Dockerfile
 
-FROM denoland/deno:alpine-2.0.0 AS base
+FROM denoland/deno:alpine-2.0.0@sha256:0a6f0116409d2330af10a83b9a66c7c5732530e0bee5823627221b86e4f62c5e AS base
 WORKDIR /app
 
 RUN apk add --no-cache libstdc++ dumb-init git
@@ -22,7 +22,7 @@ ENV DENO_DIR=/app/.deno_cache
 CMD ["deno", "--allow-env", "--allow-read", "--allow-run", "--allow-net", "--allow-sys", "--unstable-sloppy-imports", "index.ts"]
 
 # https://github.com/evanw/esbuild/issues/1921
-FROM denoland/deno:alpine-2.0.0 AS prod
+FROM denoland/deno:alpine-2.0.0@sha256:0a6f0116409d2330af10a83b9a66c7c5732530e0bee5823627221b86e4f62c5e AS prod
 WORKDIR /app
 
 RUN apk add --no-cache libstdc++ dumb-init git
