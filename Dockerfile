@@ -12,7 +12,10 @@ RUN apt-get update && apt-get install -y \
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
 # Prod copies the bundle and runs node. pnpm is only for this build stage and the dev target.
-RUN npm install -g --allow-scripts=pnpm pnpm@12.16.1
+# Node 26 does not ship corepack. corepack install reads packageManager from package.json.
+RUN npm install -g corepack@0.36.0 \
+    && corepack enable \
+    && corepack install
 
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile --store-dir /pnpm/store
 

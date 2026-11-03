@@ -19,15 +19,6 @@
     // `tests/**` is not ignored: tests/arr-e2e/docker-compose.yml pins the *arr images the
     // live e2e suite runs against, and those need updates like any other dependency.
   ],
-  customManagers: [
-    {
-      customType: "regex",
-      fileMatch: ["^Dockerfile$"],
-      matchStrings: ["npm install -g --allow-scripts=pnpm pnpm@(?<currentValue>\\d+\\.\\d+\\.\\d+)"],
-      datasourceTemplate: "npm",
-      depNameTemplate: "pnpm",
-    },
-  ],
   packageRules: [
     {
       // Base maps dependencies → refactor, which would land in the release changelog.
