@@ -30,7 +30,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "dotenv": "17.4.2",
+    "dotenv": "18.0.9",
     "fast-glob": "3.3.3",
     "ky": "2.2.0",
     "pino": "10.4.0",
