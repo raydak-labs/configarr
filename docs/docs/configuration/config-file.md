@@ -1179,9 +1179,9 @@ sonarr:
 
 Because \*Arr servers return stored secrets (passwords, API keys, `secretToken`, `appToken`) masked as `********`, Configarr cannot read existing secrets from the server. Two settings control when secret fields in `fields` are sent to existing download clients:
 
-| Setting                        | Default | Behavior                                                                                                      |
-| ------------------------------ | ------- | ------------------------------------------------------------------------------------------------------------- |
-| `update_password`              | `false` | When `true`, always overwrites secret fields with configured values on every run. Available since v1.19.0.   |
+| Setting                        | Default | Behavior                                                                                                                           |
+| ------------------------------ | ------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `update_password`              | `false` | When `true`, always overwrites secret fields with configured values on every run. Available since v1.19.0.                         |
 | `update_password_on_test_fail` | `false` | Experimental since v1.39.0. When `true`, tests the stored secret first and updates it only when that test rejects the credentials. |
 
 `update_password: true` takes precedence over `update_password_on_test_fail`.
