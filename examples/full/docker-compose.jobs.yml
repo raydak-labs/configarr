@@ -1,6 +1,6 @@
 services:
   configarr:
-    image: ghcr.io/raydak-labs/configarr:latest
+    image: ghcr.io/raydak-labs/configarr:latest@sha256:0e14337fef1c2c0193537b6ea301b52c464ef0718a6f5165ebc7334d7fd10451
     networks:
       - configarr-full
     volumes:

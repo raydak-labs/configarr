@@ -1,7 +1,7 @@
 services:
   configarr:
     container_name: configarr-reused
-    image: ghcr.io/raydak-labs/configarr:latest
+    image: ghcr.io/raydak-labs/configarr:latest@sha256:0e14337fef1c2c0193537b6ea301b52c464ef0718a6f5165ebc7334d7fd10451
     networks:
       - configarr-full
     volumes:
@@ -11,7 +11,7 @@ services:
       #- ./templates:/app/templates
 
   ofelia:
-    image: mcuadros/ofelia:latest
+    image: mcuadros/ofelia:latest@sha256:efcbe2c5cf658a25de6443c1462d653f9cc03791d642e01fc6c638a00f97e492
     command: daemon --config=/opt/config.ini
     #command: daemon --docker
     volumes:

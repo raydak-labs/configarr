@@ -1,6 +1,6 @@
 services:
   configarr:
-    image: ghcr.io/raydak-labs/configarr:latest
+    image: ghcr.io/raydak-labs/configarr:latest@sha256:0e14337fef1c2c0193537b6ea301b52c464ef0718a6f5165ebc7334d7fd10451
     networks:
       - configarr-full
     volumes:
@@ -10,7 +10,7 @@ services:
       #- ${CONFIGARR_FULL_PATH:?"missing"}/templates:/app/templates
 
   configarr-run:
-    image: ghcr.io/raydak-labs/configarr:latest
+    image: ghcr.io/raydak-labs/configarr:latest@sha256:0e14337fef1c2c0193537b6ea301b52c464ef0718a6f5165ebc7334d7fd10451
     networks:
       - configarr-full
     volumes:
@@ -20,7 +20,7 @@ services:
       #- ${CONFIGARR_FULL_PATH:?"missing"}/templates:/app/templates
 
   cron:
-    image: blackdark93/dockerfiles-cron-dind:main
+    image: blackdark93/dockerfiles-cron-dind:main@sha256:3abdd903da01440eafa8969d78cdd87de770c9653421f63ff97b7cbe7d479580
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ${CONFIGARR_FULL_PATH:?"missing"}/cron:/app/schedules:ro

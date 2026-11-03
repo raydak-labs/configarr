@@ -69,7 +69,7 @@ CMD ["dumb-init", "node", "index.js"]
 
 # Compatibility target pinned to Alpine 3.22.
 # Useful for testing old-kernel behavior with a fixed Alpine/git stack.
-FROM node:24.16.0-alpine3.22 AS prod-alpine-3-22
+FROM node:24.16.0-alpine3.22@sha256:191c9f0080fcbbc6547a85dc0ff7988072214a355aabdc1d2ec55a7dae5eea8a AS prod-alpine-3-22
 WORKDIR /app
 
 RUN apk add --no-cache libstdc++ dumb-init git

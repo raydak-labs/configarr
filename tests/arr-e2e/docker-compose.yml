@@ -5,7 +5,7 @@
 # Whisparr's eros base ignores env overrides, so it seeds a fixture config.xml instead.
 services:
   sonarr:
-    image: lscr.io/linuxserver/sonarr:4.0.20
+    image: lscr.io/linuxserver/sonarr:4.0.20@sha256:386c962ee6e260e3a5656b25df2ed056bcc9b6410e197d075f9547fd14c23bca
     environment:
       - PUID=${PUID:-1000}
       - PGID=${PGID:-1000}
@@ -40,7 +40,7 @@ services:
       - "18990:8989"
 
   radarr:
-    image: lscr.io/linuxserver/radarr:6.4.4
+    image: lscr.io/linuxserver/radarr:6.4.4@sha256:ade5937813c6ae415b29db729386e53fea3ecf067a019849bafbe2d2a6ec02ba
     environment:
       - PUID=${PUID:-1000}
       - PGID=${PGID:-1000}
@@ -57,7 +57,7 @@ services:
       - "17878:7878"
 
   radarr-v5:
-    image: lscr.io/linuxserver/radarr:5.28.0
+    image: lscr.io/linuxserver/radarr:5.28.0@sha256:c984533510abe0219a70e80d15bd0d212b7df21baa0913759c4ce6cc9092240b
     environment:
       - PUID=${PUID:-1000}
       - PGID=${PGID:-1000}
@@ -95,7 +95,7 @@ services:
   # overrides and generates a random API key, so the fixture config.xml is copied into the
   # volume before the app starts. The v2 line (v2-2.2.0-release.231) passes this suite too.
   whisparr:
-    image: ghcr.io/hotio/whisparr:v3-3.6.5-release.1886
+    image: ghcr.io/hotio/whisparr:v3-3.6.5-release.1886@sha256:5fb39f643946bc3872b105988ba81679318cc534431eafb44d8e24f8fdaa864e
     environment:
       - PUID=${PUID:-1000}
       - PGID=${PGID:-1000}
@@ -111,7 +111,7 @@ services:
       - "16969:6969"
 
   readarr:
-    image: lscr.io/linuxserver/readarr:develop-0.4.18.2805-ls157
+    image: lscr.io/linuxserver/readarr:develop-0.4.18.2805-ls157@sha256:baf471a7101b58f361ef960de91cd15f23bae82d0126df6a9edbeaf5c5aa4392
     environment:
       - PUID=${PUID:-1000}
       - PGID=${PGID:-1000}
@@ -164,7 +164,7 @@ services:
 
   # Indexer proxy for Prowlarr e2e (same image as examples/full). Not a download client.
   flaresolverr:
-    image: ghcr.io/flaresolverr/flaresolverr:v3.5.2
+    image: ghcr.io/flaresolverr/flaresolverr:v3.5.2@sha256:c80ae007ce2ccdcd217a12426e4f039ef763ff90738c808d38810c3e59323767
     environment:
       - LOG_LEVEL=info
       - TZ=Etc/UTC
