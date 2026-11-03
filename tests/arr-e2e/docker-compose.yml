@@ -21,10 +21,9 @@ services:
     ports:
       - "18989:8989"
 
-  # Pin the beta image by manifest-list digest so the e2e contract does not move with develop.
-  # Update the digest and version together when intentionally refreshing the v5 test target.
+  # v5-nightly. develop-<version>-ls<rev> keeps Renovate off the stable 4.x tags.
   sonarr-v5:
-    image: lscr.io/linuxserver/sonarr@sha256:386c962ee6e260e3a5656b25df2ed056bcc9b6410e197d075f9547fd14c23bca
+    image: lscr.io/linuxserver/sonarr:develop-5.0.0.2941-ls207@sha256:b0cb42e70dd48860bbf3a8aa87dfa8c1a6ae56c1c96c8200923e821caad72a59
     environment:
       - PUID=${PUID:-1000}
       - PGID=${PGID:-1000}
@@ -74,9 +73,9 @@ services:
     ports:
       - "17879:7878"
 
-  # Radarr 7.0.0.10815 prerelease; refresh the image digest and API contract together.
+  # develop line for the 7.0.0.10815 API. Refresh tag, digest, and generate-api.ts together.
   radarr-v7:
-    image: lscr.io/linuxserver/radarr@sha256:084b3b2ab1d0ef930660727259546a241f2bdf67c9ed085d54bf1486a6887c9b
+    image: lscr.io/linuxserver/radarr:develop-7.0.0.10815-ls275@sha256:3aae9e841647fb54777ca38fab50cb5b1fdeec8a4b6aca252583a354be1a442e
     environment:
       - PUID=${PUID:-1000}
       - PGID=${PGID:-1000}

@@ -26,9 +26,9 @@ URLs:
 
 Cleanup: `docker compose down -v`
 
-The v5 image is pinned to the same beta build used by the e2e tests. Its sample config covers TRaSH template import, quality definitions and per-profile sizes, release-profile controls, media-management settings, root folders, UI settings, and media naming. Update the image digest when choosing a newer beta.
+The v5 image is `develop-5.0.0.2941-ls207`, the same pin as the e2e tests. Its sample config covers TRaSH template import, quality definitions and per-profile sizes, release-profile controls, media-management settings, root folders, UI settings, and media naming.
 
-The Radarr v7 image is pinned to 7.0.0.10815, matching the live compatibility tests. Its YAML uses the same settings as v5/v6. Keep the v6 and v7 config volumes separate.
+The Radarr v7 image is `develop-7.0.0.10815-ls275` (7.0.0.10815), matching the live compatibility tests. Its YAML uses the same settings as v5/v6. Keep the v6 and v7 config volumes separate.
 
 ## Development
 
