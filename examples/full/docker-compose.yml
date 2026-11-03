@@ -62,7 +62,7 @@ services:
 
   # Radarr v7 develop (7.0.0.10815), same pin as the e2e suite. Isolated from the v6 database.
   radarr-v7:
-    image: lscr.io/linuxserver/radarr:develop-7.0.0.10815-ls275@sha256:3aae9e841647fb54777ca38fab50cb5b1fdeec8a4b6aca252583a354be1a442e
+    image: lscr.io/linuxserver/radarr:develop-7.0.1.10859-ls276@sha256:d5c7960330e9af3ae97be9e52cf2e3a123ae3fb76001390ee7d112b02017fa9a
     networks:
       - configarr-full
     environment:
