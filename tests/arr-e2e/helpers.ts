@@ -1,7 +1,8 @@
+import { spawn, type ChildProcess } from "node:child_process";
+import { randomUUID } from "node:crypto";
 import { cpSync, existsSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
-import { spawn } from "node:child_process";
 import { expect } from "vitest";
 import { stringify } from "yaml";
 import { LidarrClient } from "../../src/clients/lidarr-client";
@@ -221,6 +222,10 @@ function configarrEnv(workspace: ConfigWorkspace): Record<string, string> {
     TELEMETRY_ENABLED: "false",
     GIT_CONFIG_GLOBAL: "/dev/null",
     GIT_CONFIG_SYSTEM: "/dev/null",
+    // The template checkout is warmed once per file. Later syncs must not pull it again.
+    CONFIGARR_REUSE_GIT_REPO: "true",
+    // One config with several apps syncs those apps at the same time. Single-app tests are unchanged.
+    CONFIGARR_PARALLEL_ARRS: "true",
   };
 }
 
@@ -240,38 +245,84 @@ export type ConfigarrRunResult = {
   stderr: string;
 };
 
-async function runConfigarr(env: Record<string, string>, timeoutMs = 300_000): Promise<ConfigarrRunResult> {
-  const repoRoot = join(import.meta.dirname, "../..");
+type PendingJob = {
+  id: string;
+  stderr: string;
+  timer: NodeJS.Timeout;
+  resolve: (result: ConfigarrRunResult) => void;
+  reject: (error: Error) => void;
+};
 
-  return await new Promise((resolve, reject) => {
-    const child = spawn("pnpm", ["exec", "tsx", "src/index.ts"], {
-      cwd: repoRoot,
-      env: { ...process.env, ...env },
-      stdio: ["ignore", "pipe", "pipe"],
-    });
+let configarrWorker: ChildProcess | undefined;
+let workerStdout = "";
+let pendingJob: PendingJob | undefined;
+let workerChain: Promise<unknown> = Promise.resolve();
 
-    let stdout = "";
-    let stderr = "";
-    const timer = setTimeout(() => {
-      child.kill("SIGKILL");
-      reject(new Error(`configarr timed out after ${timeoutMs}ms`));
-    }, timeoutMs);
-
-    child.stdout.on("data", (chunk) => {
-      stdout += String(chunk);
-    });
-    child.stderr.on("data", (chunk) => {
-      stderr += String(chunk);
-    });
-    child.on("error", (err) => {
-      clearTimeout(timer);
-      reject(err);
-    });
-    child.on("close", (exitCode) => {
-      clearTimeout(timer);
-      resolve({ exitCode, stdout, stderr });
-    });
+function startConfigarrWorker(repoRoot: string): ChildProcess {
+  const child = spawn(process.execPath, ["--import", "tsx", "tests/arr-e2e/configarrWorker.ts"], {
+    cwd: repoRoot,
+    env: process.env,
+    stdio: ["pipe", "pipe", "pipe"],
   });
+  child.stdout?.on("data", (chunk: Buffer) => {
+    workerStdout += String(chunk);
+    const match = workerStdout.match(/\n@@E2E (\S+) (\d+) (\S+)\n/);
+    if (!match || !pendingJob || match[1] !== pendingJob.id || match.index == null) return;
+    const stdout = workerStdout.slice(0, match.index);
+    workerStdout = workerStdout.slice(match.index + match[0].length);
+    const errorText = match[3] === "-" ? "" : Buffer.from(match[3], "base64").toString("utf8");
+    const stderr = pendingJob.stderr + errorText;
+    clearTimeout(pendingJob.timer);
+    const done = pendingJob;
+    pendingJob = undefined;
+    done.resolve({ exitCode: Number(match[2]), stdout, stderr });
+  });
+  child.stderr?.on("data", (chunk: Buffer) => {
+    if (pendingJob) pendingJob.stderr += String(chunk);
+  });
+  child.on("close", (code) => {
+    if (pendingJob) {
+      clearTimeout(pendingJob.timer);
+      const done = pendingJob;
+      pendingJob = undefined;
+      done.reject(new Error(`configarr worker exited ${code}\n${workerStdout}\n${done.stderr}`));
+    }
+    configarrWorker = undefined;
+    workerStdout = "";
+  });
+  child.unref();
+  child.stdin?.unref();
+  child.stdout?.unref();
+  child.stderr?.unref();
+  process.once("beforeExit", () => child.kill());
+  return child;
+}
+
+/** Reuse one configarr process per test file. */
+function runWithWorker(env: Record<string, string>, timeoutMs: number): Promise<ConfigarrRunResult> {
+  const repoRoot = join(import.meta.dirname, "../..");
+  const id = randomUUID();
+  const job = workerChain.then(
+    () =>
+      new Promise<ConfigarrRunResult>((resolve, reject) => {
+        configarrWorker ??= startConfigarrWorker(repoRoot);
+        const timer = setTimeout(() => {
+          configarrWorker?.kill("SIGKILL");
+          reject(new Error(`configarr timed out after ${timeoutMs}ms`));
+        }, timeoutMs);
+        pendingJob = { id, stderr: "", timer, resolve, reject };
+        configarrWorker.stdin?.write(`${JSON.stringify({ id, env })}\n`);
+      }),
+  );
+  workerChain = job.then(
+    () => undefined,
+    () => undefined,
+  );
+  return job;
+}
+
+function runConfigarr(env: Record<string, string>, timeoutMs = 300_000): Promise<ConfigarrRunResult> {
+  return runWithWorker(env, timeoutMs);
 }
 
 /** Exit code 0 plus a `(1/0/0)` summary for each instance the run was supposed to configure. */

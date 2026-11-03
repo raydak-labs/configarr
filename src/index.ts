@@ -3,13 +3,14 @@ import "dotenv/config";
 import { getBuildInfo, getEnvs, initEnvs } from "./env";
 initEnvs();
 
+import { pathToFileURL } from "node:url";
 import { LidarrSyncer } from "./arr/lidarrSyncer";
 import { ProwlarrSyncer } from "./arr/prowlarrSyncer";
 import { RadarrSyncer } from "./arr/radarrSyncer";
 import { ReadarrSyncer } from "./arr/readarrSyncer";
 import { SonarrSyncer } from "./arr/sonarrSyncer";
 import { WhisparrSyncer } from "./arr/whisparrSyncer";
-import { configureApi, unsetApi } from "./clients/client";
+import { configureApi, unsetApi, usingClient } from "./clients/client";
 import { getConfig } from "./config";
 import { ConsoleDiffFormatter } from "./diffReport/formatters/consoleFormatter";
 import { writeJsonDiffReport } from "./diffReport/formatters/jsonFormatter";
@@ -55,8 +56,8 @@ const runInstances = async <TInstance extends { base_url: string; api_key: strin
     }
 
     try {
-      await configureApi(arrType, instance.base_url, instance.api_key);
-      const report = await runInstance(instance, instanceName);
+      const api = await configureApi(arrType, instance.base_url, instance.api_key);
+      const report = await usingClient(arrType, api, () => runInstance(instance, instanceName));
       new ConsoleDiffFormatter().format(report);
       reports.push(report);
       status.success++;
@@ -81,7 +82,7 @@ const runInstances = async <TInstance extends { base_url: string; api_key: strin
   return { status, reports };
 };
 
-const run = async () => {
+export const run = async () => {
   logger.info(`Support the project: https://ko-fi.com/blackdark93 - Star on Github! https://github.com/raydak-labs/configarr`);
   logger.info(`Configarr Version: ${getEnvs().CONFIGARR_VERSION}`);
 
@@ -112,12 +113,14 @@ const run = async () => {
   ) => {
     if (enabled == null || enabled) {
       const result = await runInstances(arrType, entries, runInstance);
-      totalStatus.push(`${arrType}: (${result.status.success}/${result.status.failure}/${result.status.skipped})`);
-      allReports.push(...result.reports);
-    } else {
-      logger.debug(`${arrType} disabled in config`);
-      disabledArrs.push(arrType);
+      return {
+        line: `${arrType}: (${result.status.success}/${result.status.failure}/${result.status.skipped})`,
+        reports: result.reports,
+        disabled: undefined,
+      };
     }
+    logger.debug(`${arrType} disabled in config`);
+    return { line: undefined, reports: [], disabled: arrType };
   };
 
   // Initialize telemetry
@@ -137,24 +140,43 @@ const run = async () => {
     getTelemetryInstance().trackFeatureUsage(globalConfig, allInstances);
   }
 
-  await runEnabled("SONARR", globalConfig.sonarrEnabled, globalConfig.sonarr, (instance, name) =>
-    new SonarrSyncer().run(globalConfig, instance, name),
-  );
-  await runEnabled("RADARR", globalConfig.radarrEnabled, globalConfig.radarr, (instance, name) =>
-    new RadarrSyncer().run(globalConfig, instance, name),
-  );
-  await runEnabled("WHISPARR", globalConfig.whisparrEnabled, globalConfig.whisparr, (instance, name) =>
-    new WhisparrSyncer().run(globalConfig, instance, name),
-  );
-  await runEnabled("READARR", globalConfig.readarrEnabled, globalConfig.readarr, (instance, name) =>
-    new ReadarrSyncer().run(globalConfig, instance, name),
-  );
-  await runEnabled("LIDARR", globalConfig.lidarrEnabled, globalConfig.lidarr, (instance, name) =>
-    new LidarrSyncer().run(globalConfig, instance, name),
-  );
-  await runEnabled("PROWLARR", globalConfig.prowlarrEnabled, globalConfig.prowlarr, (instance, name) =>
-    new ProwlarrSyncer().run(instance, name),
-  );
+  const starters = [
+    () =>
+      runEnabled("SONARR", globalConfig.sonarrEnabled, globalConfig.sonarr, (instance, name) =>
+        new SonarrSyncer().run(globalConfig, instance, name),
+      ),
+    () =>
+      runEnabled("RADARR", globalConfig.radarrEnabled, globalConfig.radarr, (instance, name) =>
+        new RadarrSyncer().run(globalConfig, instance, name),
+      ),
+    () =>
+      runEnabled("WHISPARR", globalConfig.whisparrEnabled, globalConfig.whisparr, (instance, name) =>
+        new WhisparrSyncer().run(globalConfig, instance, name),
+      ),
+    () =>
+      runEnabled("READARR", globalConfig.readarrEnabled, globalConfig.readarr, (instance, name) =>
+        new ReadarrSyncer().run(globalConfig, instance, name),
+      ),
+    () =>
+      runEnabled("LIDARR", globalConfig.lidarrEnabled, globalConfig.lidarr, (instance, name) =>
+        new LidarrSyncer().run(globalConfig, instance, name),
+      ),
+    () =>
+      runEnabled("PROWLARR", globalConfig.prowlarrEnabled, globalConfig.prowlarr, (instance, name) =>
+        new ProwlarrSyncer().run(instance, name),
+      ),
+  ];
+  const results = [];
+  if (getEnvs().CONFIGARR_PARALLEL_ARRS) {
+    results.push(...(await Promise.all(starters.map((start) => start()))));
+  } else {
+    for (const start of starters) results.push(await start());
+  }
+  for (const result of results) {
+    if (result.line) totalStatus.push(result.line);
+    if (result.disabled) disabledArrs.push(result.disabled);
+    allReports.push(...result.reports);
+  }
 
   logBlankLine();
   if (disabledArrs.length > 0) {
@@ -177,4 +199,7 @@ const run = async () => {
   }
 };
 
-run();
+const entry = process.argv[1];
+if (entry && import.meta.url === pathToFileURL(entry).href) {
+  void run();
+}

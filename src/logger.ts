@@ -25,6 +25,7 @@ const isJsonFormat = getEnvs().LOG_FORMAT === "json";
 const stream = isJsonFormat
   ? undefined
   : pretty({
+      sync: process.env.CONFIGARR_E2E_WORKER === "true",
       levelFirst: true,
       ignore: "hostname,pid",
       // @ts-ignore Temporary weird error

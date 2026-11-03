@@ -5,7 +5,7 @@ import { RadarrClient } from "./radarr-client";
 import { ReadarrClient } from "./readarr-client";
 import { SonarrClient } from "./sonarr-client";
 import { WhisparrClient } from "./whisparr-client";
-import { configureApi, getClient, unsetApi } from "./client";
+import { configureApi, getClient, unsetApi, usingClient } from "./client";
 
 vi.mock("./sonarr-client", () => ({
   SonarrClient: class {
@@ -76,5 +76,19 @@ describe("configureApi / getClient", () => {
 
   it("throws when getClient is called before configureApi", () => {
     expect(() => getClient("SONARR")).toThrow("Please configure API first.");
+  });
+
+  it("reads the client for the active usingClient scope", async () => {
+    const sonarr = await configureApi("SONARR", "http://localhost", "key");
+    const radarr = await configureApi("RADARR", "http://localhost", "key");
+    await Promise.all([
+      usingClient("SONARR", sonarr, async () => {
+        await new Promise((resolve) => setTimeout(resolve, 5));
+        expect(getClient("SONARR")).toBe(sonarr);
+      }),
+      usingClient("RADARR", radarr, async () => {
+        expect(getClient("RADARR")).toBe(radarr);
+      }),
+    ]);
   });
 });

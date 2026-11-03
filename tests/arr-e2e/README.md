@@ -24,10 +24,9 @@ The suite only runs through its own config (`vitest.arr-e2e.config.ts`); `pnpm t
 One file per *arr, each owning its container end to end. The regular suite runs the six per-*arr files in parallel, then the cross-arr pipeline and version matrix runs:
 
 - `pnpm test:e2e:arr:parallel` — the six per-*arr files, in parallel (~40s). Its config excludes the pipeline file, so a direct `vitest run --config vitest.arr-e2e.config.ts` cannot mix the two.
-- `pnpm test:e2e:arr:pipeline` — `pipeline.e2e.test.ts` alone through `vitest.arr-e2e.pipeline.config.ts`, since it drives every container from one config.yml (~15s).
-- `pnpm test:e2e:arr:sonarr-v5` — reruns the Sonarr feature file against the v5 container.
-- `pnpm test:e2e:arr:radarr` — reruns the Radarr feature file sequentially against v5, v6 and v7, asserting the connected major version. Uses its own setup, so only the three Radarr containers are needed.
-- `pnpm test:e2e:arr` — all stages in that order; Sonarr v4/v5 and Radarr v5/v6/v7 are included.
+- `pnpm test:e2e:arr:pipeline` — `pipeline.e2e.test.ts` alone through `vitest.arr-e2e.pipeline.config.ts`, since it drives every container from one config.yml (~15s). That run sets `CONFIGARR_PARALLEL_ARRS=true`, so the apps in that one config sync together.
+- `pnpm test:e2e:arr:versions` — reruns the Sonarr file against v5 and the Radarr file against v5, v6 and v7 at the same time. Each version is its own server, so one configarr process cannot cover them.
+- `pnpm test:e2e:arr` — parallel files, then the pipeline, then the version stage.
 
 `globalSetup.ts` waits for all APIs once and warms the Recyclarr/TRaSH clone; each file then copies that clone, because configarr checks out its pinned revision on every run and two files sharing one clone would race on `.git/index.lock`.
 

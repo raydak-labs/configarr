@@ -58,7 +58,7 @@ import {
 import { isUrl, loadTemplateFromUrl } from "./url-template-importer";
 import { cloneWithJSON } from "./util";
 
-let config: ConfigSchema;
+let config: ConfigSchema | undefined;
 let secrets: any;
 
 // For testing: reset the secrets cache
@@ -103,6 +103,12 @@ const fileTag = {
 };
 
 // TODO some schema validation. For now only check if something can be imported
+/** Drop the parsed config so a later call reads the file again. The e2e worker runs many syncs in one process. */
+export function clearCachedConfig(): void {
+  config = undefined;
+  secrets = undefined;
+}
+
 export const getConfig = (): ConfigSchema => {
   if (config) {
     return config;

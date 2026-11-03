@@ -70,6 +70,12 @@ const schema = z.object({
     .transform((x) => x === "true")
     .pipe(z.boolean())
     .default(false),
+  CONFIGARR_PARALLEL_ARRS: z
+    .string()
+    .toLowerCase()
+    .transform((x) => x === "true")
+    .pipe(z.boolean())
+    .default(false),
   CONFIGARR_ENFORCE_EXTERNAL_VALIDATION: z
     .string()
     .toLowerCase()

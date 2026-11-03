@@ -44,6 +44,11 @@ const DEFAULT_TRASH_GIT_URL = "https://github.com/TRaSH-Guides/Guides";
 let cache: TrashCache;
 let cacheReady = false;
 
+/** The e2e worker reuses one process. Drop the cache when the template repo path changes. */
+export function clearTrashCache(): void {
+  cacheReady = false;
+}
+
 const createCache = async () => {
   logger.debug(`Creating TRaSH-Guides cache ...`);
 

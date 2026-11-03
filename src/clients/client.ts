@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from "node:async_hooks";
 import { logger } from "../logger";
 import { ArrType } from "../types/common.types";
 import { LidarrClient } from "./lidarr-client";
@@ -21,10 +22,16 @@ type ConfiguredClient = {
 }[ArrType];
 
 let configured: ConfiguredClient | undefined;
+const clientStore = new AsyncLocalStorage<ConfiguredClient>();
 
 export const unsetApi = () => {
   configured = undefined;
 };
+
+/** Run `fn` against this client even if another instance is configured on the module slot. */
+export function usingClient<T>(type: ArrType, api: ArrTypeToClient[ArrType], fn: () => Promise<T>): Promise<T> {
+  return clientStore.run({ type, api } as ConfiguredClient, fn);
+}
 
 const createClient = (type: ArrType, baseUrl: string, apiKey: string): ArrTypeToClient[ArrType] => {
   switch (type) {
@@ -44,15 +51,16 @@ const createClient = (type: ArrType, baseUrl: string, apiKey: string): ArrTypeTo
 };
 
 export function getClient<T extends ArrType>(arrType: T): ArrTypeToClient[T] {
-  if (!configured) {
+  const current = clientStore.getStore() ?? configured;
+  if (!current) {
     throw new Error("Please configure API first.");
   }
-  if (configured.type !== arrType) {
+  if (current.type !== arrType) {
     throw new Error(
-      `Type mismatch: requested ${arrType} but client is configured for ${configured.type}. Ensure configureApi is called with the correct arrType.`,
+      `Type mismatch: requested ${arrType} but client is configured for ${current.type}. Ensure configureApi is called with the correct arrType.`,
     );
   }
-  return configured.api as ArrTypeToClient[T];
+  return current.api as ArrTypeToClient[T];
 }
 
 export const configureApi = async <T extends ArrType>(type: T, baseUrl: string, apiKey: string): Promise<ArrTypeToClient[T]> => {

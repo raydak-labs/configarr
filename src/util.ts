@@ -324,11 +324,11 @@ export const cloneGitRepo = async (
   let shouldReClone = false;
   if (isRepo) {
     try {
-      const remotes = await gitClient.getRemotes(true);
-      const originRemote = remotes.find((remote) => remote.name === "origin");
+      // `git remote -v` applies url.insteadOf, so an ssh rewrite looks like a new remote and reclones every run.
+      const fetchUrl = (await gitClient.raw(["config", "--get", "remote.origin.url"])).trim();
 
-      if (originRemote && originRemote.refs.fetch !== gitUrl) {
-        logger.info(`Remote URL for repository has changed from '${originRemote.refs.fetch}' to '${gitUrl}'`);
+      if (fetchUrl !== gitUrl) {
+        logger.info(`Remote URL for repository has changed from '${fetchUrl}' to '${gitUrl}'`);
         shouldReClone = true;
       }
     } catch (err: unknown) {
@@ -353,6 +353,21 @@ export const cloneGitRepo = async (
   // Re-instantiate gitClient after potential re-clone
   // (if we re-cloned, the old client references a deleted directory)
   gitClient = simpleGit({ baseDir: rootPath });
+
+  // E2e runs this once per sync against a repo that globalSetup already checked out.
+  // Skip checkout and pull when HEAD is already that commit. A normal run still updates.
+  if (process.env.CONFIGARR_REUSE_GIT_REPO === "true") {
+    try {
+      const head = (await gitClient.revparse(["--verify", "HEAD"])).trim();
+      const target = (await gitClient.revparse(["--verify", `${revision}^{commit}`])).trim();
+      if (head === target) {
+        return { ref: revision, hash: head, localPath, updated: false };
+      }
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      logger.debug(`Reused repo is not at '${revision}', checking it out: ${errorMsg}`);
+    }
+  }
 
   // Checkout the specified revision
   try {
