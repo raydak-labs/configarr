@@ -57,7 +57,7 @@ services:
       - "17878:7878"
 
   radarr-v5:
-    image: lscr.io/linuxserver/radarr:5.28.0@sha256:c984533510abe0219a70e80d15bd0d212b7df21baa0913759c4ce6cc9092240b
+    image: lscr.io/linuxserver/radarr:6.4.4@sha256:ade5937813c6ae415b29db729386e53fea3ecf067a019849bafbe2d2a6ec02ba
     environment:
       - PUID=${PUID:-1000}
       - PGID=${PGID:-1000}
