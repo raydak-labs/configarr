@@ -1,6 +1,8 @@
 import { DiffEntry, FieldChange } from "../diffReport/diffReport.types";
 import { InputConfigDownloadClient } from "../types/config.types";
 
+export type SecretUpdateMode = boolean | "on_test_failure";
+
 export type DownloadClientField = {
   name?: string | null;
   value?: unknown;
@@ -54,8 +56,16 @@ export interface ConnectionTestResult {
 
 export type DownloadClientDiff<T extends DownloadClientShared> = {
   create: InputConfigDownloadClient[];
-  update: { config: InputConfigDownloadClient; server: T; partialUpdate: boolean; fieldChanges: FieldChange[] }[];
+  update: {
+    config: InputConfigDownloadClient;
+    server: T;
+    partialUpdate: boolean;
+    fieldChanges: FieldChange[];
+    updatePassword?: boolean;
+  }[];
   unchanged: { config: InputConfigDownloadClient; server: T }[];
+  /** Equal, enabled clients whose stored secret still has to be tested. `calculateDiff` does not call the API. */
+  secretProbe: { config: InputConfigDownloadClient; server: T; partialUpdate: boolean }[];
   deleted: T[];
 };
 

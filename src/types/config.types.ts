@@ -496,6 +496,7 @@ export type InputConfigIndexerProxy = z.infer<typeof InputConfigIndexerProxySche
 export const InputConfigProwlarrDownloadClientsSchema = z.object({
   data: z.array(InputConfigDownloadClientSchema).optional(),
   update_password: z.boolean().optional(),
+  update_password_on_test_fail: z.boolean().optional(),
   delete_unmanaged: DeleteUnmanagedSchema.optional(),
 });
 export type InputConfigProwlarrDownloadClients = z.infer<typeof InputConfigProwlarrDownloadClientsSchema>;
@@ -652,6 +653,7 @@ export const InputConfigArrInstanceSchema = z.object({
     .object({
       data: z.array(InputConfigDownloadClientSchema).optional(),
       update_password: z.boolean().optional(),
+      update_password_on_test_fail: z.boolean().optional(),
       delete_unmanaged: DeleteUnmanagedSchema.optional(),
       config: InputConfigDownloadClientConfigSchema.optional(),
       remote_paths: z.array(InputConfigRemotePathSchema).optional(),

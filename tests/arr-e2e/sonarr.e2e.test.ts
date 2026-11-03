@@ -1029,6 +1029,78 @@ describe("sonarr (live)", () => {
     expect(findNamed(await client.getDownloadClients(), "e2e-blackhole")).toBeUndefined();
   });
 
+  test("update_password_on_test_fail leaves the stored secret when the client is unreachable", async () => {
+    const schema = (await client.getDownloadClientSchema()).find((item) => item.implementation?.toLowerCase() === "qbittorrent");
+    expect(schema?.fields, "qBittorrent schema").toBeTruthy();
+    const name = `e2e-qbit-${randomUUID()}`;
+    const apiInfo = (await fetch(`${baseUrl}/api`, { headers: { "X-Api-Key": apiKey } }).then((response) => response.json())) as {
+      current?: string;
+    };
+    const apiPath = apiInfo.current === "v5" ? "/api/v5/downloadclient" : "/api/v3/downloadclient";
+    const query = apiInfo.current === "v5" ? "skipTesting=true&skipValidation=All" : "forceSave=true";
+    const headers = { "X-Api-Key": apiKey, "Content-Type": "application/json" };
+    const payload = {
+      ...schema,
+      id: 0,
+      name,
+      enable: false,
+      fields: schema!.fields!.map((field) => ({
+        ...field,
+        value:
+          field.name === "host"
+            ? "127.0.0.1"
+            : field.name === "port"
+              ? 9
+              : field.name === "username"
+                ? "e2e"
+                : field.name === "password"
+                  ? "stored-secret"
+                  : field.value,
+      })),
+    };
+    // An enabled create always runs the connection test. Save it disabled, then enable with the same skip flag.
+    const created = await fetch(`${baseUrl}${apiPath}?${query}`, { method: "POST", headers, body: JSON.stringify(payload) });
+    const createdBody = await created.text();
+    expect(created.ok, createdBody).toBe(true);
+    const savedDisabled = JSON.parse(createdBody) as { id: number };
+    const enabled = await fetch(`${baseUrl}${apiPath}/${savedDisabled.id}?${query}`, {
+      method: "PUT",
+      headers,
+      body: JSON.stringify({ ...JSON.parse(createdBody), enable: true }),
+    });
+    expect(enabled.ok, await enabled.text()).toBe(true);
+    onTestFinished(async () => {
+      const current = findNamed(await client.getDownloadClients(), name);
+      if (current?.id != null) await client.deleteDownloadClient(String(current.id));
+    });
+
+    const config = mediaConfig("SONARR", {
+      download_clients: {
+        update_password_on_test_fail: true,
+        data: [
+          {
+            name,
+            type: schema!.implementation,
+            enable: true,
+            fields: { host: "127.0.0.1", port: 9, username: "e2e", password: "config-secret" },
+          },
+        ],
+      },
+    });
+    const first = await syncConfig(config);
+    assertPipelineSucceeded(first.result, ["SONARR"]);
+    expect(first.result.stdout).toContain(`Download client "${name}": connection test failed`);
+    expect(first.result.stdout).toContain("leaving stored secret");
+    expect(first.result.stdout).not.toContain("updating secret fields");
+    const saved = findNamed(await client.getDownloadClients(), name);
+    expect(saved?.enable).toBe(true);
+    expect(saved?.fields?.find((field) => field.name === "host")?.value).toBe("127.0.0.1");
+
+    const second = await syncConfig(config, first.workspace);
+    assertPipelineSucceeded(second.result, ["SONARR"]);
+    assertDiffUpToDate(second.result, ["SONARR"]);
+  });
+
   test("root folders", async () => {
     const preserved = await preservedRootFolderPaths(client);
     const yaml = (paths: string[]) => mediaConfig("SONARR", { root_folders: [...paths, ...preserved] });

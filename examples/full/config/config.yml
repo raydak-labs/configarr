@@ -175,6 +175,8 @@ sonarr:
             tv_category: my-cat
             tv_imported_category: import-cat
       update_password: false
+      # (experimental) since v1.39.0. Send configured secrets only when the connection test rejects the stored ones.
+      update_password_on_test_fail: false
       delete_unmanaged:
         enabled: false
         ignore:
@@ -342,6 +344,8 @@ radarr:
             password: changeme
             movie_imported_category: series-4k
       update_password: false
+      # (experimental) since v1.39.0. Send configured secrets only when the connection test rejects the stored ones.
+      update_password_on_test_fail: false
       delete_unmanaged:
         enabled: false
         ignore:
@@ -528,6 +532,8 @@ whisparr:
             username: sonarr
             password: changeme
       update_password: false
+      # (experimental) since v1.39.0. Send configured secrets only when the connection test rejects the stored ones.
+      update_password_on_test_fail: false
       delete_unmanaged:
         enabled: false
         ignore:
@@ -630,6 +636,8 @@ readarr:
             username: sonarr
             password: changeme
       update_password: false
+      # (experimental) since v1.39.0. Send configured secrets only when the connection test rejects the stored ones.
+      update_password_on_test_fail: false
       delete_unmanaged:
         enabled: false
         ignore:
@@ -729,6 +737,8 @@ lidarr:
             username: sonarr
             password: changeme
       update_password: false
+      # (experimental) since v1.39.0. Send configured secrets only when the connection test rejects the stored ones.
+      update_password_on_test_fail: false
       delete_unmanaged:
         enabled: false
         ignore:
@@ -833,5 +843,8 @@ prowlarr:
           fields:
             host: qbittorrent
             port: 8080
+      update_password: false
+      # (experimental) since v1.39.0. Send configured secrets only when the connection test rejects the stored ones.
+      update_password_on_test_fail: false
       delete_unmanaged:
         enabled: false
