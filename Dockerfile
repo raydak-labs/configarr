@@ -1,6 +1,6 @@
 # https://github.com/nodejs/docker-node/blob/main/docs/BestPractices.md
 # TODO because multiarch build has problems with QEMU and Node we cannot use alpine here: https://github.com/nodejs/docker-node/issues/1798
-FROM node:24.22.2-slim@sha256:c86ecead9e55a5210ac1727de38a4ca840bf03dcaf34dc9749addbf383b1920c AS base
+FROM node:26.13.0-slim@sha256:e4db4c914bf8ad241bd24804fc25d272d89bad97e68cdc8a1414862790a02c39 AS base
 WORKDIR /app
 
 ENV PNPM_HOME="/opt/pnpm"
@@ -49,7 +49,7 @@ ENV CONFIGARR_VERSION=${CONFIGARR_VERSION}
 
 CMD [ "pnpm", "start" ]
 # https://github.com/evanw/esbuild/issues/1921
-FROM node:24.22.2-alpine@sha256:8a32c8cf649a49915a66e81e7a609223c708d0adabf288ee3f4077d765542f85 AS prod
+FROM node:26.13.0-alpine@sha256:c6ad9e9c1d80f6eb607c26b4b0a132ff7a2344fad1c78ea3baa2a7d4c8de6d94 AS prod
 WORKDIR /app
 
 RUN apk add --no-cache libstdc++ dumb-init git
@@ -69,7 +69,7 @@ CMD ["dumb-init", "node", "index.js"]
 
 # Compatibility target pinned to Alpine 3.22.
 # Useful for testing old-kernel behavior with a fixed Alpine/git stack.
-FROM node:24.16.0-alpine3.22@sha256:191c9f0080fcbbc6547a85dc0ff7988072214a355aabdc1d2ec55a7dae5eea8a AS prod-alpine-3-22
+FROM node:26.3.0-alpine3.22@sha256:c7932b9e5e337b0e733d6e16abc1b0e104759e8b05e59ed56586cce967d26dfe AS prod-alpine-3-22
 WORKDIR /app
 
 RUN apk add --no-cache libstdc++ dumb-init git
