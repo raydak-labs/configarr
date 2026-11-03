@@ -39,6 +39,10 @@ class MockDownloadClientSync extends BaseDownloadClientSync<MediaDownloadClientR
     return this.getApi();
   }
 
+  public testIsSecretField(fieldName: string): boolean {
+    return this.isSecretField(fieldName);
+  }
+
   public get testInjectedApi(): DownloadClientsClient<MediaDownloadClientResource> & TagsClient {
     return this.api;
   }
@@ -427,6 +431,78 @@ describe("BaseDownloadClientSync - secret update modes", () => {
     ...overrides,
   });
 
+  const schemaAria2: DownloadClientResource = {
+    id: 0,
+    name: "Aria2",
+    implementation: "Aria2",
+    protocol: DownloadProtocol.Torrent,
+    enable: true,
+    priority: 1,
+    fields: [
+      { name: "host", value: "" },
+      { name: "rpcPath", value: "" },
+      { name: "secretToken", value: "" },
+    ],
+    tags: [],
+    removeCompletedDownloads: true,
+    removeFailedDownloads: true,
+    configContract: "Aria2Settings",
+  };
+
+  const createAria2ServerClient = (overrides: Partial<DownloadClientResource> = {}): DownloadClientResource => ({
+    id: 2,
+    name: "aria2-client",
+    implementation: "Aria2",
+    protocol: DownloadProtocol.Torrent,
+    enable: true,
+    priority: 1,
+    fields: [
+      { name: "host", value: "127.0.0.1" },
+      { name: "rpcPath", value: "/rpc" },
+      { name: "secretToken", value: "********" },
+    ],
+    tags: [],
+    removeCompletedDownloads: true,
+    removeFailedDownloads: true,
+    configContract: "Aria2Settings",
+    ...overrides,
+  });
+
+  const schemaFreebox: DownloadClientResource = {
+    id: 0,
+    name: "Freebox",
+    implementation: "Freebox",
+    protocol: DownloadProtocol.Torrent,
+    enable: true,
+    priority: 1,
+    fields: [
+      { name: "host", value: "" },
+      { name: "appToken", value: "" },
+    ],
+    tags: [],
+    removeCompletedDownloads: true,
+    removeFailedDownloads: true,
+    configContract: "FreeboxSettings",
+  };
+
+  const createFreeboxServerClient = (overrides: Partial<DownloadClientResource> = {}): DownloadClientResource => ({
+    id: 3,
+    name: "freebox-client",
+    implementation: "Freebox",
+    protocol: DownloadProtocol.Torrent,
+    enable: true,
+    priority: 1,
+    fields: [
+      { name: "host", value: "192.168.0.254" },
+      { name: "appToken", value: "********" },
+    ],
+    tags: [],
+    removeCompletedDownloads: true,
+    removeFailedDownloads: true,
+    configContract: "FreeboxSettings",
+    ...overrides,
+  });
+
   let api: any;
   let cache: ServerCache;
 
@@ -435,7 +511,7 @@ describe("BaseDownloadClientSync - secret update modes", () => {
     vi.mocked(getEnvs).mockReturnValue({ LOG_LEVEL: "fatal", CONFIGARR_ENFORCE_CONFIG_VALIDATION: false } as ReturnType<typeof getEnvs>);
     cache = { tags: [] } as unknown as ServerCache;
     api = {
-      getDownloadClientSchema: vi.fn(async () => [schemaClient]),
+      getDownloadClientSchema: vi.fn(async () => [schemaClient, schemaAria2, schemaFreebox]),
       getDownloadClients: vi.fn(async () => [createServerClient()]),
       createDownloadClient: vi.fn(async (client) => client),
       updateDownloadClient: vi.fn(async (_id, client) => client),
@@ -912,5 +988,205 @@ describe("BaseDownloadClientSync - secret update modes", () => {
     const updateEntry = result.diffEntries.find((e) => e.name === "qBit" && e.action === "update");
     expect(updateEntry).toBeDefined();
     expect(updateEntry?.fieldChanges).toEqual([{ field: "fields.password", from: SECRET_MASK, to: SECRET_MASK }]);
+  });
+
+  describe("secretToken and appToken predicate and sync handling", () => {
+    test("isSecretField identifies secretToken and appToken as secrets and preserves non-secret fields", () => {
+      const syncInstance = new MockDownloadClientSync({} as any);
+      expect(syncInstance.testIsSecretField("secretToken")).toBe(true);
+      expect(syncInstance.testIsSecretField("appToken")).toBe(true);
+      expect(syncInstance.testIsSecretField("password")).toBe(true);
+      expect(syncInstance.testIsSecretField("apiKey")).toBe(true);
+      expect(syncInstance.testIsSecretField("username")).toBe(false);
+      expect(syncInstance.testIsSecretField("host")).toBe(false);
+      expect(syncInstance.testIsSecretField("rpcPath")).toBe(false);
+    });
+
+    test("positive: on_test_fail true + Aria2 secretToken against server mask -> takes connection-test path on failure", async () => {
+      const token = "ARIA2_SECRET_TOKEN";
+      api.testDownloadClient.mockRejectedValueOnce(new Error("Unauthorized token"));
+      const sync = new RadarrDownloadClientSync(api);
+      const serverClient = createAria2ServerClient();
+      api.getDownloadClients.mockResolvedValueOnce([serverClient]);
+
+      const result = await sync.syncDownloadClients(
+        {
+          download_clients: {
+            update_password_on_test_fail: true,
+            data: [
+              {
+                name: "aria2-client",
+                type: "aria2",
+                fields: { host: "127.0.0.1", rpcPath: "/rpc", secretToken: token },
+              },
+            ],
+          },
+        },
+        cache,
+      );
+
+      expect(api.testDownloadClient).toHaveBeenCalledTimes(1);
+      expect(api.testDownloadClient).toHaveBeenCalledWith(serverClient);
+      expect(result.updated).toBe(1);
+      expect(api.updateDownloadClient).toHaveBeenCalledTimes(1);
+
+      const [calledId, updatePayload] = api.updateDownloadClient.mock.calls[0];
+      expect(calledId).toBe("2");
+      const secretField = updatePayload.fields?.find((f: any) => f.name === "secretToken");
+      expect(secretField?.value).toBe(token);
+
+      const updateEntry = result.diffEntries.find((e) => e.name === "aria2-client" && e.action === "update");
+      expect(updateEntry).toBeDefined();
+      expect(updateEntry?.fieldChanges).toEqual([{ field: "fields.secretToken", from: SECRET_MASK, to: SECRET_MASK }]);
+      expect(JSON.stringify(result.diffEntries)).not.toContain(token);
+    });
+
+    test("positive: on_test_fail true + Aria2 secretToken against server mask + test passes -> no update", async () => {
+      api.testDownloadClient.mockResolvedValueOnce(undefined);
+      const sync = new RadarrDownloadClientSync(api);
+      const serverClient = createAria2ServerClient();
+      api.getDownloadClients.mockResolvedValueOnce([serverClient]);
+
+      const result = await sync.syncDownloadClients(
+        {
+          download_clients: {
+            update_password_on_test_fail: true,
+            data: [
+              {
+                name: "aria2-client",
+                type: "aria2",
+                fields: { host: "127.0.0.1", rpcPath: "/rpc", secretToken: "VALID_TOKEN" },
+              },
+            ],
+          },
+        },
+        cache,
+      );
+
+      expect(api.testDownloadClient).toHaveBeenCalledTimes(1);
+      expect(api.testDownloadClient).toHaveBeenCalledWith(serverClient);
+      expect(api.updateDownloadClient).not.toHaveBeenCalled();
+      expect(result.updated).toBe(0);
+      expect(result.diffEntries.filter((e) => e.action === "update")).toHaveLength(0);
+    });
+
+    test("positive: on_test_fail true + Freebox appToken against server mask -> takes connection-test path on failure", async () => {
+      const token = "FREEBOX_APP_TOKEN";
+      api.testDownloadClient.mockRejectedValueOnce(new Error("Unauthorized app token"));
+      const sync = new RadarrDownloadClientSync(api);
+      const serverClient = createFreeboxServerClient();
+      api.getDownloadClients.mockResolvedValueOnce([serverClient]);
+
+      const result = await sync.syncDownloadClients(
+        {
+          download_clients: {
+            update_password_on_test_fail: true,
+            data: [
+              {
+                name: "freebox-client",
+                type: "freebox",
+                fields: { host: "192.168.0.254", appToken: token },
+              },
+            ],
+          },
+        },
+        cache,
+      );
+
+      expect(api.testDownloadClient).toHaveBeenCalledTimes(1);
+      expect(api.testDownloadClient).toHaveBeenCalledWith(serverClient);
+      expect(result.updated).toBe(1);
+      expect(api.updateDownloadClient).toHaveBeenCalledTimes(1);
+
+      const [calledId, updatePayload] = api.updateDownloadClient.mock.calls[0];
+      expect(calledId).toBe("3");
+      const secretField = updatePayload.fields?.find((f: any) => f.name === "appToken");
+      expect(secretField?.value).toBe(token);
+
+      const updateEntry = result.diffEntries.find((e) => e.name === "freebox-client" && e.action === "update");
+      expect(updateEntry).toBeDefined();
+      expect(updateEntry?.fieldChanges).toEqual([{ field: "fields.appToken", from: SECRET_MASK, to: SECRET_MASK }]);
+      expect(JSON.stringify(result.diffEntries)).not.toContain(token);
+    });
+
+    test("positive: on_test_fail true + stored secretToken empty + configured value -> secret sent directly, no test, diff masked", async () => {
+      const token = "EMPTY_STORED_TOKEN_REPAIR";
+      const infoSpy = vi.spyOn(logger, "info");
+      const sync = new RadarrDownloadClientSync(api);
+      const serverClient = createAria2ServerClient({
+        fields: [
+          { name: "host", value: "127.0.0.1" },
+          { name: "rpcPath", value: "/rpc" },
+          { name: "secretToken", value: "" },
+        ],
+      });
+      api.getDownloadClients.mockResolvedValueOnce([serverClient]);
+
+      const result = await sync.syncDownloadClients(
+        {
+          download_clients: {
+            update_password_on_test_fail: true,
+            data: [
+              {
+                name: "aria2-client",
+                type: "aria2",
+                fields: { host: "127.0.0.1", rpcPath: "/rpc", secretToken: token },
+              },
+            ],
+          },
+        },
+        cache,
+      );
+
+      expect(api.testDownloadClient).not.toHaveBeenCalled();
+      expect(result.updated).toBe(1);
+      expect(api.updateDownloadClient).toHaveBeenCalledTimes(1);
+
+      const updatePayload = api.updateDownloadClient.mock.calls[0][1];
+      expect(updatePayload.fields?.find((f: any) => f.name === "secretToken")?.value).toBe(token);
+
+      const updateEntry = result.diffEntries.find((e) => e.name === "aria2-client" && e.action === "update");
+      expect(updateEntry).toBeDefined();
+      expect(updateEntry?.fieldChanges).toEqual([{ field: "fields.secretToken", from: SECRET_MASK, to: SECRET_MASK }]);
+      expect(JSON.stringify(result.diffEntries)).not.toContain(token);
+
+      const logged = infoSpy.mock.calls.map((call) => String(call[0])).join("\n");
+      expect(logged).toContain("stored secret is empty");
+      expect(logged).not.toContain(token);
+    });
+
+    test("on_test_fail true + non-secret field change (rpcPath) -> unmasked diff, no test call", async () => {
+      const sync = new RadarrDownloadClientSync(api);
+      const serverClient = createAria2ServerClient();
+      api.getDownloadClients.mockResolvedValueOnce([serverClient]);
+
+      const result = await sync.syncDownloadClients(
+        {
+          download_clients: {
+            update_password_on_test_fail: true,
+            data: [
+              {
+                name: "aria2-client",
+                type: "aria2",
+                fields: { host: "127.0.0.1", rpcPath: "/custom-rpc", secretToken: "NEW_CONFIG_SECRET" },
+              },
+            ],
+          },
+        },
+        cache,
+      );
+
+      expect(api.testDownloadClient).not.toHaveBeenCalled();
+      expect(result.updated).toBe(1);
+      expect(api.updateDownloadClient).toHaveBeenCalledTimes(1);
+
+      const updatePayload = api.updateDownloadClient.mock.calls[0][1];
+      expect(updatePayload.fields?.find((f: any) => f.name === "rpcPath")?.value).toBe("/custom-rpc");
+      expect(updatePayload.fields?.find((f: any) => f.name === "secretToken")?.value).toBe("********");
+
+      const updateEntry = result.diffEntries.find((e) => e.name === "aria2-client" && e.action === "update");
+      expect(updateEntry).toBeDefined();
+      expect(updateEntry?.fieldChanges).toEqual([{ field: "fields.rpcPath", from: "/rpc", to: "/custom-rpc" }]);
+    });
   });
 });

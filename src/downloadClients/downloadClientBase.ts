@@ -2,7 +2,7 @@ import { z } from "zod";
 import { ServerCache } from "../cache";
 import type { DownloadClientsClient, TagsClient } from "../clients/capabilities";
 import { DiffEntry, FieldChange } from "../diffReport/diffReport.types";
-import { SECRET_MASK } from "../diffReport/redactSecrets";
+import { isSecretFieldName, SECRET_MASK } from "../diffReport/redactSecrets";
 import { getEnvs } from "../env";
 import { logger } from "../logger";
 import { buildTagPlaceholders, ensureTags, resolveTagNames } from "../tags/tags";
@@ -143,8 +143,7 @@ export abstract class BaseDownloadClientSync<T extends DownloadClientShared> {
     return ids.map((id) => (id < 0 ? (byId.get(id) ?? id) : id));
   }
   protected isSecretField(fieldName: string): boolean {
-    const lower = fieldName.toLowerCase();
-    return lower.includes("password") || lower.includes("apikey");
+    return isSecretFieldName(fieldName);
   }
 
   private hasNonEmptySecretField(config: InputConfigDownloadClient): boolean {

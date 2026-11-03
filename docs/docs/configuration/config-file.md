@@ -1169,7 +1169,7 @@ sonarr:
 
 ### Secret field updates (`update_password`, `update_password_on_test_fail`)
 
-Because \*Arr servers return stored secrets (passwords, API keys) masked as `********`, Configarr cannot read existing secrets from the server. Two settings control when secret fields in `fields` are sent to existing download clients:
+Because \*Arr servers return stored secrets (passwords, API keys, `secretToken`, `appToken`) masked as `********`, Configarr cannot read existing secrets from the server. Two settings control when secret fields in `fields` are sent to existing download clients:
 
 | Setting                        | Default | Behavior                                                                                             |
 | ------------------------------ | ------- | ---------------------------------------------------------------------------------------------------- |
