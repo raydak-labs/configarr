@@ -106,6 +106,8 @@ Feature × arr × create / update / delete / idempotent (second run Diff Report 
 | Release profiles               | CUDI     | CUDI     | CUDI     | CUDI     | CUDI     | —        |
 | Download clients (blackhole)   | CUDI     | CUDI     | CUDI     | CUDI     | CUDI     | CUDI     |
 | Existing indexer settings      | UI       | UI       | —        | —        | —        | —        |
+| Global indexer config          | CUI      | CUI      | CUI      | CUI      | CUI      | —        |
+| Notifications                  | CUDI     | CUDI     | CUDI     | CUDI     | CUDI     | CUDI     |
 | DC config / remote paths       | CUI / CD | CUI / CD | CUI / CD | CUI / CD | CUI / CD | —        |
 | Metadata profiles              | —        | —        | —        | CUDI     | CUDI     | —        |
 | Metadata generation            | UI       | UI       | —        | —        | —        | —        |
@@ -135,4 +137,4 @@ Letters = asserted GET after a configarr write/omit. Root-folder **update** for 
 - **TRaSH/Recyclarr templates** are a Sonarr/Radarr create-only smoke (`WEB-1080p` / `HD Bluray + WEB`). No CUDI.
 - **Whisparr 3.5.0 rejects its own default naming config** (`movieFolderFormat` / `sceneFolderFormat` must start with a literal subfolder, `sceneImportFolderFormat` must not be empty). A `PUT /config/naming` that carries those defaults 400s, so `media_naming_api` on Whisparr needs valid folder formats in the YAML. `restoreMediaBaseline` therefore skips writes that would not change anything.
 - **Prowlarr applications** point at the Sonarr and Radarr containers. Prowlarr may create indexers there; the media-manager tests only update their own named fixtures.
-- **In-use tags are never asserted against a live server.** A `delete_unmanaged_tags` run that hits a 409 needs a tag held by a resource configarr does not manage (import list, notification, indexer), and no client in this repo exposes those endpoints. The `onInUse: "skip"` and `onInUse: "throw"` policies are covered in `src/tags/tags.test.ts` instead.
+- **In-use tags are never asserted against a live server.** A `delete_unmanaged_tags` run that hits a 409 needs a tag held by a resource configarr does not manage (import list, indexer), and no client in this repo exposes those endpoints. The `onInUse: "skip"` and `onInUse: "throw"` policies are covered in `src/tags/tags.test.ts` instead.

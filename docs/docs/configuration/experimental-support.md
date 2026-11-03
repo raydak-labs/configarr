@@ -305,13 +305,14 @@ instead of the usual `*arr` instance shape. The following are managed:
 - **Indexers** – created from a Prowlarr schema `definition` (e.g. `1337x`), matched by `name`
 - **Indexer Proxies** – FlareSolverr / HTTP / SOCKS4 / SOCKS5
 - **Download Clients** – reuses the same engine as the other `*arr` download clients
+- **Notifications** – same `notifications` block as the media managers (experimental since v1.39.0). Templates do not apply; define the block on the instance. `indexer_config` is not supported.
 - an optional **"sync indexers to apps"** trigger (`applications.sync_indexers`)
 
 Each managed section (`sync_profiles`, `applications`, `indexers`, `indexer_proxies`,
-`download_clients`) supports a `delete_unmanaged: { enabled, ignore }` block, and tags use the
+`download_clients`, `notifications`) supports a `delete_unmanaged: { enabled, ignore }` block, and tags use the
 instance-level `delete_unmanaged_tags: { enabled, ignore }` block. Resources are synced in
 dependency order: tags → sync profiles → indexer proxies → indexers → applications → download
-clients, so an indexer can reference a sync profile created in the same run.
+clients → notifications, so an indexer can reference a sync profile created in the same run.
 
 :::warning Be careful with `delete_unmanaged` on Prowlarr
 
@@ -330,11 +331,11 @@ manage by hand, and do a `DRY_RUN=true` run first to see exactly what would be r
 
 :::
 
-Not supported (out of scope for now): indexer definitions/proxies beyond CRUD, notifications,
+Not supported (out of scope for now): indexer definitions/proxies beyond CRUD, `indexer_config`,
 DNS/host config.
 
-Any failure while syncing tags, sync profiles, indexer proxies, indexers or applications (including
-the `sync_indexers` command) fails that Prowlarr instance and is honoured by `STOP_ON_ERROR`.
+Any failure while syncing tags, sync profiles, indexer proxies, indexers, applications (including
+the `sync_indexers` command) or notifications fails that Prowlarr instance and is honoured by `STOP_ON_ERROR`.
 
 Enable/disable all Prowlarr instances with the top-level `prowlarrEnabled` flag (defaults to enabled).
 
@@ -428,6 +429,21 @@ prowlarr:
             port: 8080
       delete_unmanaged:
         enabled: false
+
+    # (experimental) since v1.39.0. Same shape as the media managers. No templates.
+    # notifications:
+    #   update_password: false
+    #   delete_unmanaged:
+    #     enabled: false
+    #     ignore: []
+    #   data:
+    #     - name: ops-webhook
+    #       type: Webhook
+    #       events:
+    #         on_grab: true
+    #       fields:
+    #         url: "https://ops.example.com/prowlarr-events"
+    #         method: 1
 ```
 
 ## Metadata Profiles - Common Configuration

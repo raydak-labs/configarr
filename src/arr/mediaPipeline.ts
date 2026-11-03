@@ -35,9 +35,11 @@ import { getTelemetryInstance, Telemetry } from "../telemetry";
 import { MediaArrType } from "../types/common.types";
 import {
   HostConfigSchema,
+  IndexerConfigSchema,
   IndexerSettingsSchema,
   InputConfigArrInstance,
   InputConfigImportListsSchema,
+  InputConfigNotificationsSchema,
   InputConfigSchema,
   MergedConfigInstance,
   MetadataSettingsSchema,
@@ -46,6 +48,9 @@ import { TrashQualityDefinitionQuality } from "../types/trashguide.types";
 import { syncUiConfig, uiConfigDiffToDiffEntries } from "../uiConfigs/uiConfigSyncer";
 import { prepareMetadata, syncMetadata } from "../metadata/metadataSync";
 import { prepareIndexerSettings, syncIndexerSettings, type IndexerSettingsClient } from "../indexerSettings/indexerSettings";
+import { syncIndexerConfig } from "../indexerConfig/indexerConfigSync";
+import { validateNotifications, syncNotifications } from "../notifications/notifications";
+import type { IndexerConfigClient } from "../clients/capabilities";
 import { ConfigValidationError } from "../validation";
 import type {
   DownloadClientResource as LidarrDownloadClientResource,
@@ -153,6 +158,7 @@ export type MediaFeatureSyncs<T extends MediaArrType = MediaArrType> = {
 
   metadata?: MetadataClient<MetadataResource>;
   indexerSettings?: IndexerSettingsClient;
+  indexerConfig?: IndexerConfigClient;
   qd: QualityDefinitionSync<MediaArrResources[T]["qualityDefinition"]>;
   mm: MediaManagementSync<MediaArrResources[T]["naming"], MediaArrResources[T]["mediaManagement"]>;
   qp: BaseQualityProfileSync<MediaArrResources[T]["qualityProfile"]>;
@@ -195,6 +201,10 @@ export type MediaSyncToQualityProfilesArgs<T extends MediaArrType = MediaArrType
   supportsProfileQualitySizes?: boolean;
 };
 
+/**
+ * Run initial media synchronization steps through quality profile diffing and validation.
+ * Returns the media sync context for downstream sync phases, or throws a ConfigValidationError if configuration fails validation.
+ */
 export const runMediaSyncToQualityProfiles = async <T extends MediaArrType>(
   args: MediaSyncToQualityProfilesArgs<T>,
 ): Promise<MediaSyncContext<T>> => {
@@ -245,6 +255,17 @@ export const runMediaSyncToQualityProfiles = async <T extends MediaArrType>(
     if (!parsed.success) throw new ConfigValidationError(`Invalid indexer_settings configuration: ${parsed.error.message}`);
     config.indexer_settings = parsed.data;
     await prepareIndexerSettings(syncs.indexerSettings, config.indexer_settings, config, true);
+  }
+  if (config.indexer_config !== undefined) {
+    const parsed = IndexerConfigSchema.safeParse(config.indexer_config);
+    if (!parsed.success) throw new ConfigValidationError(`Invalid indexer_config configuration: ${parsed.error.message}`);
+    config.indexer_config = parsed.data;
+  }
+  if (config.notifications !== undefined) {
+    const parsed = InputConfigNotificationsSchema.safeParse(config.notifications);
+    if (!parsed.success) throw new ConfigValidationError(`Invalid notifications configuration: ${parsed.error.message}`);
+    config.notifications = parsed.data;
+    await validateNotifications(client, config.notifications);
   }
   await qpSync.validateConfig(config);
   await mmSync.validateConfig(config.media_management);
@@ -466,6 +487,10 @@ export const runMediaSyncToQualityProfiles = async <T extends MediaArrType>(
   return { arrType, instanceName, client, config, serverCache, collector, syncs, qualityDefinitionDefaults };
 };
 
+/**
+ * Complete remaining synchronization steps for media *arr instances and prune unmanaged tags.
+ * Returns the final instance diff report containing all applied and planned resource changes.
+ */
 export const completeMediaSync = async <T extends MediaArrType>(ctx: MediaSyncContext<T>): Promise<InstanceDiffReport> => {
   const { arrType, instanceName, client, config, serverCache, collector, syncs } = ctx;
   const delaySync = syncs.delay;
@@ -578,6 +603,12 @@ export const completeMediaSync = async <T extends MediaArrType>(ctx: MediaSyncCo
   if (config.import_lists && syncs.importLists) collector.add(await syncs.importLists.sync(config.import_lists, serverCache, config));
   if (config.indexer_settings && syncs.indexerSettings)
     collector.add(await syncIndexerSettings(syncs.indexerSettings, config.indexer_settings, config));
+  if (config.indexer_config && syncs.indexerConfig) {
+    collector.add(await syncIndexerConfig(syncs.indexerConfig, config.indexer_config));
+  }
+  if (config.notifications) {
+    collector.add(await syncNotifications(client, config.notifications, serverCache));
+  }
 
   // Tag cleanup runs last, after every resource that can hold a tag has been synced.
   if (config.delete_unmanaged_tags?.enabled) {
@@ -598,6 +629,7 @@ export const completeMediaSync = async <T extends MediaArrType>(ctx: MediaSyncCo
             config.root_folders?.filter((folder) => typeof folder !== "string").flatMap((folder) => folder.tags ?? []),
             config.download_clients?.data?.flatMap((downloadClient) => downloadClient.tags ?? []),
             config.import_lists?.data?.flatMap((item) => item.tags ?? []),
+            config.notifications?.data?.flatMap((item) => item.tags ?? []),
           ],
           onInUse: "skip",
         });

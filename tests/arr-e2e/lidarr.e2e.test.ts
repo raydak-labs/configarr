@@ -410,4 +410,87 @@ describe("lidarr (live)", () => {
     expect(await pathsOf()).toContain(E2E_ROOT_A);
     expect(await pathsOf()).not.toContain(E2E_ROOT_B);
   });
+
+  test("global indexer config", async () => {
+    const yaml = (rss: number, retention: number) =>
+      mediaConfig("LIDARR", {
+        indexer_config: {
+          rss_sync_interval: rss,
+          retention,
+        },
+      });
+
+    const created = await syncConfig(yaml(60, 30));
+    assertPipelineSucceeded(created.result, ["LIDARR"]);
+    let current = await client.getIndexerConfig();
+    expect(current.rssSyncInterval).toBe(60);
+    expect(current.retention).toBe(30);
+
+    const updated = await syncConfig(yaml(120, 60), created.workspace);
+    assertPipelineSucceeded(updated.result, ["LIDARR"]);
+    current = await client.getIndexerConfig();
+    expect(current.rssSyncInterval).toBe(120);
+    expect(current.retention).toBe(60);
+
+    const second = await syncConfig(yaml(120, 60), created.workspace);
+    assertPipelineSucceeded(second.result, ["LIDARR"]);
+    assertDiffUpToDate(second.result, ["LIDARR"]);
+  });
+
+  test("notification connections", async () => {
+    const preexisting = nonE2eNames(await client.getNotifications());
+    const yaml = (includeNotif: boolean, onHealthIssue = false, includeHealthWarnings = false, listHealthEvent = true) =>
+      mediaConfig("LIDARR", {
+        notifications: {
+          data: includeNotif
+            ? [
+                {
+                  name: "e2e-notification",
+                  type: "CustomScript",
+                  events: listHealthEvent ? { on_grab: true, on_health_issue: onHealthIssue } : { on_grab: true },
+                  include_health_warnings: includeHealthWarnings,
+                  fields: { path: "/data/e2e/e2e-notification.sh" },
+                  tags: ["e2e-notif-tag"],
+                },
+              ]
+            : [],
+          delete_unmanaged: { enabled: true, ignore: preexisting },
+        },
+      });
+
+    const created = await syncConfig(yaml(true, false, false));
+    assertPipelineSucceeded(created.result, ["LIDARR"]);
+    let notif = findNamed(await client.getNotifications(), "e2e-notification");
+    expect(notif, "e2e-notification did not persist").toBeTruthy();
+    expect(notif?.onGrab).toBe(true);
+    expect(notif?.onHealthIssue).toBe(false);
+    expect(notif?.includeHealthWarnings).toBe(false);
+    const pathField = notif?.fields?.find((f: { name?: string | null }) => f.name === "path");
+    expect(pathField?.value).toBe("/data/e2e/e2e-notification.sh");
+    const tag = (await client.getTags()).find((item) => item.label === "e2e-notif-tag");
+    expect(tag?.id).toBeTruthy();
+    expect(notif?.tags).toContain(tag?.id);
+
+    const updated = await syncConfig(yaml(true, true, true), created.workspace);
+    assertPipelineSucceeded(updated.result, ["LIDARR"]);
+    notif = findNamed(await client.getNotifications(), "e2e-notification");
+    expect(notif?.onGrab).toBe(true);
+    expect(notif?.onHealthIssue).toBe(true);
+    expect(notif?.includeHealthWarnings).toBe(true);
+
+    const omitted = await syncConfig(yaml(true, true, true, false), created.workspace);
+    assertPipelineSucceeded(omitted.result, ["LIDARR"]);
+    notif = findNamed(await client.getNotifications(), "e2e-notification");
+    expect(notif?.onGrab).toBe(true);
+    expect(notif?.onHealthIssue).toBe(true);
+    expect(notif?.includeHealthWarnings).toBe(true);
+
+    const second = await syncConfig(yaml(true, true, true, false), created.workspace);
+    assertPipelineSucceeded(second.result, ["LIDARR"]);
+    assertDiffUpToDate(second.result, ["LIDARR"]);
+
+    const deleted = await syncConfig(yaml(false, false, false), created.workspace);
+    assertPipelineSucceeded(deleted.result, ["LIDARR"]);
+    expect(findNamed(await client.getNotifications(), "e2e-notification")).toBeUndefined();
+  });
 });

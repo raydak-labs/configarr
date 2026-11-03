@@ -17,6 +17,8 @@ export type MappedTemplates = Partial<
     | "host_config"
     | "metadata"
     | "indexer_settings"
+    | "indexer_config"
+    | "notifications"
     | "delete_unmanaged_custom_formats"
     | "delete_unmanaged_quality_profiles"
     | "delete_unmanaged_metadata_profiles"

@@ -17,6 +17,8 @@ import {
   UiConfigResource,
   CustomFormatResource,
   HostConfigResource,
+  IndexerConfigResource,
+  NotificationResource,
 } from "../__generated__/whisparr/data-contracts";
 import { logger } from "../logger";
 import type { CustomFormatRequest } from "../customFormats/customFormat.types";
@@ -224,6 +226,34 @@ export class WhisparrClient
 
   async getIndexers() {
     return this.api.v3IndexerList();
+  }
+
+  async getIndexerConfig(): Promise<IndexerConfigResource> {
+    return this.api.v3ConfigIndexerList();
+  }
+
+  async updateIndexerConfig(id: string, data: IndexerConfigResource): Promise<IndexerConfigResource> {
+    return this.api.v3ConfigIndexerUpdate(id, data);
+  }
+
+  async getNotificationSchema(): Promise<NotificationResource[]> {
+    return this.api.v3NotificationSchemaList();
+  }
+
+  async getNotifications(): Promise<NotificationResource[]> {
+    return this.api.v3NotificationList();
+  }
+
+  async createNotification(notification: NotificationResource): Promise<NotificationResource> {
+    return this.api.v3NotificationCreate(notification, { forceSave: true }, { redactResponseErrors: true });
+  }
+
+  async updateNotification(id: string, notification: NotificationResource): Promise<NotificationResource> {
+    return this.api.v3NotificationUpdate(id, notification, { forceSave: true }, { redactResponseErrors: true });
+  }
+
+  async deleteNotification(id: string): Promise<void> {
+    return this.api.v3NotificationDelete(+id);
   }
 
   async getTags(): Promise<TagResource[]> {
