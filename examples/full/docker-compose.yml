@@ -19,9 +19,9 @@ services:
       - 6500:8989
     restart: unless-stopped
 
-  # Pinned Sonarr v5 beta example. Keep its config volume separate from v4.
+  # Sonarr v5 develop, same pin as the e2e suite. Keep its config volume separate from v4.
   sonarr-v5:
-    image: lscr.io/linuxserver/sonarr@sha256:386c962ee6e260e3a5656b25df2ed056bcc9b6410e197d075f9547fd14c23bca
+    image: lscr.io/linuxserver/sonarr:develop-5.0.0.2941-ls207@sha256:b0cb42e70dd48860bbf3a8aa87dfa8c1a6ae56c1c96c8200923e821caad72a59
     networks:
       - configarr-full
     environment:
@@ -60,9 +60,9 @@ services:
       - 6501:7878
     restart: unless-stopped
 
-  # Radarr v7 (7.0.0.10815), isolated from the v6 example database.
+  # Radarr v7 develop (7.0.0.10815), same pin as the e2e suite. Isolated from the v6 database.
   radarr-v7:
-    image: lscr.io/linuxserver/radarr@sha256:084b3b2ab1d0ef930660727259546a241f2bdf67c9ed085d54bf1486a6887c9b
+    image: lscr.io/linuxserver/radarr:develop-7.0.0.10815-ls275@sha256:3aae9e841647fb54777ca38fab50cb5b1fdeec8a4b6aca252583a354be1a442e
     networks:
       - configarr-full
     environment:

@@ -51,8 +51,8 @@ pnpm test:e2e:arr:radarr
 Individual stages are `pnpm test:e2e:arr:radarr-v5`, `:radarr-v6` and `:radarr-v7`.
 Override their connections with `RADARR_V5_BASE_URL` / `RADARR_V5_API_KEY`
 (and `V6` / `V7` equivalents). The ordinary suite still uses `RADARR_BASE_URL`.
-V7 is pinned to 7.0.0.10815 by image digest; refresh it together with
-the API specification in `generate-api.ts`. The full Radarr coverage column below
+V7 is pinned to `develop-7.0.0.10815-ls275` (Radarr 7.0.0.10815). Refresh the tag, digest, and
+the API specification in `generate-api.ts` together. Sonarr v5 is `develop-5.0.0.2941-ls207` (`v5-nightly`). The full Radarr coverage column below
 runs on each major, including templates, settings and CRUD/idempotency.
 
 The Radarr versions and the two Sonarr containers use separate config/database volumes. Do not share their volumes or use `docker compose down -v` if the local test databases should be retained.
