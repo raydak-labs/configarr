@@ -13,7 +13,9 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
 # Prod copies the bundle and runs node. pnpm is only for this build stage and the dev target.
 # Node 26 does not ship corepack. corepack install reads packageManager from package.json.
-RUN npm install -g corepack@0.36.0 \
+# renovate: datasource=npm depName=corepack
+ARG COREPACK_VERSION=0.36.0
+RUN npm install -g corepack@$COREPACK_VERSION \
     && corepack enable \
     && corepack install
 

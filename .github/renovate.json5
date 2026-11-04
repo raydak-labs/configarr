@@ -8,6 +8,8 @@
     ":maintainLockFilesMonthly",
     ":pinVersions",
     "security:minimumReleaseAgeNpm",
+    // Tracks `# renovate:` comments above ARG/ENV *_VERSION in Dockerfiles.
+    "customManagers:dockerfileVersions",
   ],
   ignorePaths: [
     "**/node_modules/**",
@@ -18,15 +20,6 @@
     "**/__fixtures__/**",
     // `tests/**` is not ignored: tests/arr-e2e/docker-compose.yml pins the *arr images the
     // live e2e suite runs against, and those need updates like any other dependency.
-  ],
-  customManagers: [
-    {
-      customType: "regex",
-      fileMatch: ["^Dockerfile$"],
-      matchStrings: ["npm install -g corepack@(?<currentValue>\\d+\\.\\d+\\.\\d+)"],
-      datasourceTemplate: "npm",
-      depNameTemplate: "corepack",
-    },
   ],
   packageRules: [
     {
