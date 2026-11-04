@@ -17,9 +17,6 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e:arr": "vitest run --config vitest.arr-e2e.config.ts",
-    "test:e2e:arr:pipeline": "vitest run --config vitest.arr-e2e.config.ts --project pipeline",
-    "test:e2e:arr:sonarr-v5": "vitest run --config vitest.arr-e2e.config.ts --project sonarr-v5",
-    "test:e2e:arr:radarr": "vitest run --config vitest.arr-e2e.config.ts --project radarr-v5 --project radarr-v7 --project arr tests/arr-e2e/radarr.e2e.test.ts",
     "typecheck": "tsc --noEmit",
     "release": "release-it"
   },

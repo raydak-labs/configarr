@@ -13,7 +13,7 @@ Rules below are defaults. A deviation needs the user's approval and a one-line c
 - Sync feature changes need e2e coverage per affected app, including an idempotent second run.
   Setup, matrix, `e2e-` fixtures and cleanup: [tests/arr-e2e/README.md](tests/arr-e2e/README.md). Run `pnpm test:e2e:arr` (separate from `pnpm test`).
 - Keep Sonarr v4/v5 and Radarr v5/v6/v7 working; guard version-specific features.
-  Sonarr changes: verify both versions. Radarr sync changes: `pnpm test:e2e:arr:radarr`. Projects and the `ARR_E2E_SEQUENTIAL` switch: `vitest.arr-e2e.config.ts`.
+  `pnpm test:e2e:arr` covers all versions; subset with `--project <name>`. Projects and the `ARR_E2E_SEQUENTIAL` switch: `vitest.arr-e2e.config.ts`.
 
 ## Architecture
 
