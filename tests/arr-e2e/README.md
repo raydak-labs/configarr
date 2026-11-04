@@ -27,9 +27,9 @@ One file per *arr, each owning its container end to end. The regular suite runs 
 - `pnpm test:e2e:arr:pipeline` — `pipeline.e2e.test.ts` alone through `vitest.arr-e2e.pipeline.config.ts`, since it drives every container from one config.yml (~15s).
 - `pnpm test:e2e:arr:sonarr-v5` — reruns the Sonarr feature file against the v5 container.
 - `pnpm test:e2e:arr:radarr` — reruns the Radarr feature file sequentially against v5, v6 and v7, asserting the connected major version. Uses its own setup, so only the three Radarr containers are needed.
-- `pnpm test:e2e:arr` — all stages in that order; Sonarr v4/v5 and Radarr v5/v6/v7 are included.
+- `pnpm test:e2e:arr` — all stages through `tests/arr-e2e/runStages.ts`; Sonarr v4/v5 and Radarr v5/v6/v7 are included. Sequential by default (~165s). `ARR_E2E_PARALLEL_STAGES=true` runs stages on disjoint containers concurrently (per-*arr files + Sonarr v5 + Radarr v5 + Radarr v7, then pipeline, then Radarr v6; ~85s) and prints each stage's output when it finishes.
 
-`globalSetup.ts` waits for all APIs once and warms the Recyclarr/TRaSH clone; each file then copies that clone, because configarr checks out its pinned revision on every run and two files sharing one clone would race on `.git/index.lock`.
+Each vitest invocation's global setup warms a shared Recyclarr/TRaSH cache in the OS temp dir under a cross-process lock (the only git network access), snapshots it into a per-invocation run directory, and pins `trashRevision` to the snapshot's commit, so configarr runs never `git pull`. Each file then copies that snapshot, because configarr checks out its revision on every run and two files sharing one clone would race on `.git/index.lock`. The run directory, including every config workspace, is deleted in teardown. configarr runs with an empty `HOME`: simple-git drops `GIT_CONFIG_*`, and a user `url.*.insteadOf` rewrite would otherwise make configarr re-clone both repos on every run.
 
 Each file cleans its *arr in `beforeAll`, snapshots the server-wide settings it overwrites (UI, media management, naming, default delay profile, quality definitions, download-client config), and restores plus cleans again in `afterAll` — regardless of which test failed.
 
@@ -75,7 +75,8 @@ The Radarr versions and the two Sonarr containers use separate config/database v
 | File                   | Role                                                                                                                 |
 | ---------------------- | -------------------------------------------------------------------------------------------------------------------- |
 | `docker-compose.yml`   | Media *arr + Sonarr/Radarr version fixtures + Prowlarr + FlareSolverr                                                |
-| `globalSetup.ts`       | Wait for every API, warm the template repo clone                                                                     |
+| `globalSetup.ts`       | Wait for every API, warm and snapshot the template repos                                                             |
+| `runStages.ts`         | `pnpm test:e2e:arr` stage runner, `ARR_E2E_PARALLEL_STAGES` switch                                                   |
 | `helpers.ts`           | Clients, configarr runner, assertions, cleanup, snapshot/restore                                                     |
 | `config.ts`            | Only the config fragments that are identical for every *arr                                                          |
 | `sonarr.e2e.test.ts`   | All Sonarr features + Recyclarr `WEB-1080p` include                                                                  |

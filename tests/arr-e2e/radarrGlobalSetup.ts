@@ -1,8 +1,9 @@
+import type { TestProject } from "vitest/node";
 import { arrConnection } from "./config";
-import { waitForArrApi, warmTemplateRepos } from "./helpers";
+import { setupRunRepos, waitForArrApi } from "./helpers";
 
-export default async function setup(): Promise<void> {
+export default async function setup(project: TestProject): Promise<() => void> {
   const { baseUrl, apiKey } = arrConnection("RADARR");
   await waitForArrApi(baseUrl, apiKey, "/api/v3/system/status");
-  await warmTemplateRepos();
+  return await setupRunRepos(project);
 }
