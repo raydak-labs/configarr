@@ -25,6 +25,8 @@ const isJsonFormat = getEnvs().LOG_FORMAT === "json";
 const stream = isJsonFormat
   ? undefined
   : pretty({
+      // Synchronous writes: lines logged right before an exit or crash are not lost.
+      sync: true,
       levelFirst: true,
       ignore: "hostname,pid",
       // @ts-ignore Temporary weird error
