@@ -19,12 +19,14 @@ import { TrashCF } from "../types/trashguide.types";
 import * as util from "../util";
 import { logger } from "../logger";
 
+vi.mock("node:fs");
+vi.mock("../trash-guide");
+
 describe("CustomFormats", () => {
   let customCF: TrashCF;
 
   beforeEach(() => {
     vi.resetAllMocks();
-    vi.mock("node:fs");
 
     customCF = {
       trash_id: "custom-size-more-40gb",
@@ -168,7 +170,6 @@ describe("CustomFormats", () => {
         ["trash1", { carrConfig: { configarr_id: "trash1", name: "trash1" }, requestConfig: {} }],
       ]);
 
-      vi.mock("../trash-guide");
       vi.mocked(loadTrashCFs).mockResolvedValue(mockTrashCFs);
       vi.spyOn(config, "getConfig").mockReturnValue({ localCustomFormatsPath: undefined });
 
@@ -183,7 +184,6 @@ describe("CustomFormats", () => {
         ["trash1", { carrConfig: { configarr_id: "trash1", name: "trash1" }, requestConfig: {} }],
       ]);
 
-      vi.mock("../trash-guide");
       vi.mocked(loadTrashCFs).mockResolvedValue(mockTrashCFs);
       vi.spyOn(config, "getConfig").mockReturnValue({ localCustomFormatsPath: undefined });
 
@@ -198,7 +198,6 @@ describe("CustomFormats", () => {
         ["trash1", { carrConfig: { configarr_id: "trash1", name: "trash1" }, requestConfig: {} }],
       ]);
 
-      vi.mock("../trash-guide");
       vi.mocked(loadTrashCFs).mockResolvedValue(mockTrashCFs);
       vi.spyOn(config, "getConfig").mockReturnValue({ localCustomFormatsPath: undefined });
 
