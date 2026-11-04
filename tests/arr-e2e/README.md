@@ -21,21 +21,21 @@ The suite only runs through its own config (`vitest.arr-e2e.config.ts`); `pnpm t
 
 ## Layout and run order
 
-One file per *arr, each owning its container end to end. The regular suite runs the six per-*arr files in parallel, then the cross-arr pipeline and version matrix runs:
+One file per *arr, each owning its container end to end. `pnpm test:e2e:arr` runs everything in one vitest invocation (~60s) through the projects in `vitest.arr-e2e.config.ts`:
 
-- `pnpm test:e2e:arr:parallel` — the six per-*arr files, in parallel (~40s). Its config excludes the pipeline file, so a direct `vitest run --config vitest.arr-e2e.config.ts` cannot mix the two.
-- `pnpm test:e2e:arr:pipeline` — `pipeline.e2e.test.ts` alone through `vitest.arr-e2e.pipeline.config.ts`, since it drives every container from one config.yml (~15s).
-- `pnpm test:e2e:arr:sonarr-v5` — reruns the Sonarr feature file against the v5 container.
-- `pnpm test:e2e:arr:radarr` — reruns the Radarr feature file sequentially against v5, v6 and v7, asserting the connected major version. Uses its own setup, so only the three Radarr containers are needed.
-- `pnpm test:e2e:arr` — all stages through `tests/arr-e2e/runStages.ts`; Sonarr v4/v5 and Radarr v5/v6/v7 are included. Sequential by default (~165s). `ARR_E2E_PARALLEL_STAGES=true` runs stages on disjoint containers concurrently (per-*arr files + Sonarr v5 + Radarr v5 + Radarr v7, then pipeline, then Radarr v6; ~85s) and prints each stage's output when it finishes.
+- `arr` — the six per-*arr files against the default containers (Sonarr v4, Radarr v6, asserting major 6 unless `RADARR_BASE_URL` is overridden).
+- `sonarr-v5`, `radarr-v5`, `radarr-v7` — the Sonarr / Radarr feature file again against its version container.
+- `pipeline` — `pipeline.e2e.test.ts`, which drives every default container from one config.yml. It has `sequence.groupOrder: 1`, so it starts after the other projects finish.
 
-Each vitest invocation's global setup warms a shared Recyclarr/TRaSH cache in the OS temp dir under a cross-process lock (the only git network access), snapshots it into a per-invocation run directory, and pins `trashRevision` to the snapshot's commit, so configarr runs never `git pull`. Each file then copies that snapshot, because configarr checks out its revision on every run and two files sharing one clone would race on `.git/index.lock`. The run directory, including every config workspace, is deleted in teardown. configarr runs with an empty `HOME`: simple-git drops `GIT_CONFIG_*`, and a user `url.*.insteadOf` rewrite would otherwise make configarr re-clone both repos on every run.
+All other projects own disjoint containers and run concurrently. `ARR_E2E_SEQUENTIAL=true` runs one file at a time (~230s). Subsets: `pnpm test:e2e:arr:pipeline`, `:sonarr-v5`, `:radarr` (Radarr file on v5, v6 and v7), or any `--project <name>` filter.
+
+Each project's global setup waits for its containers, warms a shared Recyclarr/TRaSH cache in the OS temp dir under a cross-process lock (the only git network access), snapshots it into a per-project run directory, and pins `trashRevision` to the snapshot's commit, so configarr runs never `git pull`. Each file then copies that snapshot, because configarr checks out its revision on every run and two files sharing one clone would race on `.git/index.lock`. The run directory, including every config workspace, is deleted in teardown. configarr runs with an empty `HOME` so the user's git config stays out (simple-git drops `GIT_CONFIG_*`).
 
 Each file cleans its *arr in `beforeAll`, snapshots the server-wide settings it overwrites (UI, media management, naming, default delay profile, quality definitions, download-client config), and restores plus cleans again in `afterAll` — regardless of which test failed.
 
 ## Ports / API key
 
-Override with `SONARR_BASE_URL`, `SONARR_API_KEY`, …, `PROWLARR_BASE_URL`, `PROWLARR_API_KEY`. The normal suite tests Sonarr v4 and v5. The v5 stage defaults to port `18990` and the test API key; override it independently with `SONARR_V5_BASE_URL` and `SONARR_V5_API_KEY`. To run just the v5 Sonarr feature file:
+Override with `SONARR_BASE_URL`, `SONARR_API_KEY`, …, `PROWLARR_BASE_URL`, `PROWLARR_API_KEY`. The normal suite tests Sonarr v4 and v5. The `sonarr-v5` project defaults to port `18990` and the test API key; override it independently with `SONARR_V5_BASE_URL` and `SONARR_V5_API_KEY`. To run just the v5 Sonarr feature file:
 
 ```bash
 pnpm test:e2e:arr:sonarr-v5
@@ -44,13 +44,12 @@ pnpm test:e2e:arr:sonarr-v5
 To run only the Radarr matrix:
 
 ```bash
-PUID=$(id -u) PGID=$(id -g) docker compose -f tests/arr-e2e/docker-compose.yml up -d radarr radarr-v5 radarr-v7
 pnpm test:e2e:arr:radarr
 ```
 
-Individual stages are `pnpm test:e2e:arr:radarr-v5`, `:radarr-v6` and `:radarr-v7`.
+The v6 run goes through the `arr` project, whose global setup waits for every default container, so the whole stack must be up. A single major: `pnpm test:e2e:arr --project radarr-v5` (or `radarr-v7`).
 Override their connections with `RADARR_V5_BASE_URL` / `RADARR_V5_API_KEY`
-(and `V6` / `V7` equivalents). The ordinary suite still uses `RADARR_BASE_URL`.
+(and `V7`). v6 is the default container and uses `RADARR_BASE_URL`.
 V7 is pinned to `develop-7.0.0.10815-ls275` (Radarr 7.0.0.10815). Refresh the tag, digest, and
 the API specification in `generate-api.ts` together. Sonarr v5 is `develop-5.0.0.2941-ls207` (`v5-nightly`). The full Radarr coverage column below
 runs on each major, including templates, settings and CRUD/idempotency.
@@ -75,8 +74,7 @@ The Radarr versions and the two Sonarr containers use separate config/database v
 | File                   | Role                                                                                                                 |
 | ---------------------- | -------------------------------------------------------------------------------------------------------------------- |
 | `docker-compose.yml`   | Media *arr + Sonarr/Radarr version fixtures + Prowlarr + FlareSolverr                                                |
-| `globalSetup.ts`       | Wait for every API, warm and snapshot the template repos                                                             |
-| `runStages.ts`         | `pnpm test:e2e:arr` stage runner, `ARR_E2E_PARALLEL_STAGES` switch                                                   |
+| `globalSetup.ts`       | Per project: wait for its APIs, warm and snapshot the template repos                                                 |
 | `helpers.ts`           | Clients, configarr runner, assertions, cleanup, snapshot/restore                                                     |
 | `config.ts`            | Only the config fragments that are identical for every *arr                                                          |
 | `sonarr.e2e.test.ts`   | All Sonarr features + Recyclarr `WEB-1080p` include                                                                  |
