@@ -4,6 +4,7 @@ import { basename, join } from "node:path";
 import { execFileSync, spawn } from "node:child_process";
 import { expect, inject } from "vitest";
 import type { TestProject } from "vitest/node";
+import esbuild from "esbuild";
 import { stringify } from "yaml";
 import { LidarrClient } from "../../src/clients/lidarr-client";
 import { ProwlarrClient } from "../../src/clients/prowlarr-client";
@@ -214,13 +215,14 @@ async function withSharedRepoLock<T>(fn: () => Promise<T>, timeoutMs = 300_000):
  */
 export async function setupRunRepos(project: TestProject): Promise<() => void> {
   const runRoot = mkdtempSync(join(tmpdir(), "configarr-arr-e2e-run-"));
+  await buildConfigarrBundle(runRoot);
   await withSharedRepoLock(async () => {
     const rootPath = join(runRoot, "warmup");
     mkdirSync(join(rootPath, "config"), { recursive: true });
     const configLocation = join(rootPath, "config", "config.yml");
     writeFileSync(configLocation, stringify({ telemetry: false }), "utf8");
 
-    const result = await runConfigarr(configarrEnv({ rootPath, configLocation, repoPath: SHARED_REPO_CACHE }, runRoot));
+    const result = await runConfigarr(configarrEnv({ rootPath, configLocation, repoPath: SHARED_REPO_CACHE }, runRoot), runRoot);
     if (result.exitCode !== 0) {
       throw new Error(`Warming the template repos failed (${result.exitCode})\n${result.stdout}\n${result.stderr}`);
     }
@@ -233,6 +235,26 @@ export async function setupRunRepos(project: TestProject): Promise<() => void> {
   project.provide("arrE2eRunRoot", runRoot);
   project.provide("arrE2eTrashRevision", trashRevision);
   return () => rmSync(runRoot, { recursive: true, force: true });
+}
+
+function bundlePath(runRoot: string): string {
+  return join(runRoot, "configarr.cjs");
+}
+
+/**
+ * Same esbuild bundle as the Docker image, built once per project. Starting it costs one file parse
+ * instead of tsx resolving and loading every module, which dominated CI time (~2s of ~3.4s per run).
+ */
+async function buildConfigarrBundle(runRoot: string): Promise<void> {
+  await esbuild.build({
+    entryPoints: [join(import.meta.dirname, "../../src/index.ts")],
+    bundle: true,
+    platform: "node",
+    target: "node20",
+    format: "cjs",
+    outfile: bundlePath(runRoot),
+    logLevel: "error",
+  });
 }
 
 /**
@@ -290,7 +312,10 @@ export async function syncConfig(
   options?: { dryRun?: boolean },
 ): Promise<{ workspace: ConfigWorkspace; result: ConfigarrRunResult }> {
   const workspace = writeConfigWorkspace(config, reuse);
-  const result = await runConfigarr({ ...configarrEnv(workspace), ...(options?.dryRun ? { DRY_RUN: "true" } : {}) });
+  const result = await runConfigarr(
+    { ...configarrEnv(workspace), ...(options?.dryRun ? { DRY_RUN: "true" } : {}) },
+    inject("arrE2eRunRoot"),
+  );
   return { workspace, result };
 }
 
@@ -300,12 +325,11 @@ export type ConfigarrRunResult = {
   stderr: string;
 };
 
-async function runConfigarr(env: Record<string, string>, timeoutMs = 300_000): Promise<ConfigarrRunResult> {
+async function runConfigarr(env: Record<string, string>, runRoot: string, timeoutMs = 300_000): Promise<ConfigarrRunResult> {
   const repoRoot = join(import.meta.dirname, "../..");
 
   return await new Promise((resolve, reject) => {
-    // Direct node + tsx loader: `pnpm exec` adds ~0.5s startup to each of ~300 runs.
-    const child = spawn(process.execPath, ["--import", "tsx", "src/index.ts"], {
+    const child = spawn(process.execPath, [bundlePath(runRoot)], {
       cwd: repoRoot,
       env: { ...process.env, ...env },
       stdio: ["ignore", "pipe", "pipe"],
