@@ -8,6 +8,8 @@
     ":maintainLockFilesMonthly",
     ":pinVersions",
     "security:minimumReleaseAgeNpm",
+    // Tracks `# renovate:` comments above ARG/ENV *_VERSION in Dockerfiles.
+    "customManagers:dockerfileVersions",
   ],
   ignorePaths: [
     "**/node_modules/**",
