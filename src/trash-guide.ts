@@ -44,6 +44,11 @@ const DEFAULT_TRASH_GIT_URL = "https://github.com/TRaSH-Guides/Guides";
 let cache: TrashCache;
 let cacheReady = false;
 
+// For testing: force the next run to rebuild the cache from the repo
+export const resetTrashCache = (): void => {
+  cacheReady = false;
+};
+
 const createCache = async () => {
   logger.debug(`Creating TRaSH-Guides cache ...`);
 

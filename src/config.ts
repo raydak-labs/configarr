@@ -58,11 +58,17 @@ import {
 import { isUrl, loadTemplateFromUrl } from "./url-template-importer";
 import { cloneWithJSON } from "./util";
 
-let config: ConfigSchema;
+let config: ConfigSchema | undefined;
 let secrets: any;
 
 // For testing: reset the secrets cache
 export const resetSecretsCache = (): void => {
+  secrets = undefined;
+};
+
+// For testing: drop the parsed config and secrets so the next getConfig reads the files again
+export const resetConfigCache = (): void => {
+  config = undefined;
   secrets = undefined;
 };
 
