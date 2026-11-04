@@ -1,8 +1,9 @@
-import { cpSync, existsSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
-import { spawn } from "node:child_process";
-import { expect } from "vitest";
+import { execFileSync, spawn } from "node:child_process";
+import { expect, inject } from "vitest";
+import type { TestProject } from "vitest/node";
 import { stringify } from "yaml";
 import { LidarrClient } from "../../src/clients/lidarr-client";
 import { ProwlarrClient } from "../../src/clients/prowlarr-client";
@@ -169,48 +170,105 @@ export async function waitForAllArrApis(timeoutMs = 180_000): Promise<void> {
 
 export type ConfigWorkspace = { rootPath: string; configLocation: string; repoPath: string };
 
-/** Recyclarr + TRaSH clone that `globalSetup` warms once, then every test file copies. */
-const TEMPLATE_REPO_ROOT = join(tmpdir(), "configarr-arr-e2e-repo-template");
+declare module "vitest" {
+  export interface ProvidedContext {
+    /** Per-invocation temp dir holding the repo snapshot, per-file clones and config workspaces. */
+    arrE2eRunRoot: string;
+    /** TRaSH commit of the snapshot; pinned so configarr runs detached and never pulls. */
+    arrE2eTrashRevision: string;
+  }
+}
+
+/** Recyclarr + TRaSH clone kept across invocations, so only its first warm-up clones. */
+const SHARED_REPO_CACHE = join(tmpdir(), "configarr-arr-e2e-repo-template");
+const SHARED_REPO_LOCK = `${SHARED_REPO_CACHE}.lock`;
+
+function runRepoSnapshot(runRoot: string): string {
+  return join(runRoot, "repo-template");
+}
+
+/** Cross-process lock: parallel stages are separate vitest invocations sharing one cache. */
+async function withSharedRepoLock<T>(fn: () => Promise<T>, timeoutMs = 300_000): Promise<T> {
+  const deadline = Date.now() + timeoutMs;
+  for (;;) {
+    try {
+      mkdirSync(SHARED_REPO_LOCK);
+      break;
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code !== "EEXIST") throw err;
+      if (Date.now() > deadline) throw new Error(`Timed out waiting for ${SHARED_REPO_LOCK}; remove it if no e2e run is active`);
+      await new Promise((r) => setTimeout(r, 200));
+    }
+  }
+  try {
+    return await fn();
+  } finally {
+    rmSync(SHARED_REPO_LOCK, { recursive: true, force: true });
+  }
+}
+
+/**
+ * globalSetup step. Warms the shared cache (the only git network access of the invocation), then
+ * snapshots it into a per-invocation run root so a concurrent invocation's warm-up cannot change
+ * files under this run. Returns the teardown that deletes the run root.
+ */
+export async function setupRunRepos(project: TestProject): Promise<() => void> {
+  const runRoot = mkdtempSync(join(tmpdir(), "configarr-arr-e2e-run-"));
+  await withSharedRepoLock(async () => {
+    const rootPath = join(runRoot, "warmup");
+    mkdirSync(join(rootPath, "config"), { recursive: true });
+    const configLocation = join(rootPath, "config", "config.yml");
+    writeFileSync(configLocation, stringify({ telemetry: false }), "utf8");
+
+    const result = await runConfigarr(configarrEnv({ rootPath, configLocation, repoPath: SHARED_REPO_CACHE }, runRoot));
+    if (result.exitCode !== 0) {
+      throw new Error(`Warming the template repos failed (${result.exitCode})\n${result.stdout}\n${result.stderr}`);
+    }
+    cpSync(SHARED_REPO_CACHE, runRepoSnapshot(runRoot), { recursive: true });
+  });
+  const trashRevision = execFileSync("git", ["rev-parse", "HEAD"], {
+    cwd: join(runRepoSnapshot(runRoot), "trash-guides"),
+    encoding: "utf8",
+  }).trim();
+  project.provide("arrE2eRunRoot", runRoot);
+  project.provide("arrE2eTrashRevision", trashRevision);
+  return () => rmSync(runRoot, { recursive: true, force: true });
+}
 
 /**
  * Repo clone for the running test file. configarr checks out its pinned revision on every
  * run, so two files sharing one clone would race on `.git/index.lock`.
  */
-function repoRootForCurrentFile(): string {
+function repoRootForCurrentFile(runRoot: string): string {
   const testPath = expect.getState().testPath ?? "shared";
   const key = basename(testPath).replace(/\.e2e\.test\.ts$/, "");
-  const repoPath = join(tmpdir(), `configarr-arr-e2e-repo-${key}`);
-  if (!existsSync(repoPath) && existsSync(TEMPLATE_REPO_ROOT)) {
-    cpSync(TEMPLATE_REPO_ROOT, repoPath, { recursive: true });
+  const repoPath = join(runRoot, `repo-${key}`);
+  if (!existsSync(repoPath)) {
+    cpSync(runRepoSnapshot(runRoot), repoPath, { recursive: true });
   }
   return repoPath;
 }
 
 export function writeConfigWorkspace(config: unknown, reuse?: ConfigWorkspace): ConfigWorkspace {
-  const rootPath = reuse?.rootPath ?? mkdtempSync(join(tmpdir(), "configarr-arr-e2e-"));
+  const runRoot = inject("arrE2eRunRoot");
+  const rootPath = reuse?.rootPath ?? mkdtempSync(join(runRoot, "ws-"));
   const configDir = join(rootPath, "config");
-  const repoPath = reuse?.repoPath ?? repoRootForCurrentFile();
+  const repoPath = reuse?.repoPath ?? repoRootForCurrentFile(runRoot);
   mkdirSync(configDir, { recursive: true });
-  mkdirSync(repoPath, { recursive: true });
   const configLocation = reuse?.configLocation ?? join(configDir, "config.yml");
-  writeFileSync(configLocation, stringify(config), "utf8");
+  writeFileSync(configLocation, stringify(withPinnedTrashRevision(config)), "utf8");
   return { rootPath, configLocation, repoPath };
 }
 
-/** Clones the template repos once so the per-file copies cost no network. */
-export async function warmTemplateRepos(): Promise<void> {
-  const rootPath = join(tmpdir(), "configarr-arr-e2e-warmup");
-  mkdirSync(join(rootPath, "config"), { recursive: true });
-  const configLocation = join(rootPath, "config", "config.yml");
-  writeFileSync(configLocation, stringify({ telemetry: false }), "utf8");
-
-  const result = await runConfigarr(configarrEnv({ rootPath, configLocation, repoPath: TEMPLATE_REPO_ROOT }));
-  if (result.exitCode !== 0) {
-    throw new Error(`Warming the template repos failed (${result.exitCode})\n${result.stdout}\n${result.stderr}`);
-  }
+/** A branch revision makes every configarr run `git pull`; a commit leaves HEAD detached. */
+function withPinnedTrashRevision(config: unknown): unknown {
+  if (config === null || typeof config !== "object" || Array.isArray(config) || "trashRevision" in config) return config;
+  return { trashRevision: inject("arrE2eTrashRevision"), ...config };
 }
 
-function configarrEnv(workspace: ConfigWorkspace): Record<string, string> {
+function configarrEnv(workspace: ConfigWorkspace, runRoot = inject("arrE2eRunRoot")): Record<string, string> {
+  const home = join(runRoot, "home");
+  mkdirSync(home, { recursive: true });
   return {
     CONFIG_LOCATION: workspace.configLocation,
     ROOT_PATH: workspace.rootPath,
@@ -219,8 +277,10 @@ function configarrEnv(workspace: ConfigWorkspace): Record<string, string> {
     STOP_ON_ERROR: "true",
     LOG_LEVEL: "info",
     TELEMETRY_ENABLED: "false",
-    GIT_CONFIG_GLOBAL: "/dev/null",
-    GIT_CONFIG_SYSTEM: "/dev/null",
+    // simple-git strips GIT_CONFIG_*; an empty HOME hides user `url.*.insteadOf` rewrites,
+    // which make configarr see a changed remote and re-clone both repos on every run.
+    HOME: home,
+    XDG_CONFIG_HOME: home,
   };
 }
 
@@ -244,7 +304,8 @@ async function runConfigarr(env: Record<string, string>, timeoutMs = 300_000): P
   const repoRoot = join(import.meta.dirname, "../..");
 
   return await new Promise((resolve, reject) => {
-    const child = spawn("pnpm", ["exec", "tsx", "src/index.ts"], {
+    // Direct node + tsx loader: `pnpm exec` adds ~0.5s startup to each of ~300 runs.
+    const child = spawn(process.execPath, ["--import", "tsx", "src/index.ts"], {
       cwd: repoRoot,
       env: { ...process.env, ...env },
       stdio: ["ignore", "pipe", "pipe"],
