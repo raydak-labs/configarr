@@ -9,10 +9,11 @@ Rules below are defaults. A deviation needs the user's approval and a one-line c
 
 - Use **pnpm**; scripts in [package.json](package.json). Done means `pnpm build && pnpm test && pnpm lint && pnpm typecheck` pass (`pnpm lint:fix` for Prettier).
 - Unit tests: Vitest, `<source>.test.ts` beside its source file; fixtures in `tests/samples/`; mock API clients.
+  One test file per source file: add cases to `util.test.ts`, never split into `util.<topic>.test.ts`.
 - Sync feature changes need e2e coverage per affected app, including an idempotent second run.
   Setup, matrix, `e2e-` fixtures and cleanup: [tests/arr-e2e/README.md](tests/arr-e2e/README.md). Run `pnpm test:e2e:arr` (separate from `pnpm test`).
 - Keep Sonarr v4/v5 and Radarr v5/v6/v7 working; guard version-specific features.
-  Sonarr changes: verify both versions. Radarr sync changes: `pnpm test:e2e:arr:radarr`.
+  Sonarr changes: verify both versions. Radarr sync changes: `pnpm test:e2e:arr:radarr`. Projects and the `ARR_E2E_SEQUENTIAL` switch: `vitest.arr-e2e.config.ts`.
 
 ## Architecture
 
