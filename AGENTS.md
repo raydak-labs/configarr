@@ -17,7 +17,7 @@ Rules below are defaults. A deviation needs the user's approval and a one-line c
 
 ## Architecture
 
-- Entry points: `src/index.ts`, `src/arr/*Syncer.ts`, the feature directory. Media apps share `src/arr/mediaPipeline.ts`; Prowlarr has its own pipeline without quality profiles or custom formats.
+- Entry points: `src/index.ts` (run loop in `src/run.ts`), `src/arr/*Syncer.ts`, the feature directory. Media apps share `src/arr/mediaPipeline.ts`; Prowlarr has its own pipeline without quality profiles or custom formats.
 - Features run load → diff → write → opt-in unmanaged cleanup. Keep dry-run and diff reporting intact.
 - The instance syncer calls `getClient("SONARR")` (literal type → concrete client) and injects it; feature code receives the client.
   One handler instance per feature per run handles load, diff, write, and cleanup.

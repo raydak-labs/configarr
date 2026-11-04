@@ -2,7 +2,7 @@
  * Error propagation of the media pipeline write boundaries.
  *
  * A failing write must not resolve normally: `completeMediaSync` has to reject so that the
- * instance loop in src/index.ts counts the instance as a failure instead of reporting a green
+ * instance loop in src/run.ts counts the instance as a failure instead of reporting a green
  * summary for a configuration that was never applied. Every boundary keeps logging the failure
  * before it propagates.
  *
