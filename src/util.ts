@@ -324,11 +324,11 @@ export const cloneGitRepo = async (
   let shouldReClone = false;
   if (isRepo) {
     try {
-      const remotes = await gitClient.getRemotes(true);
-      const originRemote = remotes.find((remote) => remote.name === "origin");
+      // Raw config value: `getRemotes` applies `url.*.insteadOf`, so a rewrite would look like a URL change.
+      const originUrl = (await gitClient.getConfig("remote.origin.url", "local")).value;
 
-      if (originRemote && originRemote.refs.fetch !== gitUrl) {
-        logger.info(`Remote URL for repository has changed from '${originRemote.refs.fetch}' to '${gitUrl}'`);
+      if (originUrl && originUrl !== gitUrl) {
+        logger.info(`Remote URL for repository has changed from '${originUrl}' to '${gitUrl}'`);
         shouldReClone = true;
       }
     } catch (err: unknown) {

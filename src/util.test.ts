@@ -1,8 +1,13 @@
+import { execFileSync } from "node:child_process";
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import path from "path";
-import { describe, expect, test } from "vitest";
+import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import { CustomFormatRequest } from "./customFormats/customFormat.types";
 import { TrashCF, TrashCFSpF } from "./types/trashguide.types";
 import {
+  cloneGitRepo,
   cloneWithJSON,
   compareCustomFormats,
   compareObjectsCarr,
@@ -419,5 +424,57 @@ describe("toEnumOrThrow", () => {
     } catch (err) {
       expect(err).toBeInstanceOf(ConfigValidationError);
     }
+  });
+});
+
+const git = (cwd: string, ...args: string[]) => execFileSync("git", args, { cwd, encoding: "utf8" });
+
+describe("cloneGitRepo", () => {
+  let root: string;
+  let originalHome: string | undefined;
+
+  beforeEach(() => {
+    root = mkdtempSync(join(tmpdir(), "configarr-clone-test-"));
+    originalHome = process.env.HOME;
+    process.env.HOME = join(root, "home");
+    mkdirSync(process.env.HOME);
+
+    const origin = join(root, "origin");
+    mkdirSync(origin);
+    git(origin, "init", "-q", "-b", "master");
+    writeFileSync(join(origin, "file.txt"), "content");
+    git(origin, "add", ".");
+    git(origin, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", "init");
+    // Same shape as a user's `url.git@github.com:.insteadOf https://github.com/` rewrite.
+    git(root, "config", "--file", join(process.env.HOME, ".gitconfig"), `url.file://${origin}.insteadOf`, "https://example.invalid/repo");
+  });
+
+  afterEach(() => {
+    process.env.HOME = originalHome;
+    rmSync(root, { recursive: true, force: true });
+  });
+
+  test("keeps the clone when an insteadOf rewrite changes the effective remote URL", async () => {
+    const local = join(root, "local");
+    const conf = { disabled: true };
+
+    await cloneGitRepo(local, "https://example.invalid/repo", "master", conf);
+    const marker = join(local, "untracked-marker");
+    writeFileSync(marker, "");
+    await cloneGitRepo(local, "https://example.invalid/repo", "master", conf);
+
+    expect(existsSync(marker)).toBe(true);
+  });
+
+  test("re-clones when the configured URL changes", async () => {
+    const local = join(root, "local");
+    const conf = { disabled: true };
+
+    await cloneGitRepo(local, "https://example.invalid/repo", "master", conf);
+    const marker = join(local, "untracked-marker");
+    writeFileSync(marker, "");
+    await cloneGitRepo(local, `file://${join(root, "origin")}`, "master", conf);
+
+    expect(existsSync(marker)).toBe(false);
   });
 });
