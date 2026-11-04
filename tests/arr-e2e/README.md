@@ -21,7 +21,7 @@ The suite only runs through its own config (`vitest.arr-e2e.config.ts`); `pnpm t
 
 ## Layout and run order
 
-One file per *arr, each owning its container end to end. `pnpm test:e2e:arr` runs everything in one vitest invocation (~60s) through the projects in `vitest.arr-e2e.config.ts`:
+One file per *arr, each owning its container end to end. `pnpm test:e2e:arr` runs everything in one vitest invocation (~30s locally) through the projects in `vitest.arr-e2e.config.ts`:
 
 - `arr` — the six per-*arr files against the default containers (Sonarr v4, Radarr v6, asserting major 6 unless `RADARR_BASE_URL` is overridden).
 - `sonarr-v5`, `radarr-v5`, `radarr-v7` — the Sonarr / Radarr feature file again against its version container.
@@ -30,6 +30,8 @@ One file per *arr, each owning its container end to end. `pnpm test:e2e:arr` run
 All other projects own disjoint containers and run concurrently. `ARR_E2E_SEQUENTIAL=true` runs one file at a time (~230s). Run a subset with `pnpm test:e2e:arr --project <name>` (repeatable), e.g. `--project radarr-v5 --project radarr-v7`. The `arr` and `pipeline` projects wait for every default container, so keep the whole stack up.
 
 Each project's global setup waits for its containers, warms a shared Recyclarr/TRaSH cache in the OS temp dir under a cross-process lock (the only git network access), snapshots it into a per-project run directory, and pins `trashRevision` to the snapshot's commit, so configarr runs never `git pull`. Each file then copies that snapshot, because configarr checks out its revision on every run and two files sharing one clone would race on `.git/index.lock`. The run directory, including every config workspace, is deleted in teardown. configarr runs with an empty `HOME` so the user's git config stays out (simple-git drops `GIT_CONFIG_*`).
+
+Each project's global setup also bundles `src/index.ts` (the Docker image's CLI) and `configarrWorker.ts` with esbuild. The warm-up runs the CLI as a fresh process. Tests run configarr in one long-lived worker per test file (`configarrRunner.ts`): it resets env, config, TRaSH cache, telemetry and the API client before each job, and returns stdout, stderr and the exit code like a process would. Per-run process startup was about 60% of CI time.
 
 Each file cleans its *arr in `beforeAll`, snapshots the server-wide settings it overwrites (UI, media management, naming, default delay profile, quality definitions, download-client config), and restores plus cleans again in `afterAll` — regardless of which test failed.
 
@@ -65,7 +67,9 @@ The Radarr versions and the two Sonarr containers use separate config/database v
 | ---------------------- | -------------------------------------------------------------------------------------------------------------------- |
 | `docker-compose.yml`   | Media *arr + Sonarr/Radarr version fixtures + Prowlarr + FlareSolverr                                                |
 | `globalSetup.ts`       | Per project: wait for its APIs, warm and snapshot the template repos                                                 |
-| `helpers.ts`           | Clients, configarr runner, assertions, cleanup, snapshot/restore                                                     |
+| `helpers.ts`           | Clients, config workspaces, assertions, cleanup, snapshot/restore                                                    |
+| `configarrRunner.ts`   | Bundles configarr; runs it as a process (warm-up) or in the per-file worker (tests)                                  |
+| `configarrWorker.ts`   | Worker entry: one configarr run per stdin job, state reset in between                                                |
 | `config.ts`            | Only the config fragments that are identical for every *arr                                                          |
 | `sonarr.e2e.test.ts`   | All Sonarr features + Recyclarr `WEB-1080p` include                                                                  |
 | `radarr.e2e.test.ts`   | All Radarr features + Recyclarr `HD Bluray + WEB` include                                                            |

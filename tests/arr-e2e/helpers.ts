@@ -1,10 +1,9 @@
 import { cpSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
-import { execFileSync, spawn } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import { expect, inject } from "vitest";
 import type { TestProject } from "vitest/node";
-import esbuild from "esbuild";
 import { stringify } from "yaml";
 import { LidarrClient } from "../../src/clients/lidarr-client";
 import { ProwlarrClient } from "../../src/clients/prowlarr-client";
@@ -15,6 +14,7 @@ import { WhisparrClient } from "../../src/clients/whisparr-client";
 import { DelayProfileShared } from "../../src/delayProfiles/delayProfile.types";
 import type { ArrType, MediaArrType } from "../../src/types/common.types";
 import { arrConnection } from "./config";
+import { buildConfigarrBundles, type ConfigarrRunResult, runConfigarrInWorker, runConfigarrProcess } from "./configarrRunner";
 
 const PROWLARR_STATUS_PATH = "/api/v1/system/status";
 const FLARESOLVERR_DEFAULT_BASE_URL = "http://127.0.0.1:18191";
@@ -215,14 +215,14 @@ async function withSharedRepoLock<T>(fn: () => Promise<T>, timeoutMs = 300_000):
  */
 export async function setupRunRepos(project: TestProject): Promise<() => void> {
   const runRoot = mkdtempSync(join(tmpdir(), "configarr-arr-e2e-run-"));
-  await buildConfigarrBundle(runRoot);
+  await buildConfigarrBundles(runRoot);
   await withSharedRepoLock(async () => {
     const rootPath = join(runRoot, "warmup");
     mkdirSync(join(rootPath, "config"), { recursive: true });
     const configLocation = join(rootPath, "config", "config.yml");
     writeFileSync(configLocation, stringify({ telemetry: false }), "utf8");
 
-    const result = await runConfigarr(configarrEnv({ rootPath, configLocation, repoPath: SHARED_REPO_CACHE }, runRoot), runRoot);
+    const result = await runConfigarrProcess(configarrEnv({ rootPath, configLocation, repoPath: SHARED_REPO_CACHE }, runRoot), runRoot);
     if (result.exitCode !== 0) {
       throw new Error(`Warming the template repos failed (${result.exitCode})\n${result.stdout}\n${result.stderr}`);
     }
@@ -235,26 +235,6 @@ export async function setupRunRepos(project: TestProject): Promise<() => void> {
   project.provide("arrE2eRunRoot", runRoot);
   project.provide("arrE2eTrashRevision", trashRevision);
   return () => rmSync(runRoot, { recursive: true, force: true });
-}
-
-function bundlePath(runRoot: string): string {
-  return join(runRoot, "configarr.cjs");
-}
-
-/**
- * Same esbuild bundle as the Docker image, built once per project. Starting it costs one file parse
- * instead of tsx resolving and loading every module, which dominated CI time (~2s of ~3.4s per run).
- */
-async function buildConfigarrBundle(runRoot: string): Promise<void> {
-  await esbuild.build({
-    entryPoints: [join(import.meta.dirname, "../../src/index.ts")],
-    bundle: true,
-    platform: "node",
-    target: "node20",
-    format: "cjs",
-    outfile: bundlePath(runRoot),
-    logLevel: "error",
-  });
 }
 
 /**
@@ -312,51 +292,11 @@ export async function syncConfig(
   options?: { dryRun?: boolean },
 ): Promise<{ workspace: ConfigWorkspace; result: ConfigarrRunResult }> {
   const workspace = writeConfigWorkspace(config, reuse);
-  const result = await runConfigarr(
+  const result = await runConfigarrInWorker(
     { ...configarrEnv(workspace), ...(options?.dryRun ? { DRY_RUN: "true" } : {}) },
     inject("arrE2eRunRoot"),
   );
   return { workspace, result };
-}
-
-export type ConfigarrRunResult = {
-  exitCode: number | null;
-  stdout: string;
-  stderr: string;
-};
-
-async function runConfigarr(env: Record<string, string>, runRoot: string, timeoutMs = 300_000): Promise<ConfigarrRunResult> {
-  const repoRoot = join(import.meta.dirname, "../..");
-
-  return await new Promise((resolve, reject) => {
-    const child = spawn(process.execPath, [bundlePath(runRoot)], {
-      cwd: repoRoot,
-      env: { ...process.env, ...env },
-      stdio: ["ignore", "pipe", "pipe"],
-    });
-
-    let stdout = "";
-    let stderr = "";
-    const timer = setTimeout(() => {
-      child.kill("SIGKILL");
-      reject(new Error(`configarr timed out after ${timeoutMs}ms`));
-    }, timeoutMs);
-
-    child.stdout.on("data", (chunk) => {
-      stdout += String(chunk);
-    });
-    child.stderr.on("data", (chunk) => {
-      stderr += String(chunk);
-    });
-    child.on("error", (err) => {
-      clearTimeout(timer);
-      reject(err);
-    });
-    child.on("close", (exitCode) => {
-      clearTimeout(timer);
-      resolve({ exitCode, stdout, stderr });
-    });
-  });
 }
 
 /** Exit code 0 plus a `(1/0/0)` summary for each instance the run was supposed to configure. */
