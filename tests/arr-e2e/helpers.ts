@@ -46,7 +46,7 @@ async function sonarrStatusPath(baseUrl: string, apiKey: string): Promise<string
   return `/api/${version}/system/status`;
 }
 
-async function waitForSonarrApi(baseUrl: string, apiKey: string, timeoutMs = 180_000): Promise<void> {
+export async function waitForSonarrApi(baseUrl: string, apiKey: string, timeoutMs = 180_000): Promise<void> {
   const deadline = Date.now() + timeoutMs;
   let lastError: unknown;
   while (Date.now() < deadline) {
@@ -277,8 +277,8 @@ function configarrEnv(workspace: ConfigWorkspace, runRoot = inject("arrE2eRunRoo
     STOP_ON_ERROR: "true",
     LOG_LEVEL: "info",
     TELEMETRY_ENABLED: "false",
-    // simple-git strips GIT_CONFIG_*; an empty HOME hides user `url.*.insteadOf` rewrites,
-    // which make configarr see a changed remote and re-clone both repos on every run.
+    // simple-git strips GIT_CONFIG_*; an empty HOME keeps the user's git config (url rewrites,
+    // credential helpers) out of the runs.
     HOME: home,
     XDG_CONFIG_HOME: home,
   };

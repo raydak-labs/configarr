@@ -1,6 +1,6 @@
 /**
  * Every *arr plus Prowlarr in a single config.yml, so the multi-instance pipeline in `index.ts`
- * is covered end to end. Touches all containers, so it runs on its own (see `test:e2e:arr`).
+ * is covered end to end. Touches all containers, so its project runs after all others (`sequence.groupOrder` in `vitest.arr-e2e.config.ts`).
  *
  *   cd tests/arr-e2e && PUID=$(id -u) PGID=$(id -g) docker compose up -d
  *   pnpm test:e2e:arr
