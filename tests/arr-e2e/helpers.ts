@@ -215,26 +215,33 @@ async function withSharedRepoLock<T>(fn: () => Promise<T>, timeoutMs = 300_000):
  */
 export async function setupRunRepos(project: TestProject): Promise<() => void> {
   const runRoot = mkdtempSync(join(tmpdir(), "configarr-arr-e2e-run-"));
-  await buildConfigarrBundles(runRoot);
-  await withSharedRepoLock(async () => {
-    const rootPath = join(runRoot, "warmup");
-    mkdirSync(join(rootPath, "config"), { recursive: true });
-    const configLocation = join(rootPath, "config", "config.yml");
-    writeFileSync(configLocation, stringify({ telemetry: false }), "utf8");
+  const removeRunRoot = () => rmSync(runRoot, { recursive: true, force: true });
+  try {
+    await buildConfigarrBundles(runRoot);
+    await withSharedRepoLock(async () => {
+      const rootPath = join(runRoot, "warmup");
+      mkdirSync(join(rootPath, "config"), { recursive: true });
+      const configLocation = join(rootPath, "config", "config.yml");
+      writeFileSync(configLocation, stringify({ telemetry: false }), "utf8");
 
-    const result = await runConfigarrProcess(configarrEnv({ rootPath, configLocation, repoPath: SHARED_REPO_CACHE }, runRoot), runRoot);
-    if (result.exitCode !== 0) {
-      throw new Error(`Warming the template repos failed (${result.exitCode})\n${result.stdout}\n${result.stderr}`);
-    }
-    cpSync(SHARED_REPO_CACHE, runRepoSnapshot(runRoot), { recursive: true });
-  });
-  const trashRevision = execFileSync("git", ["rev-parse", "HEAD"], {
-    cwd: join(runRepoSnapshot(runRoot), "trash-guides"),
-    encoding: "utf8",
-  }).trim();
-  project.provide("arrE2eRunRoot", runRoot);
-  project.provide("arrE2eTrashRevision", trashRevision);
-  return () => rmSync(runRoot, { recursive: true, force: true });
+      const result = await runConfigarrProcess(configarrEnv({ rootPath, configLocation, repoPath: SHARED_REPO_CACHE }, runRoot), runRoot);
+      if (result.exitCode !== 0) {
+        throw new Error(`Warming the template repos failed (${result.exitCode})\n${result.stdout}\n${result.stderr}`);
+      }
+      cpSync(SHARED_REPO_CACHE, runRepoSnapshot(runRoot), { recursive: true });
+    });
+    const trashRevision = execFileSync("git", ["rev-parse", "HEAD"], {
+      cwd: join(runRepoSnapshot(runRoot), "trash-guides"),
+      encoding: "utf8",
+    }).trim();
+    project.provide("arrE2eRunRoot", runRoot);
+    project.provide("arrE2eTrashRevision", trashRevision);
+  } catch (err) {
+    // Vitest only calls the returned teardown, so a failed setup removes its own run root.
+    removeRunRoot();
+    throw err;
+  }
+  return removeRunRoot;
 }
 
 /**
