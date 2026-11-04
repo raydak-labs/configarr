@@ -23,11 +23,10 @@ The suite only runs through its own config (`vitest.arr-e2e.config.ts`); `pnpm t
 
 One file per *arr, each owning its container end to end. `pnpm test:e2e:arr` runs everything in one vitest invocation (~30s locally) through the projects in `vitest.arr-e2e.config.ts`:
 
-- `arr` — the six per-*arr files against the default containers (Sonarr v4, Radarr v6, asserting major 6 unless `RADARR_BASE_URL` is overridden).
-- `sonarr-v5`, `radarr-v5`, `radarr-v7` — the Sonarr / Radarr feature file again against its version container.
+- One project per app and version, named as in `docker-compose.yml`: `sonarr-v4`, `sonarr-v5`, `radarr-v5`, `radarr-v6`, `radarr-v7`, `whisparr-v3`, `readarr-v0`, `lidarr-nightly`, `prowlarr-v2`. The Sonarr and Radarr feature files run once per version. Radarr projects assert the connected major (`radarr-v6` skips it when `RADARR_BASE_URL` is overridden).
 - `pipeline` — `pipeline.e2e.test.ts`, which drives every default container from one config.yml. It has `sequence.groupOrder: 1`, so it starts after the other projects finish.
 
-All other projects own disjoint containers and run concurrently. `ARR_E2E_SEQUENTIAL=true` runs one file at a time (~230s). Run a subset with `pnpm test:e2e:arr --project <name>` (repeatable), e.g. `--project radarr-v5 --project radarr-v7`. The `arr` and `pipeline` projects wait for every default container, so keep the whole stack up.
+All other projects own disjoint containers and run concurrently. `ARR_E2E_SEQUENTIAL=true` runs one file at a time (~230s). Run a subset with `pnpm test:e2e:arr --project <name>` (repeatable), e.g. `--project radarr-v5 --project radarr-v7`. Projects on default containers and `pipeline` wait for every default container, so keep the whole stack up.
 
 Each project's global setup waits for its containers, warms a shared Recyclarr/TRaSH cache in the OS temp dir under a cross-process lock (the only git network access), snapshots it into a per-project run directory, and pins `trashRevision` to the snapshot's commit, so configarr runs never `git pull`. Each file then copies that snapshot, because configarr checks out its revision on every run and two files sharing one clone would race on `.git/index.lock`. The run directory, including every config workspace, is deleted in teardown. configarr runs with an empty `HOME` so the user's git config stays out (simple-git drops `GIT_CONFIG_*`).
 
@@ -39,7 +38,7 @@ Each file cleans its *arr in `beforeAll`, snapshots the server-wide settings it 
 
 Override with `SONARR_BASE_URL`, `SONARR_API_KEY`, …, `PROWLARR_BASE_URL`, `PROWLARR_API_KEY`. The normal suite tests Sonarr v4 and v5. The `sonarr-v5` project defaults to port `18990` and the test API key; override it independently with `SONARR_V5_BASE_URL` and `SONARR_V5_API_KEY`.
 
-Radarr v5 and v7 run as the `radarr-v5` / `radarr-v7` projects; v6 is the default container in the `arr` project.
+Radarr v5 and v7 run as the `radarr-v5` / `radarr-v7` projects; `radarr-v6` uses the default container.
 Override their connections with `RADARR_V5_BASE_URL` / `RADARR_V5_API_KEY`
 (and `V7`). v6 is the default container and uses `RADARR_BASE_URL`.
 V7 is pinned to `develop-7.0.0.10815-ls275` (Radarr 7.0.0.10815). Refresh the tag, digest, and
