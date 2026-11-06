@@ -2,7 +2,7 @@
   lib,
   pkgs,
   src,
-  version ? "1.39.0",
+  version ? "1.39.1",
   ...
 }:
 pkgs.stdenvNoCC.mkDerivation (finalAttrs: {
@@ -49,7 +49,7 @@ pkgs.stdenvNoCC.mkDerivation (finalAttrs: {
 
   pnpmDeps = pkgs.fetchPnpmDeps {
     fetcherVersion = 4;
-    hash = "sha256-ec9e8QcwSIsg2EgazCCljXGOfYGiBkPOpf4KFVXgEso=";
+    hash = "sha256-rp8UefwTC2iPIze0Y4OHNtSBtz0gdVWJQaOJ1sMszIA=";
     inherit (finalAttrs) pname src version;
   };
 

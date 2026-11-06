@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.39.1](https://github.com/raydak-labs/configarr/compare/v1.39.0...v1.39.1) (2026-11-06)
+
+### Bug Fixes
+
+- install corepack in the Node 26 image ([#619](https://github.com/raydak-labs/configarr/issues/619)) ([85a3f8e](https://github.com/raydak-labs/configarr/commit/85a3f8ebdbfdcb127ae591d7e9fea3b49a9b8dcc))
+- keep git clones when an insteadOf rewrite changes the remote URL ([0ad21d8](https://github.com/raydak-labs/configarr/commit/0ad21d892af4716f399b55444e3555b8ea44d188))
+- write pretty logs synchronously ([8ba36df](https://github.com/raydak-labs/configarr/commit/8ba36df211e863893a13c949acc680a057c10c8d))
+
+### (internal) Refactorings
+
+- move the run loop from index.ts to run.ts ([b9f41d1](https://github.com/raydak-labs/configarr/commit/b9f41d1053623d7e823cb79e0935fc645aa66695))
+
 ## [1.39.0](https://github.com/raydak-labs/configarr/compare/v1.38.0...v1.39.0) (2026-11-03)
 
 ### Features
