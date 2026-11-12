@@ -165,6 +165,68 @@ describe("lidarr (live)", () => {
     expect(findNamed(await client.getQualityProfiles(), "e2e-qp")).toBeUndefined();
   });
 
+  test("quality profile groups keep their server ids across config reorders", async () => {
+    const preexisting = nonE2eNames(await client.getQualityProfiles());
+    const groups = [
+      { name: "Lossless", qualities: ["FLAC", "ALAC"] },
+      { name: "Lossy", qualities: ["MP3-320", "MP3-256"] },
+    ];
+    const yaml = (reverse: boolean) =>
+      mediaConfig("LIDARR", {
+        quality_profiles: [
+          {
+            name: "e2e-qp-groups",
+            upgrade: { allowed: false, until_quality: "Lossless" },
+            min_format_score: 0,
+            qualities: reverse ? [...groups].reverse() : groups,
+          },
+        ],
+      });
+    const groupIds = async () => {
+      const profile = findNamed(await client.getQualityProfiles(), "e2e-qp-groups");
+      const ids = new Map<string, number | undefined>();
+
+      for (const item of profile?.items ?? []) {
+        if (item.name != null) {
+          ids.set(item.name, item.id);
+        }
+      }
+
+      return ids;
+    };
+
+    const created = await syncConfig(yaml(false));
+    assertPipelineSucceeded(created.result, ["LIDARR"]);
+    const initial = await groupIds();
+    const losslessId = initial.get("Lossless");
+    const lossyId = initial.get("Lossy");
+    expect(losslessId).toBeDefined();
+    expect(losslessId!).toBeGreaterThanOrEqual(1000);
+    expect(lossyId).not.toBe(losslessId);
+
+    const second = await syncConfig(yaml(false), created.workspace);
+    assertPipelineSucceeded(second.result, ["LIDARR"]);
+    assertDiffUpToDate(second.result, ["LIDARR"]);
+
+    // Reordering the groups must keep each id on its name instead of renumbering by config index.
+    const reordered = await syncConfig(yaml(true), created.workspace);
+    assertPipelineSucceeded(reordered.result, ["LIDARR"]);
+    const afterReorder = await groupIds();
+    expect(afterReorder.get("Lossless")).toBe(losslessId);
+    expect(afterReorder.get("Lossy")).toBe(lossyId);
+
+    const third = await syncConfig(yaml(true), created.workspace);
+    assertPipelineSucceeded(third.result, ["LIDARR"]);
+    assertDiffUpToDate(third.result, ["LIDARR"]);
+
+    const deleted = await syncConfig(
+      mediaConfig("LIDARR", { delete_unmanaged_quality_profiles: { enabled: true, ignore: preexisting } }),
+      created.workspace,
+    );
+    assertPipelineSucceeded(deleted.result, ["LIDARR"]);
+    expect(findNamed(await client.getQualityProfiles(), "e2e-qp-groups")).toBeUndefined();
+  });
+
   test("quality definitions", async () => {
     const flac = async () => (await client.getQualityDefinitions()).find((d) => d.quality?.name === "FLAC");
 

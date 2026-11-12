@@ -543,6 +543,25 @@ sonarr:
               - WEBRip-1080p
 ```
 
+Quality groups are named sets of qualities. The \*arr apps number groups from `1000` upwards,
+and a cutoff (and `upgrade.until_quality`) refers to that number. Configarr keeps the number
+stable: on update it reuses the id the server already uses for a group with the same name, and only
+allocates a new one for a group that does not exist yet. Inserting, removing or reordering groups in
+the config therefore no longer renumbers the remaining groups or silently moves `until_quality` to a
+different group.
+
+To pin a group id explicitly — for example to match a profile that is also edited outside Configarr —
+set `id` on the group. Ids must be `>= 1000` and unique; setting `id` on a plain quality is an error.
+
+```yml
+qualities:
+  - name: WEB 2160p
+    id: 1003 # optional, pinned group id
+    qualities:
+      - WEBDL-2160p
+      - WEBRip-2160p
+```
+
 Sonarr v5 stores size limits on each quality-profile quality instead of globally. Keep
 `quality_definition` for a shared default, then set `quality_sizes` on a profile only
 where it needs a different value. Per-profile values take precedence field by field;

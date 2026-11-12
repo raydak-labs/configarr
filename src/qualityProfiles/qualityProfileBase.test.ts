@@ -279,6 +279,85 @@ describe("qualityProfileBase", async () => {
     expect(result[3]!.allowed).toBe(true);
   });
 
+  describe("mapQualities - group identity", () => {
+    const resources: QualityDefinitionShared[] = [
+      { id: 1, title: "HDTV-1080p", weight: 2, quality: { id: 1, name: "HDTV-1080p" } },
+      { id: 2, title: "WEBDL-1080p", weight: 2, quality: { id: 2, name: "WEBDL-1080p" } },
+      { id: 3, title: "WEBDL-720p", weight: 2, quality: { id: 3, name: "WEBDL-720p" } },
+    ];
+
+    const profileWith = (qualities: ConfigQualityProfileItem[]): ConfigQualityProfile => ({
+      name: "Standard",
+      min_format_score: 0,
+      qualities,
+      quality_sort: "top",
+      upgrade: { allowed: false, until_quality: "HD Group", until_score: 0 },
+      score_set: "default",
+    });
+
+    test("reuses the existing server id by name instead of the config index", async ({}) => {
+      const profile = profileWith([
+        { name: "WEB 720p", qualities: ["WEBDL-720p"] },
+        { name: "HD Group", qualities: ["HDTV-1080p", "WEBDL-1080p"] },
+      ]);
+
+      // server has the groups in the opposite order and with ids that do not match 1000 + index
+      const existing: QualityItem[] = [
+        { id: 1005, name: "HD Group", allowed: true, items: [] },
+        { id: 1002, name: "WEB 720p", allowed: true, items: [] },
+      ];
+
+      const result = mapQualities(resources, profile, existing);
+      // mapQualities reverses the configured order (quality_sort: top)
+      const idsByName = new Map(result.map((item) => [item.name, item.id]));
+
+      expect(idsByName.get("WEB 720p")).toBe(1002);
+      expect(idsByName.get("HD Group")).toBe(1005);
+    });
+
+    test("allocates a fresh id without colliding with a reused one", async ({}) => {
+      const profile = profileWith([
+        { name: "New Group", qualities: ["HDTV-1080p"] },
+        { name: "HD Group", qualities: ["WEBDL-1080p"] },
+      ]);
+
+      const existing: QualityItem[] = [{ id: 1000, name: "HD Group", allowed: true, items: [] }];
+
+      const result = mapQualities(resources, profile, existing);
+      const idsByName = new Map(result.map((item) => [item.name, item.id]));
+
+      // "New Group" sits at index 0, but 1000 is already taken by the reused id, so it shifts to 1001
+      expect(idsByName.get("New Group")).toBe(1001);
+      expect(idsByName.get("HD Group")).toBe(1000);
+    });
+
+    test("honours an explicit id from the config", async ({}) => {
+      const profile = profileWith([{ name: "HD Group", id: 2001, qualities: ["HDTV-1080p"] }]);
+
+      const existing: QualityItem[] = [{ id: 1005, name: "HD Group", allowed: true, items: [] }];
+
+      const result = mapQualities(resources, profile, existing);
+
+      expect(result.find((item) => item.name === "HD Group")?.id).toBe(2001);
+    });
+
+    test("rejects an id on a plain quality", async ({}) => {
+      const profile = profileWith([{ name: "HDTV-1080p", id: 1001 }]);
+
+      expect(() => mapQualities(resources, profile)).toThrow(ConfigValidationError);
+      expect(() => mapQualities(resources, profile)).toThrow(/only supported for quality groups/);
+    });
+
+    test("rejects duplicate group ids", async ({}) => {
+      const profile = profileWith([
+        { name: "HD Group", id: 1001, qualities: ["HDTV-1080p"] },
+        { name: "WEB Group", id: 1001, qualities: ["WEBDL-720p"] },
+      ]);
+
+      expect(() => mapQualities(resources, profile)).toThrow(/quality group id 1001 is used by both/);
+    });
+  });
+
   describe("isOrderOfQualitiesEqual", async () => {
     test("should diff for grouped incorrect order", async ({}) => {
       const arr1: QualityItem[] = [
@@ -520,6 +599,32 @@ describe("qualityProfileBase", async () => {
       ];
 
       expect(isOrderOfQualitiesEqual(arr1, arr2)).toBe(true);
+    });
+
+    test("should diff when a group id differs", async ({}) => {
+      const group = (id: number): QualityItem => ({
+        allowed: true,
+        id,
+        name: "Merged QPs",
+        items: [{ quality: { id: 14, name: "WEBRip-720p", resolution: 720 }, allowed: true, items: [] }],
+      });
+
+      expect(isOrderOfQualitiesEqual([group(1000)], [group(1005)])).toBe(false);
+      expect(isOrderOfQualitiesEqual([group(1000)], [group(1000)])).toBe(true);
+    });
+
+    test("should diff when nested items are missing on one side", async ({}) => {
+      const arr1: QualityItem[] = [
+        {
+          allowed: true,
+          id: 1000,
+          name: "Merged QPs",
+          items: [{ quality: { id: 14, name: "WEBRip-720p", resolution: 720 }, allowed: true, items: [] }],
+        },
+      ];
+      const arr2: QualityItem[] = [{ allowed: true, id: 1000, name: "Merged QPs", items: [] }];
+
+      expect(isOrderOfQualitiesEqual(arr1, arr2)).toBe(false);
     });
   });
 
@@ -1303,6 +1408,99 @@ describe("qualityProfileBase", async () => {
         fieldChanges: [{ field: "minFormatScore", from: 0, to: 10 }],
       },
     ]);
+  });
+
+  describe("calculateQualityProfilesDiff - group ids", () => {
+    const quality = (name: string, id: number): QualityItem => ({ quality: { id, name }, allowed: true, items: [] });
+
+    const serverProfile = (items: QualityItem[], cutoff: number): QualityProfileShared => ({
+      id: 3,
+      name: "Standard",
+      upgradeAllowed: false,
+      cutoff,
+      cutoffFormatScore: 1,
+      minFormatScore: 0,
+      minUpgradeFormatScore: 1,
+      formatItems: [],
+      items,
+    });
+
+    const cacheWith = (profile: QualityProfileShared) =>
+      new ServerCache({
+        customFormats: [],
+        qualityDefinitions: [
+          { id: 1, title: "HDTV-1080p", weight: 1, quality: { id: 1, name: "HDTV-1080p" } },
+          { id: 2, title: "WEBDL-1080p", weight: 1, quality: { id: 2, name: "WEBDL-1080p" } },
+        ],
+        qualityProfiles: [profile],
+      });
+
+    const config: MergedConfigInstance = {
+      custom_formats: [],
+      quality_profiles: [
+        {
+          name: "Standard",
+          min_format_score: 0,
+          // reversed by mapQualities, so this maps to the server order [WEBDL-1080p, HDTV-1080p]
+          qualities: [{ name: "HD Group", qualities: ["HDTV-1080p", "WEBDL-1080p"] }],
+          quality_sort: "top",
+          upgrade: { allowed: false, until_quality: "HD Group", until_score: 0 },
+          score_set: "default",
+        },
+      ],
+      customFormatDefinitions: [],
+      media_management: {},
+      media_naming: {},
+    };
+
+    const cfMap: CFProcessing = { carrIdMapping: new Map(), cfNameToCarrConfig: new Map() };
+    const sync = new QualityProfileRadarrSync(qpClient);
+
+    test("does not renumber a group whose server id is not 1000", async () => {
+      const cache = cacheWith(
+        serverProfile([{ id: 1005, name: "HD Group", allowed: true, items: [quality("WEBDL-1080p", 2), quality("HDTV-1080p", 1)] }], 1005),
+      );
+
+      const result = await sync.calculateQualityProfilesDiff(cfMap, config, cache);
+
+      expect(result.changedQPs).toEqual([]);
+      expect(result.noChanges).toEqual(["Standard"]);
+    });
+
+    test("keeps stable group ids across a reorder and is idempotent on the next run", async () => {
+      // server order is [HD Group, WEB Group]; the config lists the opposite display order
+      const before = serverProfile(
+        [
+          { id: 1002, name: "HD Group", allowed: true, items: [quality("WEBDL-1080p", 2)] },
+          { id: 1005, name: "WEB Group", allowed: true, items: [quality("HDTV-1080p", 1)] },
+        ],
+        1002,
+      );
+      const reordered: MergedConfigInstance = {
+        ...config,
+        quality_profiles: [
+          {
+            ...config.quality_profiles[0]!,
+            qualities: [
+              { name: "HD Group", qualities: ["WEBDL-1080p"] },
+              { name: "WEB Group", qualities: ["HDTV-1080p"] },
+            ],
+          },
+        ],
+      };
+
+      const first = await sync.calculateQualityProfilesDiff(cfMap, reordered, cacheWith(before));
+
+      expect(first.changedQPs).toHaveLength(1);
+      // mapQualities reverses the configured order, and ids follow the names, not the config index
+      expect(first.changedQPs[0]!.items!.map((item) => item.id)).toEqual([1005, 1002]);
+      expect(first.changedQPs[0]!.cutoff).toBe(1002);
+
+      const second = await sync.calculateQualityProfilesDiff(cfMap, reordered, cacheWith(first.changedQPs[0]!));
+
+      expect(second.changedQPs).toEqual([]);
+      expect(second.noChanges).toEqual(["Standard"]);
+    });
   });
 
   describe("BaseQualityProfileSync.persist", () => {

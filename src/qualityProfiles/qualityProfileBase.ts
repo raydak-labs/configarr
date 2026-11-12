@@ -176,7 +176,11 @@ export const mapQualityProfiles = ({ carrIdMapping }: CFProcessing, { custom_for
 };
 
 // TODO should we use clones or not?
-export const mapQualities = (qd_source: QualityDefinitionShared[], value_source: ConfigQualityProfile) => {
+export const mapQualities = (
+  qd_source: QualityDefinitionShared[],
+  value_source: ConfigQualityProfile,
+  existingItems?: QualityItem[] | null,
+) => {
   const qd = cloneWithJSON(qd_source);
   const value = cloneWithJSON(value_source);
 
@@ -190,11 +194,70 @@ export const mapQualities = (qd_source: QualityDefinitionShared[], value_source:
     }
   });
 
+  // Group identity. Prefer an explicit config `id`, then the id the server already uses for a group with the
+  // same name, and only then a fresh id. Deriving group ids from the config array index (1000 + i) meant that
+  // inserting or reordering a group renumbered every group that followed it and silently moved any cutoff
+  // pointing at one of them. Server items with a `name` are groups; plain qualities only have `quality.name`.
+  const existingGroupIdByName = new Map<string, number>();
+
+  for (const item of existingItems ?? []) {
+    if (item.name != null && item.id != null) {
+      existingGroupIdByName.set(item.name, item.id);
+    }
+  }
+
+  // ids claimed by explicit config `id`s or reused from the server, so freshly allocated ids never collide
+  const claimedIdToGroupName = new Map<number, string>();
+  const groupIdByName = new Map<string, number>();
+
+  for (const obj of value.qualities) {
+    const isGroup = (obj.qualities?.length ?? 0) > 0;
+
+    if (obj.id != null && !isGroup) {
+      throw new ConfigValidationError(
+        `QualityProfile '${value.name}': item '${obj.name}' sets 'id', which is only supported for quality groups (items with a 'qualities' list)`,
+      );
+    }
+
+    if (!isGroup) {
+      continue;
+    }
+
+    const id = obj.id ?? existingGroupIdByName.get(obj.name);
+
+    if (id == null) {
+      continue;
+    }
+
+    const owner = claimedIdToGroupName.get(id);
+
+    if (owner != null && owner !== obj.name) {
+      throw new ConfigValidationError(
+        `QualityProfile '${value.name}': quality group id ${id} is used by both '${owner}' and '${obj.name}'`,
+      );
+    }
+
+    claimedIdToGroupName.set(id, obj.name);
+    groupIdByName.set(obj.name, id);
+  }
+
+  const allocateGroupId = (index: number): number => {
+    let id = 1000 + index;
+
+    while (claimedIdToGroupName.has(id)) {
+      id++;
+    }
+
+    claimedIdToGroupName.set(id, "");
+
+    return id;
+  };
+
   const allowedQualities = value.qualities.map<QualityItem>((obj, i) => {
     if (obj.qualities?.length && obj.qualities.length > 0) {
       return {
         allowed: obj.enabled ?? true,
-        id: 1000 + i,
+        id: groupIdByName.get(obj.name) ?? allocateGroupId(i),
         name: obj.name,
         items:
           obj.qualities
@@ -286,13 +349,20 @@ export const isOrderOfQualitiesEqual = (arr1: QualityItem[], arr2: QualityItem[]
       return false;
     }
 
-    const items1 = element1.items ?? [];
-    const item2s = element2.items ?? [];
+    // Group ids are stable now (see mapQualities), so a differing id means the config asks for another id.
+    if (element1.id !== element2.id) {
+      return false;
+    }
 
-    if (!(items1.length === 0 && items1.length === item2s.length)) {
-      if (!isOrderOfQualitiesEqual(element1.items ?? [], element2.items ?? [])) {
-        return false;
-      }
+    const items1 = element1.items ?? [];
+    const items2 = element2.items ?? [];
+
+    if (items1.length !== items2.length) {
+      return false;
+    }
+
+    if (items1.length > 0 && !isOrderOfQualitiesEqual(items1, items2)) {
+      return false;
     }
   }
 
@@ -583,7 +653,7 @@ export abstract class BaseQualityProfileSync<T extends QualityProfileShared> {
     for (const [name, value] of qpMerged.entries()) {
       const serverMatch = qpServerMap.get(name);
       const scoringForQP = scoring.get(name);
-      const mappedQualities = mapQualities(serverCache.qualityDefinitions, value);
+      const mappedQualities = mapQualities(serverCache.qualityDefinitions, value, serverMatch?.items);
 
       const profileLanguage = this.resolveLanguage(name, value.language, languageMap);
 

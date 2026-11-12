@@ -717,6 +717,68 @@ describe("radarr (live)", () => {
     expect(findNamed(await client.getQualityProfiles(), "e2e-qp")).toBeUndefined();
   });
 
+  test("quality profile groups keep their server ids across config reorders", async () => {
+    const preexisting = nonE2eNames(await client.getQualityProfiles());
+    const groups = [
+      { name: "HD", qualities: ["Bluray-1080p", "HDTV-1080p"] },
+      { name: "Web", qualities: ["WEBDL-1080p", "WEBRip-1080p"] },
+    ];
+    const yaml = (reverse: boolean) =>
+      mediaConfig("RADARR", {
+        quality_profiles: [
+          {
+            name: "e2e-qp-groups",
+            upgrade: { allowed: false, until_quality: "HD" },
+            min_format_score: 0,
+            qualities: reverse ? [...groups].reverse() : groups,
+          },
+        ],
+      });
+    const groupIds = async () => {
+      const profile = findNamed(await client.getQualityProfiles(), "e2e-qp-groups");
+      const ids = new Map<string, number | undefined>();
+
+      for (const item of profile?.items ?? []) {
+        if (item.name != null) {
+          ids.set(item.name, item.id);
+        }
+      }
+
+      return ids;
+    };
+
+    const created = await syncConfig(yaml(false));
+    assertPipelineSucceeded(created.result, ["RADARR"]);
+    const initial = await groupIds();
+    const hdId = initial.get("HD");
+    const webId = initial.get("Web");
+    expect(hdId).toBeDefined();
+    expect(hdId!).toBeGreaterThanOrEqual(1000);
+    expect(webId).not.toBe(hdId);
+
+    const second = await syncConfig(yaml(false), created.workspace);
+    assertPipelineSucceeded(second.result, ["RADARR"]);
+    assertDiffUpToDate(second.result, ["RADARR"]);
+
+    // Reordering the groups must keep each id on its name instead of renumbering by config index.
+    const reordered = await syncConfig(yaml(true), created.workspace);
+    assertPipelineSucceeded(reordered.result, ["RADARR"]);
+    const afterReorder = await groupIds();
+    expect(afterReorder.get("HD")).toBe(hdId);
+    expect(afterReorder.get("Web")).toBe(webId);
+
+    const third = await syncConfig(yaml(true), created.workspace);
+    assertPipelineSucceeded(third.result, ["RADARR"]);
+    assertDiffUpToDate(third.result, ["RADARR"]);
+
+    const deleted = await syncConfig(
+      mediaConfig("RADARR", { delete_unmanaged_quality_profiles: { enabled: true, ignore: preexisting } }),
+      created.workspace,
+    );
+    assertPipelineSucceeded(deleted.result, ["RADARR"]);
+    expect(findNamed(await client.getQualityProfiles(), "e2e-qp-groups")).toBeUndefined();
+  });
+
   test("quality definitions", async () => {
     const webdl = async () => (await client.getQualityDefinitions()).find((d) => d.quality?.name === "WEBDL-1080p");
 
