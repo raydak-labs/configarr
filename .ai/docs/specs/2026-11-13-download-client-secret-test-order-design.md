@@ -30,7 +30,7 @@ Plan: [2026-11-13-download-client-secret-test-order](../plans/2026-11-13-downloa
 - Update with a non-secret field difference: the client is updated. When the configuration sets a secret field, that configured secret is part of the update; otherwise the stored secret is kept.
 - Update with no other difference and a configured secret field (including `""`): `resolveSecretProbes` tests the stored secret.
   - Pass: unchanged; the stored secret stays.
-  - Credential rejection: write the configured secret when there is a non-empty value to write.
+  - Credential rejection: write the configured secret, including an empty value; if both sides are empty there is nothing to write.
   - Connectivity failure, timeout, *arr 5xx: unchanged; the stored secret stays.
 - Secret field omitted: no test and no secret write.
 
@@ -50,7 +50,7 @@ The value `********` is treated as the server mask, not as a secret. An empty st
 
 - `calculateDiff` stays free of API calls and keeps `secretProbe` for clients whose non-secret fields match.
 - In test-failure mode, a real diff with a configured secret includes the masked secret change and sets `updatePassword: true`.
-- `resolveSecretProbes` runs before writes and turns a credential rejection into a normal update entry with masked secret field changes, when the configuration has a non-empty secret to write.
+- `resolveSecretProbes` runs before writes and turns a credential rejection into a normal update entry with masked secret field changes, when the configuration has a secret change to write, including an empty value. If both sides are empty there is nothing to write, so the client stays unchanged.
 - `mergeFieldsWithSchema` never writes a secret that the YAML does not set, so `update_password: true` does not clear an omitted secret.
 - In `DRY_RUN` the stored-secret probe still runs; no write is attempted.
 
