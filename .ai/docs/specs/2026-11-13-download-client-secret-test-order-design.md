@@ -32,6 +32,7 @@ Plan: [2026-11-13-download-client-secret-test-order](../plans/2026-11-13-downloa
   - Pass: unchanged; the stored secret stays.
   - Credential rejection: write the configured secret, including an empty value; if both sides are empty there is nothing to write.
   - Connectivity failure, timeout, *arr 5xx: unchanged; the stored secret stays.
+- A client that is disabled on the server is not probed; its stored secret stays unchanged.
 - Secret field omitted: no test and no secret write.
 
 A test is a failure only when *arr rejects the credentials. An unreachable client or any other error never changes the secret. When a non-secret diff triggers the update, a specified secret is always part of that change.
