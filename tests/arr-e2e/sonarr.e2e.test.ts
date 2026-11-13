@@ -835,7 +835,9 @@ describe("sonarr (live)", () => {
     const webId = initial.get("Web");
     expect(hdId).toBeDefined();
     expect(hdId!).toBeGreaterThanOrEqual(1000);
+    expect(webId).toBeDefined();
     expect(webId).not.toBe(hdId);
+    expect(findNamed(await client.getQualityProfiles(), "e2e-qp-groups")?.cutoff).toBe(hdId);
 
     const second = await syncConfig(yaml(false), created.workspace);
     assertPipelineSucceeded(second.result, ["SONARR"]);
@@ -847,6 +849,7 @@ describe("sonarr (live)", () => {
     const afterReorder = await groupIds();
     expect(afterReorder.get("HD")).toBe(hdId);
     expect(afterReorder.get("Web")).toBe(webId);
+    expect(findNamed(await client.getQualityProfiles(), "e2e-qp-groups")?.cutoff).toBe(hdId);
 
     const third = await syncConfig(yaml(true), created.workspace);
     assertPipelineSucceeded(third.result, ["SONARR"]);

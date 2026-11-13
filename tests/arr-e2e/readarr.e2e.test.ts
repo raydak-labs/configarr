@@ -202,7 +202,9 @@ describe("readarr (live)", () => {
     const ebookId = initial.get("Ebook");
     expect(audioId).toBeDefined();
     expect(audioId!).toBeGreaterThanOrEqual(1000);
+    expect(ebookId).toBeDefined();
     expect(ebookId).not.toBe(audioId);
+    expect(findNamed(await client.getQualityProfiles(), "e2e-qp-groups")?.cutoff).toBe(audioId);
 
     const second = await syncConfig(yaml(false), created.workspace);
     assertPipelineSucceeded(second.result, ["READARR"]);
@@ -214,6 +216,7 @@ describe("readarr (live)", () => {
     const afterReorder = await groupIds();
     expect(afterReorder.get("Audio")).toBe(audioId);
     expect(afterReorder.get("Ebook")).toBe(ebookId);
+    expect(findNamed(await client.getQualityProfiles(), "e2e-qp-groups")?.cutoff).toBe(audioId);
 
     const third = await syncConfig(yaml(true), created.workspace);
     assertPipelineSucceeded(third.result, ["READARR"]);

@@ -357,6 +357,48 @@ describe("qualityProfileBase", async () => {
       expect(() => mapQualities(resources, profile)).toThrow(/quality group id 1001 is used by both/);
     });
 
+    test("lets an explicit id win over a server id reused by an earlier group", async ({}) => {
+      const profile = profileWith([
+        { name: "A", qualities: ["HDTV-1080p"] },
+        { name: "B", id: 1000, qualities: ["WEBDL-1080p"] },
+      ]);
+
+      // The server currently uses 1000 for "A", so a one-pass resolution would reserve it there
+      // and then reject B's explicit id.
+      const existing: QualityItem[] = [
+        { id: 1000, name: "A", allowed: true, items: [] },
+        { id: 1001, name: "B", allowed: true, items: [] },
+      ];
+
+      const result = mapQualities(resources, profile, existing);
+      const idsByName = new Map(result.map((item) => [item.name, item.id]));
+
+      expect(idsByName.get("B")).toBe(1000);
+      expect(idsByName.get("A")).toBe(1001);
+      const groupIds = result.filter((item) => item.name != null).map((item) => item.id);
+      expect(new Set(groupIds)).toEqual(new Set([1000, 1001]));
+    });
+
+    test("rejects a group id below the *arr group range at runtime", async ({}) => {
+      const profile = profileWith([{ name: "HD Group", id: 5, qualities: ["HDTV-1080p"] }]);
+
+      expect(() => mapQualities(resources, profile)).toThrow(/id must be an integer >= 1000/);
+    });
+
+    test("rejects a non-integer group id at runtime", async ({}) => {
+      const profile = profileWith([{ name: "HD Group", id: 1000.5, qualities: ["HDTV-1080p"] }]);
+
+      expect(() => mapQualities(resources, profile)).toThrow(/id must be an integer >= 1000/);
+    });
+
+    test("rejects a non-numeric group id from lenient validation at runtime", async ({}) => {
+      // Lenient validation returns the raw config, so a string can reach the mapper even though the
+      // schema types it as a number.
+      const profile = profileWith([{ name: "HD Group", id: "1000" as unknown as number, qualities: ["HDTV-1080p"] }]);
+
+      expect(() => mapQualities(resources, profile)).toThrow(/id must be an integer >= 1000/);
+    });
+
     test("rejects a group name defined twice", async ({}) => {
       const profile = profileWith([
         { name: "HD Group", id: 1001, qualities: ["HDTV-1080p"] },
@@ -1598,6 +1640,77 @@ describe("qualityProfileBase", async () => {
 
       expect(second.changedQPs).toEqual([]);
       expect(second.noChanges).toEqual(["Standard"]);
+    });
+
+    test("preserves the server cutoff when until_quality is omitted and upgrades are disabled", async () => {
+      // WEB is the server cutoff; omitting until_quality must not move it to the first config entry.
+      const before = {
+        ...serverProfile(
+          [
+            { id: 1001, name: "WEB Group", allowed: true, items: [quality("WEBDL-1080p", 2)] },
+            { id: 1000, name: "HD Group", allowed: true, items: [quality("HDTV-1080p", 1)] },
+          ],
+          1001,
+        ),
+        cutoffFormatScore: 4,
+      };
+      const noUntil: MergedConfigInstance = {
+        ...config,
+        quality_profiles: [
+          {
+            ...config.quality_profiles[0]!,
+            qualities: [
+              { name: "HD Group", qualities: ["HDTV-1080p"] },
+              { name: "WEB Group", qualities: ["WEBDL-1080p"] },
+            ],
+            upgrade: { allowed: false },
+          },
+        ],
+      };
+
+      const result = await sync.calculateQualityProfilesDiff(cfMap, noUntil, cacheWith(before));
+
+      expect(result.changedQPs).toEqual([]);
+      expect(result.noChanges).toEqual(["Standard"]);
+    });
+
+    test("moves a preserved cutoff onto the remapped group id", async () => {
+      // Server: A=1000, B=1001, cutoff points at A. Config pins B to 1000, so A is renumbered.
+      const before = {
+        ...serverProfile(
+          [
+            { id: 1001, name: "B", allowed: true, items: [quality("WEBDL-1080p", 2)] },
+            { id: 1000, name: "A", allowed: true, items: [quality("HDTV-1080p", 1)] },
+          ],
+          1000,
+        ),
+        cutoffFormatScore: 4,
+      };
+      const remapped: MergedConfigInstance = {
+        ...config,
+        quality_profiles: [
+          {
+            ...config.quality_profiles[0]!,
+            qualities: [
+              { name: "A", qualities: ["HDTV-1080p"] },
+              { name: "B", id: 1000, qualities: ["WEBDL-1080p"] },
+            ],
+            upgrade: { allowed: false },
+          },
+        ],
+      };
+
+      const result = await sync.calculateQualityProfilesDiff(cfMap, remapped, cacheWith(before));
+
+      expect(result.changedQPs).toHaveLength(1);
+      const updated = result.changedQPs[0]!;
+      const idsByName = new Map(updated.items!.map((item) => [item.name, item.id]));
+
+      expect(idsByName.get("B")).toBe(1000);
+      expect(idsByName.get("A")).toBe(1001);
+      // The cutoff still points at A, not at the group that took over id 1000.
+      expect(updated.cutoff).toBe(1001);
+      expect(updated.cutoffFormatScore).toBe(4);
     });
   });
 

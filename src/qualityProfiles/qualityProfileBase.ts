@@ -298,6 +298,8 @@ export const mapQualities = (
   const groupIdByName = new Map<string, number>();
   const groupNames = new Set<string>();
 
+  // First pass: explicit ids are reserved before any server id is reused by name, so an explicit id
+  // wins over name matching even when the group it collides with is declared earlier in the config.
   for (const obj of value.qualities) {
     const isGroup = (obj.qualities?.length ?? 0) > 0;
 
@@ -317,18 +319,40 @@ export const mapQualities = (
 
     groupNames.add(obj.name);
 
-    const id = obj.id ?? existingGroupIdByName.get(obj.name);
-
-    if (id == null) {
+    if (obj.id == null) {
       continue;
     }
 
-    const owner = claimedIdToGroupName.get(id);
+    // Lenient config validation keeps the raw value, so this range check has to exist at runtime too.
+    // The id shares its number space with the plain quality ids used by `cutoff`, which are small
+    // (1..N); a group id below 1000 could match a quality and make `cutoff` ambiguous on the server.
+    if (typeof obj.id !== "number" || !Number.isInteger(obj.id) || obj.id < 1000) {
+      throw new ConfigValidationError(`QualityProfile '${value.name}': quality group '${obj.name}' id must be an integer >= 1000`);
+    }
+
+    const owner = claimedIdToGroupName.get(obj.id);
 
     if (owner != null && owner !== obj.name) {
       throw new ConfigValidationError(
-        `QualityProfile '${value.name}': quality group id ${id} is used by both '${owner}' and '${obj.name}'`,
+        `QualityProfile '${value.name}': quality group id ${obj.id} is used by both '${owner}' and '${obj.name}'`,
       );
+    }
+
+    claimedIdToGroupName.set(obj.id, obj.name);
+    groupIdByName.set(obj.name, obj.id);
+  }
+
+  // Second pass: reuse the id the server already uses for a group with the same name, unless an
+  // explicit id claimed it already.
+  for (const obj of value.qualities) {
+    if ((obj.qualities?.length ?? 0) === 0 || obj.id != null) {
+      continue;
+    }
+
+    const id = existingGroupIdByName.get(obj.name);
+
+    if (id == null || claimedIdToGroupName.has(id)) {
+      continue;
     }
 
     claimedIdToGroupName.set(id, obj.name);
@@ -529,6 +553,39 @@ const getDisabledUpgradeCutoff = (
   }
 
   return fallbackId;
+};
+
+/**
+ * Moves a cutoff the server already stores onto the id namespace of the profile about to be written.
+ *
+ * Group ids are profile-local tags: when an explicit id forces a group onto a new number, the cutoff
+ * has to follow the item's name rather than its old number, or it would point at another group. The
+ * server also requires the cutoff item to be allowed, so return undefined when it is not, letting the
+ * caller fall back to a deterministic choice.
+ */
+const translateServerCutoff = (
+  serverCutoff: number | undefined,
+  serverItems: QualityItem[] | null | undefined,
+  nextItems: QualityItem[],
+): number | undefined => {
+  if (serverCutoff == null) {
+    return undefined;
+  }
+
+  const previous = (serverItems ?? []).find((item) => item.id === serverCutoff || item.quality?.id === serverCutoff);
+  const previousName = previous == null ? undefined : itemName(previous);
+
+  if (previousName == null) {
+    return undefined;
+  }
+
+  const next = nextItems.find((item) => itemName(item) === previousName);
+
+  if (next == null || next.allowed === false) {
+    return undefined;
+  }
+
+  return next.id ?? next.quality?.id;
 };
 
 export function qualityProfilesToDiffEntries<T extends QualityProfileShared>(
@@ -910,8 +967,16 @@ export abstract class BaseQualityProfileSync<T extends QualityProfileShared> {
             diffExist = true;
           }
         } else {
-          const cutoffId = getDisabledUpgradeCutoff(mappedQualities, qualityToId, value.upgrade.until_quality, name);
-          const cutoffFormatScore = value.upgrade.until_score ?? 1;
+          // With upgrades disabled the *arr apps ignore cutoff and cutoffFormatScore at decision
+          // time, but the API still validates cutoff against an allowed item. When the config does
+          // not name a cutoff, keep the server value (translated onto the remapped ids) instead of
+          // inventing one and clobbering changes made outside configarr.
+          const cutoffId =
+            value.upgrade.until_quality == null
+              ? (translateServerCutoff(serverMatch.cutoff, serverMatch.items, mappedQualities) ??
+                getDisabledUpgradeCutoff(mappedQualities, qualityToId, undefined, name))
+              : getDisabledUpgradeCutoff(mappedQualities, qualityToId, value.upgrade.until_quality, name);
+          const cutoffFormatScore = value.upgrade.until_score ?? serverMatch.cutoffFormatScore ?? 1;
 
           if (serverMatch.cutoff !== cutoffId) {
             updatedServerObject.cutoff = cutoffId;

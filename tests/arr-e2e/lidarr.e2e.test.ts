@@ -202,7 +202,9 @@ describe("lidarr (live)", () => {
     const lossyId = initial.get("Lossy");
     expect(losslessId).toBeDefined();
     expect(losslessId!).toBeGreaterThanOrEqual(1000);
+    expect(lossyId).toBeDefined();
     expect(lossyId).not.toBe(losslessId);
+    expect(findNamed(await client.getQualityProfiles(), "e2e-qp-groups")?.cutoff).toBe(losslessId);
 
     const second = await syncConfig(yaml(false), created.workspace);
     assertPipelineSucceeded(second.result, ["LIDARR"]);
@@ -214,6 +216,7 @@ describe("lidarr (live)", () => {
     const afterReorder = await groupIds();
     expect(afterReorder.get("Lossless")).toBe(losslessId);
     expect(afterReorder.get("Lossy")).toBe(lossyId);
+    expect(findNamed(await client.getQualityProfiles(), "e2e-qp-groups")?.cutoff).toBe(losslessId);
 
     const third = await syncConfig(yaml(true), created.workspace);
     assertPipelineSucceeded(third.result, ["LIDARR"]);

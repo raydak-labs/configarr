@@ -552,6 +552,13 @@ different group.
 
 To pin a group id explicitly — for example to match a profile that is also edited outside Configarr —
 set `id` on the group. Ids must be `>= 1000` and unique; setting `id` on a plain quality is an error.
+Explicit ids are reserved first, so they win over a name match even if another group in the config
+already used that server id; the displaced group gets a new id.
+
+When `upgrade.allowed` is `false` and `until_quality` is omitted, Configarr leaves the server cutoff
+and `cutoffFormatScore` untouched instead of replacing them with a fallback. If a group id is
+remapped, the preserved cutoff follows the group by name. This keeps values set in the \*arr UI from
+being overwritten on every sync.
 
 ```yml
 qualities:
