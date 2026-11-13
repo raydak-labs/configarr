@@ -385,7 +385,7 @@ describe("QualityProfileRadarrSync", async () => {
     const createdProfile = diff.create[0];
     expect(createdProfile).toBeDefined();
     expect(createdProfile?.upgradeAllowed).toBe(false);
-    expect(createdProfile?.cutoffFormatScore).toBe(1);
+    expect(createdProfile?.cutoffFormatScore).toBe(0);
     // cutoff should point to the "WEB 720p" group (1000 + index 0 in allowedQualities)
     // The group ID for WEB 720p (first in the config) should be 1000
     expect(createdProfile?.cutoff).toBe(1000);
@@ -488,7 +488,7 @@ describe("QualityProfileRadarrSync", async () => {
     // cutoff must point to the until_quality (HDTV-1080p = id 10)
     expect(updatedProfile?.cutoff).toBe(10);
     expect(updatedProfile?.upgradeAllowed).toBe(false);
-    expect(updatedProfile?.cutoffFormatScore).toBe(1);
+    expect(updatedProfile?.cutoffFormatScore).toBe(0);
   });
 
   test("calculateQualityProfilesDiff - should update profile when changing upgrade.allowed from true to false (quality group)", async ({}) => {
@@ -571,7 +571,7 @@ describe("QualityProfileRadarrSync", async () => {
     // cutoff must point to the until_quality group "WEB 2160p" = id 1001
     expect(updatedProfile?.cutoff).toBe(1001);
     expect(updatedProfile?.upgradeAllowed).toBe(false);
-    expect(updatedProfile?.cutoffFormatScore).toBe(1);
+    expect(updatedProfile?.cutoffFormatScore).toBe(0);
   });
 
   test("calculateQualityProfilesDiff - should update profile when changing upgrade.allowed from true to false with no until_quality", async ({}) => {

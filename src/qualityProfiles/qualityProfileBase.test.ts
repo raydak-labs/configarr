@@ -358,6 +358,72 @@ describe("qualityProfileBase", async () => {
     });
   });
 
+  describe("mapQualities - undeclared qualities", () => {
+    const resources: QualityDefinitionShared[] = [
+      { id: 9, title: "Unknown", weight: 1, quality: { id: 9, name: "Unknown" } },
+      { id: 1, title: "HDTV-1080p", weight: 2, quality: { id: 1, name: "HDTV-1080p" } },
+      { id: 8, title: "OGG", weight: 1, quality: { id: 8, name: "OGG" } },
+      { id: 2, title: "WEBDL-1080p", weight: 2, quality: { id: 2, name: "WEBDL-1080p" } },
+      { id: 4, title: "MP3-320", weight: 1, quality: { id: 4, name: "MP3-320" } },
+      { id: 5, title: "MP3-256", weight: 1, quality: { id: 5, name: "MP3-256" } },
+      { id: 3, title: "WAV", weight: 1, quality: { id: 3, name: "WAV" } },
+    ];
+
+    const profile: ConfigQualityProfile = {
+      name: "Standard",
+      min_format_score: 0,
+      qualities: [
+        { name: "HD", qualities: ["HDTV-1080p", "WEBDL-1080p"] },
+        { name: "Low", qualities: ["MP3-320", "MP3-256"] },
+      ],
+      quality_sort: "top",
+      upgrade: { allowed: false, until_quality: "Low", until_score: 0 },
+      score_set: "default",
+    };
+
+    const serverItems: QualityItem[] = [
+      { allowed: false, items: [], quality: { id: 9, name: "Unknown" } },
+      {
+        allowed: true,
+        id: 1002,
+        name: "Low",
+        items: [
+          { allowed: true, items: [], quality: { id: 5, name: "MP3-256" } },
+          { allowed: true, items: [], quality: { id: 4, name: "MP3-320" } },
+        ],
+      },
+      { allowed: false, items: [], quality: { id: 8, name: "OGG" } },
+      {
+        allowed: true,
+        id: 1005,
+        name: "HD",
+        items: [
+          { allowed: true, items: [], quality: { id: 2, name: "WEBDL-1080p" } },
+          { allowed: true, items: [], quality: { id: 1, name: "HDTV-1080p" } },
+        ],
+      },
+      { allowed: false, items: [], quality: { id: 3, name: "WAV" } },
+    ];
+
+    const namesOf = (items: QualityItem[]) => items.map((item) => item.name ?? item.quality?.name);
+
+    test("keeps undeclared qualities at their server position", () => {
+      const result = mapQualities(resources, profile, serverItems);
+
+      expect(namesOf(result)).toEqual(["Unknown", "Low", "OGG", "HD", "WAV"]);
+      expect(result[1]!.id).toBe(1002);
+      expect(result[3]!.id).toBe(1005);
+    });
+
+    test("still places new qualities at the top when the server does not have them", () => {
+      const withoutOgg = serverItems.filter((item) => item.quality?.name !== "OGG");
+
+      const result = mapQualities(resources, profile, withoutOgg);
+
+      expect(namesOf(result)).toEqual(["Unknown", "OGG", "Low", "HD", "WAV"]);
+    });
+  });
+
   describe("isOrderOfQualitiesEqual", async () => {
     test("should diff for grouped incorrect order", async ({}) => {
       const arr1: QualityItem[] = [
@@ -1418,7 +1484,7 @@ describe("qualityProfileBase", async () => {
       name: "Standard",
       upgradeAllowed: false,
       cutoff,
-      cutoffFormatScore: 1,
+      cutoffFormatScore: 0,
       minFormatScore: 0,
       minUpgradeFormatScore: 1,
       formatItems: [],
@@ -1500,6 +1566,79 @@ describe("qualityProfileBase", async () => {
 
       expect(second.changedQPs).toEqual([]);
       expect(second.noChanges).toEqual(["Standard"]);
+    });
+  });
+
+  describe("calculateQualityProfilesDiff - undeclared qualities", () => {
+    const plain = (name: string, id: number, allowed = false): QualityItem => ({ allowed, items: [], quality: { id, name } });
+
+    const definitions: QualityDefinitionShared[] = [
+      { id: 9, title: "Unknown", weight: 1, quality: { id: 9, name: "Unknown" } },
+      { id: 1, title: "HDTV-1080p", weight: 2, quality: { id: 1, name: "HDTV-1080p" } },
+      { id: 8, title: "OGG", weight: 1, quality: { id: 8, name: "OGG" } },
+      { id: 2, title: "WEBDL-1080p", weight: 2, quality: { id: 2, name: "WEBDL-1080p" } },
+      { id: 4, title: "MP3-320", weight: 1, quality: { id: 4, name: "MP3-320" } },
+      { id: 5, title: "MP3-256", weight: 1, quality: { id: 5, name: "MP3-256" } },
+      { id: 3, title: "WAV", weight: 1, quality: { id: 3, name: "WAV" } },
+    ];
+
+    const server: QualityProfileShared = {
+      id: 7,
+      name: "Standard",
+      upgradeAllowed: false,
+      cutoff: 1002,
+      cutoffFormatScore: 0,
+      minFormatScore: 0,
+      minUpgradeFormatScore: 1,
+      formatItems: [],
+      items: [
+        plain("Unknown", 9),
+        { allowed: true, id: 1002, name: "Low", items: [plain("MP3-256", 5, true), plain("MP3-320", 4, true)] },
+        plain("OGG", 8),
+        { allowed: true, id: 1005, name: "HD", items: [plain("WEBDL-1080p", 2, true), plain("HDTV-1080p", 1, true)] },
+        plain("WAV", 3),
+      ],
+    };
+
+    const config = (until_score: number): MergedConfigInstance => ({
+      custom_formats: [],
+      quality_profiles: [
+        {
+          name: "Standard",
+          min_format_score: 0,
+          qualities: [
+            { name: "HD", qualities: ["HDTV-1080p", "WEBDL-1080p"] },
+            { name: "Low", qualities: ["MP3-320", "MP3-256"] },
+          ],
+          quality_sort: "top",
+          upgrade: { allowed: false, until_quality: "Low", until_score },
+          score_set: "default",
+        },
+      ],
+      customFormatDefinitions: [],
+      media_management: {},
+      media_naming: {},
+    });
+
+    const cfMap: CFProcessing = { carrIdMapping: new Map(), cfNameToCarrConfig: new Map() };
+    const sync = new QualityProfileRadarrSync(qpClient);
+
+    test("is idempotent when the server has qualities the config does not declare", async () => {
+      const cache = new ServerCache({ customFormats: [], qualityDefinitions: definitions, qualityProfiles: [server] });
+
+      const result = await sync.calculateQualityProfilesDiff(cfMap, config(0), cache);
+
+      expect(result.changedQPs).toEqual([]);
+      expect(result.noChanges).toEqual(["Standard"]);
+    });
+
+    test("uses until_score as cutoffFormatScore on create when upgrades are disabled", async () => {
+      const cache = new ServerCache({ customFormats: [], qualityDefinitions: definitions });
+
+      const result = await sync.calculateQualityProfilesDiff(cfMap, config(7), cache);
+
+      expect(result.create).toHaveLength(1);
+      expect(result.create[0]!.cutoffFormatScore).toBe(7);
     });
   });
 

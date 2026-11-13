@@ -562,6 +562,13 @@ qualities:
       - WEBRip-2160p
 ```
 
+The order of `qualities` is the preference ranking: the first entry is the highest priority (shown at
+the top in the \*arr UI), and Configarr sends it last in the API array. When updating an existing
+profile, qualities you do not list keep the position they already have on the server instead of being
+moved to the top or bottom; only qualities the server does not have yet are placed according to
+`quality_sort`. Declare the entries in the same order the \*arr UI shows them, otherwise Configarr
+intentionally changes the preference order.
+
 Sonarr v5 stores size limits on each quality-profile quality instead of globally. Keep
 `quality_definition` for a shared default, then set `quality_sizes` on a profile only
 where it needs a different value. Per-profile values take precedence field by field;

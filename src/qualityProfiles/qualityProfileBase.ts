@@ -175,6 +175,79 @@ export const mapQualityProfiles = ({ carrIdMapping }: CFProcessing, { custom_for
   return profileScores;
 };
 
+const itemName = (item: QualityItem): string | undefined => item.name ?? item.quality?.name ?? undefined;
+
+/**
+ * Places qualities that the config does not declare back where the server has them, instead of
+ * moving all of them to the top or bottom of the list. Each undeclared item is inserted after the
+ * closest declared item that precedes it on the server, so declaring a subset no longer reorders
+ * the rest of the profile. Items the server does not have yet still go to the top or bottom,
+ * according to `quality_sort`.
+ */
+const mergeUndeclaredQualities = (
+  declared: QualityItem[],
+  undeclared: QualityItem[],
+  serverItems: QualityItem[],
+  atBottom: boolean,
+): QualityItem[] => {
+  const serverIndex = new Map<string, number>();
+
+  serverItems.forEach((item, index) => {
+    const name = itemName(item);
+
+    if (name != null) {
+      serverIndex.set(name, index);
+    }
+  });
+
+  const declaredNames = new Set(declared.map(itemName).filter((name): name is string => name != null));
+  const leading: QualityItem[] = [];
+  const trailing: QualityItem[] = [];
+  const after = new Map<string, QualityItem[]>();
+
+  for (const item of undeclared) {
+    const name = itemName(item);
+    const index = name != null ? serverIndex.get(name) : undefined;
+
+    if (index == null) {
+      (atBottom ? trailing : leading).push(item);
+      continue;
+    }
+
+    let anchor: string | undefined;
+
+    for (let i = index - 1; i >= 0; i--) {
+      const previousName = itemName(serverItems[i]!);
+
+      if (previousName != null && declaredNames.has(previousName)) {
+        anchor = previousName;
+        break;
+      }
+    }
+
+    if (anchor == null) {
+      leading.push(item);
+    } else {
+      after.set(anchor, [...(after.get(anchor) ?? []), item]);
+    }
+  }
+
+  const merged: QualityItem[] = [...leading];
+
+  for (const item of declared) {
+    merged.push(item);
+    const name = itemName(item);
+
+    if (name != null) {
+      merged.push(...(after.get(name) ?? []));
+    }
+  }
+
+  merged.push(...trailing);
+
+  return merged;
+};
+
 // TODO should we use clones or not?
 export const mapQualities = (
   qd_source: QualityDefinitionShared[],
@@ -326,12 +399,21 @@ export const mapQualities = (
   // Ordering of items in the array matters of how they will be displayed. First is last.
   // Need to double check if always works as expected also regarding of templates etc.
 
+  const orderedQualities = allowedQualities.reverse();
+
+  // With an existing profile, keep undeclared qualities where the server has them. Moving them all
+  // to the top or bottom reordered the preference ranking even when the config only changed a
+  // single group.
+  if (existingItems?.length && missingQualities.length > 0) {
+    return mergeUndeclaredQualities(orderedQualities, missingQualities, existingItems, value.quality_sort === "bottom");
+  }
+
   // TODO no sure if a useful feature
   if (value.quality_sort === "bottom") {
-    return [...allowedQualities.reverse(), ...missingQualities];
+    return [...orderedQualities, ...missingQualities];
   } else {
     // default = top
-    return [...missingQualities, ...allowedQualities.reverse()];
+    return [...missingQualities, ...orderedQualities];
   }
 };
 
@@ -719,7 +801,9 @@ export abstract class BaseQualityProfileSync<T extends QualityProfileShared> {
           const cutoffId = getDisabledUpgradeCutoff(mappedQualities, qualityToId, value.upgrade.until_quality, name);
 
           newP.cutoff = cutoffId;
-          newP.cutoffFormatScore = 1;
+          // Upgrades are disabled, but until_score is still the cutoff score the config expects.
+          // Forcing 1 rewrote every profile that had it set to 0.
+          newP.cutoffFormatScore = value.upgrade.until_score ?? 1;
           newP.upgradeAllowed = false;
           this.attachMinUpgradeOnCreate(newP, 1);
         }
@@ -806,6 +890,7 @@ export abstract class BaseQualityProfileSync<T extends QualityProfileShared> {
           }
         } else {
           const cutoffId = getDisabledUpgradeCutoff(mappedQualities, qualityToId, value.upgrade.until_quality, name);
+          const cutoffFormatScore = value.upgrade.until_score ?? 1;
 
           if (serverMatch.cutoff !== cutoffId) {
             updatedServerObject.cutoff = cutoffId;
@@ -813,10 +898,10 @@ export abstract class BaseQualityProfileSync<T extends QualityProfileShared> {
             fieldChanges.push({ field: "cutoff", from: serverMatch.cutoff, to: cutoffId });
           }
 
-          if (serverMatch.cutoffFormatScore !== 1) {
-            updatedServerObject.cutoffFormatScore = 1;
+          if (serverMatch.cutoffFormatScore !== cutoffFormatScore) {
+            updatedServerObject.cutoffFormatScore = cutoffFormatScore;
             diffExist = true;
-            fieldChanges.push({ field: "cutoffFormatScore", from: serverMatch.cutoffFormatScore, to: 1 });
+            fieldChanges.push({ field: "cutoffFormatScore", from: serverMatch.cutoffFormatScore, to: cutoffFormatScore });
           }
 
           if (this.diffMinUpgradeOnUpdate(updatedServerObject, serverMatch, false, undefined, fieldChanges)) {

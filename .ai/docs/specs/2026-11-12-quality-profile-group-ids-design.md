@@ -2,6 +2,9 @@
 
 Status: implemented (2026-11-12)
 
+Extended by [quality profile round-trip](2026-11-13-quality-profile-round-trip-design.md) for the
+items ordering and `cutoffFormatScore` behaviour.
+
 [Implementation plan](../plans/2026-11-12-quality-profile-group-ids.md)
 
 ## Problem
