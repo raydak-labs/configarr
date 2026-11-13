@@ -47,6 +47,7 @@ import {
   MergedConfigInstance,
 } from "./types/config.types";
 import { RemotePathConfigSchema } from "./remotePaths/remotePath.types";
+import { normalizeRemotePath } from "./remotePaths/remotePath.util";
 import { ConfigValidationError, validateConfig as validateConfigData, warnOrThrowConfig } from "./validation";
 import {
   TrashCFGroupMapping,
@@ -278,6 +279,12 @@ export const parseIncludes = (input: InputConfigIncludeItem): ConfigIncludeItem 
 });
 
 /**
+ * Drive-relative Windows path (`X:…`), as opposed to drive-absolute (`X:\…` or `X:/…`).
+ * Accepted for backward compatibility but deprecated.
+ */
+const DRIVE_RELATIVE_PATH = /^[a-zA-Z]:(?![\\/])/;
+
+/**
  * Validate remote path mappings configuration
  * Checks for duplicate host + remote_path combinations and validates structure
  * @throws Error if validation fails
@@ -292,9 +299,20 @@ const validateRemotePaths = (remotePaths: InputConfigRemotePath[]): void => {
       throw new ConfigValidationError(`Invalid remote path config: ${error instanceof Error ? error.message : String(error)}`);
     }
 
+    for (const [field, value] of [
+      ["remote_path", config.remote_path],
+      ["local_path", config.local_path],
+    ] as const) {
+      if (DRIVE_RELATIVE_PATH.test(value)) {
+        logger.warn(
+          `Remote path mapping ${field} '${value}' is drive-relative, which is deprecated. Use an absolute path (X:\\…, /… or \\\\server\\share).`,
+        );
+      }
+    }
+
     // Check for duplicates by host + remote_path combination
-    // Normalize path for duplicate detection (remove trailing slashes)
-    const normalizedRemotePath = config.remote_path.replace(/\/+$/, "");
+    // Normalize path for duplicate detection (remove trailing separators, `/` and `\`)
+    const normalizedRemotePath = normalizeRemotePath(config.remote_path);
     const key = `${config.host}||${normalizedRemotePath}`;
     if (keys.has(key)) {
       throw new ConfigValidationError(`Duplicate remote path mapping: '${config.host} + ${config.remote_path}' already configured.`);
