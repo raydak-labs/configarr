@@ -165,6 +165,68 @@ describe("readarr (live)", () => {
     expect(findNamed(await client.getQualityProfiles(), "e2e-qp")).toBeUndefined();
   });
 
+  test("quality profile groups keep their server ids across config reorders", async () => {
+    const preexisting = nonE2eNames(await client.getQualityProfiles());
+    const groups = [
+      { name: "Audio", qualities: ["MP3", "M4B"] },
+      { name: "Ebook", qualities: ["EPUB", "MOBI"] },
+    ];
+    const yaml = (reverse: boolean) =>
+      mediaConfig("READARR", {
+        quality_profiles: [
+          {
+            name: "e2e-qp-groups",
+            upgrade: { allowed: false, until_quality: "Audio" },
+            min_format_score: 0,
+            qualities: reverse ? [...groups].reverse() : groups,
+          },
+        ],
+      });
+    const groupIds = async () => {
+      const profile = findNamed(await client.getQualityProfiles(), "e2e-qp-groups");
+      const ids = new Map<string, number | undefined>();
+
+      for (const item of profile?.items ?? []) {
+        if (item.name != null) {
+          ids.set(item.name, item.id);
+        }
+      }
+
+      return ids;
+    };
+
+    const created = await syncConfig(yaml(false));
+    assertPipelineSucceeded(created.result, ["READARR"]);
+    const initial = await groupIds();
+    const audioId = initial.get("Audio");
+    const ebookId = initial.get("Ebook");
+    expect(audioId).toBeDefined();
+    expect(audioId!).toBeGreaterThanOrEqual(1000);
+    expect(ebookId).not.toBe(audioId);
+
+    const second = await syncConfig(yaml(false), created.workspace);
+    assertPipelineSucceeded(second.result, ["READARR"]);
+    assertDiffUpToDate(second.result, ["READARR"]);
+
+    // Reordering the groups must keep each id on its name instead of renumbering by config index.
+    const reordered = await syncConfig(yaml(true), created.workspace);
+    assertPipelineSucceeded(reordered.result, ["READARR"]);
+    const afterReorder = await groupIds();
+    expect(afterReorder.get("Audio")).toBe(audioId);
+    expect(afterReorder.get("Ebook")).toBe(ebookId);
+
+    const third = await syncConfig(yaml(true), created.workspace);
+    assertPipelineSucceeded(third.result, ["READARR"]);
+    assertDiffUpToDate(third.result, ["READARR"]);
+
+    const deleted = await syncConfig(
+      mediaConfig("READARR", { delete_unmanaged_quality_profiles: { enabled: true, ignore: preexisting } }),
+      created.workspace,
+    );
+    assertPipelineSucceeded(deleted.result, ["READARR"]);
+    expect(findNamed(await client.getQualityProfiles(), "e2e-qp-groups")).toBeUndefined();
+  });
+
   test("quality definitions", async () => {
     const epub = async () => (await client.getQualityDefinitions()).find((d) => d.quality?.name === "EPUB");
 

@@ -205,15 +205,24 @@ const mergeUndeclaredQualities = (
   const trailing: QualityItem[] = [];
   const after = new Map<string, QualityItem[]>();
 
+  // Place server items in their own order first; `undeclared` arrives in quality-definition order,
+  // which differs from the ranking the server stores.
+  const onServer: Array<{ item: QualityItem; index: number }> = [];
+  const missingFromServer: QualityItem[] = [];
+
   for (const item of undeclared) {
-    const name = itemName(item);
-    const index = name != null ? serverIndex.get(name) : undefined;
+    const index = serverIndex.get(itemName(item) ?? "");
 
     if (index == null) {
-      (atBottom ? trailing : leading).push(item);
-      continue;
+      missingFromServer.push(item);
+    } else {
+      onServer.push({ item, index });
     }
+  }
 
+  onServer.sort((a, b) => a.index - b.index);
+
+  for (const { item, index } of onServer) {
     let anchor: string | undefined;
 
     for (let i = index - 1; i >= 0; i--) {
@@ -230,6 +239,11 @@ const mergeUndeclaredQualities = (
     } else {
       after.set(anchor, [...(after.get(anchor) ?? []), item]);
     }
+  }
+
+  // Qualities the server does not have yet are the only ones quality_sort still positions.
+  for (const item of missingFromServer) {
+    (atBottom ? trailing : leading).push(item);
   }
 
   const merged: QualityItem[] = [...leading];
@@ -282,6 +296,7 @@ export const mapQualities = (
   // ids claimed by explicit config `id`s or reused from the server, so freshly allocated ids never collide
   const claimedIdToGroupName = new Map<number, string>();
   const groupIdByName = new Map<string, number>();
+  const groupNames = new Set<string>();
 
   for (const obj of value.qualities) {
     const isGroup = (obj.qualities?.length ?? 0) > 0;
@@ -295,6 +310,12 @@ export const mapQualities = (
     if (!isGroup) {
       continue;
     }
+
+    if (groupNames.has(obj.name)) {
+      throw new ConfigValidationError(`QualityProfile '${value.name}': quality group '${obj.name}' is defined more than once`);
+    }
+
+    groupNames.add(obj.name);
 
     const id = obj.id ?? existingGroupIdByName.get(obj.name);
 

@@ -356,6 +356,15 @@ describe("qualityProfileBase", async () => {
 
       expect(() => mapQualities(resources, profile)).toThrow(/quality group id 1001 is used by both/);
     });
+
+    test("rejects a group name defined twice", async ({}) => {
+      const profile = profileWith([
+        { name: "HD Group", id: 1001, qualities: ["HDTV-1080p"] },
+        { name: "HD Group", id: 1002, qualities: ["WEBDL-1080p"] },
+      ]);
+
+      expect(() => mapQualities(resources, profile)).toThrow(/quality group 'HD Group' is defined more than once/);
+    });
   });
 
   describe("mapQualities - undeclared qualities", () => {
@@ -421,6 +430,29 @@ describe("qualityProfileBase", async () => {
       const result = mapQualities(resources, profile, withoutOgg);
 
       expect(namesOf(result)).toEqual(["Unknown", "OGG", "Low", "HD", "WAV"]);
+    });
+
+    test("orders undeclared qualities by their server position, not by the definitions order", () => {
+      const definitions: QualityDefinitionShared[] = [
+        { id: 1, title: "A", weight: 1, quality: { id: 1, name: "A" } },
+        { id: 2, title: "B", weight: 1, quality: { id: 2, name: "B" } },
+        { id: 3, title: "D", weight: 1, quality: { id: 3, name: "D" } },
+      ];
+      const onlyD: ConfigQualityProfile = {
+        name: "Standard",
+        min_format_score: 0,
+        qualities: [{ name: "D" }],
+        quality_sort: "top",
+        upgrade: { allowed: false, until_quality: "D", until_score: 0 },
+        score_set: "default",
+      };
+      const server: QualityItem[] = [
+        { allowed: true, items: [], quality: { id: 3, name: "D" } },
+        { allowed: false, items: [], quality: { id: 2, name: "B" } },
+        { allowed: false, items: [], quality: { id: 1, name: "A" } },
+      ];
+
+      expect(namesOf(mapQualities(definitions, onlyD, server))).toEqual(["D", "B", "A"]);
     });
   });
 

@@ -68,11 +68,12 @@ Unit coverage in `qualityProfileBase.test.ts`:
 The group ids in these tests (`1002`, `1005`) match what Lidarr returns for profile groups, so the
 regression is covered without a live instance.
 
-Live probes against Lidarr nightly, Sonarr v4 and Radarr v6 confirmed the assumption behind the
-reuse: each app keeps a group id that configarr sends (`1000`, `1001`), keeps it after the groups are
-reordered, and keeps `cutoff` pointing at the same group. Groups need at least two qualities per app
-validator, and `minUpgradeFormatScore` must be `>= 1`; the e2e payloads already satisfy both.
+Live probes against Lidarr nightly, Sonarr v4, Radarr v6, Readarr and Whisparr v3 confirmed the
+assumption behind the reuse: each app keeps a group id that configarr sends (`1000`, `1001`), keeps
+it after the groups are reordered, and keeps `cutoff` pointing at the same group. Groups need at
+least two qualities per app validator, and `minUpgradeFormatScore` must be `>= 1`; the e2e payloads
+already satisfy both.
 
-Live e2e coverage in `tests/arr-e2e/{lidarr,sonarr,radarr}.e2e.test.ts` creates grouped profiles,
-asserts the server ids, reorders the groups, asserts the ids followed their names, and requires an
-up-to-date diff on the following run.
+Live e2e coverage in `tests/arr-e2e/{lidarr,sonarr,radarr,readarr,whisparr}.e2e.test.ts` creates
+grouped profiles, asserts the server ids, reorders the groups, asserts the ids followed their names,
+and requires an up-to-date diff on the following run.
