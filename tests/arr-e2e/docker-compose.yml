@@ -175,7 +175,8 @@ services:
       - "18113:8112"
 
   prowlarr:
-    image: lscr.io/linuxserver/prowlarr:2.7.0@sha256:04be30163fbaf48d6aeee7b5893c9f6614ffbad6d853971df0d6dcdf01c7f104
+    # Versioned tag pinned by digest; the old 2.7.0 digest was removed from the registry.
+    image: lscr.io/linuxserver/prowlarr:2.7.0.5723-ls168@sha256:6660787a99b2e58203539583663c973b48979fc00ff2cb78dc0ea17429e1f6ef
     environment:
       - PUID=${PUID:-1000}
       - PGID=${PGID:-1000}
