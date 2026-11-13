@@ -1237,14 +1237,41 @@ radarr:
           local_path: "/mnt/torrents"
 ```
 
+Windows download clients often report a path on a network share as a UNC path. Use single quotes so the
+backslashes are not interpreted as YAML escapes:
+
+```yaml title="config.yml"
+sonarr:
+  instance1:
+    download_clients:
+      remote_paths:
+        - host: "download-client"
+          remote_path: '\\server\share\downloads'
+          local_path: "/data/downloads"
+```
+
 **Key Points:**
 
 - `host`: The hostname or IP address of the download client
 - `remote_path`: The path as seen by the download client (must be unique combined with host)
 - `local_path`: The path as accessible by the \*Arr application
+- Both paths must be absolute: POSIX (`/downloads`), a Windows drive path (`D:\Downloads` or `D:/Downloads`)
+  or a UNC path with server and share (`\\server\share\…`). A bare `\\server` or `\\` is rejected
+- Drive-relative Windows paths (`D:Downloads`) are accepted for backward compatibility but deprecated;
+  Configarr logs a warning and they should be rewritten as absolute paths
+- In YAML, backslashes are escapes inside double-quoted scalars (`"\f"` is a form feed). Write UNC paths with
+  single quotes (`'\\server\share'`) or escape each backslash (`"\\\\server\\share"`)
+- \*Arr apps append a trailing separator when storing a mapping, and Configarr compares paths with
+  trailing separators stripped, so `\\server\share` and `\\server\share\` are the same mapping
 - Mappings are matched by `host + remote_path` combination (must be unique)
 - Existing mappings with matching host+remote_path will be updated with new local_path
 - Mappings that exist on the server but not in config will be deleted
+
+:::note
+On Linux, `\` is a valid character in a file or directory name, not a path separator. Configarr only
+treats `\` as a separator for Windows-style paths (drive-qualified and `\\` UNC). A POSIX path such as
+`/data\` is therefore different from `/data`, and `//server/share` is different from `\\server\share`.
+:::
 
 For more details, check the \*Arr-specific API documentation under the `RemotePathMapping` resource endpoint.
 

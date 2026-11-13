@@ -165,6 +165,138 @@ describe("remotePathSyncer", () => {
       expect(mockRadarrClient.updateRemotePathMapping).not.toHaveBeenCalled();
     });
 
+    it("should treat a UNC remote_path with trailing backslash as unchanged", async () => {
+      mockRadarrClient.getRemotePathMappings.mockResolvedValue([
+        { id: 1, host: "download-client", remotePath: "\\\\server\\downloads\\", localPath: "/data/downloads/" },
+      ]);
+
+      const config: any = {
+        custom_formats: [],
+        quality_profiles: [],
+        download_clients: {
+          remote_paths: [{ host: "download-client", remote_path: String.raw`\\server\downloads`, local_path: "/data/downloads" }],
+        },
+      };
+
+      const first = await syncRemotePaths(mockRadarrClient, "LIDARR", config);
+      const second = await syncRemotePaths(mockRadarrClient, "LIDARR", config);
+
+      expect(first).toMatchObject({ created: 0, updated: 0, deleted: 0, unchanged: 1 });
+      expect(second).toMatchObject({ created: 0, updated: 0, deleted: 0, unchanged: 1 });
+      expect(mockRadarrClient.createRemotePathMapping).not.toHaveBeenCalled();
+      expect(mockRadarrClient.updateRemotePathMapping).not.toHaveBeenCalled();
+    });
+
+    it("should create a UNC remote_path that does not exist on the server", async () => {
+      mockRadarrClient.getRemotePathMappings.mockResolvedValue([]);
+      mockRadarrClient.createRemotePathMapping.mockResolvedValue({ id: 1 });
+
+      const result = await syncRemotePaths(mockRadarrClient, "LIDARR", {
+        custom_formats: [],
+        quality_profiles: [],
+        download_clients: {
+          remote_paths: [{ host: "download-client", remote_path: String.raw`\\server\downloads`, local_path: "/data/downloads" }],
+        },
+      } as any);
+
+      expect(result.created).toBe(1);
+      expect(mockRadarrClient.createRemotePathMapping).toHaveBeenCalledWith({
+        host: "download-client",
+        remotePath: String.raw`\\server\downloads`,
+        localPath: "/data/downloads",
+      });
+    });
+
+    it("should treat a UNC local_path with trailing backslash as unchanged", async () => {
+      mockRadarrClient.getRemotePathMappings.mockResolvedValue([
+        { id: 1, host: "download-client", remotePath: "\\\\server\\downloads\\", localPath: "\\\\server\\downloads\\" },
+      ]);
+
+      const result = await syncRemotePaths(mockRadarrClient, "LIDARR", {
+        custom_formats: [],
+        quality_profiles: [],
+        download_clients: {
+          remote_paths: [
+            { host: "download-client", remote_path: String.raw`\\server\downloads`, local_path: String.raw`\\server\downloads` },
+          ],
+        },
+      } as any);
+
+      expect(result.unchanged).toBe(1);
+      expect(result.updated).toBe(0);
+    });
+
+    it("should not match UNC remote_paths on different servers", async () => {
+      mockRadarrClient.getRemotePathMappings.mockResolvedValue([
+        { id: 1, host: "download-client", remotePath: "\\\\other\\downloads\\", localPath: "/data/downloads" },
+      ]);
+      mockRadarrClient.createRemotePathMapping.mockResolvedValue({ id: 2 });
+
+      const result = await syncRemotePaths(mockRadarrClient, "LIDARR", {
+        custom_formats: [],
+        quality_profiles: [],
+        download_clients: {
+          remote_paths: [{ host: "download-client", remote_path: String.raw`\\server\downloads`, local_path: "/data/downloads" }],
+        },
+      } as any);
+
+      expect(result.created).toBe(1);
+      expect(mockRadarrClient.createRemotePathMapping).toHaveBeenCalledTimes(1);
+    });
+
+    it("should not match a forward-slash UNC path with a backslash UNC path", async () => {
+      mockRadarrClient.getRemotePathMappings.mockResolvedValue([
+        { id: 1, host: "download-client", remotePath: "//server/downloads", localPath: "/data/downloads" },
+      ]);
+      mockRadarrClient.createRemotePathMapping.mockResolvedValue({ id: 2 });
+
+      const result = await syncRemotePaths(mockRadarrClient, "LIDARR", {
+        custom_formats: [],
+        quality_profiles: [],
+        download_clients: {
+          remote_paths: [{ host: "download-client", remote_path: String.raw`\\server\downloads`, local_path: "/data/downloads" }],
+        },
+      } as any);
+
+      expect(result.created).toBe(1);
+      expect(mockRadarrClient.createRemotePathMapping).toHaveBeenCalledTimes(1);
+    });
+
+    it("should not match a POSIX remote_path ending in a backslash", async () => {
+      mockRadarrClient.getRemotePathMappings.mockResolvedValue([
+        { id: 1, host: "transmission", remotePath: "/downloads", localPath: "/data/downloads" },
+      ]);
+      mockRadarrClient.createRemotePathMapping.mockResolvedValue({ id: 2 });
+
+      const result = await syncRemotePaths(mockRadarrClient, "RADARR", {
+        custom_formats: [],
+        quality_profiles: [],
+        download_clients: {
+          remote_paths: [{ host: "transmission", remote_path: "/downloads\\", local_path: "/data/downloads" }],
+        },
+      } as any);
+
+      expect(result.created).toBe(1);
+      expect(mockRadarrClient.createRemotePathMapping).toHaveBeenCalledWith(expect.objectContaining({ remotePath: "/downloads\\" }));
+    });
+
+    it("should not treat a POSIX local_path ending in a backslash as the same path", async () => {
+      mockRadarrClient.getRemotePathMappings.mockResolvedValue([
+        { id: 1, host: "transmission", remotePath: "/downloads", localPath: "/data/downloads\\" },
+      ]);
+
+      const result = await syncRemotePaths(mockRadarrClient, "RADARR", {
+        custom_formats: [],
+        quality_profiles: [],
+        download_clients: {
+          remote_paths: [{ host: "transmission", remote_path: "/downloads", local_path: "/data/downloads" }],
+        },
+      } as any);
+
+      expect(result.updated).toBe(1);
+      expect(result.unchanged).toBe(0);
+    });
+
     it("should delete all mappings when delete_unmanaged_remote_paths is true with empty array", async () => {
       const serverMappings: RemotePathMappingResource[] = [
         { id: 1, host: "transmission", remotePath: "/downloads", localPath: "/data/downloads" },
@@ -199,7 +331,7 @@ describe("remotePathSyncer", () => {
       mockRadarrClient.getRemotePathMappings.mockResolvedValue(serverMappings);
       mockRadarrClient.createRemotePathMapping.mockResolvedValue({
         id: 3,
-        host: "deluge",
+        host: "download-client",
         remotePath: "/downloads",
         localPath: "/data/downloads",
       });
@@ -221,7 +353,7 @@ describe("remotePathSyncer", () => {
               local_path: "/new/path", // Update
             },
             {
-              host: "deluge",
+              host: "download-client",
               remote_path: "/downloads",
               local_path: "/data/downloads", // Create
             },
@@ -235,7 +367,7 @@ describe("remotePathSyncer", () => {
       expect(result.updated).toBe(1);
       expect(result.deleted).toBe(1); // qbittorrent deleted
       expect(mockRadarrClient.createRemotePathMapping).toHaveBeenCalledWith({
-        host: "deluge",
+        host: "download-client",
         remotePath: "/downloads",
         localPath: "/data/downloads",
       });

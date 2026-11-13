@@ -832,7 +832,7 @@ describe("radarr (live)", () => {
   test("download clients, their config and remote paths", async () => {
     const preexisting = nonE2eNames(await client.getDownloadClients());
     const preexistingPaths = (await client.getRemotePathMappings())
-      .filter((p) => p.host !== "e2e-host")
+      .filter((p) => p.host !== "e2e-host" && p.host !== "e2e-unc")
       .map((p) => ({ host: p.host ?? "", remote_path: p.remotePath ?? "", local_path: p.localPath ?? "" }));
     const blackhole = blackholeFromSchema(await client.getDownloadClientSchema());
     expect(blackhole, "TorrentBlackhole/UsenetBlackhole schema").toBeTruthy();
@@ -845,7 +845,11 @@ describe("radarr (live)", () => {
           delete_unmanaged: { enabled: !includeClient, ignore: preexisting },
           config: downloadClientConfigBlock(handling),
           remote_paths: includeRemote
-            ? [...preexistingPaths, { host: "e2e-host", remote_path: "/downloads", local_path: E2E_ROOT_A }]
+            ? [
+                ...preexistingPaths,
+                { host: "e2e-host", remote_path: "/downloads", local_path: E2E_ROOT_A },
+                { host: "e2e-unc", remote_path: "\\\\server\\share\\downloads", local_path: E2E_ROOT_A },
+              ]
             : preexistingPaths,
           delete_unmanaged_remote_paths: true,
         },
@@ -864,6 +868,11 @@ describe("radarr (live)", () => {
     const e2ePathMapped = async () =>
       (await client.getRemotePathMappings()).some((p) => p.host === "e2e-host" && (p.localPath ?? "").replace(/\/+$/, "") === E2E_ROOT_A);
     await waitUntil(e2ePathMapped);
+    // A UNC remote path keeps a trailing `\` in *arr; the next run must still match it.
+    const e2eUncPath = async () => (await client.getRemotePathMappings()).find((p) => p.host === "e2e-unc");
+    await waitUntil(async () => (await e2eUncPath())?.remotePath === "\\\\server\\share\\downloads\\");
+    expect((await e2eUncPath())?.remotePath).toBe("\\\\server\\share\\downloads\\");
+    expect(((await e2eUncPath())?.localPath ?? "").replace(/\/+$/, "")).toBe(E2E_ROOT_A);
 
     const flipped = await syncConfig(yaml(true, true, 5, original), created.workspace);
     assertPipelineSucceeded(flipped.result, ["RADARR"]);
@@ -876,7 +885,7 @@ describe("radarr (live)", () => {
 
     const droppedPath = await syncConfig(yaml(true, false, 5, original), created.workspace);
     assertPipelineSucceeded(droppedPath.result, ["RADARR"]);
-    expect((await client.getRemotePathMappings()).some((p) => p.host === "e2e-host")).toBe(false);
+    expect((await client.getRemotePathMappings()).some((p) => p.host === "e2e-host" || p.host === "e2e-unc")).toBe(false);
 
     const deleted = await syncConfig(yaml(false, false, 5, original), created.workspace);
     assertPipelineSucceeded(deleted.result, ["RADARR"]);
