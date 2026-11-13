@@ -2,7 +2,7 @@
 
 Opt-in Vitest suite against real *arr containers. **Not** part of `pnpm test`. Stack lives in `tests/arr-e2e/` (not `examples/full`).
 
-Covers: **Sonarr**, **Radarr**, **Whisparr**, **Readarr**, **Lidarr** (nightly), **Prowlarr**.
+Covers: **Sonarr**, **Radarr**, **Whisparr**, **Readarr**, **Lidarr** (nightly), **Prowlarr**, plus a **Deluge** download client for the secret e2e.
 
 ## Local
 
@@ -47,36 +47,41 @@ runs on each major, including templates, settings and CRUD/idempotency.
 
 The Radarr versions and the two Sonarr containers use separate config/database volumes. Do not share their volumes or use `docker compose down -v` if the local test databases should be retained.
 
-| App          | URL                    | API key                            |
-| ------------ | ---------------------- | ---------------------------------- |
-| Sonarr v4    | http://127.0.0.1:18989 | `e2etestapikey0123456789abcdef012` |
-| Sonarr v5    | http://127.0.0.1:18990 | same                               |
-| Radarr v6    | http://127.0.0.1:17878 | same                               |
-| Radarr v5    | http://127.0.0.1:17879 | same                               |
-| Radarr v7    | http://127.0.0.1:17880 | same                               |
-| Whisparr     | http://127.0.0.1:16969 | same                               |
-| Readarr      | http://127.0.0.1:18787 | same                               |
-| Lidarr       | http://127.0.0.1:18686 | same                               |
-| Prowlarr     | http://127.0.0.1:19696 | same                               |
-| FlareSolverr | http://127.0.0.1:18191 | — (Prowlarr proxy only)            |
+| App          | URL                    | API key                               |
+| ------------ | ---------------------- | ------------------------------------- |
+| Sonarr v4    | http://127.0.0.1:18989 | `e2etestapikey0123456789abcdef012`    |
+| Sonarr v5    | http://127.0.0.1:18990 | same                                  |
+| Radarr v6    | http://127.0.0.1:17878 | same                                  |
+| Radarr v5    | http://127.0.0.1:17879 | same                                  |
+| Radarr v7    | http://127.0.0.1:17880 | same                                  |
+| Whisparr     | http://127.0.0.1:16969 | same                                  |
+| Readarr      | http://127.0.0.1:18787 | same                                  |
+| Lidarr       | http://127.0.0.1:18686 | same                                  |
+| Prowlarr     | http://127.0.0.1:19696 | same                                  |
+| Deluge       | http://127.0.0.1:18112 | web UI password `deluge` (secret e2e) |
+| Deluge empty | http://127.0.0.1:18113 | empty password (secret e2e)           |
+| FlareSolverr | http://127.0.0.1:18191 | — (Prowlarr proxy only)               |
+
+The download-client secret tests seed Deluge clients in Sonarr, so the *arr container must be able to reach `deluge:8112` and `deluge-empty:8112`. Override the host and password with `DELUGE_E2E_HOST` / `DELUGE_E2E_PASSWORD`; the host-side readiness check uses `DELUGE_BASE_URL` (default `http://127.0.0.1:18112`). The empty-password test uses `DELUGE_EMPTY_E2E_HOST` and `DELUGE_EMPTY_BASE_URL` (default `http://127.0.0.1:18113`); its `web.json` fixture is mounted as `web.conf` and sets an empty password.
 
 ## File map
 
-| File                   | Role                                                                                                                 |
-| ---------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| `docker-compose.yml`   | Media *arr + Sonarr/Radarr version fixtures + Prowlarr + FlareSolverr                                                |
-| `globalSetup.ts`       | Per project: wait for its APIs, warm and snapshot the template repos                                                 |
-| `helpers.ts`           | Clients, config workspaces, assertions, cleanup, snapshot/restore                                                    |
-| `configarrRunner.ts`   | Bundles configarr; runs it as a process (warm-up) or in the per-file worker (tests)                                  |
-| `configarrWorker.ts`   | Worker entry: one configarr run per stdin job, state reset in between                                                |
-| `config.ts`            | Only the config fragments that are identical for every *arr                                                          |
-| `sonarr.e2e.test.ts`   | All Sonarr features + Recyclarr `WEB-1080p` include                                                                  |
-| `radarr.e2e.test.ts`   | All Radarr features + Recyclarr `HD Bluray + WEB` include                                                            |
-| `whisparr.e2e.test.ts` | All Whisparr features                                                                                                |
-| `readarr.e2e.test.ts`  | All Readarr features + metadata profiles, object root folders                                                        |
-| `lidarr.e2e.test.ts`   | All Lidarr features + metadata profiles, `items[]` delay profiles (#481)                                             |
-| `prowlarr.e2e.test.ts` | Tags, sync profiles, proxies, indexers, applications, download clients                                               |
-| `pipeline.e2e.test.ts` | All six instances in one config.yml, twice, plus the cross-cutting instance `tags:` / `delete_unmanaged_tags:` block |
+| File                       | Role                                                                                                                 |
+| -------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `docker-compose.yml`       | Media *arr + Sonarr/Radarr version fixtures + Prowlarr + Deluge + FlareSolverr                                       |
+| `fixtures/deluge/web.json` | Empty-password Deluge web config for the empty-secret e2e                                                            |
+| `globalSetup.ts`           | Per project: wait for its APIs, warm and snapshot the template repos                                                 |
+| `helpers.ts`               | Clients, config workspaces, assertions, cleanup, snapshot/restore                                                    |
+| `configarrRunner.ts`       | Bundles configarr; runs it as a process (warm-up) or in the per-file worker (tests)                                  |
+| `configarrWorker.ts`       | Worker entry: one configarr run per stdin job, state reset in between                                                |
+| `config.ts`                | Only the config fragments that are identical for every *arr                                                          |
+| `sonarr.e2e.test.ts`       | All Sonarr features + Recyclarr `WEB-1080p` include                                                                  |
+| `radarr.e2e.test.ts`       | All Radarr features + Recyclarr `HD Bluray + WEB` include                                                            |
+| `whisparr.e2e.test.ts`     | All Whisparr features                                                                                                |
+| `readarr.e2e.test.ts`      | All Readarr features + metadata profiles, object root folders                                                        |
+| `lidarr.e2e.test.ts`       | All Lidarr features + metadata profiles, `items[]` delay profiles (#481)                                             |
+| `prowlarr.e2e.test.ts`     | Tags, sync profiles, proxies, indexers, applications, download clients                                               |
+| `pipeline.e2e.test.ts`     | All six instances in one config.yml, twice, plus the cross-cutting instance `tags:` / `delete_unmanaged_tags:` block |
 
 Per-*arr files are deliberately duplicated instead of generated from a shared factory: the payloads differ per app, and `if (kind === …)` in a test hides which app is actually being asserted. Only *arr-agnostic code is shared (`helpers.ts`, `config.ts`).
 

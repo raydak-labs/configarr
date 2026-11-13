@@ -145,6 +145,35 @@ services:
     ports:
       - "18686:8686"
 
+  # Real download client for the download-client secret e2e. Default web password: deluge.
+  deluge:
+    image: lscr.io/linuxserver/deluge:2.2.0-ls387@sha256:e2a537991884a514b64d7adf857e39b5e9239a1c76e52114e52bf10707dde772
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=Etc/UTC
+      - DELUGE_LOGLEVEL=error
+    volumes:
+      - deluge-data:/config
+      - deluge-downloads:/downloads
+    ports:
+      - "18112:8112"
+
+  # Deluge with an empty web password, for the empty-secret e2e.
+  deluge-empty:
+    image: lscr.io/linuxserver/deluge:2.2.0-ls387@sha256:e2a537991884a514b64d7adf857e39b5e9239a1c76e52114e52bf10707dde772
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=Etc/UTC
+      - DELUGE_LOGLEVEL=error
+    volumes:
+      - deluge-empty-data:/config
+      - deluge-empty-downloads:/downloads
+      - ./fixtures/deluge/web.json:/config/web.conf:ro
+    ports:
+      - "18113:8112"
+
   prowlarr:
     image: lscr.io/linuxserver/prowlarr:2.7.0@sha256:04be30163fbaf48d6aeee7b5893c9f6614ffbad6d853971df0d6dcdf01c7f104
     environment:
@@ -181,3 +210,7 @@ volumes:
   readarr-data:
   lidarr-data:
   prowlarr-data:
+  deluge-data:
+  deluge-downloads:
+  deluge-empty-data:
+  deluge-empty-downloads:
