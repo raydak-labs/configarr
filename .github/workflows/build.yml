@@ -97,7 +97,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Login to Docker Hub
-        if: github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request' && vars.DOCKERHUB_USERNAME != ''
         uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
         with:
           username: ${{ vars.DOCKERHUB_USERNAME }}
@@ -109,8 +109,8 @@ jobs:
         with:
           # list of Docker images to use as base name for tags
           images: |
-            ghcr.io/raydak-labs/configarr
-            docker.io/configarr/configarr,enable=${{ steps.set_platforms.outputs.MANUAL_RUN == 'false' }}
+            ghcr.io/${{ github.repository }}
+            docker.io/${{ vars.DOCKERHUB_USERNAME }}/configarr,enable=${{ steps.set_platforms.outputs.MANUAL_RUN == 'false' && vars.DOCKERHUB_USERNAME != '' }}
           # generate Docker tags based on the following events/attributes
           tags: |
             type=ref,event=branch,prefix=dev-,enable=${{ steps.set_platforms.outputs.MANUAL_RUN == 'true' }}
@@ -142,8 +142,8 @@ jobs:
         uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
         with:
           images: |
-            ghcr.io/raydak-labs/configarr
-            docker.io/configarr/configarr,enable=${{ steps.set_platforms.outputs.MANUAL_RUN == 'false' }}
+            ghcr.io/${{ github.repository }}
+            docker.io/${{ vars.DOCKERHUB_USERNAME }}/configarr,enable=${{ steps.set_platforms.outputs.MANUAL_RUN == 'false' && vars.DOCKERHUB_USERNAME != '' }}
           tags: |
             type=ref,event=branch,prefix=dev-,suffix=-alpine3.22,enable=${{ steps.set_platforms.outputs.MANUAL_RUN == 'true' }}
             type=schedule,suffix=-alpine3.22,enable=${{ steps.set_platforms.outputs.MANUAL_RUN == 'false' }}
