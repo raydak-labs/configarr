@@ -240,6 +240,22 @@ describe("ProwlarrDownloadClientSync", () => {
   });
 
   describe("update_password_on_test_fail", () => {
+    const makeMockClient = (serverClient: DownloadClientResource) => ({
+      getDownloadClientSchema: vi.fn(async () => [
+        qbitSchema({
+          fields: [
+            { name: "host", value: "" },
+            { name: "password", value: "" },
+          ],
+        }),
+      ]),
+      getDownloadClients: vi.fn(async () => [serverClient]),
+      updateDownloadClient: vi.fn(async (_id, payload) => payload),
+      testDownloadClient: vi.fn(),
+      getTags: vi.fn(async () => []),
+      createTag: vi.fn(),
+    });
+
     test("Prowlarr calls testDownloadClient and pushes config secret on failure", async () => {
       const serverClient = qbitSchema({
         id: 42,
@@ -295,6 +311,100 @@ describe("ProwlarrDownloadClientSync", () => {
       };
       expect(updatePayload.fields?.find((field) => field.name === "password")?.value).toBe(secret);
       expect(result.updated).toBe(1);
+    });
+
+    test("Prowlarr includes the configured secret when another field changes, without a test", async () => {
+      const serverClient = qbitSchema({
+        id: 42,
+        name: "qBittorrent",
+        enable: true,
+        fields: [
+          { name: "host", value: "old-host" },
+          { name: "password", value: "********" },
+        ],
+      });
+
+      const mockClient = makeMockClient(serverClient);
+      const sync = new ProwlarrDownloadClientSync(mockClient as never);
+      const secret = "PROWLARR_ROTATED_SECRET";
+      const result = await sync.syncDownloadClients(
+        {
+          download_clients: {
+            update_password_on_test_fail: true,
+            data: [{ name: "qBittorrent", type: "qbittorrent", fields: { host: "new-host", password: secret } }],
+          },
+        },
+        new ServerCache(),
+      );
+
+      expect(mockClient.testDownloadClient).not.toHaveBeenCalled();
+      expect(mockClient.updateDownloadClient).toHaveBeenCalledTimes(1);
+      const updatePayload = mockClient.updateDownloadClient.mock.calls[0]![1] as {
+        fields?: { name?: string | null; value?: unknown }[];
+      };
+      expect(updatePayload.fields?.find((field) => field.name === "host")?.value).toBe("new-host");
+      expect(updatePayload.fields?.find((field) => field.name === "password")?.value).toBe(secret);
+      expect(result.updated).toBe(1);
+    });
+
+    test("Prowlarr update_password true keeps an omitted secret", async () => {
+      const serverClient = qbitSchema({
+        id: 42,
+        name: "qBittorrent",
+        enable: true,
+        fields: [
+          { name: "host", value: "old-host" },
+          { name: "password", value: "********" },
+        ],
+      });
+
+      const mockClient = makeMockClient(serverClient);
+      const sync = new ProwlarrDownloadClientSync(mockClient as never);
+      const result = await sync.syncDownloadClients(
+        {
+          download_clients: {
+            update_password: true,
+            data: [{ name: "qBittorrent", type: "qbittorrent", fields: { host: "new-host" } }],
+          },
+        },
+        new ServerCache(),
+      );
+
+      expect(mockClient.updateDownloadClient).toHaveBeenCalledTimes(1);
+      const updatePayload = mockClient.updateDownloadClient.mock.calls[0]![1] as {
+        fields?: { name?: string | null; value?: unknown }[];
+      };
+      expect(updatePayload.fields?.find((field) => field.name === "host")?.value).toBe("new-host");
+      expect(updatePayload.fields?.find((field) => field.name === "password")?.value).toBe("********");
+      expect(result.updated).toBe(1);
+    });
+
+    test("Prowlarr update_password false ignores a secret difference over an empty stored secret", async () => {
+      const serverClient = qbitSchema({
+        id: 42,
+        name: "qBittorrent",
+        enable: true,
+        fields: [
+          { name: "host", value: "qbittorrent" },
+          { name: "password", value: "" },
+        ],
+      });
+
+      const mockClient = makeMockClient(serverClient);
+      const sync = new ProwlarrDownloadClientSync(mockClient as never);
+      const result = await sync.syncDownloadClients(
+        {
+          download_clients: {
+            update_password: false,
+            data: [{ name: "qBittorrent", type: "qbittorrent", fields: { host: "qbittorrent", password: "IGNORED" } }],
+          },
+        },
+        new ServerCache(),
+      );
+
+      expect(mockClient.testDownloadClient).not.toHaveBeenCalled();
+      expect(mockClient.updateDownloadClient).not.toHaveBeenCalled();
+      expect(result.updated).toBe(0);
     });
   });
 });
