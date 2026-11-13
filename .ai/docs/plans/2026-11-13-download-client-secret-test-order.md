@@ -11,7 +11,7 @@ Spec: [2026-11-13-download-client-secret-test-order-design](../specs/2026-11-13-
 ## 2. Diff and probes
 
 - In test-failure mode, any real diff with a configured secret includes the masked secret change and sets `updatePassword: true`.
-- `resolveSecretProbes` tests the stored secret for clients whose non-secret fields match. A credential rejection becomes a masked secret update when the config has a secret change to write, including an empty value; if both sides are empty there is nothing to write and the client stays unchanged. A client that is disabled on the server is not probed; its stored secret stays unchanged. Non-credential failures leave the stored secret alone.
+- `resolveSecretProbes` tests the stored secret for clients whose non-secret fields match. A credential rejection becomes a masked secret update when the config has a secret change to write, including an empty value; if both sides are empty there is nothing to write and the client stays unchanged. A client that is disabled on the server is not probed; if its other settings match, its stored secret stays unchanged. A non-secret difference still triggers an update, and a configured secret is included in that update. Non-credential failures leave the stored secret alone.
 
 ## 3. Sync
 
