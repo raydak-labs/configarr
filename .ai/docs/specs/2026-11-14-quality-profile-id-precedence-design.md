@@ -54,8 +54,9 @@ referential integrity.
 3. **Preserve an unnamed cutoff on update.** When `upgrade.allowed` is false and `until_quality` is
    omitted, translate the server cutoff from its old id to the item name and then to the newly
    assigned id. Keep it if the item is still present and allowed; otherwise fall back to the
-   highest-priority allowed item. Creating a profile still uses the fallback because no server value
-   exists.
+   highest-priority allowed item. Both steps use the items that will actually be written
+   (`updatedServerObject.items`), so an enabled but undeclared server item keeps the cutoff when the
+   order is unchanged. Creating a profile still uses the fallback because no server value exists.
 4. **Preserve `cutoffFormatScore` on update** when `until_score` is omitted. `until_score ?? 1` remains
    the create default.
 5. Keep matching profiles and groups by name. The numeric id is never treated as an identity outside

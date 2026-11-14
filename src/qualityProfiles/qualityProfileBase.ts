@@ -971,11 +971,16 @@ export abstract class BaseQualityProfileSync<T extends QualityProfileShared> {
           // time, but the API still validates cutoff against an allowed item. When the config does
           // not name a cutoff, keep the server value (translated onto the remapped ids) instead of
           // inventing one and clobbering changes made outside configarr.
+          //
+          // Use the items that will actually be written: when the order is unchanged,
+          // `updatedServerObject` keeps the server items, including undeclared qualities that
+          // `mappedQualities` marks as disabled only because the config does not list them.
+          const effectiveItems = updatedServerObject.items ?? mappedQualities;
           const cutoffId =
             value.upgrade.until_quality == null
-              ? (translateServerCutoff(serverMatch.cutoff, serverMatch.items, mappedQualities) ??
-                getDisabledUpgradeCutoff(mappedQualities, qualityToId, undefined, name))
-              : getDisabledUpgradeCutoff(mappedQualities, qualityToId, value.upgrade.until_quality, name);
+              ? (translateServerCutoff(serverMatch.cutoff, serverMatch.items, effectiveItems) ??
+                getDisabledUpgradeCutoff(effectiveItems, qualityToId, undefined, name))
+              : getDisabledUpgradeCutoff(effectiveItems, qualityToId, value.upgrade.until_quality, name);
           const cutoffFormatScore = value.upgrade.until_score ?? serverMatch.cutoffFormatScore ?? 1;
 
           if (serverMatch.cutoff !== cutoffId) {

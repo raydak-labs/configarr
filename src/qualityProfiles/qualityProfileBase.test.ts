@@ -1777,6 +1777,46 @@ describe("qualityProfileBase", async () => {
       expect(result.noChanges).toEqual(["Standard"]);
     });
 
+    test("preserves an enabled undeclared server cutoff when the item order is unchanged", async () => {
+      // The config declares only HDTV, so mapped items mark WEBDL as disabled. The order still
+      // matches the server, so `updatedServerObject` keeps the server items and WEBDL stays
+      // enabled there. The cutoff must stay on WEBDL instead of falling back to HDTV.
+      const resources: QualityDefinitionShared[] = [
+        { id: 1, title: "HDTV-1080p", weight: 2, quality: { id: 1, name: "HDTV-1080p" } },
+        { id: 2, title: "WEBDL-1080p", weight: 2, quality: { id: 2, name: "WEBDL-1080p" } },
+      ];
+      const serverProfile: QualityProfileShared = {
+        id: 7,
+        name: "Standard",
+        upgradeAllowed: false,
+        cutoff: 2,
+        cutoffFormatScore: 3,
+        minFormatScore: 0,
+        minUpgradeFormatScore: 1,
+        formatItems: [],
+        items: [plain("WEBDL-1080p", 2, true), plain("HDTV-1080p", 1, true)],
+      };
+      const onlyHdtv: MergedConfigInstance = {
+        ...config(0),
+        quality_profiles: [
+          {
+            ...config(0).quality_profiles[0]!,
+            qualities: [{ name: "HDTV-1080p" }],
+            upgrade: { allowed: false },
+          },
+        ],
+      };
+
+      const result = await sync.calculateQualityProfilesDiff(
+        cfMap,
+        onlyHdtv,
+        new ServerCache({ customFormats: [], qualityDefinitions: resources, qualityProfiles: [serverProfile] }),
+      );
+
+      expect(result.changedQPs).toEqual([]);
+      expect(result.noChanges).toEqual(["Standard"]);
+    });
+
     test("uses until_score as cutoffFormatScore on create when upgrades are disabled", async () => {
       const cache = new ServerCache({ customFormats: [], qualityDefinitions: definitions });
 
