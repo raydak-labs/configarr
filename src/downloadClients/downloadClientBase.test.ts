@@ -625,6 +625,27 @@ describe("BaseDownloadClientSync - secret update modes", () => {
     expect(result.updated).toBe(1);
   });
 
+  test("update_password true + password omitted + non-secret change -> stored secret preserved", async () => {
+    const sync = new RadarrDownloadClientSync(api);
+    api.getDownloadClients.mockResolvedValueOnce([createServerClient()]);
+
+    const result = await sync.syncDownloadClients(
+      {
+        download_clients: {
+          update_password: true,
+          data: [{ name: "qBit", type: "qbittorrent", fields: { host: "different-host" } }],
+        },
+      },
+      cache,
+    );
+
+    expect(api.updateDownloadClient).toHaveBeenCalledTimes(1);
+    const updatePayload = api.updateDownloadClient.mock.calls[0][1];
+    expect(updatePayload.fields?.find((f: any) => f.name === "host")?.value).toBe("different-host");
+    expect(updatePayload.fields?.find((f: any) => f.name === "password")?.value).toBe(SECRET_MASK);
+    expect(result.updated).toBe(1);
+  });
+
   test("boundary: both true -> behaves as update_password true (no test)", async () => {
     const sync = new RadarrDownloadClientSync(api);
     const serverClient = createServerClient();
@@ -709,7 +730,7 @@ describe("BaseDownloadClientSync - secret update modes", () => {
     expect(result.updated).toBe(0);
   });
 
-  test("on_test_fail true + non-secret change -> update as with false (stored secret kept), no test call", async () => {
+  test("on_test_fail true + non-secret change -> update includes the configured secret, no test call", async () => {
     const sync = new RadarrDownloadClientSync(api);
     const serverClient = createServerClient();
     api.getDownloadClients.mockResolvedValueOnce([serverClient]);
@@ -736,7 +757,13 @@ describe("BaseDownloadClientSync - secret update modes", () => {
 
     const updatePayload = api.updateDownloadClient.mock.calls[0][1];
     expect(updatePayload.fields?.find((f: any) => f.name === "host")?.value).toBe("different-host");
-    expect(updatePayload.fields?.find((f: any) => f.name === "password")?.value).toBe("********");
+    expect(updatePayload.fields?.find((f: any) => f.name === "password")?.value).toBe("NEW_CONFIG_SECRET");
+
+    const updateEntry = result.diffEntries.find((e) => e.name === "qBit" && e.action === "update");
+    expect(updateEntry?.fieldChanges).toEqual([
+      { field: "fields.host", from: "127.0.0.1", to: "different-host" },
+      { field: "fields.password", from: SECRET_MASK, to: SECRET_MASK },
+    ]);
   });
 
   test("on_test_fail true + no secret in config -> no test call", async () => {
@@ -765,9 +792,10 @@ describe("BaseDownloadClientSync - secret update modes", () => {
     expect(result.updated).toBe(0);
   });
 
-  test("positive: on_test_fail true + stored secret empty + configured secret -> configured secret sent, no test, diff masked", async () => {
+  test("positive: on_test_fail true + stored secret empty + configured secret + credential failure -> configured secret sent, diff masked", async () => {
     const secret = "EMPTY_STORED_REPAIR";
     const infoSpy = vi.spyOn(logger, "info");
+    api.testDownloadClient.mockRejectedValueOnce(new Error("Authentication failed"));
     const sync = new RadarrDownloadClientSync(api);
     const serverClient = createServerClient({
       fields: [
@@ -793,7 +821,7 @@ describe("BaseDownloadClientSync - secret update modes", () => {
       cache,
     );
 
-    expect(api.testDownloadClient).not.toHaveBeenCalled();
+    expect(api.testDownloadClient).toHaveBeenCalledTimes(1);
     expect(result.updated).toBe(1);
     expect(api.updateDownloadClient).toHaveBeenCalledTimes(1);
 
@@ -806,7 +834,6 @@ describe("BaseDownloadClientSync - secret update modes", () => {
     expect(JSON.stringify(result.diffEntries)).not.toContain(secret);
 
     const logged = infoSpy.mock.calls.map((call) => String(call[0])).join("\n");
-    expect(logged).toContain("stored secret is empty");
     expect(logged).not.toContain(secret);
   });
 
@@ -853,8 +880,9 @@ describe("BaseDownloadClientSync - secret update modes", () => {
     ]);
   });
 
-  test("boundary: on_test_fail true + stored secret null + configured secret -> configured secret sent", async () => {
+  test("boundary: on_test_fail true + stored secret null + configured secret + credential failure -> configured secret sent", async () => {
     const secret = "EMPTY_STORED_REPAIR_NULL";
+    api.testDownloadClient.mockRejectedValueOnce(new Error("Authentication failed"));
     const sync = new RadarrDownloadClientSync(api);
     const serverClient = createServerClient({
       fields: [
@@ -880,7 +908,7 @@ describe("BaseDownloadClientSync - secret update modes", () => {
       cache,
     );
 
-    expect(api.testDownloadClient).not.toHaveBeenCalled();
+    expect(api.testDownloadClient).toHaveBeenCalledTimes(1);
     expect(result.updated).toBe(1);
     expect(api.updateDownloadClient).toHaveBeenCalledTimes(1);
 
@@ -892,7 +920,93 @@ describe("BaseDownloadClientSync - secret update modes", () => {
     expect(updateEntry?.fieldChanges).toEqual([{ field: "fields.password", from: SECRET_MASK, to: SECRET_MASK }]);
   });
 
-  test("negative: on_test_fail true + stored secret empty + configured secret empty -> no update, no test", async () => {
+  test("update_password false + stored secret + empty configured -> no update, no test", async () => {
+    const sync = new RadarrDownloadClientSync(api);
+    api.getDownloadClients.mockResolvedValueOnce([createServerClient()]);
+
+    const result = await sync.syncDownloadClients(
+      {
+        download_clients: {
+          update_password: false,
+          data: [{ name: "qBit", type: "qbittorrent", fields: { host: "127.0.0.1", password: "" } }],
+        },
+      },
+      cache,
+    );
+
+    expect(api.testDownloadClient).not.toHaveBeenCalled();
+    expect(api.updateDownloadClient).not.toHaveBeenCalled();
+    expect(result.updated).toBe(0);
+    expect(result.diffEntries.filter((entry) => entry.action === "update")).toHaveLength(0);
+  });
+
+  test("update_password true + stored secret + empty configured -> clears the stored secret", async () => {
+    const sync = new RadarrDownloadClientSync(api);
+    api.getDownloadClients.mockResolvedValueOnce([createServerClient()]);
+
+    const result = await sync.syncDownloadClients(
+      {
+        download_clients: {
+          update_password: true,
+          data: [{ name: "qBit", type: "qbittorrent", fields: { host: "127.0.0.1", password: "" } }],
+        },
+      },
+      cache,
+    );
+
+    expect(api.testDownloadClient).not.toHaveBeenCalled();
+    expect(api.updateDownloadClient).toHaveBeenCalledTimes(1);
+    const updatePayload = api.updateDownloadClient.mock.calls[0][1];
+    expect(updatePayload.fields?.find((f: any) => f.name === "password")?.value).toBe("");
+    expect(result.updated).toBe(1);
+  });
+
+  test("on_test_fail + stored secret + empty configured + test passes -> no update", async () => {
+    const sync = new RadarrDownloadClientSync(api);
+    const serverClient = createServerClient();
+    api.getDownloadClients.mockResolvedValueOnce([serverClient]);
+
+    const result = await sync.syncDownloadClients(
+      {
+        download_clients: {
+          update_password_on_test_fail: true,
+          data: [{ name: "qBit", type: "qbittorrent", fields: { host: "127.0.0.1", password: "" } }],
+        },
+      },
+      cache,
+    );
+
+    expect(api.testDownloadClient).toHaveBeenCalledTimes(1);
+    expect(api.testDownloadClient).toHaveBeenCalledWith(serverClient);
+    expect(api.updateDownloadClient).not.toHaveBeenCalled();
+    expect(result.updated).toBe(0);
+  });
+
+  test("on_test_fail + stored secret + empty configured + credential failure -> clears the stored secret", async () => {
+    api.testDownloadClient.mockRejectedValueOnce(new Error("Authentication failed"));
+    const sync = new RadarrDownloadClientSync(api);
+    api.getDownloadClients.mockResolvedValueOnce([createServerClient()]);
+
+    const result = await sync.syncDownloadClients(
+      {
+        download_clients: {
+          update_password_on_test_fail: true,
+          data: [{ name: "qBit", type: "qbittorrent", fields: { host: "127.0.0.1", password: "" } }],
+        },
+      },
+      cache,
+    );
+
+    expect(api.testDownloadClient).toHaveBeenCalledTimes(1);
+    expect(api.updateDownloadClient).toHaveBeenCalledTimes(1);
+    const updatePayload = api.updateDownloadClient.mock.calls[0][1];
+    expect(updatePayload.fields?.find((f: any) => f.name === "password")?.value).toBe("");
+    expect(result.updated).toBe(1);
+    const updateEntry = result.diffEntries.find((entry) => entry.action === "update");
+    expect(updateEntry?.fieldChanges).toEqual([{ field: "fields.password", from: SECRET_MASK, to: SECRET_MASK }]);
+  });
+
+  test("on_test_fail true + stored secret empty + configured secret empty + test passes -> no update", async () => {
     const sync = new RadarrDownloadClientSync(api);
     const serverClient = createServerClient({
       fields: [
@@ -918,12 +1032,45 @@ describe("BaseDownloadClientSync - secret update modes", () => {
       cache,
     );
 
-    expect(api.testDownloadClient).not.toHaveBeenCalled();
+    expect(api.testDownloadClient).toHaveBeenCalledTimes(1);
     expect(api.updateDownloadClient).not.toHaveBeenCalled();
     expect(result.updated).toBe(0);
   });
 
-  test("negative: update_password false (on_test_fail unset) + stored secret empty -> stored value kept", async () => {
+  test("on_test_fail true + stored secret empty + configured secret empty + credential failure -> no update", async () => {
+    api.testDownloadClient.mockRejectedValueOnce(new Error("Authentication failed"));
+    const sync = new RadarrDownloadClientSync(api);
+    const serverClient = createServerClient({
+      fields: [
+        { name: "host", value: "127.0.0.1" },
+        { name: "password", value: "" },
+      ],
+    });
+    api.getDownloadClients.mockResolvedValueOnce([serverClient]);
+
+    const result = await sync.syncDownloadClients(
+      {
+        download_clients: {
+          update_password_on_test_fail: true,
+          data: [
+            {
+              name: "qBit",
+              type: "qbittorrent",
+              fields: { host: "127.0.0.1", password: "" },
+            },
+          ],
+        },
+      },
+      cache,
+    );
+
+    expect(api.testDownloadClient).toHaveBeenCalledTimes(1);
+    expect(api.updateDownloadClient).not.toHaveBeenCalled();
+    expect(result.updated).toBe(0);
+    expect(result.diffEntries.filter((entry) => entry.action === "update")).toHaveLength(0);
+  });
+
+  test("negative: update_password false + stored secret empty + configured secret -> no update, no test", async () => {
     const sync = new RadarrDownloadClientSync(api);
     const serverClient = createServerClient({
       fields: [
@@ -950,11 +1097,8 @@ describe("BaseDownloadClientSync - secret update modes", () => {
     );
 
     expect(api.testDownloadClient).not.toHaveBeenCalled();
-    expect(result.updated).toBe(1);
-    expect(api.updateDownloadClient).toHaveBeenCalledTimes(1);
-
-    const updatePayload = api.updateDownloadClient.mock.calls[0][1];
-    expect(updatePayload.fields?.find((f: any) => f.name === "password")?.value).toBe("");
+    expect(api.updateDownloadClient).not.toHaveBeenCalled();
+    expect(result.updated).toBe(0);
   });
 
   test("DRY_RUN + test throws -> reported, no update call", async () => {
@@ -1180,9 +1324,10 @@ describe("BaseDownloadClientSync - secret update modes", () => {
       expect(JSON.stringify(result.diffEntries)).not.toContain(token);
     });
 
-    test("positive: on_test_fail true + stored secretToken empty + configured value -> secret sent directly, no test, diff masked", async () => {
+    test("positive: on_test_fail true + stored secretToken empty + configured value + credential failure -> secret sent, diff masked", async () => {
       const token = "EMPTY_STORED_TOKEN_REPAIR";
       const infoSpy = vi.spyOn(logger, "info");
+      api.testDownloadClient.mockRejectedValueOnce(new Error("Authentication failed"));
       const sync = new RadarrDownloadClientSync(api);
       const serverClient = createAria2ServerClient({
         fields: [
@@ -1209,7 +1354,7 @@ describe("BaseDownloadClientSync - secret update modes", () => {
         cache,
       );
 
-      expect(api.testDownloadClient).not.toHaveBeenCalled();
+      expect(api.testDownloadClient).toHaveBeenCalledTimes(1);
       expect(result.updated).toBe(1);
       expect(api.updateDownloadClient).toHaveBeenCalledTimes(1);
 
@@ -1222,11 +1367,10 @@ describe("BaseDownloadClientSync - secret update modes", () => {
       expect(JSON.stringify(result.diffEntries)).not.toContain(token);
 
       const logged = infoSpy.mock.calls.map((call) => String(call[0])).join("\n");
-      expect(logged).toContain("stored secret is empty");
       expect(logged).not.toContain(token);
     });
 
-    test("on_test_fail true + non-secret field change (rpcPath) -> unmasked diff, no test call", async () => {
+    test("on_test_fail true + non-secret field change (rpcPath) -> update includes the configured secret, no test", async () => {
       const sync = new RadarrDownloadClientSync(api);
       const serverClient = createAria2ServerClient();
       api.getDownloadClients.mockResolvedValueOnce([serverClient]);
@@ -1253,11 +1397,14 @@ describe("BaseDownloadClientSync - secret update modes", () => {
 
       const updatePayload = api.updateDownloadClient.mock.calls[0][1];
       expect(updatePayload.fields?.find((f: any) => f.name === "rpcPath")?.value).toBe("/custom-rpc");
-      expect(updatePayload.fields?.find((f: any) => f.name === "secretToken")?.value).toBe("********");
+      expect(updatePayload.fields?.find((f: any) => f.name === "secretToken")?.value).toBe("NEW_CONFIG_SECRET");
 
       const updateEntry = result.diffEntries.find((e) => e.name === "aria2-client" && e.action === "update");
       expect(updateEntry).toBeDefined();
-      expect(updateEntry?.fieldChanges).toEqual([{ field: "fields.rpcPath", from: "/rpc", to: "/custom-rpc" }]);
+      expect(updateEntry?.fieldChanges).toEqual([
+        { field: "fields.rpcPath", from: "/rpc", to: "/custom-rpc" },
+        { field: "fields.secretToken", from: SECRET_MASK, to: SECRET_MASK },
+      ]);
     });
   });
 });

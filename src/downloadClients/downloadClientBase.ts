@@ -146,26 +146,14 @@ export abstract class BaseDownloadClientSync<T extends DownloadClientShared> {
     return isSecretFieldName(fieldName);
   }
 
-  private hasNonEmptySecretField(config: InputConfigDownloadClient): boolean {
+  private hasConfiguredSecretField(config: InputConfigDownloadClient): boolean {
     if (!config.fields) {
       return false;
     }
     const normalized = this.normalizeConfigFields(config.fields, this.getArrType());
     return Object.entries(normalized).some(([key, value]) => {
-      return this.isSecretField(key) && typeof value === "string" && value.length > 0 && value !== SECRET_MASK;
+      return this.isSecretField(key) && typeof value === "string" && value !== SECRET_MASK;
     });
-  }
-
-  private hasEmptyStoredSecretChange(changes: FieldChange[]): boolean {
-    return changes.some(
-      (change) =>
-        change.field.startsWith("fields.") &&
-        this.isSecretField(change.field.slice("fields.".length)) &&
-        (change.from === "" || change.from === null) &&
-        typeof change.to === "string" &&
-        change.to.length > 0 &&
-        change.to !== SECRET_MASK,
-    );
   }
 
   private getMaskedSecretFieldChanges(config: InputConfigDownloadClient, serverClient: T, cache: ServerCache): FieldChange[] {
@@ -226,9 +214,10 @@ export abstract class BaseDownloadClientSync<T extends DownloadClientShared> {
       let valuesMatch = JSON.stringify(configValue) === JSON.stringify(serverValue);
 
       const shouldUpdatePassword = updatePassword === true;
-      // A stored secret, masked or plaintext, is not comparable. Empty means the server has not stored one.
-      const storedSecret = this.isSecretField(fieldName) && typeof serverValue === "string" && serverValue.length > 0;
-      if (!valuesMatch && storedSecret && typeof configValue === "string" && configValue.length > 0 && !shouldUpdatePassword) {
+      // A stored secret is not comparable with the configuration. While secrets are not being
+      // written, any configured string, including "", is treated as equal so an update never
+      // rewrites a secret, even when the stored value is empty.
+      if (!valuesMatch && this.isSecretField(fieldName) && typeof configValue === "string" && !shouldUpdatePassword) {
         valuesMatch = true;
       }
 
@@ -297,13 +286,24 @@ export abstract class BaseDownloadClientSync<T extends DownloadClientShared> {
       const fieldName = field.name ?? "";
       const isSecret = this.isSecretField(fieldName);
       const shouldUpdatePassword = updatePassword === true;
+      const configValue = normalizedFields[fieldName];
+
+      // A secret is only written when the YAML sets it. An omitted secret keeps the stored value,
+      // even when update_password is true.
+      if (isSecret && configValue === undefined && serverFields) {
+        const serverField = serverFields.find((f) => f.name === fieldName);
+        if (serverField) {
+          return { ...field, value: serverField.value };
+        }
+      }
+
       if (!shouldUpdatePassword && isSecret && serverFields) {
         const serverField = serverFields.find((f) => f.name === fieldName);
         if (serverField) {
           return { ...field, value: serverField.value };
         }
       }
-      const configValue = normalizedFields[fieldName];
+
       return configValue !== undefined ? { ...field, value: configValue } : field;
     });
   }
@@ -424,17 +424,11 @@ export abstract class BaseDownloadClientSync<T extends DownloadClientShared> {
       } else {
         const comparison = this.isDownloadClientEqual(config, serverClient, cache, comparisonUpdatePassword);
         if (!comparison.equal) {
-          const repairEmptySecret = isTestFailureMode && this.hasEmptyStoredSecretChange(comparison.changes);
-          if (repairEmptySecret) {
-            this.logger.info(`Download client "${config.name}": stored secret is empty, sending configured secret fields`);
-          }
-          const fieldChanges = repairEmptySecret
-            ? comparison.changes.map((change) => {
-                if (change.field.startsWith("fields.") && this.isSecretField(change.field.slice("fields.".length))) {
-                  return { field: change.field, from: SECRET_MASK, to: SECRET_MASK };
-                }
-                return change;
-              })
+          // In test-failure mode a specified secret is part of every update: the other field
+          // differences trigger the write, so send the configured secret with them.
+          const includesSecret = isTestFailureMode && this.hasConfiguredSecretField(config);
+          const fieldChanges = includesSecret
+            ? [...comparison.changes, ...this.getMaskedSecretFieldChanges(config, serverClient, cache)]
             : comparison.changes;
           const partialUpdate = this.shouldUsePartialUpdate(config);
           update.push({
@@ -442,9 +436,9 @@ export abstract class BaseDownloadClientSync<T extends DownloadClientShared> {
             server: serverClient,
             partialUpdate,
             fieldChanges,
-            updatePassword: repairEmptySecret ? true : comparisonUpdatePassword,
+            updatePassword: includesSecret ? true : comparisonUpdatePassword,
           });
-        } else if (isTestFailureMode && serverClient.enable !== false && this.hasNonEmptySecretField(config)) {
+        } else if (isTestFailureMode && serverClient.enable !== false && this.hasConfiguredSecretField(config)) {
           secretProbe.push({
             config,
             server: serverClient,
@@ -481,12 +475,21 @@ export abstract class BaseDownloadClientSync<T extends DownloadClientShared> {
           continue;
         }
 
+        const fieldChanges = this.getMaskedSecretFieldChanges(probe.config, probe.server, cache);
+        if (fieldChanges.length === 0) {
+          this.logger.info(
+            `Download client "${probe.config.name}": connection test rejected the stored secret, but the configuration has no non-empty secret to replace it`,
+          );
+          diff.unchanged.push({ config: probe.config, server: probe.server });
+          continue;
+        }
+
         this.logger.info(`Download client "${probe.config.name}": connection test rejected the stored secret, updating secret fields`);
         diff.update.push({
           config: probe.config,
           server: probe.server,
           partialUpdate: probe.partialUpdate,
-          fieldChanges: this.getMaskedSecretFieldChanges(probe.config, probe.server, cache),
+          fieldChanges,
           updatePassword: true,
         });
       }

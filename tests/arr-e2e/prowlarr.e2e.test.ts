@@ -1,4 +1,5 @@
-import { afterAll, beforeAll, describe, expect, test } from "vitest";
+import { afterAll, beforeAll, describe, expect, onTestFinished, test } from "vitest";
+import { randomUUID } from "node:crypto";
 import { E2E_API_KEY, prowlarrConnection } from "./config";
 import {
   assertDiffUpToDate,
@@ -10,6 +11,7 @@ import {
   findNamed,
   nonE2eNames,
   syncConfig,
+  waitUntil,
 } from "./helpers";
 
 function fieldValue(resource: { fields?: Array<{ name?: string | null; value?: unknown }> | null } | undefined, name: string): unknown {
@@ -250,6 +252,265 @@ describe("prowlarr (live)", () => {
     expect(findNamed(await client.getAppProfiles(), "e2e-sync")).toBeUndefined();
     expect(findNamed(await client.getAppProfiles(), "Standard")).toBeTruthy();
   }, 600_000);
+
+  test("update_password_on_test_fail writes a Deluge password with other changes and tests it alone", async () => {
+    const { base_url: baseUrl, api_key: apiKey } = prowlarrConnection();
+    const delugeBaseUrl = process.env.DELUGE_BASE_URL ?? "http://127.0.0.1:18112";
+    await waitUntil(async () => {
+      try {
+        return (await fetch(delugeBaseUrl, { signal: AbortSignal.timeout(3000) })).ok;
+      } catch {
+        return false;
+      }
+    }, 60_000);
+
+    const client = createProwlarrClient();
+    const schema = (await client.getDownloadClientSchema()).find((item) => item.implementation?.toLowerCase() === "deluge");
+    expect(schema?.fields, "Deluge schema").toBeTruthy();
+    const name = `e2e-deluge-${randomUUID()}`;
+    const apiPath = "/api/v1/downloadclient";
+    const query = "forceSave=true";
+    const headers = { "X-Api-Key": apiKey, "Content-Type": "application/json" };
+    const delugeHost = process.env.DELUGE_E2E_HOST ?? "deluge";
+    const delugePassword = process.env.DELUGE_E2E_PASSWORD ?? "deluge";
+
+    const payload = (password: string, priority: number) => ({
+      ...schema,
+      name,
+      enable: false,
+      priority,
+      fields: schema!.fields!.map((field) => ({
+        ...field,
+        value:
+          field.name === "host"
+            ? delugeHost
+            : field.name === "port"
+              ? 8112
+              : field.name === "useSsl"
+                ? false
+                : field.name === "urlBase"
+                  ? ""
+                  : field.name === "password"
+                    ? password
+                    : field.name === "category"
+                      ? ""
+                      : field.value,
+      })),
+    });
+    const create = async (password: string, priority: number) => {
+      const response = await fetch(`${baseUrl}${apiPath}?${query}`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(payload(password, priority)),
+      });
+      const body = await response.text();
+      expect(response.ok, body).toBe(true);
+      const created = JSON.parse(body) as { id: number };
+      const enabled = await fetch(`${baseUrl}${apiPath}/${created.id}?${query}`, {
+        method: "PUT",
+        headers,
+        body: JSON.stringify({ ...JSON.parse(body), enable: true }),
+      });
+      expect(enabled.ok, await enabled.text()).toBe(true);
+      return created.id;
+    };
+
+    const id = await create("stale-password", 1);
+    onTestFinished(async () => {
+      const current = findNamed(await client.getDownloadClients(), name);
+      if (current?.id != null) await client.deleteDownloadClient(String(current.id));
+    });
+
+    const yaml = (priority: number) => ({
+      telemetry: false,
+      prowlarr: {
+        e2e: {
+          ...prowlarrConnection(),
+          download_clients: {
+            update_password_on_test_fail: true,
+            data: [
+              {
+                name,
+                type: schema!.implementation,
+                enable: true,
+                priority,
+                fields: {
+                  host: delugeHost,
+                  port: 8112,
+                  use_ssl: false,
+                  url_base: "",
+                  password: delugePassword,
+                  category: "",
+                },
+              },
+            ],
+          },
+        },
+      },
+    });
+
+    const withChange = await syncConfig(yaml(5));
+    assertPipelineSucceeded(withChange.result, ["PROWLARR"]);
+    expect(withChange.result.stdout).not.toContain("connection test rejected");
+    const saved = findNamed(await client.getDownloadClients(), name);
+    expect(saved?.priority).toBe(5);
+    const tested = await fetch(`${baseUrl}${apiPath}/test`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(saved),
+    });
+    expect(tested.ok, await tested.text()).toBe(true);
+    const second = await syncConfig(yaml(5), withChange.workspace);
+    assertDiffUpToDate(second.result, ["PROWLARR"]);
+
+    // Reseed the stale password at the same priority so only the password can differ.
+    const current = findNamed(await client.getDownloadClients(), name);
+    expect(current).toBeDefined();
+    const reseed = {
+      ...current!,
+      fields: current!.fields?.map((field) => (field.name === "password" ? { ...field, value: "stale-password" } : field)),
+    };
+    const reseeded = await fetch(`${baseUrl}${apiPath}/${id}?${query}`, {
+      method: "PUT",
+      headers,
+      body: JSON.stringify(reseed),
+    });
+    expect(reseeded.ok, await reseeded.text()).toBe(true);
+
+    const passwordOnly = await syncConfig(yaml(5), withChange.workspace);
+    assertPipelineSucceeded(passwordOnly.result, ["PROWLARR"]);
+    expect(passwordOnly.result.stdout).toContain("connection test rejected the stored secret");
+    const fixed = findNamed(await client.getDownloadClients(), name);
+    const retested = await fetch(`${baseUrl}${apiPath}/test`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(fixed),
+    });
+    expect(retested.ok, await retested.text()).toBe(true);
+    const final = await syncConfig(yaml(5), passwordOnly.workspace);
+    assertDiffUpToDate(final.result, ["PROWLARR"]);
+  });
+
+  test("update_password_on_test_fail clears and preserves an empty Deluge password", async () => {
+    const { base_url: baseUrl, api_key: apiKey } = prowlarrConnection();
+    const delugeBaseUrl = process.env.DELUGE_EMPTY_BASE_URL ?? "http://127.0.0.1:18113";
+    await waitUntil(async () => {
+      try {
+        return (await fetch(delugeBaseUrl, { signal: AbortSignal.timeout(3000) })).ok;
+      } catch {
+        return false;
+      }
+    }, 60_000);
+
+    const client = createProwlarrClient();
+    const schema = (await client.getDownloadClientSchema()).find((item) => item.implementation?.toLowerCase() === "deluge");
+    expect(schema?.fields, "Deluge schema").toBeTruthy();
+    const name = `e2e-deluge-empty-${randomUUID()}`;
+    const apiPath = "/api/v1/downloadclient";
+    const query = "forceSave=true";
+    const headers = { "X-Api-Key": apiKey, "Content-Type": "application/json" };
+    const delugeHost = process.env.DELUGE_EMPTY_E2E_HOST ?? "deluge-empty";
+
+    const payload = (password: string) => ({
+      ...schema,
+      name,
+      enable: false,
+      priority: 1,
+      fields: schema!.fields!.map((field) => ({
+        ...field,
+        value:
+          field.name === "host"
+            ? delugeHost
+            : field.name === "port"
+              ? 8112
+              : field.name === "useSsl"
+                ? false
+                : field.name === "urlBase"
+                  ? ""
+                  : field.name === "password"
+                    ? password
+                    : field.name === "category"
+                      ? ""
+                      : field.value,
+      })),
+    });
+    const create = async (password: string) => {
+      const response = await fetch(`${baseUrl}${apiPath}?${query}`, { method: "POST", headers, body: JSON.stringify(payload(password)) });
+      const body = await response.text();
+      expect(response.ok, body).toBe(true);
+      const created = JSON.parse(body) as { id: number };
+      const enabled = await fetch(`${baseUrl}${apiPath}/${created.id}?${query}`, {
+        method: "PUT",
+        headers,
+        body: JSON.stringify({ ...JSON.parse(body), enable: true }),
+      });
+      expect(enabled.ok, await enabled.text()).toBe(true);
+      return created.id;
+    };
+
+    const id = await create("stale-password");
+    onTestFinished(async () => {
+      const current = findNamed(await client.getDownloadClients(), name);
+      if (current?.id != null) await client.deleteDownloadClient(String(current.id));
+    });
+
+    const yaml = (password: string) => ({
+      telemetry: false,
+      prowlarr: {
+        e2e: {
+          ...prowlarrConnection(),
+          download_clients: {
+            update_password_on_test_fail: true,
+            data: [
+              {
+                name,
+                type: schema!.implementation,
+                enable: true,
+                priority: 1,
+                fields: { host: delugeHost, port: 8112, use_ssl: false, url_base: "", password, category: "" },
+              },
+            ],
+          },
+        },
+      },
+    });
+
+    const cleared = await syncConfig(yaml(""));
+    assertPipelineSucceeded(cleared.result, ["PROWLARR"]);
+    expect(cleared.result.stdout).toContain("connection test rejected the stored secret");
+    const saved = findNamed(await client.getDownloadClients(), name);
+    expect(saved?.fields?.find((field) => field.name === "password")?.value).toBe("");
+    const tested = await fetch(`${baseUrl}${apiPath}/test`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(saved),
+    });
+    expect(tested.ok, await tested.text()).toBe(true);
+    const second = await syncConfig(yaml(""), cleared.workspace);
+    assertDiffUpToDate(second.result, ["PROWLARR"]);
+
+    // Reseed the empty password and configure a non-empty one: the stored empty value works,
+    // so the test passes and the configured value is not written.
+    const current = findNamed(await client.getDownloadClients(), name);
+    expect(current).toBeDefined();
+    const reseed = {
+      ...current!,
+      fields: current!.fields?.map((field) => (field.name === "password" ? { ...field, value: "" } : field)),
+    };
+    const reseeded = await fetch(`${baseUrl}${apiPath}/${id}?${query}`, {
+      method: "PUT",
+      headers,
+      body: JSON.stringify(reseed),
+    });
+    expect(reseeded.ok, await reseeded.text()).toBe(true);
+
+    const kept = await syncConfig(yaml("ignored-non-empty"), cleared.workspace);
+    assertPipelineSucceeded(kept.result, ["PROWLARR"]);
+    expect(kept.result.stdout).not.toContain("connection test rejected");
+    expect(findNamed(await client.getDownloadClients(), name)?.fields?.find((field) => field.name === "password")?.value).toBe("");
+    const final = await syncConfig(yaml("ignored-non-empty"), kept.workspace);
+    assertDiffUpToDate(final.result, ["PROWLARR"]);
+  });
 
   test("snake_case schema fields accept snake_case and camelCase config keys", async () => {
     const client = createProwlarrClient();
