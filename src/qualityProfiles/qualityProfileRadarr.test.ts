@@ -385,7 +385,7 @@ describe("QualityProfileRadarrSync", async () => {
     const createdProfile = diff.create[0];
     expect(createdProfile).toBeDefined();
     expect(createdProfile?.upgradeAllowed).toBe(false);
-    expect(createdProfile?.cutoffFormatScore).toBe(1);
+    expect(createdProfile?.cutoffFormatScore).toBe(0);
     // cutoff should point to the "WEB 720p" group (1000 + index 0 in allowedQualities)
     // The group ID for WEB 720p (first in the config) should be 1000
     expect(createdProfile?.cutoff).toBe(1000);
@@ -488,7 +488,7 @@ describe("QualityProfileRadarrSync", async () => {
     // cutoff must point to the until_quality (HDTV-1080p = id 10)
     expect(updatedProfile?.cutoff).toBe(10);
     expect(updatedProfile?.upgradeAllowed).toBe(false);
-    expect(updatedProfile?.cutoffFormatScore).toBe(1);
+    expect(updatedProfile?.cutoffFormatScore).toBe(0);
   });
 
   test("calculateQualityProfilesDiff - should update profile when changing upgrade.allowed from true to false (quality group)", async ({}) => {
@@ -571,7 +571,7 @@ describe("QualityProfileRadarrSync", async () => {
     // cutoff must point to the until_quality group "WEB 2160p" = id 1001
     expect(updatedProfile?.cutoff).toBe(1001);
     expect(updatedProfile?.upgradeAllowed).toBe(false);
-    expect(updatedProfile?.cutoffFormatScore).toBe(1);
+    expect(updatedProfile?.cutoffFormatScore).toBe(0);
   });
 
   test("calculateQualityProfilesDiff - should update profile when changing upgrade.allowed from true to false with no until_quality", async ({}) => {
@@ -589,7 +589,7 @@ describe("QualityProfileRadarrSync", async () => {
       min_format_score: 0,
       qualities: fromConfig,
       quality_sort: "top",
-      // No until_quality — should fall back to highest-priority allowed quality (Remux-2160p = id 10)
+      // No until_quality: the server cutoff is preserved instead of being replaced by a fallback.
       upgrade: { allowed: false },
       score_set: "default",
     };
@@ -622,10 +622,11 @@ describe("QualityProfileRadarrSync", async () => {
 
     const updatedProfile = diff.changedQPs[0];
     expect(updatedProfile).toBeDefined();
-    // cutoff falls back to Remux-2160p (highest-priority allowed quality = id 10)
-    expect(updatedProfile?.cutoff).toBe(10);
+    // The config does not express a cutoff, so the server value survives (Remux-1080p = id 13)
+    expect(updatedProfile?.cutoff).toBe(13);
     expect(updatedProfile?.upgradeAllowed).toBe(false);
-    expect(updatedProfile?.cutoffFormatScore).toBe(1);
+    // cutoffFormatScore is ignored while upgrades are disabled, so it is preserved as well
+    expect(updatedProfile?.cutoffFormatScore).toBe(500);
   });
 
   test("calculateQualityProfilesDiff - exposes minFormatScore diff as a structured FieldChange", async ({}) => {
