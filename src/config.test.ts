@@ -796,6 +796,71 @@ describe("mergeConfigsAndTemplates", () => {
     expect(result.quality_definition?.preferred_ratio).toBeUndefined();
   });
 
+  describe("remote path validation", () => {
+    const validate = (remotePaths: Array<{ host: string; remote_path: string; local_path: string }>) => () =>
+      validateMergedConfig({
+        custom_formats: [],
+        quality_profiles: [],
+        download_clients: { remote_paths: remotePaths },
+      });
+
+    test("accepts a UNC mapping", () => {
+      expect(
+        validate([{ host: "download-client", remote_path: String.raw`\\server\downloads`, local_path: "/data/downloads" }]),
+      ).not.toThrow();
+    });
+
+    test("rejects a non-absolute remote_path at config load", () => {
+      expect(validate([{ host: "download-client", remote_path: "downloads", local_path: "/data/downloads" }])).toThrow(
+        ConfigValidationError,
+      );
+    });
+
+    test("rejects a UNC path without a share at config load", () => {
+      expect(validate([{ host: "download-client", remote_path: String.raw`\\server`, local_path: "/data/downloads" }])).toThrow(
+        ConfigValidationError,
+      );
+      expect(validate([{ host: "download-client", remote_path: "\\\\", local_path: "/data/downloads" }])).toThrow(ConfigValidationError);
+    });
+
+    test("accepts a drive-relative path but warns that it is deprecated", () => {
+      const warn = vi.spyOn(logger, "warn").mockImplementation(() => {});
+      try {
+        expect(validate([{ host: "download-client", remote_path: String.raw`C:downloads`, local_path: "/data/downloads" }])).not.toThrow();
+        expect(warn).toHaveBeenCalledWith(expect.stringContaining("drive-relative"));
+      } finally {
+        warn.mockRestore();
+      }
+    });
+
+    test("treats UNC paths differing only by a trailing separator as duplicates", () => {
+      expect(
+        validate([
+          { host: "download-client", remote_path: String.raw`\\server\downloads`, local_path: "/data/downloads" },
+          { host: "download-client", remote_path: "\\\\server\\downloads\\", local_path: "/data/downloads2" },
+        ]),
+      ).toThrow(/Duplicate remote path mapping/);
+    });
+
+    test("does not treat mappings on different UNC servers as duplicates", () => {
+      expect(
+        validate([
+          { host: "download-client", remote_path: String.raw`\\server\downloads`, local_path: "/data/downloads" },
+          { host: "download-client", remote_path: String.raw`\\other\downloads`, local_path: "/data/downloads2" },
+        ]),
+      ).not.toThrow();
+    });
+
+    test("treats a forward-slash UNC path as distinct from a backslash UNC path", () => {
+      expect(
+        validate([
+          { host: "download-client", remote_path: "//server/downloads", local_path: "/data/downloads" },
+          { host: "download-client", remote_path: String.raw`\\server\downloads`, local_path: "/data/downloads2" },
+        ]),
+      ).not.toThrow();
+    });
+  });
+
   test("should prioritize config values over template values", async () => {
     const fromConfig: ConfigQualityProfileItem[] = [{ name: "HDTV-1080p", enabled: false }];
 

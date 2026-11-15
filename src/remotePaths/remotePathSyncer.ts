@@ -5,6 +5,7 @@ import { RemotePathMappingResource, RemotePathSyncResult, RemotePathDiff } from 
 import { InputConfigRemotePath, MergedConfigInstance } from "../types/config.types";
 import { getEnvs } from "../env";
 import { DiffEntry } from "../diffReport/diffReport.types";
+import { normalizeRemotePath } from "./remotePath.util";
 
 type RemotePathClient = Pick<
   ArrTypeToClient[MediaArrType],
@@ -12,19 +13,11 @@ type RemotePathClient = Pick<
 >;
 
 /**
- * Normalize a path by removing trailing slashes
- * Radarr may add trailing slashes but we need consistent comparison
- */
-function normalizePath(path: string): string {
-  return path.replace(/\/+$/, "");
-}
-
-/**
  * Create a composite key for matching remote path mappings
  * Uses host + remote_path combination for uniqueness
  */
 function createCompositeKey(host: string, remotePath: string): string {
-  return `${host}||${normalizePath(remotePath)}`;
+  return `${host}||${normalizeRemotePath(remotePath)}`;
 }
 
 /**
@@ -57,7 +50,7 @@ function calculateDiff(configs: InputConfigRemotePath[], serverMappings: RemoteP
     const serverMapping = serverMap.get(key);
     if (!serverMapping) {
       toCreate.push(config);
-    } else if (normalizePath(serverMapping.localPath ?? "") !== normalizePath(config.local_path)) {
+    } else if (normalizeRemotePath(serverMapping.localPath ?? "") !== normalizeRemotePath(config.local_path)) {
       if (serverMapping.id) {
         toUpdate.push({ id: serverMapping.id, config, server: serverMapping });
       }
@@ -188,10 +181,10 @@ export async function syncRemotePaths(
         const errorMsg = error instanceof Error ? error.message : String(error);
         if (errorMsg.includes("RemotePath already configured") || errorMsg.includes("already exists")) {
           // Try to find the existing mapping and update it (match by host AND remotePath)
-          const normalizedConfigPath = normalizePath(config.remote_path);
+          const normalizedConfigPath = normalizeRemotePath(config.remote_path);
           const existingMapping = serverMappings.find(
             (m: RemotePathMappingResource) =>
-              m.host === config.host && m.remotePath && normalizePath(m.remotePath) === normalizedConfigPath,
+              m.host === config.host && m.remotePath && normalizeRemotePath(m.remotePath) === normalizedConfigPath,
           );
           if (existingMapping && existingMapping.id) {
             logger.debug(`RemotePath '${config.host} + ${config.remote_path}' already exists. Attempting to update instead.`);
