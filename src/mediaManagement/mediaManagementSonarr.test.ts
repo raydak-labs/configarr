@@ -1,7 +1,11 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { loadNamingFromTrashSonarr } from "../trash-guide";
 import { MediaManagementSync } from "./mediaManagement";
 import { SonarrMediaManagementSync } from "./mediaManagementSonarr";
 import { MediaManagementTypeSchema } from "../types/config.types";
+
+vi.mock("../trash-guide", () => ({ loadNamingFromTrashSonarr: vi.fn() }));
+vi.mock("../logger", () => ({ logger: { debug: vi.fn(), warn: vi.fn() } }));
 
 describe("MediaManagementTypeSchema Sonarr v5 controls", () => {
   it("accepts documented season-pack modes, percentage thresholds, and extension lists", () => {
@@ -61,5 +65,46 @@ describe("MediaManagementSync.validateConfig", () => {
     await expect(sync.validateConfig({ userRejectedExtensions: ".dog" })).rejects.toThrow(
       "skipFreeSpaceCheckWhenGrabbing, seasonPackUpgrade, seasonPackUpgradeThreshold, and userRejectedExtensions require Sonarr v5.",
     );
+  });
+});
+
+describe("SonarrMediaManagementSync.mapNaming", () => {
+  const sync = new SonarrMediaManagementSync({} as never);
+
+  beforeEach(() => {
+    vi.resetAllMocks();
+  });
+
+  it("maps all episode formats and rename settings", async () => {
+    vi.mocked(loadNamingFromTrashSonarr).mockResolvedValue({
+      series: { default: "series-format" },
+      season: { default: "season-format" },
+      episodes: {
+        standard: { default: "standard-format" },
+        daily: { default: "daily-format" },
+        anime: { default: "anime-format" },
+      },
+    });
+
+    await expect(
+      sync.mapNaming({
+        series: "default",
+        season: "default",
+        episodes: { standard: "default", daily: "default", anime: "default", rename: false },
+      }),
+    ).resolves.toEqual({
+      seriesFolderFormat: "series-format",
+      seasonFolderFormat: "season-format",
+      standardEpisodeFormat: "standard-format",
+      dailyEpisodeFormat: "daily-format",
+      animeEpisodeFormat: "anime-format",
+      renameEpisodes: false,
+    });
+  });
+
+  it("returns null when TRaSH naming is unavailable", async () => {
+    vi.mocked(loadNamingFromTrashSonarr).mockResolvedValue(null);
+
+    await expect(sync.mapNaming({ series: "default" })).resolves.toBeNull();
   });
 });

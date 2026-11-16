@@ -6,12 +6,10 @@ import { QualityItem, QualityProfileShared } from "./qualityProfile.types";
 import {
   checkForConflictingCFs,
   filterInvalidQualityProfiles,
-  isOrderOfConfigQualitiesEqual,
-  isOrderOfQualitiesEqual,
-  mapQualities,
   mapQualityProfiles,
   qualityProfilesToDiffEntries,
 } from "./qualityProfileBase";
+import { isOrderOfConfigQualitiesEqual, isOrderOfQualitiesEqual, mapQualities } from "./qualityProfileQualities";
 import { QualityProfileRadarrSync } from "./qualityProfileRadarr";
 import type { QualityProfileResource } from "../__generated__/radarr/data-contracts";
 import type { QualityProfilesClient } from "../clients/capabilities";

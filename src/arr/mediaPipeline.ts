@@ -5,7 +5,7 @@ import { ServerCache } from "../cache";
 import { ArrTypeToClient } from "../clients/client";
 import type { MetadataClient } from "../clients/capabilities";
 import type { MetadataResource } from "../__generated__/sonarr/data-contracts";
-import { mergeConfigsAndTemplates } from "../config";
+import { mergeConfigsAndTemplates } from "../configMerge";
 import { CFIDToConfigGroup, CFProcessing, CustomFormatRef } from "../customFormats/customFormat.types";
 import {
   calculateCFsToManage,
@@ -23,9 +23,10 @@ import { BaseDownloadClientSync } from "../downloadClients/downloadClientBase";
 import { getEnvs } from "../env";
 import { logger } from "../logger";
 import { MediaManagementSync, mediamanagementDiffToDiffEntries, namingDiffToDiffEntries } from "../mediaManagement/mediaManagement";
-import type { SonarrMediaManagementResource } from "../clients/sonarr-client";
+import type { SonarrMediaManagementResource } from "../clients/sonarr-resource-mapper";
 import { QualityDefinitionSync, qualityDefinitionsToDiffEntries } from "../qualityDefinitions/qualityDefinition";
-import { BaseQualityProfileSync, getUnmanagedQualityProfiles, qualityProfilesToDiffEntries } from "../qualityProfiles/qualityProfileBase";
+import { getUnmanagedQualityProfiles, qualityProfilesToDiffEntries } from "../qualityProfiles/qualityProfileBase";
+import { BaseQualityProfileSync } from "../qualityProfiles/qualityProfileSyncBase";
 import { BaseReleaseProfileSync } from "../releaseProfiles/releaseProfileBase";
 import { syncRemotePaths } from "../remotePaths/remotePathSyncer";
 import { BaseRootFolderSync } from "../rootFolder/rootFolderBase";
@@ -228,7 +229,10 @@ export const runMediaSyncToQualityProfiles = async <T extends MediaArrType>(
 
   logger.info(`Server objects: CustomFormats ${serverCFs.length}`);
 
-  const { config } = await mergeConfigsAndTemplates(globalConfig, instanceConfig, arrType, { supportsProfileQualitySizes });
+  const { config } = await mergeConfigsAndTemplates(globalConfig, instanceConfig, arrType, {
+    supportsProfileQualitySizes,
+    mediaManagement: syncs.mm,
+  });
   if (config.host_config !== undefined) {
     const parsed = HostConfigSchema.safeParse(config.host_config);
     if (!parsed.success)
@@ -293,10 +297,8 @@ export const runMediaSyncToQualityProfiles = async <T extends MediaArrType>(
   const cfUpdateResult = await manageCf(client, mergedCFs, serverCFMapping);
   collector.add(cfUpdateResult.diffEntries);
 
-  // add missing CFs to list because we need it for further steps
-  // serverCFs.push(...cfUpdateResult.createCFs);
   if (cfUpdateResult.createCFs.length > 0 || cfUpdateResult.updatedCFs.length > 0) {
-    // refresh cfs
+    // Later stages need the custom formats created or updated above.
     serverCache.customFormats = await loadServerCustomFormats(client);
   }
 

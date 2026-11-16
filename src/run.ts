@@ -18,10 +18,7 @@ import { ArrType } from "./types/common.types";
 import { InputConfigArrInstance } from "./types/config.types";
 import { ConfigValidationError } from "./validation";
 
-/**
- * Shared instance loop: skip disabled instances, run `runInstance` against each one,
- * and tally success / failure / skipped while honouring STOP_ON_ERROR.
- */
+/** Run each enabled instance and tally results, honoring STOP_ON_ERROR. */
 const runInstances = async <TInstance extends { base_url: string; api_key: string; enabled?: boolean }>(
   arrType: ArrType,
   entries: Record<string, TInstance> | undefined,
@@ -56,9 +53,10 @@ const runInstances = async <TInstance extends { base_url: string; api_key: strin
       new ConsoleDiffFormatter().format(report);
       reports.push(report);
       status.success++;
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : String(err);
       logger.error(
-        `Failure during configuring: ${arrType} - ${instanceName} (Detailed logs with env var: LOG_STACKTRACE=true). Error: ${err?.message}`,
+        `Failure during configuring: ${arrType} - ${instanceName} (Detailed logs with env var: LOG_STACKTRACE=true). Error: ${errorMessage}`,
       );
       status.failure++;
       if (getEnvs().LOG_STACKTRACE) {
@@ -116,7 +114,6 @@ export const run = async () => {
     }
   };
 
-  // Initialize telemetry
   if (Telemetry.isEnabled({ enabled: globalConfig.telemetry })) {
     const allInstances: Record<string, InputConfigArrInstance[]> = {};
     const telemetryArrs: { type: ArrType; config: Record<string, InputConfigArrInstance> | undefined }[] = [
@@ -163,8 +160,9 @@ export const run = async () => {
     try {
       writeJsonDiffReport(diffOutputFile, allReports, getEnvs().DRY_RUN);
       logger.info(`Diff report written to ${diffOutputFile}`);
-    } catch (err: any) {
-      logger.error(`Failed to write diff report to ${diffOutputFile}: ${err.message}`);
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      logger.error(`Failed to write diff report to ${diffOutputFile}: ${errorMessage}`);
     }
   }
 

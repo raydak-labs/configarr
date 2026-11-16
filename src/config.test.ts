@@ -1,14 +1,9 @@
 import path from "node:path";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import yaml from "yaml";
-import {
-  getSecrets,
-  isTrashQualityDefinition,
-  mergeConfigsAndTemplates,
-  resetSecretsCache,
-  transformConfig,
-  validateConfig as validateMergedConfig,
-} from "./config";
+import { getSecrets, resetSecretsCache, transformConfig, validateConfig as validateMergedConfig } from "./config";
+import { mergeConfigsAndTemplates } from "./configMerge";
+import { isTrashQualityDefinition } from "./configTemplates";
 import * as env from "./env";
 import * as localImporter from "./local-importer";
 import * as reclarrImporter from "./recyclarr-importer";
@@ -29,6 +24,8 @@ import {
 } from "./types/config.types";
 import { TrashQP, TrashQualityDefinition } from "./types/trashguide.types";
 import { cloneWithJSON } from "./util";
+import { MediaManagementSync } from "./mediaManagement/mediaManagement";
+import { RadarrMediaManagementSync } from "./mediaManagement/mediaManagementRadarr";
 import { logger } from "./logger";
 import { ConfigValidationError, validateConfig } from "./validation";
 
@@ -405,6 +402,41 @@ describe("mergeConfigsAndTemplates", () => {
 
     expect(result.config.custom_formats.length).toBe(2); // was 3, now 2 after deduplication
     expect(result.config.quality_profiles.length).toBe(3);
+  });
+
+  test("uses the injected media naming mapper", async () => {
+    vi.spyOn(localImporter, "loadLocalRecyclarrTemplate").mockReturnValue(new Map());
+    vi.spyOn(reclarrImporter, "loadRecyclarrTemplates").mockReturnValue(new Map());
+    vi.spyOn(trashGuide, "loadQPFromTrash").mockResolvedValue(new Map());
+    vi.spyOn(trashGuide, "loadAllQDsFromTrash").mockResolvedValue(new Map());
+    vi.spyOn(trashGuide, "loadTrashCustomFormatGroups").mockResolvedValue(new Map());
+    const mapper = new RadarrMediaManagementSync({} as never);
+    const map = vi.spyOn(mapper, "mapNaming").mockResolvedValue({ standardMovieFormat: "mapped" });
+    const inputConfig: InputConfigArrInstance = {
+      base_url: "http://radarr:7878",
+      api_key: "test",
+      media_naming: { folder: "default" },
+    };
+
+    const result = await mergeConfigsAndTemplates({}, inputConfig, "RADARR", { mediaManagement: mapper });
+
+    expect(map).toHaveBeenCalledWith({ folder: "default" });
+    expect(result.config.media_naming_api).toEqual({ standardMovieFormat: "mapped" });
+  });
+
+  test("warns when media naming has no app mapper", async () => {
+    vi.spyOn(localImporter, "loadLocalRecyclarrTemplate").mockReturnValue(new Map());
+    const warn = vi.spyOn(logger, "warn");
+    const inputConfig: InputConfigArrInstance = {
+      base_url: "http://lidarr:8686",
+      api_key: "test",
+      media_naming: { folder: "default" },
+    };
+
+    const result = await mergeConfigsAndTemplates({}, inputConfig, "LIDARR", { mediaManagement: new MediaManagementSync({} as never) });
+
+    expect(warn).toHaveBeenCalledWith("MediaNaming not supported for LIDARR");
+    expect(result.config.media_naming_api).toBeUndefined();
   });
 
   test("applies referenced TRaSH quality sizes only to Sonarr v5 profiles", async () => {

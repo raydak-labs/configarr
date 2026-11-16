@@ -1,13 +1,10 @@
 import type { QualityProfileResource } from "../__generated__/sonarr/data-contracts";
-import type { SonarrClient, SonarrProfileQualitySize } from "../clients/sonarr-client";
+import type { SonarrClient } from "../clients/sonarr-client";
+import type { SonarrProfileQualitySize } from "../clients/sonarr-resource-mapper";
 import type { QualityProfilesClient } from "../clients/capabilities";
 import { DiffEntry, FieldChange } from "../diffReport/diffReport.types";
-import {
-  attachMinUpgradeOnCreate,
-  BaseQualityProfileSync,
-  diffMinUpgradeOnUpdate,
-  warnUnsupportedQualityProfileLanguage,
-} from "./qualityProfileBase";
+import { attachMinUpgradeOnCreate, diffMinUpgradeOnUpdate, warnUnsupportedQualityProfileLanguage } from "./qualityProfileBase";
+import { BaseQualityProfileSync } from "./qualityProfileSyncBase";
 import { QualityProfileLanguage, QualityProfileShared } from "./qualityProfile.types";
 import { ConfigQualityProfile } from "../types/config.types";
 import type { QualityDefinitionShared } from "../qualityDefinitions/qualityDefinition.types";

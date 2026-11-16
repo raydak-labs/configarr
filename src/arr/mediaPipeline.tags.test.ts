@@ -22,7 +22,7 @@ vi.mock("../telemetry", () => ({
   Telemetry: { isEnabled: () => false },
   getTelemetryInstance: () => ({ trackInstanceConfig: vi.fn() }),
 }));
-vi.mock("../config", () => ({ mergeConfigsAndTemplates: async () => ({ config: mergedConfig }) }));
+vi.mock("../configMerge", () => ({ mergeConfigsAndTemplates: async () => ({ config: mergedConfig }) }));
 vi.mock("../customFormats/customFormats", () => ({
   calculateCFsToManage: () => new Set<string>(),
   deleteCustomFormat: vi.fn(),

@@ -1,7 +1,8 @@
 import { DiffEntry, FieldChange } from "../diffReport/diffReport.types";
 import { logger } from "../logger";
 import type { MediaManagementClient } from "../clients/capabilities";
-import { MediaManagementType, MediaNamingApiType } from "../types/config.types";
+import { MediaManagementType, MediaNamingApiType, MediaNamingType } from "../types/config.types";
+import type { TrashArrSupported } from "../types/trashguide.types";
 import { ConfigValidationError } from "../validation";
 import { compareObjectsCarr } from "../util";
 
@@ -54,11 +55,37 @@ export function calculateMediamanagementDiffFor<T extends { id?: number }>(serve
   };
 }
 
-export class MediaManagementSync<Naming extends { id?: number }, Management extends { id?: number }> {
+export interface MediaNamingMapper {
+  mapNaming(mediaNaming: MediaNamingType): Promise<object | null | undefined>;
+}
+
+export class MediaManagementSync<Naming extends { id?: number }, Management extends { id?: number }> implements MediaNamingMapper {
   constructor(protected readonly api: MediaManagementClient<Naming, Management>) {}
 
   protected getApi() {
     return this.api;
+  }
+
+  async mapNaming(_mediaNaming: MediaNamingType): Promise<Naming | null | undefined> {
+    return undefined;
+  }
+
+  protected resolveMediaNaming(arrType: TrashArrSupported, key: string | undefined, trashValues: Record<string, string>): string | null {
+    if (!key) {
+      return null;
+    }
+
+    const value = trashValues[key];
+    if (value == null) {
+      logger.warn(`(${arrType}) TRaSH naming key '${key}' was not found. Check debug logs for available keys.`);
+      return null;
+    }
+
+    return value;
+  }
+
+  protected logMappedNaming(resource: Naming): void {
+    logger.debug<object>(resource, "Mapped mediaNaming to API:");
   }
 
   protected hasSonarrV5OnlyControls(mediaManagement?: MediaManagementType): boolean {

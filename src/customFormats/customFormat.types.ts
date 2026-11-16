@@ -33,28 +33,6 @@ export type CustomFormatRequest = {
   specifications?: CustomFormatSpecification[] | null;
 };
 
-/** Used in the UI of Sonarr/Radarr to import. Trash JSON are based on that so users can copy&paste stuff */
-export type UserFriendlyField = {
-  name?: string | null;
-  value?: any;
-  negate?: boolean;
-  required?: boolean;
-};
-
-/*
-Language values:
-0 = Unknown
--2 = Original
-*/
-export type CustomFormatImportImplementation =
-  | "ReleaseTitleSpecification" // Value string
-  | "LanguageSpecification" // value number
-  | "SizeSpecification" // special
-  | "IndexerFlagSpecification" // value number
-  | "SourceSpecification" // value number
-  | "ResolutionSpecification" // value number
-  | "ReleaseGroupSpecification"; // value string
-
 export type ReleaseTitleOrLanguageSpecification = OmitTyped<CustomFormatSpecification, "fields"> & {
   implementation: "ReleaseTitleSpecification" | "LanguageSpecification";
   fields?: RequireAtLeastOne<TrashCFSpF> | null;

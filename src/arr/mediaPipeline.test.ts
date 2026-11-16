@@ -10,7 +10,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ServerCache } from "../cache";
 import type { ConfigQualityProfile, MergedConfigInstance } from "../types/config.types";
-import type { QualityProfileDiffResult } from "../qualityProfiles/qualityProfileBase";
+import type { QualityProfileDiffResult } from "../qualityProfiles/qualityProfileSyncBase";
 import { ConfigValidationError } from "../validation";
 import { completeMediaSync, runMediaSyncToQualityProfiles, type MediaFeatureSyncs } from "./mediaPipeline";
 
@@ -28,7 +28,7 @@ vi.mock("../env", async (importOriginal) => {
     })),
   };
 });
-vi.mock("../config", () => ({ mergeConfigsAndTemplates: vi.fn(async () => ({ config: {} })) }));
+vi.mock("../configMerge", () => ({ mergeConfigsAndTemplates: vi.fn(async () => ({ config: {} })) }));
 vi.mock("../customFormats/customFormats", () => ({
   calculateCFsToManage: vi.fn(() => new Set<string>()),
   deleteCustomFormat: vi.fn(async () => undefined),
@@ -60,7 +60,7 @@ vi.mock("../notifications/notifications", () => ({
   syncNotifications: vi.fn(async () => [{ resourceType: "Notification", name: "hook", action: "create" as const }]),
 }));
 
-import { mergeConfigsAndTemplates } from "../config";
+import { mergeConfigsAndTemplates } from "../configMerge";
 import { getEnvs } from "../env";
 import { logger } from "../logger";
 import { syncDownloadClientConfig } from "../downloadClientConfig/downloadClientConfigSyncer";
@@ -193,9 +193,13 @@ describe("runMediaSyncToQualityProfiles", () => {
 
   it("passes Sonarr profile-size support to template merging", async () => {
     const order: Order = [];
-    await run(order, syncs(order), undefined, true);
+    const syncObjects = syncs(order);
+    await run(order, syncObjects, undefined, true);
 
-    expect(mergeConfigsAndTemplates).toHaveBeenCalledWith({}, {}, "SONARR", { supportsProfileQualitySizes: true });
+    expect(mergeConfigsAndTemplates).toHaveBeenCalledWith({}, {}, "SONARR", {
+      supportsProfileQualitySizes: true,
+      mediaManagement: syncObjects.mm,
+    });
   });
 
   it("validates configuration before any mutating feature runs", async () => {

@@ -5,7 +5,7 @@ import { getClient } from "../clients/client";
 import { StandardDelayProfileSync } from "../delayProfiles/delayProfileBase";
 import { InstanceDiffReport } from "../diffReport/diffReport.types";
 import { RadarrDownloadClientSync } from "../downloadClients/downloadClientRadarr";
-import { MediaManagementSync } from "../mediaManagement/mediaManagement";
+import { RadarrMediaManagementSync } from "../mediaManagement/mediaManagementRadarr";
 import { QualityDefinitionPreferredSync } from "../qualityDefinitions/qualityDefinition";
 import { QualityProfileRadarrSync } from "../qualityProfiles/qualityProfileRadarr";
 import { ReleaseProfileRadarrSync } from "../releaseProfiles/releaseProfileRadarr";
@@ -29,7 +29,7 @@ export class RadarrSyncer {
         hostConfig: new RadarrHostConfigSync(client),
         importLists: new RadarrImportListSync(client),
         qd: new QualityDefinitionPreferredSync(client),
-        mm: new MediaManagementSync(client),
+        mm: new RadarrMediaManagementSync(client),
         qp: new QualityProfileRadarrSync(client),
         delay: new StandardDelayProfileSync(client, DownloadProtocol),
         releaseProfiles: new ReleaseProfileRadarrSync(client),

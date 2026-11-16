@@ -1,11 +1,7 @@
 import type { QualityProfileResource } from "../__generated__/whisparr/data-contracts";
 import { FieldChange } from "../diffReport/diffReport.types";
-import {
-  attachMinUpgradeOnCreate,
-  BaseQualityProfileSync,
-  diffMinUpgradeOnUpdate,
-  warnUnsupportedQualityProfileLanguage,
-} from "./qualityProfileBase";
+import { attachMinUpgradeOnCreate, diffMinUpgradeOnUpdate, warnUnsupportedQualityProfileLanguage } from "./qualityProfileBase";
+import { BaseQualityProfileSync } from "./qualityProfileSyncBase";
 import { QualityProfileLanguage, QualityProfileShared } from "./qualityProfile.types";
 
 export class QualityProfileWhisparrSync extends BaseQualityProfileSync<QualityProfileResource> {

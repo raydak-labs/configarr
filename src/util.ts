@@ -1,7 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, rmSync } from "node:fs";
-import path from "node:path";
 import { CheckRepoActions, simpleGit } from "simple-git";
-import { ConfigarrCF, CustomFormatRequest, ImportCF, UserFriendlyField } from "./customFormats/customFormat.types";
+import { ConfigarrCF, CustomFormatRequest, ImportCF } from "./customFormats/customFormat.types";
 import { getHelpers } from "./env";
 import { logger } from "./logger";
 import { TrashCF } from "./types/trashguide.types";
@@ -42,12 +41,12 @@ export const trashRepoPaths = {
 
 export const recyclarrRepoPaths = {
   root: recyclarrConfigPath,
-  sonarrCF: `${recyclarrSonarrCFs}`,
-  sonarrQD: `${recyclarrSonarrQDs}`,
-  sonarrQP: `${recyclarrSonarrQPs}`,
-  radarrCF: `${recyclarrRadarrCFs}`,
-  radarrQD: `${recyclarrRadarrQDs}`,
-  radarrQP: `${recyclarrRadarrQPs}`,
+  sonarrCF: recyclarrSonarrCFs,
+  sonarrQD: recyclarrSonarrQDs,
+  sonarrQP: recyclarrSonarrQPs,
+  radarrCF: recyclarrRadarrCFs,
+  radarrQD: recyclarrRadarrQDs,
+  radarrQP: recyclarrRadarrQPs,
 };
 
 export const trashToCarrCF = ({ trash_id, trash_regex, trash_scores, ...rest }: TrashCF): ConfigarrCF => {
@@ -86,25 +85,14 @@ export const mapImportCfToRequestCf = (cf: TrashCF | ConfigarrCF): CustomFormatR
   }
 
   const specs = rest.specifications.map((spec) => {
-    const newFields: UserFriendlyField[] = [];
-
     if (!spec.fields) {
       logger.info(`Spec: ${spec.name} fields is not defined`);
       throw new Error(`Spec is not correctly defined: ${spec.name}`);
     }
 
-    // 2024-09-30: Test if this handles all cases
-    newFields.push(...Object.entries(spec.fields).map(([key, value]) => ({ name: key, value })));
-
     return {
       ...spec,
-      fields: newFields.map((f) => {
-        if (f.name) {
-          return f;
-        }
-
-        return { ...f, name: "value" };
-      }),
+      fields: Object.entries(spec.fields).map(([name, value]) => ({ name: name || "value", value })),
     };
   });
 
@@ -228,15 +216,12 @@ export function compareObjectsCarr(serverObject: any, localObject: any, parent?:
 }
 
 export function notEmpty<TValue>(value: TValue | null | undefined): value is TValue {
-  if (value === null || value === undefined) return false;
-  return true;
+  return value !== null && value !== undefined;
 }
 
 export const cloneWithJSON = <T>(input: T): T => {
   return JSON.parse(JSON.stringify(input));
 };
-
-export const ROOT_PATH = path.resolve(process.cwd());
 
 /** Name of the built-in "any language" entry Radarr/Whisparr use as their quality-profile language default. */
 export const ANY_LANGUAGE_NAME = "Any";
@@ -274,11 +259,11 @@ export function zip<T extends unknown[][]>(...arrays: T): Array<{ [K in keyof T]
 async function performCloneOperation(gitUrl: string, rootPath: string, sparseConfig: { disabled: boolean; sparseDirs?: string[] }) {
   const gitClient = simpleGit({ baseDir: rootPath });
   const disableGitCloneOptions = process.env.CONFIGARR_DISABLE_GIT_CLONE_OPTIONS !== undefined;
-  let sparseEnabled = false;
+  const sparseDirs = sparseConfig.sparseDirs ?? [];
+  const sparseEnabled = !sparseConfig.disabled && sparseDirs.length > 0;
 
-  if (!sparseConfig.disabled && sparseConfig.sparseDirs && sparseConfig.sparseDirs.length > 0) {
-    sparseEnabled = true;
-    logger.debug(`Sparse checkout enabled for directories: ${sparseConfig.sparseDirs.join(", ")}`);
+  if (sparseEnabled) {
+    logger.debug(`Sparse checkout enabled for directories: ${sparseDirs.join(", ")}`);
   } else {
     logger.debug(`Sparse checkout disabled`);
   }
@@ -296,7 +281,7 @@ async function performCloneOperation(gitUrl: string, rootPath: string, sparseCon
   }
 
   if (sparseEnabled && !disableGitCloneOptions) {
-    await gitClient.raw(["sparse-checkout", "set", ...sparseConfig.sparseDirs!]);
+    await gitClient.raw(["sparse-checkout", "set", ...sparseDirs]);
   }
 
   logger.info(`Cloned repository: '${gitUrl}'`);
@@ -320,7 +305,6 @@ export const cloneGitRepo = async (
   let gitClient = simpleGit({ baseDir: rootPath });
   const isRepo = await gitClient.checkIsRepo(CheckRepoActions.IS_REPO_ROOT);
 
-  // Check if we need to re-clone due to remote URL change
   let shouldReClone = false;
   if (isRepo) {
     try {
@@ -339,7 +323,6 @@ export const cloneGitRepo = async (
     }
   }
 
-  // Delete and re-clone if repository doesn't exist or URL changed
   if (!isRepo || shouldReClone) {
     if (shouldReClone) {
       logger.info(`Removing existing repository at '${rootPath}' and re-cloning...`);
@@ -350,11 +333,9 @@ export const cloneGitRepo = async (
     await performCloneOperation(gitUrl, rootPath, cloneConf);
   }
 
-  // Re-instantiate gitClient after potential re-clone
-  // (if we re-cloned, the old client references a deleted directory)
+  // The previous client may reference a deleted directory after re-cloning.
   gitClient = simpleGit({ baseDir: rootPath });
 
-  // Checkout the specified revision
   try {
     await gitClient.checkout(revision, ["-f"]);
     const result = await gitClient.status();
@@ -374,8 +355,7 @@ export const cloneGitRepo = async (
 
     try {
       hash = await gitClient.revparse(["--verify", "HEAD"]);
-    } catch (err: unknown) {
-      // Ignore
+    } catch {
       logger.debug(`Unable to extract hash from commit`);
     }
 
@@ -395,7 +375,7 @@ export const cloneGitRepo = async (
 };
 
 export const roundToDecimal = (num: number, decimalPlaces = 0) => {
-  const p = Math.pow(10, decimalPlaces);
+  const p = 10 ** decimalPlaces;
   return Math.round((num + Number.EPSILON) * p) / p;
 };
 
@@ -408,18 +388,10 @@ export function toEnumOrThrow<T extends Record<string, string>>(enumObj: T, valu
   return match as T[keyof T];
 }
 
-/**
- * Convert snake_case string to camelCase
- * @param str - The snake_case string to convert
- * @returns The camelCase version of the string
- */
 export const snakeToCamel = (str: string): string => {
   return str.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
 };
 
-/**
- * Convert camelCase to snake_case
- */
 export const camelToSnake = (str: string): string => {
   return str.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
 };
