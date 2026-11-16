@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.39.2](https://github.com/raydak-labs/configarr/compare/v1.39.1...v1.39.2) (2026-11-16)
+
+
+### Bug Fixes
+
+* align download client secret updates with the configured values ([#627](https://github.com/raydak-labs/configarr/issues/627)) ([db4f6cf](https://github.com/raydak-labs/configarr/commit/db4f6cfc18028a1324d6dc6a426ba33cd36b073c))
+* **ci:** deploy documentation after release-please ([b2dfae9](https://github.com/raydak-labs/configarr/commit/b2dfae95418877cb95d2064e9b1853b5aa4586a0))
+* **ci:** expand CLI release build metadata ([43f20cd](https://github.com/raydak-labs/configarr/commit/43f20cdfddcbae00a7496a67fe23e95bcff2813f))
+* keep quality profile groups, ids and cutoffs stable ([#626](https://github.com/raydak-labs/configarr/issues/626)) ([0a7b118](https://github.com/raydak-labs/configarr/commit/0a7b11808f1092581dc1c381e9d40cad7c4a37f2))
+* **remotePaths:** accept UNC paths and normalize trailing separators ([#628](https://github.com/raydak-labs/configarr/issues/628)) ([da5db04](https://github.com/raydak-labs/configarr/commit/da5db04c37efcb6621ebe36f28d20d72d1e75118))
+
+
+### (internal) Refactorings
+
+* simplify utilities and split large modules ([#629](https://github.com/raydak-labs/configarr/issues/629)) ([23d5286](https://github.com/raydak-labs/configarr/commit/23d528623ee6f7bcb3fd017d2b5bf0c2cf8679d6))
+
 ## [1.39.1](https://github.com/raydak-labs/configarr/compare/v1.39.0...v1.39.1) (2026-11-06)
 
 ### Bug Fixes
