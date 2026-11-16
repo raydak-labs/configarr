@@ -49,7 +49,7 @@ pkgs.stdenvNoCC.mkDerivation (finalAttrs: {
 
   pnpmDeps = pkgs.fetchPnpmDeps {
     fetcherVersion = 4;
-    hash = "sha256-rp8UefwTC2iPIze0Y4OHNtSBtz0gdVWJQaOJ1sMszIA=";
+    hash = "sha256-ovhyQU2ffrG/G4n4uWjvFUaWrKwEeuwwcme+NY1CMgI=";
     inherit (finalAttrs) pname src version;
   };
 
