@@ -1,10 +1,10 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Mocked } from "vitest";
-import type { MetadataProfilesClient } from "../clients/capabilities";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { MetadataProfileResource } from "../__generated__/readarr/data-contracts";
-import { ReadarrMetadataProfileSync } from "./metadataProfileReadarr";
 import { ServerCache } from "../cache";
+import type { MetadataProfilesClient } from "../clients/capabilities";
 import type { InputConfigReadarrMetadataProfile, MergedConfigInstance } from "../types/config.types";
+import { ReadarrMetadataProfileSync } from "./metadataProfileReadarr";
 
 vi.mock("../env", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../env")>();

@@ -6,21 +6,19 @@
  */
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
 import { LidarrClient } from "../../src/clients/lidarr-client";
-import { DelayProfileLidarrSync, LidarrDelayProfile } from "../../src/delayProfiles/delayProfileLidarr";
+import { DelayProfileLidarrSync, type LidarrDelayProfile } from "../../src/delayProfiles/delayProfileLidarr";
 import { InputConfigDelayProfileSchema } from "../../src/types/config.types";
 import {
-  E2E_ROOT_A,
-  E2E_ROOT_B,
   arrConnection,
   cfAssignBlock,
   downloadClientConfigBlock,
+  E2E_ROOT_A,
+  E2E_ROOT_B,
   e2eCustomFormatDefinition,
   e2eMediaSettings,
   mediaConfig,
 } from "./config";
 import {
-  LEGACY_DELAY_PROFILE,
-  MediaBaseline,
   assertDiffUpToDate,
   assertPipelineSucceeded,
   blackholeFromSchema,
@@ -29,6 +27,8 @@ import {
   cleanupMetadataProfilesE2e,
   defaultDelayProfile,
   findNamed,
+  LEGACY_DELAY_PROFILE,
+  type MediaBaseline,
   nonE2eNames,
   preservedRootFolderObjects,
   restoreMediaBaseline,

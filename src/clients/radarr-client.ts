@@ -1,32 +1,31 @@
-import { KyHttpClient } from "../ky-client";
 import { Api } from "../__generated__/radarr/Api";
-import {
+import type {
+  CustomFormatResource,
   DelayProfileResource,
+  DownloadClientConfigResource,
+  DownloadClientResource,
   HostConfigResource,
   ImportListResource,
+  IndexerConfigResource,
+  LanguageResource,
   MediaManagementConfigResource,
+  MetadataResource,
   NamingConfigResource,
+  NotificationResource,
+  QualityDefinitionResource,
+  QualityProfileResource,
+  ReleaseProfileResource,
+  RemotePathMappingResource,
   RootFolderResource,
   SystemResource,
   TagResource,
-  DownloadClientConfigResource,
-  DownloadClientResource,
-  LanguageResource,
-  QualityDefinitionResource,
-  QualityProfileResource,
-  RemotePathMappingResource,
-  ReleaseProfileResource,
   UiConfigResource,
-  CustomFormatResource,
-  IndexerConfigResource,
-  MetadataResource,
-  NotificationResource,
 } from "../__generated__/radarr/data-contracts";
-import { logger } from "../logger";
 import type { CustomFormatRequest } from "../customFormats/customFormat.types";
+import { KyHttpClient } from "../ky-client";
+import { logger } from "../logger";
 import { ANY_LANGUAGE_NAME, cloneWithJSON } from "../util";
-import { forceSaveIfDisabled, logConnectionError, validateClientParams } from "./connection";
-import {
+import type {
   CustomFormatsClient,
   DownloadClientsClient,
   QualityDefinitionsClient,
@@ -34,6 +33,7 @@ import {
   SystemClient,
   TagsClient,
 } from "./capabilities";
+import { forceSaveIfDisabled, logConnectionError, validateClientParams } from "./connection";
 export class RadarrClient
   implements
     SystemClient,

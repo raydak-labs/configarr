@@ -1,5 +1,5 @@
 import { describe, expect, test, vi } from "vitest";
-import { ReleaseProfileResource } from "../__generated__/sonarr-v5/data-contracts";
+import type { ReleaseProfileResource } from "../__generated__/sonarr-v5/data-contracts";
 import { ServerCache } from "../cache";
 import { ConfigValidationError } from "../validation";
 import { ReleaseProfileSonarrSync } from "./releaseProfileSonarr";

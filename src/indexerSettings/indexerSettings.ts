@@ -1,7 +1,7 @@
+import type { DiffEntry, FieldChange } from "../diffReport/diffReport.types";
+import { filterUnmanagedDownloadClients } from "../downloadClients/downloadClientBase";
 import { getEnvs } from "../env";
 import { logger } from "../logger";
-import { filterUnmanagedDownloadClients } from "../downloadClients/downloadClientBase";
-import type { DiffEntry, FieldChange } from "../diffReport/diffReport.types";
 import type { IndexerSettings, MergedConfigInstance } from "../types/config.types";
 import { ConfigValidationError } from "../validation";
 

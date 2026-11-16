@@ -1,4 +1,5 @@
-import { describe, expect, test, beforeEach, vi } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vitest";
+
 vi.mock("../env", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../env")>();
   return {
@@ -7,23 +8,23 @@ vi.mock("../env", async (importOriginal) => {
   };
 });
 
-import { BaseDownloadClientSync } from "./downloadClientBase";
-import {
-  InputConfigArrInstanceSchema,
-  InputConfigProwlarrDownloadClientsSchema,
-  type InputConfigDownloadClient,
-} from "../types/config.types";
+import type { DownloadClientResource, TagResource } from "../__generated__/radarr/data-contracts";
+import { DownloadProtocol } from "../__generated__/radarr/data-contracts";
 import type { ServerCache } from "../cache";
 import type { DownloadClientsClient, TagsClient } from "../clients/capabilities";
 import { getClient } from "../clients/client";
-import type { TagResource, DownloadClientResource } from "../__generated__/radarr/data-contracts";
-import { DownloadProtocol } from "../__generated__/radarr/data-contracts";
-import { ArrType } from "../types/common.types";
-import { MediaDownloadClientResource } from "./downloadClient.types";
+import { SECRET_MASK } from "../diffReport/redactSecrets";
 import { getEnvs } from "../env";
 import { logger } from "../logger";
-import { SECRET_MASK } from "../diffReport/redactSecrets";
+import type { ArrType } from "../types/common.types";
+import {
+  InputConfigArrInstanceSchema,
+  type InputConfigDownloadClient,
+  InputConfigProwlarrDownloadClientsSchema,
+} from "../types/config.types";
 import { ConfigValidationError } from "../validation";
+import type { MediaDownloadClientResource } from "./downloadClient.types";
+import { BaseDownloadClientSync } from "./downloadClientBase";
 import { RadarrDownloadClientSync } from "./downloadClientRadarr";
 
 class MockDownloadClientSync extends BaseDownloadClientSync<MediaDownloadClientResource> {

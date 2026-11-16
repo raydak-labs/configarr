@@ -2,25 +2,25 @@ import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import fg from "fast-glob";
 import yaml from "yaml";
+import { filterConfigarrReleaseProfiles } from "./configTemplates";
 import { getEnvs, getHelpers } from "./env";
 import { logger } from "./logger";
-import {
-  ConfigCustomFormat,
-  ConfigIncludeItem,
-  ConfigQualityProfile,
-  ConfigSchema,
-  InputConfigArrInstance,
-  InputConfigIncludeItem,
-  InputConfigInstance,
-  InputConfigRemotePath,
-  InputConfigSchema,
-  InputConfigSchemaSchema,
-  MergedConfigInstance,
-} from "./types/config.types";
 import { RemotePathConfigSchema } from "./remotePaths/remotePath.types";
 import { normalizeRemotePath } from "./remotePaths/remotePath.util";
+import {
+  type ConfigCustomFormat,
+  type ConfigIncludeItem,
+  type ConfigQualityProfile,
+  type ConfigSchema,
+  type InputConfigArrInstance,
+  type InputConfigIncludeItem,
+  type InputConfigInstance,
+  type InputConfigRemotePath,
+  type InputConfigSchema,
+  InputConfigSchemaSchema,
+  type MergedConfigInstance,
+} from "./types/config.types";
 import { ConfigValidationError, validateConfig as validateConfigData } from "./validation";
-import { filterConfigarrReleaseProfiles } from "./configTemplates";
 
 let config: ConfigSchema | undefined;
 let secrets: any;
@@ -162,7 +162,7 @@ export const getSecrets = () => {
   }
 
   // Single file path (backward compatibility) - throw error if not found (but not for glob patterns)
-  if (patterns.length === 1 && patterns[0] && allFilePaths.length === 0 && !/[*?\[\{]/.test(patterns[0])) {
+  if (patterns.length === 1 && patterns[0] && allFilePaths.length === 0 && !/[*?[{]/.test(patterns[0])) {
     logger.error(`Secret file in location "${patterns[0]}" does not exist.`);
     throw new Error("Secret file not found.");
   }

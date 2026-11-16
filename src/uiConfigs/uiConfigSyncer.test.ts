@@ -1,6 +1,6 @@
-import { describe, expect, test, vi, beforeEach, afterEach } from "vitest";
-import { syncUiConfig } from "./uiConfigSyncer";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { getEnvs } from "../env";
+import { syncUiConfig } from "./uiConfigSyncer";
 
 vi.mock("../env", () => ({
   getEnvs: vi.fn(() => ({ DRY_RUN: false })),

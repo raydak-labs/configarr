@@ -1,4 +1,4 @@
-import { ReleaseProfileResource } from "../__generated__/whisparr/data-contracts";
+import type { ReleaseProfileResource } from "../__generated__/whisparr/data-contracts";
 import type { ReleaseProfilesApi } from "../clients/capabilities";
 import { BaseReleaseProfileSync, sharedReleaseProfileAdapter } from "./releaseProfileBase";
 

@@ -1,10 +1,10 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { Mocked } from "vitest";
-import type { MetadataProfilesClient } from "../clients/capabilities";
-import { ReadarrMetadataProfileSync } from "./metadataProfileReadarr";
-import { ServerCache } from "../cache";
-import { InputConfigReadarrMetadataProfile } from "../types/config.types";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { MetadataProfileResource } from "../__generated__/readarr/data-contracts";
+import { ServerCache } from "../cache";
+import type { MetadataProfilesClient } from "../clients/capabilities";
+import type { InputConfigReadarrMetadataProfile } from "../types/config.types";
+import { ReadarrMetadataProfileSync } from "./metadataProfileReadarr";
 
 describe("ReadarrMetadataProfileSync", () => {
   const mockApi: Mocked<MetadataProfilesClient<MetadataProfileResource>> = {

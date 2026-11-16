@@ -1,7 +1,7 @@
-import { InputConfigIndexer, InputConfigIndexerSchema } from "../types/config.types";
+import { type InputConfigIndexer, InputConfigIndexerSchema } from "../types/config.types";
 import { ConfigValidationError } from "../validation";
-import { ExtraProp, ProviderResourceSync } from "./providerResourceSync";
-import { AppProfileResource, IndexerResource } from "./types";
+import { type ExtraProp, ProviderResourceSync } from "./providerResourceSync";
+import type { AppProfileResource, IndexerResource } from "./types";
 
 type IndexerCtx = { appProfiles: AppProfileResource[] };
 

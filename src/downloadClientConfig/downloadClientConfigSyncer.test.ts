@@ -1,8 +1,8 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { syncDownloadClientConfig } from "./downloadClientConfigSyncer";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ServerCache } from "../cache";
-import type { MergedConfigInstance } from "../types/config.types";
 import type { MediaArrType } from "../types/common.types";
+import type { MergedConfigInstance } from "../types/config.types";
+import type { syncDownloadClientConfig } from "./downloadClientConfigSyncer";
 
 // Mock env - use importOriginal to preserve getHelpers and getBuildInfo
 vi.mock("../env", async (importOriginal) => {

@@ -1,31 +1,31 @@
 import { logger } from "./logger";
 import { mergeNotifications } from "./notifications/mergeNotifications";
 import {
+  type TransformTrashCFGroupsOptions,
+  type TransformTrashQPCFGroupsOptions,
   transformTrashCFGroups,
-  TransformTrashCFGroupsOptions,
-  TransformTrashQPCFGroupsOptions,
   transformTrashQDs,
   transformTrashQPCFGroups,
   transformTrashQPCFs,
   transformTrashQPToTemplate,
 } from "./trash-guide";
-import { ArrType, MappedMergedTemplates, MappedTemplates } from "./types/common.types";
-import {
+import type { ArrType, MappedMergedTemplates, MappedTemplates } from "./types/common.types";
+import type {
   InputConfigCustomFormatGroup,
   InputConfigIncludeItem,
   InputConfigQualitySize,
   InputConfigRecyclarrReleaseProfile,
   InputConfigReleaseProfile,
 } from "./types/config.types";
-import { ConfigValidationError, warnOrThrowConfig } from "./validation";
 import {
-  TrashCFGroupMapping,
-  TrashQP,
-  TrashQualityDefinition,
-  TrashQualityDefinitionQuality,
+  type TrashCFGroupMapping,
+  type TrashQP,
+  type TrashQualityDefinition,
+  type TrashQualityDefinitionQuality,
   TrashQualityDefinitionSchema,
 } from "./types/trashguide.types";
 import { isUrl, loadTemplateFromUrl } from "./url-template-importer";
+import { ConfigValidationError, warnOrThrowConfig } from "./validation";
 
 export const expandAndAppendCustomFormatGroups = (
   customFormatGroups: InputConfigCustomFormatGroup[] | undefined,
@@ -232,7 +232,9 @@ const includeTrashTemplate = (
   const requiredCFsFromCFGroups = transformTrashQPCFGroups(template, trashCFGroupMapping, useExcludeSemantics, autoTrashCfGroupOptions);
 
   const numberOfCfsLoaded = requiredCFsFromCFGroups.reduce((p, c) => {
-    (c.trash_ids || []).forEach((id) => p.add(id));
+    for (const id of c.trash_ids || []) {
+      p.add(id);
+    }
     return p;
   }, new Set<string>());
 
@@ -319,7 +321,7 @@ export const includeTemplateOrderDefault = async (
           break;
         case "RECYCLARR":
         // RECYCLARR shares LOCAL fallback matching for backward compatibility.
-        case undefined:
+        case undefined: {
           let recyclarrFound = false;
           let localFound = false;
 
@@ -343,6 +345,7 @@ export const includeTemplateOrderDefault = async (
           }
 
           break;
+        }
       }
 
       return previous;

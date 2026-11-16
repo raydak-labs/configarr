@@ -1,6 +1,6 @@
-import { getEnvs } from "../env";
-import { SECRET_MASK } from "../diffReport/redactSecrets";
 import type { DiffEntry, FieldChange } from "../diffReport/diffReport.types";
+import { SECRET_MASK } from "../diffReport/redactSecrets";
+import { getEnvs } from "../env";
 import type { InputConfigArrInstance } from "../types/config.types";
 import { ConfigValidationError } from "../validation";
 

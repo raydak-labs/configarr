@@ -1,8 +1,8 @@
 import type { DownloadClientResource } from "../__generated__/prowlarr/data-contracts";
-import { ServerCache } from "../cache";
-import { FieldChange } from "../diffReport/diffReport.types";
-import { InputConfigDownloadClient } from "../types/config.types";
-import { SecretUpdateMode } from "./downloadClient.types";
+import type { ServerCache } from "../cache";
+import type { FieldChange } from "../diffReport/diffReport.types";
+import type { InputConfigDownloadClient } from "../types/config.types";
+import type { SecretUpdateMode } from "./downloadClient.types";
 import { BaseDownloadClientSync } from "./downloadClientBase";
 
 export class ProwlarrDownloadClientSync extends BaseDownloadClientSync<DownloadClientResource> {

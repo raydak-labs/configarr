@@ -1,12 +1,12 @@
-import { ServerCache } from "../cache";
+import type { ServerCache } from "../cache";
 import type { ArrTypeToClient } from "../clients/client";
-import { DiffEntry } from "../diffReport/diffReport.types";
-import { logger } from "../logger";
-import { MediaArrType } from "../types/common.types";
-import { InputConfigDownloadClientConfig, MergedConfigInstance } from "../types/config.types";
+import type { DiffEntry } from "../diffReport/diffReport.types";
 import { getEnvs } from "../env";
+import { logger } from "../logger";
+import type { MediaArrType } from "../types/common.types";
+import type { InputConfigDownloadClientConfig, MergedConfigInstance } from "../types/config.types";
 import { camelToSnake, compareObjectsCarr, snakeToCamel } from "../util";
-import { DownloadClientConfigSyncResult } from "./downloadClientConfig.types";
+import type { DownloadClientConfigSyncResult } from "./downloadClientConfig.types";
 
 type DownloadClientConfigClient = Pick<ArrTypeToClient[MediaArrType], "getDownloadClientConfig" | "updateDownloadClientConfig">;
 
@@ -60,7 +60,6 @@ function filterFieldsByArrType(fields: Record<string, any>, arrType: MediaArrTyp
       if (arrType !== "WHISPARR") {
         filtered[key] = value;
       }
-      continue;
     }
   }
 

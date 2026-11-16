@@ -5,22 +5,21 @@
  * shared factory would hide that behind branches. Shared code stays in `helpers.ts`.
  */
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
-import { WhisparrClient } from "../../src/clients/whisparr-client";
 import { DownloadProtocol } from "../../src/__generated__/whisparr/data-contracts";
+import { WhisparrClient } from "../../src/clients/whisparr-client";
 import { StandardDelayProfileSync } from "../../src/delayProfiles/delayProfileBase";
 import { InputConfigDelayProfileSchema } from "../../src/types/config.types";
 import {
-  E2E_ROOT_A,
-  E2E_ROOT_B,
   arrConnection,
   cfAssignBlock,
   downloadClientConfigBlock,
+  E2E_ROOT_A,
+  E2E_ROOT_B,
   e2eCustomFormatDefinition,
   e2eMediaSettings,
   mediaConfig,
 } from "./config";
 import {
-  MediaBaseline,
   assertDiffUpToDate,
   assertPipelineSucceeded,
   blackholeFromSchema,
@@ -28,6 +27,7 @@ import {
   cleanupMediaE2e,
   defaultDelayProfile,
   findNamed,
+  type MediaBaseline,
   nonE2eNames,
   preservedRootFolderPaths,
   restoreMediaBaseline,
@@ -126,7 +126,10 @@ describe("whisparr (live)", () => {
       expect(await client.getUiConfig()).toEqual(beforeUi);
     } finally {
       const response = await fetch(`${url}/${original.id}`, { method: "PUT", headers, body: JSON.stringify(original) });
-      if (!response.ok) throw new Error(`Failed to restore host settings: ${response.status}`);
+      if (!response.ok) {
+        // biome-ignore lint/correctness/noUnsafeFinally: restoring server state is mandatory; restoration failures must fail the test.
+        throw new Error(`Failed to restore host settings: ${response.status}`);
+      }
     }
   });
 

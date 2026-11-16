@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
+import type { IndexerConfigClient, IndexerConfigResourceShared } from "../clients/capabilities";
 import { initEnvs } from "../env";
 import { IndexerConfigSchema } from "../types/config.types";
 import { syncIndexerConfig } from "./indexerConfigSync";
-import type { IndexerConfigClient, IndexerConfigResourceShared } from "../clients/capabilities";
 
 describe("indexerConfigSync", () => {
   afterEach(() => {

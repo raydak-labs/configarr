@@ -1,9 +1,9 @@
 import { getClient } from "../clients/client";
-import { DiffEntry, FieldChange } from "../diffReport/diffReport.types";
+import type { DiffEntry, FieldChange } from "../diffReport/diffReport.types";
 import { getEnvs } from "../env";
 import { logger } from "../logger";
-import { InputConfigProwlarrInstance, InputConfigSyncProfile } from "../types/config.types";
-import { AppProfileResource } from "./types";
+import type { InputConfigProwlarrInstance, InputConfigSyncProfile } from "../types/config.types";
+import type { AppProfileResource } from "./types";
 
 export interface SyncProfileSyncResult {
   added: number;

@@ -1,10 +1,10 @@
-import { MonitorTypes, NewItemMonitorTypes, RootFolderResource } from "../__generated__/readarr/data-contracts";
-import { InputConfigRootFolderReadarr } from "../types/config.types";
+import { MonitorTypes, NewItemMonitorTypes, type RootFolderResource } from "../__generated__/readarr/data-contracts";
+import type { InputConfigRootFolderReadarr } from "../types/config.types";
 import { toEnumOrThrow } from "../util";
 import {
-  ProfileAwareRootFolderApi,
-  ProfileAwareRootFolderConfig,
-  ProfileAwareRootFolderFields,
+  type ProfileAwareRootFolderApi,
+  type ProfileAwareRootFolderConfig,
+  type ProfileAwareRootFolderFields,
   ProfileAwareRootFolderSync,
 } from "./rootFolderBase";
 

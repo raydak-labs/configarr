@@ -1,8 +1,8 @@
-import { ServerCache } from "../cache";
+import type { ServerCache } from "../cache";
 import { getEnvs } from "../env";
-import { InputConfigApplication, InputConfigApplicationSchema, InputConfigProwlarrInstance } from "../types/config.types";
-import { ExtraProp, ProviderResourceSync, ProviderSyncOutcome } from "./providerResourceSync";
-import { ApplicationResource } from "./types";
+import { type InputConfigApplication, InputConfigApplicationSchema, type InputConfigProwlarrInstance } from "../types/config.types";
+import { type ExtraProp, ProviderResourceSync, type ProviderSyncOutcome } from "./providerResourceSync";
+import type { ApplicationResource } from "./types";
 
 type NoCtx = Record<string, never>;
 

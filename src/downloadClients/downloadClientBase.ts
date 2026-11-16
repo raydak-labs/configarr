@@ -1,22 +1,22 @@
 import { z } from "zod";
-import { ServerCache } from "../cache";
+import type { ServerCache } from "../cache";
 import type { DownloadClientsClient, TagsClient } from "../clients/capabilities";
-import { DiffEntry, FieldChange } from "../diffReport/diffReport.types";
+import type { DiffEntry, FieldChange } from "../diffReport/diffReport.types";
 import { isSecretFieldName, SECRET_MASK } from "../diffReport/redactSecrets";
 import { getEnvs } from "../env";
 import { logger } from "../logger";
 import { buildTagPlaceholders, ensureTags, resolveTagNames } from "../tags/tags";
-import { ArrType } from "../types/common.types";
-import { InputConfigDownloadClient, MergedConfigInstance } from "../types/config.types";
-import {
+import type { ArrType } from "../types/common.types";
+import type { InputConfigDownloadClient, MergedConfigInstance } from "../types/config.types";
+import { camelToSnake, snakeToCamel } from "../util";
+import { ConfigValidationError } from "../validation";
+import type {
   DownloadClientDiff,
   DownloadClientShared,
   DownloadClientSyncResult,
   SecretUpdateMode,
   ValidationResult,
 } from "./downloadClient.types";
-import { camelToSnake, snakeToCamel } from "../util";
-import { ConfigValidationError } from "../validation";
 
 // Constants
 const PRIORITY_MIN = 1;
@@ -569,7 +569,9 @@ export abstract class BaseDownloadClientSync<T extends DownloadClientShared> {
     for (const config of configClients) {
       if (config.tags) {
         const { missing } = resolveTagNames(config.tags, serverCache.tags);
-        missing.forEach((tag) => allMissingTags.add(tag));
+        for (const tag of missing) {
+          allMissingTags.add(tag);
+        }
       }
     }
 

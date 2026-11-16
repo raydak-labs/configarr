@@ -1,6 +1,6 @@
-import { InputConfigIndexerProxy, InputConfigIndexerProxySchema } from "../types/config.types";
+import { type InputConfigIndexerProxy, InputConfigIndexerProxySchema } from "../types/config.types";
 import { ProviderResourceSync } from "./providerResourceSync";
-import { IndexerProxyResource } from "./types";
+import type { IndexerProxyResource } from "./types";
 
 /**
  * Syncs Prowlarr indexer proxies (FlareSolverr, HTTP, SOCKS4/5). Matched by

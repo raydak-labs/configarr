@@ -1,4 +1,4 @@
-import { DiffEntry } from "./diffReport.types";
+import type { DiffEntry } from "./diffReport.types";
 
 export const SECRET_MASK = "********";
 

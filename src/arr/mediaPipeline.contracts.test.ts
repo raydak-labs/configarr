@@ -1,13 +1,13 @@
 import { describe, expect, expectTypeOf, it } from "vitest";
-import { DownloadProtocol } from "../__generated__/sonarr/data-contracts";
 import type { QualityDefinitionResource as SonarrQualityDefinitionResource } from "../__generated__/sonarr/data-contracts";
+import { DownloadProtocol } from "../__generated__/sonarr/data-contracts";
 import type { SonarrClient } from "../clients/sonarr-client";
 import { StandardDelayProfileSync } from "../delayProfiles/delayProfileBase";
 import { SonarrDownloadClientSync } from "../downloadClients/downloadClientSonarr";
 import { MediaManagementSync } from "../mediaManagement/mediaManagement";
 import { QualityDefinitionPreferredSync } from "../qualityDefinitions/qualityDefinition";
-import { QualityProfileLidarrSync } from "../qualityProfiles/qualityProfileLidarr";
-import { QualityProfileRadarrSync } from "../qualityProfiles/qualityProfileRadarr";
+import type { QualityProfileLidarrSync } from "../qualityProfiles/qualityProfileLidarr";
+import type { QualityProfileRadarrSync } from "../qualityProfiles/qualityProfileRadarr";
 import { QualityProfileSonarrSync } from "../qualityProfiles/qualityProfileSonarr";
 import { ReleaseProfileSonarrSync } from "../releaseProfiles/releaseProfileSonarr";
 import { PathRootFolderSync } from "../rootFolder/rootFolderBase";

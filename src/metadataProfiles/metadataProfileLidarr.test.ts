@@ -1,9 +1,9 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { Mocked } from "vitest";
-import { LidarrMetadataProfileApi, LidarrMetadataProfileSync } from "./metadataProfileLidarr";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ServerCache } from "../cache";
-import { InputConfigLidarrMetadataProfile } from "../types/config.types";
+import type { InputConfigLidarrMetadataProfile } from "../types/config.types";
 import { ConfigValidationError } from "../validation";
+import { type LidarrMetadataProfileApi, LidarrMetadataProfileSync } from "./metadataProfileLidarr";
 
 describe("LidarrMetadataProfileSync", () => {
   const mockApi: Mocked<LidarrMetadataProfileApi> = {

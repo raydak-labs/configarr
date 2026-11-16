@@ -1,8 +1,8 @@
 import fs from "node:fs";
-import { describe, expect, test, vi, afterEach } from "vitest";
-import { writeJsonDiffReport } from "./jsonFormatter";
+import { afterEach, describe, expect, test, vi } from "vitest";
 import { DiffCollector } from "../diffCollector";
-import { InstanceDiffReport } from "../diffReport.types";
+import type { InstanceDiffReport } from "../diffReport.types";
+import { writeJsonDiffReport } from "./jsonFormatter";
 
 describe("writeJsonDiffReport", () => {
   afterEach(() => {

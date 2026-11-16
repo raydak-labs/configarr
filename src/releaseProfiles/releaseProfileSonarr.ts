@@ -1,11 +1,11 @@
-import { ReleaseProfileResource } from "../__generated__/sonarr-v5/data-contracts";
+import type { ReleaseProfileResource } from "../__generated__/sonarr-v5/data-contracts";
 import type { IndexerListItem, ReleaseProfilesApi } from "../clients/capabilities";
-import { FieldChange } from "../diffReport/diffReport.types";
-import { resolveTagNames } from "../tags/tags";
+import type { FieldChange } from "../diffReport/diffReport.types";
 import type { Tag, TagResolveOptions } from "../tags/tag.types";
-import { InputConfigReleaseProfile } from "../types/config.types";
+import { resolveTagNames } from "../tags/tags";
+import type { InputConfigReleaseProfile } from "../types/config.types";
 import { ConfigValidationError } from "../validation";
-import { BaseReleaseProfileSync, ReleaseProfileAdapter, normalizeTerms } from "./releaseProfileBase";
+import { BaseReleaseProfileSync, normalizeTerms, type ReleaseProfileAdapter } from "./releaseProfileBase";
 
 type SonarrReleaseProfileApi = ReleaseProfilesApi<ReleaseProfileResource, ReleaseProfileResource> & {
   supportsReleaseProfileControls(): Promise<boolean>;

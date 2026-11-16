@@ -1,6 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { syncRemotePaths, remotePathsToDiffEntries } from "./remotePathSyncer";
-import { RemotePathMappingResource } from "./remotePath.types";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { RemotePathMappingResource } from "./remotePath.types";
+import { remotePathsToDiffEntries, syncRemotePaths } from "./remotePathSyncer";
 
 // Mock env - use importOriginal to preserve other env functions
 vi.mock("../env", async (importOriginal) => {

@@ -1,5 +1,5 @@
-import { InputConfigMetadataProfile } from "../types/config.types";
-import { DiffEntry, FieldChange } from "../diffReport/diffReport.types";
+import type { DiffEntry, FieldChange } from "../diffReport/diffReport.types";
+import type { InputConfigMetadataProfile } from "../types/config.types";
 
 // Common interface for all metadata profile resources
 // All metadata profiles must have at least id and name

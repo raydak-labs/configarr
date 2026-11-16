@@ -1,5 +1,5 @@
 import type { DownloadClientResource } from "../__generated__/readarr/data-contracts";
-import { MediaArrType } from "../types/common.types";
+import type { MediaArrType } from "../types/common.types";
 import { MediaDownloadClientSync } from "./downloadClientMedia";
 
 export class ReadarrDownloadClientSync extends MediaDownloadClientSync<DownloadClientResource> {

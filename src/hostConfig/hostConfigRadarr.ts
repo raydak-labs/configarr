@@ -1,9 +1,9 @@
-import { AuthenticationType, AuthenticationRequiredType } from "../__generated__/radarr/data-contracts";
 import type { HostConfigResource } from "../__generated__/radarr/data-contracts";
+import { AuthenticationRequiredType, AuthenticationType } from "../__generated__/radarr/data-contracts";
 import type { RadarrClient } from "../clients/radarr-client";
 import { toEnumOrThrow } from "../util";
-import { HostConfigSync } from "./hostConfigSync";
 import type { HostConfig } from "./hostConfigSync";
+import { HostConfigSync } from "./hostConfigSync";
 
 function mapRadarrHostConfig(config: HostConfig) {
   const { update_oidc_client_secret, authenticationMethod, authenticationRequired, ...fields } = config;

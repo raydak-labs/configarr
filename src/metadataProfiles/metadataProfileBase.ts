@@ -1,11 +1,11 @@
-import { ServerCache } from "../cache";
+import type { ServerCache } from "../cache";
 import type { MetadataProfilesClient } from "../clients/capabilities";
+import type { DiffEntry } from "../diffReport/diffReport.types";
 import { getEnvs } from "../env";
 import { logger } from "../logger";
-import { ArrType } from "../types/common.types";
-import { InputConfigMetadataProfile, MergedConfigInstance } from "../types/config.types";
-import { DiffEntry } from "../diffReport/diffReport.types";
-import { BaseMetadataProfileResource, MetadataProfileDiff, MetadataProfileSyncResult } from "./metadataProfile.types";
+import type { ArrType } from "../types/common.types";
+import type { InputConfigMetadataProfile, MergedConfigInstance } from "../types/config.types";
+import type { BaseMetadataProfileResource, MetadataProfileDiff, MetadataProfileSyncResult } from "./metadataProfile.types";
 
 export function metadataProfileDiffToDiffEntries(diff: MetadataProfileDiff): DiffEntry[] {
   const entries: DiffEntry[] = diff.missingOnServer.map((profile) => ({

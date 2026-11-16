@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { CFIDToConfigGroup, ImportCF } from "../customFormats/customFormat.types";
-import { ArrType, ArrTypeConst } from "./common.types";
+import type { CFIDToConfigGroup, ImportCF } from "../customFormats/customFormat.types";
+import { type ArrType, ArrTypeConst } from "./common.types";
 
 // --- Schemas ---
 

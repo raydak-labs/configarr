@@ -1,37 +1,37 @@
-import { KyHttpClient } from "../ky-client";
 import { Api } from "../__generated__/readarr/Api";
 import {
-  DelayProfileResource,
-  MediaManagementConfigResource,
-  NamingConfigResource,
-  RootFolderResource,
-  SystemResource,
-  TagResource,
-  DownloadClientConfigResource,
-  DownloadClientResource,
+  type CustomFormatResource,
+  type DelayProfileResource,
+  type DownloadClientConfigResource,
+  type DownloadClientResource,
+  type IndexerConfigResource,
   LanguageResource,
-  MetadataProfileResource,
-  QualityDefinitionResource,
-  QualityProfileResource,
-  RemotePathMappingResource,
-  ReleaseProfileResource,
-  UiConfigResource,
-  CustomFormatResource,
-  IndexerConfigResource,
-  NotificationResource,
+  type MediaManagementConfigResource,
+  type MetadataProfileResource,
+  type NamingConfigResource,
+  type NotificationResource,
+  type QualityDefinitionResource,
+  type QualityProfileResource,
+  type ReleaseProfileResource,
+  type RemotePathMappingResource,
+  type RootFolderResource,
+  type SystemResource,
+  type TagResource,
+  type UiConfigResource,
 } from "../__generated__/readarr/data-contracts";
-import { logger } from "../logger";
 import type { CustomFormatRequest } from "../customFormats/customFormat.types";
-import { forceSaveIfDisabled, logConnectionError, validateClientParams } from "./connection";
-import {
+import { KyHttpClient } from "../ky-client";
+import { logger } from "../logger";
+import type {
   CustomFormatsClient,
   DownloadClientsClient,
+  MetadataProfilesClient,
   QualityDefinitionsClient,
   QualityProfilesClient,
   SystemClient,
   TagsClient,
-  MetadataProfilesClient,
 } from "./capabilities";
+import { forceSaveIfDisabled, logConnectionError, validateClientParams } from "./connection";
 export class ReadarrClient
   implements
     SystemClient,

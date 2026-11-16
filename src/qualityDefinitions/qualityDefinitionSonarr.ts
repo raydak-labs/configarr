@@ -1,6 +1,6 @@
 import type { QualityDefinitionResource } from "../__generated__/sonarr/data-contracts";
-import type { SonarrClient } from "../clients/sonarr-client";
 import type { QualityDefinitionsClient } from "../clients/capabilities";
+import type { SonarrClient } from "../clients/sonarr-client";
 import type { TrashQualityDefinitionQuality } from "../types/trashguide.types";
 import { QualityDefinitionPreferredSync } from "./qualityDefinition";
 

@@ -4,9 +4,9 @@ import { SonarrClient } from "../clients/sonarr-client";
 import { WhisparrClient } from "../clients/whisparr-client";
 import { initEnvs } from "../env";
 import { logger } from "../logger";
-import { syncHostConfig } from "./hostConfigSync";
 import { RadarrHostConfigSync } from "./hostConfigRadarr";
 import { SonarrHostConfigSync } from "./hostConfigSonarr";
+import { syncHostConfig } from "./hostConfigSync";
 import { WhisparrHostConfigSync } from "./hostConfigWhisparr";
 
 describe("host settings synchronization", () => {

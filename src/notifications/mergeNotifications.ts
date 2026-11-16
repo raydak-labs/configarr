@@ -1,4 +1,4 @@
-import { InputConfigNotificationsSchema, type InputConfigNotification, type InputConfigNotifications } from "../types/config.types";
+import { type InputConfigNotification, type InputConfigNotifications, InputConfigNotificationsSchema } from "../types/config.types";
 import { ConfigValidationError } from "../validation";
 
 function parseNotificationsBlock(block: InputConfigNotifications): InputConfigNotifications {

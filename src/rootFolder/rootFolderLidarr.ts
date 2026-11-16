@@ -1,10 +1,10 @@
-import { MonitorTypes, NewItemMonitorTypes, RootFolderResource } from "../__generated__/lidarr/data-contracts";
-import { InputConfigRootFolderLidarr } from "../types/config.types";
+import { MonitorTypes, NewItemMonitorTypes, type RootFolderResource } from "../__generated__/lidarr/data-contracts";
+import type { InputConfigRootFolderLidarr } from "../types/config.types";
 import { toEnumOrThrow } from "../util";
 import {
-  ProfileAwareRootFolderApi,
-  ProfileAwareRootFolderConfig,
-  ProfileAwareRootFolderFields,
+  type ProfileAwareRootFolderApi,
+  type ProfileAwareRootFolderConfig,
+  type ProfileAwareRootFolderFields,
   ProfileAwareRootFolderSync,
 } from "./rootFolderBase";
 

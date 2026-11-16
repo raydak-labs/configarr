@@ -1,7 +1,7 @@
-import { getEnvs } from "../env";
-import type { DiffEntry, FieldChange } from "../diffReport/diffReport.types";
-import type { IndexerConfig } from "../types/config.types";
 import type { IndexerConfigClient, IndexerConfigResourceShared } from "../clients/capabilities";
+import type { DiffEntry, FieldChange } from "../diffReport/diffReport.types";
+import { getEnvs } from "../env";
+import type { IndexerConfig } from "../types/config.types";
 
 /**
  * Synchronize global indexer configuration settings with the remote *arr instance.

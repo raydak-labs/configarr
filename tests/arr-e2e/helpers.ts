@@ -1,17 +1,17 @@
+import { execFileSync } from "node:child_process";
 import { cpSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
-import { execFileSync } from "node:child_process";
 import { expect, inject } from "vitest";
 import type { TestProject } from "vitest/node";
 import { stringify } from "yaml";
-import { LidarrClient } from "../../src/clients/lidarr-client";
+import type { LidarrClient } from "../../src/clients/lidarr-client";
 import { ProwlarrClient } from "../../src/clients/prowlarr-client";
-import { RadarrClient } from "../../src/clients/radarr-client";
-import { ReadarrClient } from "../../src/clients/readarr-client";
+import type { RadarrClient } from "../../src/clients/radarr-client";
+import type { ReadarrClient } from "../../src/clients/readarr-client";
 import { SonarrClient } from "../../src/clients/sonarr-client";
-import { WhisparrClient } from "../../src/clients/whisparr-client";
-import { DelayProfileShared } from "../../src/delayProfiles/delayProfile.types";
+import type { WhisparrClient } from "../../src/clients/whisparr-client";
+import type { DelayProfileShared } from "../../src/delayProfiles/delayProfile.types";
 import type { ArrType, MediaArrType } from "../../src/types/common.types";
 import { arrConnection } from "./config";
 import { buildConfigarrBundles, type ConfigarrRunResult, runConfigarrInWorker, runConfigarrProcess } from "./configarrRunner";
@@ -370,7 +370,8 @@ export function cfReleaseTitleValue(cf: { specifications?: Array<{ fields?: unkn
   const fields = cf?.specifications?.[0]?.fields;
   if (Array.isArray(fields)) {
     const field = fields.find((f) => typeof f === "object" && f !== null && "name" in f && (f as { name?: string }).name === "value") as
-      { value?: unknown } | undefined;
+      | { value?: unknown }
+      | undefined;
     return field?.value;
   }
   if (fields && typeof fields === "object" && "value" in fields) {

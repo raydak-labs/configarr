@@ -1,6 +1,6 @@
 import { getClient } from "../clients/client";
 import { DelayProfileLidarrSync } from "../delayProfiles/delayProfileLidarr";
-import { InstanceDiffReport } from "../diffReport/diffReport.types";
+import type { InstanceDiffReport } from "../diffReport/diffReport.types";
 import { LidarrDownloadClientSync } from "../downloadClients/downloadClientLidarr";
 import { MediaManagementSync } from "../mediaManagement/mediaManagement";
 import { LidarrMetadataProfileSync } from "../metadataProfiles/metadataProfileLidarr";
@@ -8,7 +8,7 @@ import { QualityDefinitionPreferredSync } from "../qualityDefinitions/qualityDef
 import { QualityProfileLidarrSync } from "../qualityProfiles/qualityProfileLidarr";
 import { ReleaseProfileLidarrSync } from "../releaseProfiles/releaseProfileLidarr";
 import { LidarrRootFolderSync } from "../rootFolder/rootFolderLidarr";
-import { InputConfigArrInstance, InputConfigSchema } from "../types/config.types";
+import type { InputConfigArrInstance, InputConfigSchema } from "../types/config.types";
 import { completeMediaSync, runMediaSyncToQualityProfiles } from "./mediaPipeline";
 
 const ARR = "LIDARR" as const;

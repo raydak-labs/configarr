@@ -1,30 +1,29 @@
-import { KyHttpClient } from "../ky-client";
 import { Api } from "../__generated__/whisparr/Api";
-import {
+import type {
+  CustomFormatResource,
   DelayProfileResource,
+  DownloadClientConfigResource,
+  DownloadClientResource,
+  HostConfigResource,
+  IndexerConfigResource,
+  LanguageResource,
   MediaManagementConfigResource,
   NamingConfigResource,
+  NotificationResource,
+  QualityDefinitionResource,
+  QualityProfileResource,
+  ReleaseProfileResource,
+  RemotePathMappingResource,
   RootFolderResource,
   SystemResource,
   TagResource,
-  DownloadClientConfigResource,
-  DownloadClientResource,
-  LanguageResource,
-  QualityDefinitionResource,
-  QualityProfileResource,
-  RemotePathMappingResource,
-  ReleaseProfileResource,
   UiConfigResource,
-  CustomFormatResource,
-  HostConfigResource,
-  IndexerConfigResource,
-  NotificationResource,
 } from "../__generated__/whisparr/data-contracts";
-import { logger } from "../logger";
 import type { CustomFormatRequest } from "../customFormats/customFormat.types";
+import { KyHttpClient } from "../ky-client";
+import { logger } from "../logger";
 import { ANY_LANGUAGE_NAME, cloneWithJSON } from "../util";
-import { forceSaveIfDisabled, logConnectionError, validateClientParams } from "./connection";
-import {
+import type {
   CustomFormatsClient,
   DownloadClientsClient,
   QualityDefinitionsClient,
@@ -32,6 +31,7 @@ import {
   SystemClient,
   TagsClient,
 } from "./capabilities";
+import { forceSaveIfDisabled, logConnectionError, validateClientParams } from "./connection";
 
 // The generated contract omits these Whisparr v3 fields.
 export type WhisparrHostConfigResource = HostConfigResource & {

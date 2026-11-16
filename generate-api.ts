@@ -25,7 +25,7 @@ const generate = (app: AppName) =>
     url: OPENAPI_SPECS[app],
     modular: true,
     singleHttpClient: true,
-    // @ts-ignore little hack to have one single client (we are deleting the weird created file for the http-client)
+    // @ts-expect-error little hack to have one single client (we are deleting the weird created file for the http-client)
     fileNames: {
       httpClient: "../../ky-client",
     },

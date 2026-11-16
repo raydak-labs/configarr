@@ -1,17 +1,18 @@
 import { describe, expect, test } from "vitest";
-import { QualityDefinitionShared } from "../qualityDefinitions/qualityDefinition.types";
-import { QualityProfileShared } from "./qualityProfile.types";
-import { ServerCache } from "../cache";
-import { QualityProfileLidarrSync } from "./qualityProfileLidarr";
 import type { QualityProfileResource } from "../__generated__/lidarr/data-contracts";
+import { ServerCache } from "../cache";
 import type { QualityProfilesClient } from "../clients/capabilities";
+import type { QualityDefinitionShared } from "../qualityDefinitions/qualityDefinition.types";
+import type { QualityProfileShared } from "./qualityProfile.types";
+import { QualityProfileLidarrSync } from "./qualityProfileLidarr";
 
 /** calculateQualityProfilesDiff never touches the API; the client is only required by the type. */
 const qpClient = {} as QualityProfilesClient<QualityProfileResource>;
-import { CFProcessing } from "../customFormats/customFormat.types";
-import { MergedConfigInstance } from "../types/config.types";
 
-describe("QualityProfileLidarrSync", async () => {
+import type { CFProcessing } from "../customFormats/customFormat.types";
+import type { MergedConfigInstance } from "../types/config.types";
+
+describe("QualityProfileLidarrSync", () => {
   test("calculateQualityProfilesDiff - Lidarr create omits language and minUpgradeFormatScore", async () => {
     const cfMap: CFProcessing = { carrIdMapping: new Map(), cfNameToCarrConfig: new Map() };
     const resources: QualityDefinitionShared[] = [{ id: 1, title: "FLAC", quality: { id: 1, name: "FLAC" } }];

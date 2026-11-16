@@ -1,14 +1,14 @@
-import { ServerCache } from "../cache";
+import type { ServerCache } from "../cache";
 import type { IndexerListItem, ReleaseProfilesApi } from "../clients/capabilities";
-import { DiffEntry, FieldChange } from "../diffReport/diffReport.types";
-import { renderTags } from "../tags/renderTags";
+import type { DiffEntry, FieldChange } from "../diffReport/diffReport.types";
 import { getEnvs } from "../env";
 import { logger } from "../logger";
-import { Tag, TagResolveOptions } from "../tags/tag.types";
+import { renderTags } from "../tags/renderTags";
+import type { Tag, TagResolveOptions } from "../tags/tag.types";
 import { buildTagPlaceholders, ensureTags, resolveTagNames } from "../tags/tags";
-import { InputConfigReleaseProfile } from "../types/config.types";
+import type { InputConfigReleaseProfile } from "../types/config.types";
 import { ConfigValidationError } from "../validation";
-import { MappedReleaseProfile, ReleaseProfileShared, ReleaseProfilesDiff, ReleaseProfileSyncResult } from "./releaseProfile.types";
+import type { MappedReleaseProfile, ReleaseProfileShared, ReleaseProfileSyncResult, ReleaseProfilesDiff } from "./releaseProfile.types";
 
 export interface ReleaseProfileAdapter<Server extends ReleaseProfileShared, Request extends ReleaseProfileShared> {
   mapToServer(profile: InputConfigReleaseProfile, serverTags: Tag[], indexers: IndexerListItem[], tagOptions?: TagResolveOptions): Request;
@@ -205,7 +205,10 @@ export class BaseReleaseProfileSync<T extends ReleaseProfileShared, Request exte
     const missingTags = new Set<string>();
     for (const config of configs) {
       // Configured casing wins: this is the label the server gets.
-      resolveTagNames(this.adapter.tagLabels(config), serverCache.tags).missing.forEach((tag) => missingTags.add(tag));
+      const { missing } = resolveTagNames(this.adapter.tagLabels(config), serverCache.tags);
+      for (const tag of missing) {
+        missingTags.add(tag);
+      }
     }
 
     if (missingTags.size === 0) {

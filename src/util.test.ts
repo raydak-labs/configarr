@@ -4,8 +4,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import path from "path";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
-import { CustomFormatRequest } from "./customFormats/customFormat.types";
-import { TrashCF, TrashCFSpF } from "./types/trashguide.types";
+import type { CustomFormatRequest } from "./customFormats/customFormat.types";
+import type { TrashCF, TrashCFSpF } from "./types/trashguide.types";
 import {
   cloneGitRepo,
   cloneWithJSON,
@@ -89,7 +89,7 @@ const exampleCFImplementations = {
   ],
 };
 
-describe("SizeSpecification", async () => {
+describe("SizeSpecification", () => {
   const serverResponse: CustomFormatRequest = {
     id: 103,
     name: "Size: Block More 40GB",
@@ -184,7 +184,7 @@ describe("SizeSpecification", async () => {
   });
 });
 
-describe("compareImportCFs - general", async () => {
+describe("compareImportCFs - general", () => {
   const filePath = path.resolve(__dirname, "../tests/samples/20240930_cf_exceptLanguage.json");
   const serverResponse = loadJsonFile<CustomFormatRequest>(filePath);
 
@@ -272,7 +272,7 @@ describe("compareImportCFs - general", async () => {
   });
 });
 
-describe("zip function", async () => {
+describe("zip function", () => {
   test("should work for empty inputs", async () => {
     expect(zip([], [])).toEqual([]);
   });

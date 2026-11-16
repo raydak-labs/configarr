@@ -1,10 +1,10 @@
 import { existsSync, mkdirSync, readFileSync, rmSync } from "node:fs";
 import { CheckRepoActions, simpleGit } from "simple-git";
-import { ConfigarrCF, CustomFormatRequest, ImportCF } from "./customFormats/customFormat.types";
+import type { ConfigarrCF, CustomFormatRequest, ImportCF } from "./customFormats/customFormat.types";
+import type { FieldChange } from "./diffReport/diffReport.types";
 import { getHelpers } from "./env";
 import { logger } from "./logger";
-import { TrashCF } from "./types/trashguide.types";
-import { FieldChange } from "./diffReport/diffReport.types";
+import type { TrashCF } from "./types/trashguide.types";
 import { ConfigValidationError } from "./validation";
 
 const recyclarrConfigPath = `${getHelpers().repoPath}/recyclarr-config`;
@@ -66,7 +66,7 @@ export const toCarrCF = (input: TrashCF | ConfigarrCF): ConfigarrCF => {
 };
 
 export const mapImportCfToRequestCf = (cf: TrashCF | ConfigarrCF): CustomFormatRequest => {
-  let customId;
+  let customId: string;
   let rest: ImportCF;
 
   if ("trash_id" in cf) {
@@ -148,8 +148,8 @@ export function compareObjectsCarr(serverObject: any, localObject: any, parent?:
   const changes: FieldChange[] = [];
 
   for (const key in localObject) {
-    if (Object.prototype.hasOwnProperty.call(localObject, key)) {
-      if (Object.prototype.hasOwnProperty.call(serverObject, key)) {
+    if (Object.hasOwn(localObject, key)) {
+      if (Object.hasOwn(serverObject, key)) {
         const serverProperty = serverObject[key];
         const localProperty = localObject[key];
         const path = parent ? `${parent}.${key}` : key;
@@ -166,7 +166,7 @@ export function compareObjectsCarr(serverObject: any, localObject: any, parent?:
             // Only if server does provide less props as we have -> assume change required.
             // For example if radarr introduces new fields for custom formats and we do not have them included this would result in always changed results.
             arrayLengthMismatch = serverProperty.length < localProperty.length;
-          } else if (serverProperty.length != localProperty.length) {
+          } else if (serverProperty.length !== localProperty.length) {
             arrayLengthMismatch = true;
           }
 

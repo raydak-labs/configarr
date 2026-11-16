@@ -6,12 +6,12 @@ import type {
   ReleaseProfileResource,
 } from "../__generated__/sonarr/data-contracts";
 import type {
-  CustomFormatResource as SonarrCustomFormatV5,
   CustomFormatSpecificationSchema as SonarrCustomFormatSpecificationV5,
+  CustomFormatResource as SonarrCustomFormatV5,
   MediaManagementSettingsResource as SonarrMediaManagementV5,
   NamingSettingsResource as SonarrNamingV5,
-  QualityProfileQualityItemResource as SonarrQualityItemV5,
   QualityDefinitionResource as SonarrQualityDefinitionV5,
+  QualityProfileQualityItemResource as SonarrQualityItemV5,
   QualityProfileResource as SonarrQualityProfileV5,
   ReleaseProfileResource as SonarrReleaseProfileV5,
 } from "../__generated__/sonarr-v5/data-contracts";

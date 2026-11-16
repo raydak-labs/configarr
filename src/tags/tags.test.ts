@@ -3,8 +3,8 @@ import type { ServerCache } from "../cache";
 import type { TagsClient } from "../clients/capabilities";
 import type { Tag } from "./tag.types";
 import { TagDeletionError } from "./tag.types";
-import { buildTagPlaceholders, deleteUnmanagedInstanceTags, ensureTags, resolveTagNames, syncInstanceTags } from "./tags";
 import * as tagsModule from "./tags";
+import { buildTagPlaceholders, deleteUnmanagedInstanceTags, ensureTags, resolveTagNames, syncInstanceTags } from "./tags";
 
 // Hoisted so `vi.resetModules()` + a fresh `import("./tags")` still sees these same spies.
 const { getEnvsMock, loggerMock } = vi.hoisted(() => ({

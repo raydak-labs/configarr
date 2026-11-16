@@ -1,4 +1,3 @@
-import { getBuildInfo, getEnvs } from "./env";
 import { LidarrSyncer } from "./arr/lidarrSyncer";
 import { ProwlarrSyncer } from "./arr/prowlarrSyncer";
 import { RadarrSyncer } from "./arr/radarrSyncer";
@@ -7,15 +6,16 @@ import { SonarrSyncer } from "./arr/sonarrSyncer";
 import { WhisparrSyncer } from "./arr/whisparrSyncer";
 import { configureApi, unsetApi } from "./clients/client";
 import { getConfig } from "./config";
+import type { InstanceDiffReport } from "./diffReport/diffReport.types";
 import { ConsoleDiffFormatter } from "./diffReport/formatters/consoleFormatter";
 import { writeJsonDiffReport } from "./diffReport/formatters/jsonFormatter";
-import { InstanceDiffReport } from "./diffReport/diffReport.types";
+import { getBuildInfo, getEnvs } from "./env";
 import { logBlankLine, logger, logHeading, logInstanceHeading } from "./logger";
 import { cloneRecyclarrTemplateRepo } from "./recyclarr-importer";
 import { getTelemetryInstance, Telemetry } from "./telemetry";
 import { cloneTrashRepo } from "./trash-guide";
-import { ArrType } from "./types/common.types";
-import { InputConfigArrInstance } from "./types/config.types";
+import type { ArrType } from "./types/common.types";
+import type { InputConfigArrInstance } from "./types/config.types";
 import { ConfigValidationError } from "./validation";
 
 /** Run each enabled instance and tally results, honoring STOP_ON_ERROR. */

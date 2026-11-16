@@ -9,10 +9,10 @@
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ServerCache } from "../cache";
-import type { ConfigQualityProfile, MergedConfigInstance } from "../types/config.types";
 import type { QualityProfileDiffResult } from "../qualityProfiles/qualityProfileSyncBase";
+import type { ConfigQualityProfile, MergedConfigInstance } from "../types/config.types";
 import { ConfigValidationError } from "../validation";
-import { completeMediaSync, runMediaSyncToQualityProfiles, type MediaFeatureSyncs } from "./mediaPipeline";
+import { completeMediaSync, type MediaFeatureSyncs, runMediaSyncToQualityProfiles } from "./mediaPipeline";
 
 vi.mock("../logger", () => ({ logger: { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
 vi.mock("../env", async (importOriginal) => {
@@ -61,13 +61,13 @@ vi.mock("../notifications/notifications", () => ({
 }));
 
 import { mergeConfigsAndTemplates } from "../configMerge";
-import { getEnvs } from "../env";
-import { logger } from "../logger";
 import { syncDownloadClientConfig } from "../downloadClientConfig/downloadClientConfigSyncer";
+import { getEnvs } from "../env";
+import { syncIndexerConfig } from "../indexerConfig/indexerConfigSync";
+import { logger } from "../logger";
+import { syncNotifications, validateNotifications } from "../notifications/notifications";
 import { syncRemotePaths } from "../remotePaths/remotePathSyncer";
 import { syncUiConfig } from "../uiConfigs/uiConfigSyncer";
-import { syncIndexerConfig } from "../indexerConfig/indexerConfigSync";
-import { validateNotifications, syncNotifications } from "../notifications/notifications";
 
 type Order = string[];
 

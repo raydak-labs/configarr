@@ -4,8 +4,8 @@ import yaml from "yaml";
 import { getConfig } from "./config";
 import { logger } from "./logger";
 import { normalizeTemplateCustomFormats } from "./templateCustomFormats";
-import { ArrType, MappedTemplates } from "./types/common.types";
-import { RecyclarrTemplates } from "./types/recyclarr.types";
+import type { ArrType, MappedTemplates } from "./types/common.types";
+import type { RecyclarrTemplates } from "./types/recyclarr.types";
 
 export const getLocalTemplatePath = () => {
   const config = getConfig();

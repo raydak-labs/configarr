@@ -1,5 +1,5 @@
 import fs from "node:fs";
-import { InstanceDiffReport } from "../diffReport.types";
+import type { InstanceDiffReport } from "../diffReport.types";
 
 export interface DiffReportDocument {
   generatedAt: string;

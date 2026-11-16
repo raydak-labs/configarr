@@ -8,9 +8,9 @@
  */
 import { writeSync } from "node:fs";
 import { createInterface } from "node:readline";
-import { initEnvs } from "../../src/env";
-import { resetConfigCache } from "../../src/config";
 import { unsetApi } from "../../src/clients/client";
+import { resetConfigCache } from "../../src/config";
+import { initEnvs } from "../../src/env";
 import { run } from "../../src/run";
 import { resetTelemetryInstance } from "../../src/telemetry";
 import { resetTrashCache } from "../../src/trash-guide";

@@ -1,5 +1,5 @@
-import { DiffEntry, FieldChange } from "../diffReport/diffReport.types";
-import { InputConfigRootFolder } from "../types/config.types";
+import type { DiffEntry, FieldChange } from "../diffReport/diffReport.types";
+import type { InputConfigRootFolder } from "../types/config.types";
 
 /** Object (non-string) shape of a `root_folders` YAML entry. */
 export type InputConfigRootFolderObject = Exclude<InputConfigRootFolder, string>;

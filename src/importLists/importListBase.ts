@@ -1,9 +1,9 @@
 import type { ServerCache } from "../cache";
 import type { ImportListsClient, QualityProfilesClient, RootFoldersClient, TagsClient } from "../clients/capabilities";
-import type { DiffEntry, FieldChange } from "../diffReport/diffReport.types";
-import { getEnvs } from "../env";
 import { areTagsEqual } from "../delayProfiles/delayProfileBase";
+import type { DiffEntry, FieldChange } from "../diffReport/diffReport.types";
 import { isSecretFieldName, SECRET_MASK } from "../diffReport/redactSecrets";
+import { getEnvs } from "../env";
 import { buildTagPlaceholders, ensureTags } from "../tags/tags";
 import type { InputConfigImportList, MergedConfigInstance } from "../types/config.types";
 import { ConfigValidationError } from "../validation";

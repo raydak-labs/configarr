@@ -2,8 +2,8 @@ import type { ServerCache } from "../cache";
 import type { TagsClient } from "../clients/capabilities";
 import { getEnvs } from "../env";
 import { logger } from "../logger";
-import { TagDeletionError } from "./tag.types";
 import type { DeleteUnmanagedTagsOptions, EnsureTagsResult, Tag, TagResolveOptions, TagSyncResult } from "./tag.types";
+import { TagDeletionError } from "./tag.types";
 
 /** Reads the server's current tags into the shared cache shape every feature resolves against. */
 export const loadServerTags = async (client: TagsClient): Promise<Tag[]> => {

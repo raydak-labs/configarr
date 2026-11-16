@@ -1,11 +1,11 @@
 import type { ArrTypeToClient } from "../clients/client";
-import { DiffEntry } from "../diffReport/diffReport.types";
-import { logger } from "../logger";
-import { MediaArrType } from "../types/common.types";
-import type { UiConfigType } from "../types/config.types";
-import { UiConfigSyncResult, UiConfigResource } from "./uiConfig.types";
-import { compareObjectsCarr } from "../util";
+import type { DiffEntry } from "../diffReport/diffReport.types";
 import { getEnvs } from "../env";
+import { logger } from "../logger";
+import type { MediaArrType } from "../types/common.types";
+import type { UiConfigType } from "../types/config.types";
+import { compareObjectsCarr } from "../util";
+import type { UiConfigResource, UiConfigSyncResult } from "./uiConfig.types";
 
 type UiConfigClient = Pick<ArrTypeToClient[MediaArrType], "getUiConfig" | "updateUiConfig">;
 

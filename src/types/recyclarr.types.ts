@@ -1,5 +1,5 @@
-import { ArrType } from "./common.types";
-import { ConfigArrInstance, InputConfigCustomFormat } from "./config.types";
+import type { ArrType } from "./common.types";
+import type { ConfigArrInstance, InputConfigCustomFormat } from "./config.types";
 
 export type RecyclarrCustomFormats = Partial<Pick<InputConfigCustomFormat, "trash_ids" | "quality_profiles" | "assign_scores_to">> & {};
 

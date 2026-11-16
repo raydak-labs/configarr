@@ -4,7 +4,7 @@ import {
   areTagsEqual,
   delayProfilesToDiffEntries,
   mapDelayProfileTags,
-  StandardDelayProfile,
+  type StandardDelayProfile,
   StandardDelayProfileSync,
 } from "./delayProfileBase";
 

@@ -1,7 +1,15 @@
 import fs from "node:fs";
 import { beforeEach, describe, expect, expectTypeOf, it, vi } from "vitest";
+import type { CustomFormatResource } from "../__generated__/radarr/data-contracts";
+import type { CustomFormatsClient } from "../clients/capabilities";
 import * as config from "../config";
 import * as env from "../env";
+import { logger } from "../logger";
+import { loadTrashCFs } from "../trash-guide";
+import type { ConfigCustomFormatList } from "../types/config.types";
+import type { TrashCF } from "../types/trashguide.types";
+import * as util from "../util";
+import type { CFIDToConfigGroup, CFProcessing, ConfigarrCF, CustomFormatRequest } from "./customFormat.types";
 import {
   calculateCFsToManage,
   loadCustomFormatDefinitions,
@@ -10,14 +18,6 @@ import {
   manageCf,
   mergeCfSources,
 } from "./customFormats";
-import { loadTrashCFs } from "../trash-guide";
-import type { CustomFormatsClient } from "../clients/capabilities";
-import type { CustomFormatResource } from "../__generated__/radarr/data-contracts";
-import { CFIDToConfigGroup, CFProcessing, ConfigarrCF, CustomFormatRequest } from "./customFormat.types";
-import { ConfigCustomFormatList } from "../types/config.types";
-import { TrashCF } from "../types/trashguide.types";
-import * as util from "../util";
-import { logger } from "../logger";
 
 vi.mock("node:fs");
 vi.mock("../trash-guide");

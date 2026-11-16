@@ -12,12 +12,12 @@ import { ReadarrClient } from "../../src/clients/readarr-client";
 import { SonarrClient } from "../../src/clients/sonarr-client";
 import { WhisparrClient } from "../../src/clients/whisparr-client";
 import {
+  arrConnection,
+  cfAssignBlock,
   E2E_API_KEY,
   E2E_TAG_LISTED,
   E2E_TAG_ORPHAN,
   E2E_TAG_REFERENCED,
-  arrConnection,
-  cfAssignBlock,
   e2eCustomFormatDefinition,
   e2eMediaSettings,
   instanceTagBlock,
@@ -25,8 +25,6 @@ import {
   prowlarrConnection,
 } from "./config";
 import {
-  MediaArrClient,
-  MediaBaseline,
   assertDiffUpToDate,
   assertPipelineSucceeded,
   cleanupMediaE2e,
@@ -34,6 +32,8 @@ import {
   cleanupProwlarrE2e,
   createProwlarrClient,
   findNamed,
+  type MediaArrClient,
+  type MediaBaseline,
   nonE2eLabels,
   restoreMediaBaseline,
   snapshotMediaBaseline,

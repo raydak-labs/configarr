@@ -1,5 +1,8 @@
+import { validateConfig } from "./config";
+import { expandAndAppendCustomFormatGroups, filterConfigarrReleaseProfiles, includeTemplateOrderDefault } from "./configTemplates";
 import { loadLocalRecyclarrTemplate } from "./local-importer";
 import { logger } from "./logger";
+import type { MediaNamingMapper } from "./mediaManagement/mediaManagement";
 import { mergeNotifications } from "./notifications/mergeNotifications";
 import { filterInvalidQualityProfiles } from "./qualityProfiles/qualityProfileBase";
 import { loadRecyclarrTemplates } from "./recyclarr-importer";
@@ -7,11 +10,11 @@ import {
   loadAllQDsFromTrash,
   loadQPFromTrash,
   loadTrashCustomFormatGroups,
-  TransformTrashCFGroupsOptions,
-  TransformTrashQPCFGroupsOptions,
+  type TransformTrashCFGroupsOptions,
+  type TransformTrashQPCFGroupsOptions,
 } from "./trash-guide";
-import { ArrType, MappedMergedTemplates, MappedTemplates } from "./types/common.types";
-import {
+import type { ArrType, MappedMergedTemplates, MappedTemplates } from "./types/common.types";
+import type {
   ConfigQualityProfile,
   InputConfigArrInstance,
   InputConfigCustomFormat,
@@ -19,11 +22,8 @@ import {
   InputConfigSchema,
   MergedConfigInstance,
 } from "./types/config.types";
-import { TrashCFGroupMapping, TrashQP, TrashQualityDefinition } from "./types/trashguide.types";
+import type { TrashCFGroupMapping, TrashQP, TrashQualityDefinition } from "./types/trashguide.types";
 import { cloneWithJSON } from "./util";
-import { validateConfig } from "./config";
-import { expandAndAppendCustomFormatGroups, filterConfigarrReleaseProfiles, includeTemplateOrderDefault } from "./configTemplates";
-import type { MediaNamingMapper } from "./mediaManagement/mediaManagement";
 
 type MergedScoreInfo = {
   score?: number;
@@ -63,7 +63,7 @@ const mergeAndReduceCustomFormats = (cfs: InputConfigCustomFormat[]) => {
           // Explicit default overrides earlier scores.
           if (hasUseDefaultScore) {
             existing.set(qp.name, { score: undefined, use_default_score: true });
-          } else if (qp.score != null && qp.score != current.score) {
+          } else if (qp.score != null && qp.score !== current.score) {
             // A new explicit score replaces the current score.
             existing.set(qp.name, { score: qp.score, use_default_score: false });
           }

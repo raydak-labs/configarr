@@ -1,10 +1,10 @@
-import { DiffEntry, FieldChange } from "../diffReport/diffReport.types";
-import { logger } from "../logger";
 import type { MediaManagementClient } from "../clients/capabilities";
-import { MediaManagementType, MediaNamingApiType, MediaNamingType } from "../types/config.types";
+import type { DiffEntry, FieldChange } from "../diffReport/diffReport.types";
+import { logger } from "../logger";
+import type { MediaManagementType, MediaNamingApiType, MediaNamingType } from "../types/config.types";
 import type { TrashArrSupported } from "../types/trashguide.types";
-import { ConfigValidationError } from "../validation";
 import { compareObjectsCarr } from "../util";
+import { ConfigValidationError } from "../validation";
 
 const SONARR_V5_ONLY_CONTROLS = [
   "skipFreeSpaceCheckWhenGrabbing",

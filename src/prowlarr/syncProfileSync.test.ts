@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getEnvs } from "../env";
-import type { AppProfileResource } from "./types";
 import { deleteUnmanagedSyncProfiles, syncSyncProfiles } from "./syncProfileSync";
+import type { AppProfileResource } from "./types";
 
 vi.mock("../env", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../env")>();

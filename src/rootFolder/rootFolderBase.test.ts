@@ -1,9 +1,9 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { Mocked } from "vitest";
-import type { RootFoldersClient } from "../clients/capabilities";
-import { PathRootFolderSync } from "./rootFolderBase";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ServerCache } from "../cache";
+import type { RootFoldersClient } from "../clients/capabilities";
 import type { RootFolderServerResource } from "./rootFolder.types";
+import { PathRootFolderSync } from "./rootFolderBase";
 
 vi.mock("../env", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../env")>();

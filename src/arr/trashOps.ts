@@ -1,9 +1,9 @@
-import { CFProcessing } from "../customFormats/customFormat.types";
+import type { CFProcessing } from "../customFormats/customFormat.types";
 import { checkForConflictingCFs } from "../qualityProfiles/qualityProfileBase";
 import { loadQualityDefinitionFromTrash, loadTrashCFConflicts, loadTrashCFs, transformTrashQDs } from "../trash-guide";
-import { MergedConfigInstance } from "../types/config.types";
-import { TrashArrSupported } from "../types/trashguide.types";
-import { MediaTrashOps } from "./mediaPipeline";
+import type { MergedConfigInstance } from "../types/config.types";
+import type { TrashArrSupported } from "../types/trashguide.types";
+import type { MediaTrashOps } from "./mediaPipeline";
 
 export function createTrashOps(arrType: TrashArrSupported): MediaTrashOps {
   return {

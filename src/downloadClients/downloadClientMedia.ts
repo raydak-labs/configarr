@@ -1,8 +1,8 @@
-import { ServerCache } from "../cache";
-import { FieldChange } from "../diffReport/diffReport.types";
-import { MediaArrType } from "../types/common.types";
-import { InputConfigDownloadClient } from "../types/config.types";
-import { DownloadClientDiff, MediaDownloadClientResource, SecretUpdateMode } from "./downloadClient.types";
+import type { ServerCache } from "../cache";
+import type { FieldChange } from "../diffReport/diffReport.types";
+import type { MediaArrType } from "../types/common.types";
+import type { InputConfigDownloadClient } from "../types/config.types";
+import { DownloadClientDiff, type MediaDownloadClientResource, type SecretUpdateMode } from "./downloadClient.types";
 import { BaseDownloadClientSync } from "./downloadClientBase";
 
 export abstract class MediaDownloadClientSync<T extends MediaDownloadClientResource> extends BaseDownloadClientSync<T> {

@@ -1,58 +1,4 @@
-import type { HostConfig } from "../hostConfig/hostConfigSync";
-import type { DiffEntry } from "../diffReport/diffReport.types";
 import fs from "node:fs";
-import { ServerCache } from "../cache";
-import { ArrTypeToClient } from "../clients/client";
-import type { MetadataClient } from "../clients/capabilities";
-import type { MetadataResource } from "../__generated__/sonarr/data-contracts";
-import { mergeConfigsAndTemplates } from "../configMerge";
-import { CFIDToConfigGroup, CFProcessing, CustomFormatRef } from "../customFormats/customFormat.types";
-import {
-  calculateCFsToManage,
-  deleteCustomFormat,
-  loadCustomFormatDefinitions,
-  loadServerCustomFormats,
-  manageCf,
-} from "../customFormats/customFormats";
-import { BaseDelayProfileSync, delayProfilesToDiffEntries } from "../delayProfiles/delayProfileBase";
-import { DelayProfileShared } from "../delayProfiles/delayProfile.types";
-import { DiffCollector } from "../diffReport/diffCollector";
-import { InstanceDiffReport } from "../diffReport/diffReport.types";
-import { downloadClientConfigDiffToDiffEntries, syncDownloadClientConfig } from "../downloadClientConfig/downloadClientConfigSyncer";
-import { BaseDownloadClientSync } from "../downloadClients/downloadClientBase";
-import { getEnvs } from "../env";
-import { logger } from "../logger";
-import { MediaManagementSync, mediamanagementDiffToDiffEntries, namingDiffToDiffEntries } from "../mediaManagement/mediaManagement";
-import type { SonarrMediaManagementResource } from "../clients/sonarr-resource-mapper";
-import { QualityDefinitionSync, qualityDefinitionsToDiffEntries } from "../qualityDefinitions/qualityDefinition";
-import { getUnmanagedQualityProfiles, qualityProfilesToDiffEntries } from "../qualityProfiles/qualityProfileBase";
-import { BaseQualityProfileSync } from "../qualityProfiles/qualityProfileSyncBase";
-import { BaseReleaseProfileSync } from "../releaseProfiles/releaseProfileBase";
-import { syncRemotePaths } from "../remotePaths/remotePathSyncer";
-import { BaseRootFolderSync } from "../rootFolder/rootFolderBase";
-import { TagDeletionError } from "../tags/tag.types";
-import { deleteUnmanagedInstanceTags, ensureTags, loadServerTags, syncInstanceTags } from "../tags/tags";
-import { getTelemetryInstance, Telemetry } from "../telemetry";
-import { MediaArrType } from "../types/common.types";
-import {
-  HostConfigSchema,
-  IndexerConfigSchema,
-  IndexerSettingsSchema,
-  InputConfigArrInstance,
-  InputConfigImportListsSchema,
-  InputConfigNotificationsSchema,
-  InputConfigSchema,
-  MergedConfigInstance,
-  MetadataSettingsSchema,
-} from "../types/config.types";
-import { TrashQualityDefinitionQuality } from "../types/trashguide.types";
-import { syncUiConfig, uiConfigDiffToDiffEntries } from "../uiConfigs/uiConfigSyncer";
-import { prepareMetadata, syncMetadata } from "../metadata/metadataSync";
-import { prepareIndexerSettings, syncIndexerSettings, type IndexerSettingsClient } from "../indexerSettings/indexerSettings";
-import { syncIndexerConfig } from "../indexerConfig/indexerConfigSync";
-import { validateNotifications, syncNotifications } from "../notifications/notifications";
-import type { IndexerConfigClient } from "../clients/capabilities";
-import { ConfigValidationError } from "../validation";
 import type {
   DownloadClientResource as LidarrDownloadClientResource,
   MediaManagementConfigResource as LidarrMediaManagementConfigResource,
@@ -78,6 +24,7 @@ import type {
   ReleaseProfileResource as ReadarrReleaseProfileResource,
 } from "../__generated__/readarr/data-contracts";
 import type {
+  MetadataResource,
   DownloadClientResource as SonarrDownloadClientResource,
   NamingConfigResource as SonarrNamingConfigResource,
   QualityDefinitionResource as SonarrQualityDefinitionResource,
@@ -92,6 +39,57 @@ import type {
   QualityProfileResource as WhisparrQualityProfileResource,
   ReleaseProfileResource as WhisparrReleaseProfileResource,
 } from "../__generated__/whisparr/data-contracts";
+import { ServerCache } from "../cache";
+import type { IndexerConfigClient, MetadataClient } from "../clients/capabilities";
+import type { ArrTypeToClient } from "../clients/client";
+import type { SonarrMediaManagementResource } from "../clients/sonarr-resource-mapper";
+import { mergeConfigsAndTemplates } from "../configMerge";
+import type { CFIDToConfigGroup, CFProcessing, CustomFormatRef } from "../customFormats/customFormat.types";
+import {
+  calculateCFsToManage,
+  deleteCustomFormat,
+  loadCustomFormatDefinitions,
+  loadServerCustomFormats,
+  manageCf,
+} from "../customFormats/customFormats";
+import type { DelayProfileShared } from "../delayProfiles/delayProfile.types";
+import { type BaseDelayProfileSync, delayProfilesToDiffEntries } from "../delayProfiles/delayProfileBase";
+import { DiffCollector } from "../diffReport/diffCollector";
+import type { DiffEntry, InstanceDiffReport } from "../diffReport/diffReport.types";
+import { downloadClientConfigDiffToDiffEntries, syncDownloadClientConfig } from "../downloadClientConfig/downloadClientConfigSyncer";
+import type { BaseDownloadClientSync } from "../downloadClients/downloadClientBase";
+import { getEnvs } from "../env";
+import type { HostConfig } from "../hostConfig/hostConfigSync";
+import { syncIndexerConfig } from "../indexerConfig/indexerConfigSync";
+import { type IndexerSettingsClient, prepareIndexerSettings, syncIndexerSettings } from "../indexerSettings/indexerSettings";
+import { logger } from "../logger";
+import { type MediaManagementSync, mediamanagementDiffToDiffEntries, namingDiffToDiffEntries } from "../mediaManagement/mediaManagement";
+import { prepareMetadata, syncMetadata } from "../metadata/metadataSync";
+import { syncNotifications, validateNotifications } from "../notifications/notifications";
+import { type QualityDefinitionSync, qualityDefinitionsToDiffEntries } from "../qualityDefinitions/qualityDefinition";
+import { getUnmanagedQualityProfiles, qualityProfilesToDiffEntries } from "../qualityProfiles/qualityProfileBase";
+import type { BaseQualityProfileSync } from "../qualityProfiles/qualityProfileSyncBase";
+import type { BaseReleaseProfileSync } from "../releaseProfiles/releaseProfileBase";
+import { syncRemotePaths } from "../remotePaths/remotePathSyncer";
+import type { BaseRootFolderSync } from "../rootFolder/rootFolderBase";
+import { TagDeletionError } from "../tags/tag.types";
+import { deleteUnmanagedInstanceTags, ensureTags, loadServerTags, syncInstanceTags } from "../tags/tags";
+import { getTelemetryInstance, Telemetry } from "../telemetry";
+import type { MediaArrType } from "../types/common.types";
+import {
+  HostConfigSchema,
+  IndexerConfigSchema,
+  IndexerSettingsSchema,
+  type InputConfigArrInstance,
+  InputConfigImportListsSchema,
+  InputConfigNotificationsSchema,
+  type InputConfigSchema,
+  type MergedConfigInstance,
+  MetadataSettingsSchema,
+} from "../types/config.types";
+import type { TrashQualityDefinitionQuality } from "../types/trashguide.types";
+import { syncUiConfig, uiConfigDiffToDiffEntries } from "../uiConfigs/uiConfigSyncer";
+import { ConfigValidationError } from "../validation";
 
 /**
  * The generated resource each *arr client returns for a feature. This is what binds a

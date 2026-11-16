@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
+import type { DownloadClientResource } from "../__generated__/prowlarr/data-contracts";
 import { ServerCache } from "../cache";
+import type { DownloadClientsClient, TagsClient } from "../clients/capabilities";
 import { logger } from "../logger";
 import type { InputConfigDownloadClient } from "../types/config.types";
-import type { DownloadClientResource } from "../__generated__/prowlarr/data-contracts";
-import type { DownloadClientsClient, TagsClient } from "../clients/capabilities";
 import { ProwlarrDownloadClientSync } from "./downloadClientProwlarr";
 
 const qbitSchema = (extra: Record<string, unknown> = {}): DownloadClientResource =>

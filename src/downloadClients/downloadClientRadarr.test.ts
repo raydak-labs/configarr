@@ -1,8 +1,8 @@
 import { describe, expect, test } from "vitest";
-import type { Tag } from "../tags/tag.types";
-import { DownloadProtocol } from "../__generated__/radarr/data-contracts";
 import type { DownloadClientResource } from "../__generated__/radarr/data-contracts";
+import { DownloadProtocol } from "../__generated__/radarr/data-contracts";
 import { ServerCache } from "../cache";
+import type { Tag } from "../tags/tag.types";
 import type { InputConfigDownloadClient } from "../types/config.types";
 import { RadarrDownloadClientSync } from "./downloadClientRadarr";
 

@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { ConfigarrCF, ConfigarrCFSchema } from "../customFormats/customFormat.types";
-import { TrashCF, TrashCFSchema, TrashQualityDefinitionQualitySchema, TrashScoresSchema } from "./trashguide.types";
+import { type ConfigarrCF, ConfigarrCFSchema } from "../customFormats/customFormat.types";
+import { type TrashCF, TrashCFSchema, TrashQualityDefinitionQualitySchema, TrashScoresSchema } from "./trashguide.types";
 
 // ============================================================================
 // Each type below is derived from its Zod schema (type X = z.infer<typeof XSchema>)

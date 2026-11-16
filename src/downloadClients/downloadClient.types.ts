@@ -1,5 +1,5 @@
-import { DiffEntry, FieldChange } from "../diffReport/diffReport.types";
-import { InputConfigDownloadClient } from "../types/config.types";
+import type { DiffEntry, FieldChange } from "../diffReport/diffReport.types";
+import type { InputConfigDownloadClient } from "../types/config.types";
 
 export type SecretUpdateMode = boolean | "on_test_failure";
 

@@ -4,28 +4,28 @@
  * One file per *arr, each with its own literal payloads - the YAML differs per app, and a
  * shared factory would hide that behind branches. Shared code stays in `helpers.ts`.
  */
-import { afterAll, beforeAll, describe, expect, onTestFinished, test } from "vitest";
+
 import { randomUUID } from "node:crypto";
-import { RadarrClient } from "../../src/clients/radarr-client";
+import { afterAll, beforeAll, describe, expect, onTestFinished, test } from "vitest";
 import { DownloadProtocol } from "../../src/__generated__/radarr/data-contracts";
+import { RadarrClient } from "../../src/clients/radarr-client";
 import { StandardDelayProfileSync } from "../../src/delayProfiles/delayProfileBase";
 import { InputConfigDelayProfileSchema } from "../../src/types/config.types";
 import {
-  E2E_TAG_LISTED,
-  E2E_TAG_ORPHAN,
-  E2E_TAG_REFERENCED,
-  E2E_ROOT_A,
-  E2E_ROOT_B,
   arrConnection,
   cfAssignBlock,
   downloadClientConfigBlock,
+  E2E_ROOT_A,
+  E2E_ROOT_B,
+  E2E_TAG_LISTED,
+  E2E_TAG_ORPHAN,
+  E2E_TAG_REFERENCED,
   e2eCustomFormatDefinition,
   e2eMediaSettings,
-  mediaConfig,
   instanceTagBlock,
+  mediaConfig,
 } from "./config";
 import {
-  MediaBaseline,
   assertDiffUpToDate,
   assertNoErrorLogs,
   assertPipelineSucceeded,
@@ -35,8 +35,9 @@ import {
   cleanupMediaIndexerFixtures,
   defaultDelayProfile,
   findNamed,
-  nonE2eNames,
+  type MediaBaseline,
   nonE2eLabels,
+  nonE2eNames,
   preservedRootFolderPaths,
   restoreMediaBaseline,
   snapshotMediaBaseline,
@@ -187,7 +188,10 @@ describe("radarr (live)", () => {
         headers,
         body: JSON.stringify(original),
       });
-      if (!response.ok) throw new Error(`Failed to restore host settings: ${response.status}`);
+      if (!response.ok) {
+        // biome-ignore lint/correctness/noUnsafeFinally: restoring server state is mandatory; restoration failures must fail the test.
+        throw new Error(`Failed to restore host settings: ${response.status}`);
+      }
     }
   });
 
@@ -574,7 +578,10 @@ describe("radarr (live)", () => {
       expect(disabledProvider?.fields?.find((field) => field.name === "movieMetadata")?.value).toBe(!existing);
     } finally {
       const response = await fetch(`${url}/${original.id}`, { method: "PUT", headers, body: JSON.stringify(original) });
-      if (!response.ok) throw new Error(`Failed to restore metadata: ${response.status}`);
+      if (!response.ok) {
+        // biome-ignore lint/correctness/noUnsafeFinally: restoring server state is mandatory; restoration failures must fail the test.
+        throw new Error(`Failed to restore metadata: ${response.status}`);
+      }
     }
   });
 

@@ -1,8 +1,8 @@
-import { describe, expect, test, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 import { ServerCache } from "../cache";
 import { ConfigValidationError } from "../validation";
+import type { ReleaseProfileShared } from "./releaseProfile.types";
 import { BaseReleaseProfileSync, normalizeTerms, profileKey, sharedReleaseProfileAdapter } from "./releaseProfileBase";
-import { ReleaseProfileShared } from "./releaseProfile.types";
 
 vi.mock("../env", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../env")>();
@@ -337,7 +337,8 @@ describe("ReleaseProfiles", () => {
 
     // No id is printed that the server never assigned.
     const tagsChange = (result.diffEntries[0]?.fieldChanges ?? [])[0];
-    expect((tagsChange?.to as unknown[]).filter((id) => typeof id === "number" && id < 0)).toEqual([]);
+    const assignedTagIds = (tagsChange?.to ?? []) as unknown[];
+    expect(assignedTagIds.filter((id) => typeof id === "number" && id < 0)).toEqual([]);
   });
 
   test("dry run on a nameless arr leaves an already-tagged server profile alone", async () => {

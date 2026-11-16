@@ -1,8 +1,10 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import type { QualityProfileResource } from "../__generated__/radarr/data-contracts";
 import { ServerCache } from "../cache";
+import type { QualityProfilesClient } from "../clients/capabilities";
 import * as log from "../logger";
-import { QualityDefinitionShared } from "../qualityDefinitions/qualityDefinition.types";
-import { QualityItem, QualityProfileShared } from "./qualityProfile.types";
+import type { QualityDefinitionShared } from "../qualityDefinitions/qualityDefinition.types";
+import type { QualityItem, QualityProfileShared } from "./qualityProfile.types";
 import {
   checkForConflictingCFs,
   filterInvalidQualityProfiles,
@@ -11,19 +13,18 @@ import {
 } from "./qualityProfileBase";
 import { isOrderOfConfigQualitiesEqual, isOrderOfQualitiesEqual, mapQualities } from "./qualityProfileQualities";
 import { QualityProfileRadarrSync } from "./qualityProfileRadarr";
-import type { QualityProfileResource } from "../__generated__/radarr/data-contracts";
-import type { QualityProfilesClient } from "../clients/capabilities";
 
 /** calculateQualityProfilesDiff never touches the API; the client is only required by the type. */
 const qpClient = {} as QualityProfilesClient<QualityProfileResource>;
-import { CFProcessing } from "../customFormats/customFormat.types";
-import { ConfigQualityProfile, ConfigQualityProfileItem, MergedConfigInstance } from "../types/config.types";
-import { ConfigValidationError } from "../validation";
-import * as env from "../env";
-import type { FieldChange } from "../diffReport/diffReport.types";
 
-describe("qualityProfileBase", async () => {
-  test("isOrderOfConfigQualitiesEqual - should match", async ({}) => {
+import type { CFProcessing } from "../customFormats/customFormat.types";
+import type { FieldChange } from "../diffReport/diffReport.types";
+import * as env from "../env";
+import type { ConfigQualityProfile, ConfigQualityProfileItem, MergedConfigInstance } from "../types/config.types";
+import { ConfigValidationError } from "../validation";
+
+describe("qualityProfileBase", () => {
+  test("isOrderOfConfigQualitiesEqual - should match", async () => {
     const fromConfig: ConfigQualityProfileItem[] = [
       { name: "WEB 1080p", qualities: ["WEBDL-1080p", "WEBRip-1080p"] },
       { name: "HDTV-1080p" },
@@ -45,7 +46,7 @@ describe("qualityProfileBase", async () => {
     expect(result).toBe(true);
   });
 
-  test("isOrderOfConfigQualitiesEqual - different order", async ({}) => {
+  test("isOrderOfConfigQualitiesEqual - different order", async () => {
     const fromConfig: ConfigQualityProfileItem[] = [
       { name: "WEB 1080p", qualities: ["WEBDL-1080p", "WEBRip-1080p"] },
       { name: "HDTV-1080p" },
@@ -67,7 +68,7 @@ describe("qualityProfileBase", async () => {
     expect(result).toBe(false);
   });
 
-  test("mapQualities - enabled correctly mapped (default sorting)", async ({}) => {
+  test("mapQualities - enabled correctly mapped (default sorting)", async () => {
     const fromConfig: ConfigQualityProfileItem[] = [
       { name: "WEB 1080p", qualities: ["WEBDL-1080p", "WEBRip-1080p"] },
       { name: "HDTV-1080p" },
@@ -115,7 +116,7 @@ describe("qualityProfileBase", async () => {
     expect(() => mapQualities([], profile)).toThrow(ConfigValidationError);
   });
 
-  test("mapQualities - enabled mapped to false", async ({}) => {
+  test("mapQualities - enabled mapped to false", async () => {
     const fromConfig: ConfigQualityProfileItem[] = [
       { name: "WEB 1080p", qualities: ["WEBDL-1080p", "WEBRip-1080p"] },
       { name: "HDTV-1080p", enabled: false },
@@ -149,7 +150,7 @@ describe("qualityProfileBase", async () => {
     expect(result[2]!.allowed).toBe(true);
   });
 
-  test("mapQualities - ordering without nested qualities", async ({}) => {
+  test("mapQualities - ordering without nested qualities", async () => {
     const fromConfig: ConfigQualityProfileItem[] = [
       { name: "WEB 1080p", qualities: ["WEBDL-1080p", "WEBRip-1080p"] },
       { name: "HDTV-1080p" },
@@ -178,7 +179,7 @@ describe("qualityProfileBase", async () => {
     expect(result[1]!.name).toBe("WEB 1080p");
   });
 
-  test("mapQualities - ordering with nested qualities", async ({}) => {
+  test("mapQualities - ordering with nested qualities", async () => {
     const fromConfig: ConfigQualityProfileItem[] = [{ name: "HD Group", qualities: ["HDTV-1080p", "WEBDL-1080p"] }];
 
     const resources: QualityDefinitionShared[] = [
@@ -204,7 +205,7 @@ describe("qualityProfileBase", async () => {
     expect(result[0]!.items![1]!.quality?.name).toBe("HDTV-1080p");
   });
 
-  test("mapQualities - ordering with both nested and non-nested qualities", async ({}) => {
+  test("mapQualities - ordering with both nested and non-nested qualities", async () => {
     const fromConfig: ConfigQualityProfileItem[] = [
       { name: "HD Group", qualities: ["HDTV-1080p", "WEBDL-1080p"] },
       { name: "WEB 720p", qualities: ["WEBDL-720p", "WEBRip-720p"] },
@@ -240,7 +241,7 @@ describe("qualityProfileBase", async () => {
     expect(result[1]!.items![1]!.quality?.name).toBe("HDTV-1080p");
   });
 
-  test("mapQualities - missing qualities added", async ({}) => {
+  test("mapQualities - missing qualities added", async () => {
     const fromConfig: ConfigQualityProfileItem[] = [
       { name: "WEB 1080p", qualities: ["WEBDL-1080p", "WEBRip-1080p"] },
       { name: "HDTV-1080p" },
@@ -293,7 +294,7 @@ describe("qualityProfileBase", async () => {
       score_set: "default",
     });
 
-    test("reuses the existing server id by name instead of the config index", async ({}) => {
+    test("reuses the existing server id by name instead of the config index", async () => {
       const profile = profileWith([
         { name: "WEB 720p", qualities: ["WEBDL-720p"] },
         { name: "HD Group", qualities: ["HDTV-1080p", "WEBDL-1080p"] },
@@ -313,7 +314,7 @@ describe("qualityProfileBase", async () => {
       expect(idsByName.get("HD Group")).toBe(1005);
     });
 
-    test("allocates a fresh id without colliding with a reused one", async ({}) => {
+    test("allocates a fresh id without colliding with a reused one", async () => {
       const profile = profileWith([
         { name: "New Group", qualities: ["HDTV-1080p"] },
         { name: "HD Group", qualities: ["WEBDL-1080p"] },
@@ -329,7 +330,7 @@ describe("qualityProfileBase", async () => {
       expect(idsByName.get("HD Group")).toBe(1000);
     });
 
-    test("honours an explicit id from the config", async ({}) => {
+    test("honours an explicit id from the config", async () => {
       const profile = profileWith([{ name: "HD Group", id: 2001, qualities: ["HDTV-1080p"] }]);
 
       const existing: QualityItem[] = [{ id: 1005, name: "HD Group", allowed: true, items: [] }];
@@ -339,14 +340,14 @@ describe("qualityProfileBase", async () => {
       expect(result.find((item) => item.name === "HD Group")?.id).toBe(2001);
     });
 
-    test("rejects an id on a plain quality", async ({}) => {
+    test("rejects an id on a plain quality", async () => {
       const profile = profileWith([{ name: "HDTV-1080p", id: 1001 }]);
 
       expect(() => mapQualities(resources, profile)).toThrow(ConfigValidationError);
       expect(() => mapQualities(resources, profile)).toThrow(/only supported for quality groups/);
     });
 
-    test("rejects duplicate group ids", async ({}) => {
+    test("rejects duplicate group ids", async () => {
       const profile = profileWith([
         { name: "HD Group", id: 1001, qualities: ["HDTV-1080p"] },
         { name: "WEB Group", id: 1001, qualities: ["WEBDL-720p"] },
@@ -355,7 +356,7 @@ describe("qualityProfileBase", async () => {
       expect(() => mapQualities(resources, profile)).toThrow(/quality group id 1001 is used by both/);
     });
 
-    test("lets an explicit id win over a server id reused by an earlier group", async ({}) => {
+    test("lets an explicit id win over a server id reused by an earlier group", async () => {
       const profile = profileWith([
         { name: "A", qualities: ["HDTV-1080p"] },
         { name: "B", id: 1000, qualities: ["WEBDL-1080p"] },
@@ -377,19 +378,19 @@ describe("qualityProfileBase", async () => {
       expect(new Set(groupIds)).toEqual(new Set([1000, 1001]));
     });
 
-    test("rejects a group id below the *arr group range at runtime", async ({}) => {
+    test("rejects a group id below the *arr group range at runtime", async () => {
       const profile = profileWith([{ name: "HD Group", id: 5, qualities: ["HDTV-1080p"] }]);
 
       expect(() => mapQualities(resources, profile)).toThrow(/id must be an integer >= 1000/);
     });
 
-    test("rejects a non-integer group id at runtime", async ({}) => {
+    test("rejects a non-integer group id at runtime", async () => {
       const profile = profileWith([{ name: "HD Group", id: 1000.5, qualities: ["HDTV-1080p"] }]);
 
       expect(() => mapQualities(resources, profile)).toThrow(/id must be an integer >= 1000/);
     });
 
-    test("rejects a non-numeric group id from lenient validation at runtime", async ({}) => {
+    test("rejects a non-numeric group id from lenient validation at runtime", async () => {
       // Lenient validation returns the raw config, so a string can reach the mapper even though the
       // schema types it as a number.
       const profile = profileWith([{ name: "HD Group", id: "1000" as unknown as number, qualities: ["HDTV-1080p"] }]);
@@ -397,7 +398,7 @@ describe("qualityProfileBase", async () => {
       expect(() => mapQualities(resources, profile)).toThrow(/id must be an integer >= 1000/);
     });
 
-    test("rejects a group name defined twice", async ({}) => {
+    test("rejects a group name defined twice", async () => {
       const profile = profileWith([
         { name: "HD Group", id: 1001, qualities: ["HDTV-1080p"] },
         { name: "HD Group", id: 1002, qualities: ["WEBDL-1080p"] },
@@ -496,8 +497,8 @@ describe("qualityProfileBase", async () => {
     });
   });
 
-  describe("isOrderOfQualitiesEqual", async () => {
-    test("should diff for grouped incorrect order", async ({}) => {
+  describe("isOrderOfQualitiesEqual", () => {
+    test("should diff for grouped incorrect order", async () => {
       const arr1: QualityItem[] = [
         {
           allowed: true,
@@ -629,7 +630,7 @@ describe("qualityProfileBase", async () => {
       expect(isOrderOfQualitiesEqual(arr1, arr2)).toBe(false);
     });
 
-    test("should diff for incorrect quality order", async ({}) => {
+    test("should diff for incorrect quality order", async () => {
       const arr1: QualityItem[] = [
         {
           allowed: true,
@@ -671,7 +672,7 @@ describe("qualityProfileBase", async () => {
       expect(isOrderOfQualitiesEqual(arr1, arr2)).toBe(false);
     });
 
-    test("should be equal 1", async ({}) => {
+    test("should be equal 1", async () => {
       const arr1: QualityItem[] = [
         {
           allowed: true,
@@ -697,7 +698,7 @@ describe("qualityProfileBase", async () => {
       expect(isOrderOfQualitiesEqual(arr1, arr2)).toBe(true);
     });
 
-    test("should be equal 2", async ({}) => {
+    test("should be equal 2", async () => {
       const arr1: QualityItem[] = [
         {
           allowed: true,
@@ -739,7 +740,7 @@ describe("qualityProfileBase", async () => {
       expect(isOrderOfQualitiesEqual(arr1, arr2)).toBe(true);
     });
 
-    test("should diff when a group id differs", async ({}) => {
+    test("should diff when a group id differs", async () => {
       const group = (id: number): QualityItem => ({
         allowed: true,
         id,
@@ -751,7 +752,7 @@ describe("qualityProfileBase", async () => {
       expect(isOrderOfQualitiesEqual([group(1000)], [group(1000)])).toBe(true);
     });
 
-    test("should diff when nested items are missing on one side", async ({}) => {
+    test("should diff when nested items are missing on one side", async () => {
       const arr1: QualityItem[] = [
         {
           allowed: true,
@@ -1219,9 +1220,9 @@ describe("qualityProfileBase", async () => {
       checkForConflictingCFs(cfMap, config, conflicts);
 
       expect(logSpy).toHaveBeenCalledTimes(1);
-      expect(logSpy).toHaveBeenCalledWith(expect.stringContaining("QualityProfile \'profile1\'"));
+      expect(logSpy).toHaveBeenCalledWith(expect.stringContaining("QualityProfile 'profile1'"));
       expect(logSpy).toHaveBeenCalledWith(expect.stringContaining("Conflicting CustomFormats detected [SDR, SDR (no WEBDL)]"));
-      expect(logSpy).toHaveBeenCalledWith(expect.stringContaining("conflict group \'SDR Conflict\'"));
+      expect(logSpy).toHaveBeenCalledWith(expect.stringContaining("conflict group 'SDR Conflict'"));
     });
 
     test("should not warn when conflicting ids are split across different quality profiles", () => {

@@ -1,43 +1,43 @@
 import fs from "node:fs";
 import path from "node:path";
 import { z } from "zod";
-import { CFIDToConfigGroup, ConfigarrCF, CustomFormatRequest } from "./customFormats/customFormat.types";
 import { getConfig } from "./config";
+import type { CFIDToConfigGroup, ConfigarrCF, CustomFormatRequest } from "./customFormats/customFormat.types";
 import { getEnvs } from "./env";
 import { logger } from "./logger";
 import { interpolateSize } from "./qualityDefinitions/qualityDefinition";
 import { QualityDefinitionsRadarr, QualityDefinitionsSonarr } from "./types/common.types";
-import {
+import type {
   ConfigCustomFormat,
   ConfigQualityProfile,
   ConfigQualityProfileItem,
-  InputConfigQualitySize,
   InputConfigCfGroupTrashGuideItem,
   InputConfigCustomFormatGroup,
   InputConfigIncludeItem,
+  InputConfigQualitySize,
 } from "./types/config.types";
-import { ConfigValidationError, ValidationError, validateExternal } from "./validation";
 import {
-  TrashArrSupported,
-  TrashCache,
-  TrashCF,
-  TrashCFConflict,
-  TrashCFGroupMapping,
-  TrashCFGItem,
+  type TrashArrSupported,
+  type TrashCache,
+  type TrashCF,
+  type TrashCFConflict,
+  type TrashCFGItem,
+  type TrashCFGroupMapping,
   TrashCFSchema,
-  TrashCustomFormatGroups,
+  type TrashCustomFormatGroups,
   TrashCustomFormatGroupsSchema,
-  TrashQP,
+  type TrashQP,
   TrashQPSchema,
-  TrashQualityDefinition,
-  TrashQualityDefinitionQuality,
+  type TrashQualityDefinition,
+  type TrashQualityDefinitionQuality,
   TrashQualityDefinitionSchema,
-  TrashRadarrNaming,
+  type TrashRadarrNaming,
   TrashRadarrNamingSchema,
-  TrashSonarrNaming,
+  type TrashSonarrNaming,
   TrashSonarrNamingSchema,
 } from "./types/trashguide.types";
 import { cloneGitRepo, loadJsonFile, mapImportCfToRequestCf, notEmpty, toCarrCF, trashRepoPaths } from "./util";
+import { ConfigValidationError, ValidationError, validateExternal } from "./validation";
 
 const DEFAULT_TRASH_GIT_URL = "https://github.com/TRaSH-Guides/Guides";
 
@@ -190,7 +190,7 @@ export const loadQualityDefinitionFromTrash = async (
   qdType: string, // QualityDefinitionsSonarr | QualityDefinitionsRadarr,
   arrType: TrashArrSupported,
 ): Promise<TrashQualityDefinition> => {
-  let trashPath = arrType === "RADARR" ? trashRepoPaths.radarrQualitySize : trashRepoPaths.sonarrQualitySize;
+  const trashPath = arrType === "RADARR" ? trashRepoPaths.radarrQualitySize : trashRepoPaths.sonarrQualitySize;
 
   if (cacheReady) {
     const cacheObject = cache[arrType].qualityDefinition as any;
@@ -242,7 +242,7 @@ export const loadAllQDsFromTrash = async (arrType: TrashArrSupported): Promise<M
 };
 
 export const loadQPFromTrash = async (arrType: TrashArrSupported) => {
-  let trashPath = arrType === "RADARR" ? trashRepoPaths.radarrQP : trashRepoPaths.sonarrQP;
+  const trashPath = arrType === "RADARR" ? trashRepoPaths.radarrQP : trashRepoPaths.sonarrQP;
 
   if (cacheReady) {
     return cache[arrType].qualityProfiles;
@@ -275,7 +275,7 @@ export const loadQPFromTrash = async (arrType: TrashArrSupported) => {
  * HINT: for now we only support one naming file per arrType
  */
 const loadNamingFromTrash = async <T>(arrType: TrashArrSupported, schema: z.ZodType<T>): Promise<T | null> => {
-  let trashPath = arrType === "RADARR" ? trashRepoPaths.radarrNaming : trashRepoPaths.sonarrNaming;
+  const trashPath = arrType === "RADARR" ? trashRepoPaths.radarrNaming : trashRepoPaths.sonarrNaming;
 
   const map = new Map<string, T>();
 

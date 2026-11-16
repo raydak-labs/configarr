@@ -2,8 +2,8 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 import { ServerCache } from "../cache";
 import { DiffCollector } from "../diffReport/diffCollector";
 import { logger } from "../logger";
-import { MergedConfigInstance } from "../types/config.types";
-import { completeMediaSync, MediaFeatureSyncs, MediaSyncContext } from "./mediaPipeline";
+import type { MergedConfigInstance } from "../types/config.types";
+import { completeMediaSync, type MediaFeatureSyncs, type MediaSyncContext } from "./mediaPipeline";
 
 const configWithoutRemotePaths = (): MergedConfigInstance =>
   ({
