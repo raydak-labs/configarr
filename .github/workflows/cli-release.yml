@@ -1,13 +1,27 @@
 name: CLI Release
 
 on:
-  push:
-    tags:
-      - "v*.*.*"
+  workflow_call:
+    inputs:
+      tag:
+        description: Release tag to build. Empty uses the caller ref.
+        required: false
+        type: string
+        default: ""
+      baseline:
+        description: Enable baseline builds for older CPU architectures
+        required: false
+        type: boolean
+        default: false
   workflow_dispatch:
     inputs:
+      tag:
+        description: Existing release tag to upload artifacts to. Leave empty for a build-only run.
+        required: false
+        type: string
+        default: ""
       baseline:
-        description: "Enable baseline builds for older CPU architectures"
+        description: Enable baseline builds for older CPU architectures
         required: false
         type: boolean
         default: false
@@ -36,6 +50,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ inputs.tag }}
           persist-credentials: false
 
       - name: Inject enhanced GitHub environment variables
@@ -62,16 +77,18 @@ jobs:
           GITHUB_RUN_ID: ${{ github.run_id }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           GITHUB_SHA: ${{ github.sha }}
+          TAG_NAME: ${{ inputs.tag }}
         run: |
-          VERSION="${GITHUB_REF_SLUG}"
+          VERSION="${TAG_NAME:-${GITHUB_REF_SLUG}}"
           BUILD_TIME="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+          SHA="$(git rev-parse HEAD)"
 
           {
             echo "version=$VERSION"
             echo "build_time=$BUILD_TIME"
             echo "run_id=${GITHUB_RUN_ID}"
             echo "repo=${GITHUB_REPOSITORY}"
-            echo "sha=${GITHUB_SHA}"
+            echo "sha=${SHA}"
           } >> "$GITHUB_OUTPUT"
 
       - name: Build CLI
@@ -83,7 +100,7 @@ jobs:
           RUN_ID: ${{ steps.vars.outputs.run_id }}
           REPO: ${{ steps.vars.outputs.repo }}
           SHA: ${{ steps.vars.outputs.sha }}
-          BASELINE: ${{ github.event.inputs.baseline }}
+          BASELINE: ${{ inputs.baseline }}
         run: |
           FLAGS=()
 
@@ -125,7 +142,7 @@ jobs:
 
   release:
     needs: build-cli
-    if: startsWith(github.ref, 'refs/tags/')
+    if: inputs.tag != '' || startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -139,7 +156,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-          TAG_NAME: ${{ github.ref_name }}
+          TAG_NAME: ${{ inputs.tag || github.ref_name }}
         run: |
           echo "Collecting CLI artifacts for ${TAG_NAME} from artifacts/"
           mapfile -d '' -t ASSETS < <(
@@ -151,10 +168,4 @@ jobs:
             exit 1
           fi
           echo "Found ${#ASSETS[@]} CLI artifact(s)"
-          if gh release view "${TAG_NAME}" >/dev/null 2>&1; then
-            gh release upload "${TAG_NAME}" "${ASSETS[@]}" --clobber
-          else
-            gh release create "${TAG_NAME}" \
-              "${ASSETS[@]}" \
-              --title "${TAG_NAME}"
-          fi
+          gh release upload "${TAG_NAME}" "${ASSETS[@]}" --clobber

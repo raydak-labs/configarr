@@ -3,6 +3,8 @@ name: Release Comment
 on:
   release:
     types: [published]
+  # release-please calls this explicitly because GITHUB_TOKEN releases emit no release event.
+  workflow_call:
 
 permissions: {}
 

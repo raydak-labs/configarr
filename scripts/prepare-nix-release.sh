@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Record the release version and pnpmDeps hash in pkgs/nix/package.nix.
-# release-it runs this from before:git:release, so the result is part of the tagged commit.
+# The release-please preparation job runs this on its release branch before tagging.
 set -euo pipefail
 
 version="${1:?usage: prepare-nix-release.sh <version>}"
