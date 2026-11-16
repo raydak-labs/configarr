@@ -1712,6 +1712,32 @@ describe("qualityProfileBase", async () => {
       expect(updated.cutoff).toBe(1001);
       expect(updated.cutoffFormatScore).toBe(4);
     });
+
+    test("keeps a group cutoff when a plain quality shares its name", async () => {
+      // Server items: the plain quality HDTV-1080p (id 1) and the group "HDTV-1080p" (id 1000)
+      // containing WEBDL-1080p, with the cutoff on the group. Translating the cutoff by name alone
+      // would pick the plain quality and rewrite it to id 1.
+      const before = serverProfile(
+        [quality("HDTV-1080p", 1), { id: 1000, name: "HDTV-1080p", allowed: true, items: [quality("WEBDL-1080p", 2)] }],
+        1000,
+      );
+      const bothDeclared: MergedConfigInstance = {
+        ...config,
+        quality_profiles: [
+          {
+            ...config.quality_profiles[0]!,
+            // mapQualities reverses this to [plain HDTV-1080p, group HDTV-1080p], the server order
+            qualities: [{ name: "HDTV-1080p", qualities: ["WEBDL-1080p"] }, { name: "HDTV-1080p" }],
+            upgrade: { allowed: false },
+          },
+        ],
+      };
+
+      const result = await sync.calculateQualityProfilesDiff(cfMap, bothDeclared, cacheWith(before));
+
+      expect(result.changedQPs).toEqual([]);
+      expect(result.noChanges).toEqual(["Standard"]);
+    });
   });
 
   describe("calculateQualityProfilesDiff - undeclared qualities", () => {
@@ -1811,6 +1837,51 @@ describe("qualityProfileBase", async () => {
         cfMap,
         onlyHdtv,
         new ServerCache({ customFormats: [], qualityDefinitions: resources, qualityProfiles: [serverProfile] }),
+      );
+
+      expect(result.changedQPs).toEqual([]);
+      expect(result.noChanges).toEqual(["Standard"]);
+    });
+
+    test("does not duplicate an undeclared quality when a group and a plain quality share a name", async () => {
+      // Config: the group "HDTV-1080p" containing WEBDL-1080p plus the plain quality
+      // "HDTV-1080p". mapQualities reverses them to [plain HDTV-1080p, group HDTV-1080p]; OGG sits
+      // between the plain quality and the group on the server, so it may only be anchored once.
+      const sharedNameServer: QualityProfileShared = {
+        id: 7,
+        name: "Standard",
+        upgradeAllowed: false,
+        cutoff: 1000,
+        cutoffFormatScore: 0,
+        minFormatScore: 0,
+        minUpgradeFormatScore: 1,
+        formatItems: [],
+        items: [
+          plain("HDTV-1080p", 1, true),
+          plain("OGG", 8, true),
+          { allowed: true, id: 1000, name: "HDTV-1080p", items: [plain("WEBDL-1080p", 2, true)] },
+        ],
+      };
+      const sharedNameConfig: MergedConfigInstance = {
+        ...config(0),
+        quality_profiles: [
+          {
+            ...config(0).quality_profiles[0]!,
+            qualities: [{ name: "HDTV-1080p", qualities: ["WEBDL-1080p"] }, { name: "HDTV-1080p" }],
+            upgrade: { allowed: false },
+          },
+        ],
+      };
+      const sharedNameDefinitions: QualityDefinitionShared[] = [
+        { id: 1, title: "HDTV-1080p", weight: 2, quality: { id: 1, name: "HDTV-1080p" } },
+        { id: 2, title: "WEBDL-1080p", weight: 2, quality: { id: 2, name: "WEBDL-1080p" } },
+        { id: 8, title: "OGG", weight: 1, quality: { id: 8, name: "OGG" } },
+      ];
+
+      const result = await sync.calculateQualityProfilesDiff(
+        cfMap,
+        sharedNameConfig,
+        new ServerCache({ customFormats: [], qualityDefinitions: sharedNameDefinitions, qualityProfiles: [sharedNameServer] }),
       );
 
       expect(result.changedQPs).toEqual([]);

@@ -178,6 +178,16 @@ export const mapQualityProfiles = ({ carrIdMapping }: CFProcessing, { custom_for
 const itemName = (item: QualityItem): string | undefined => item.name ?? item.quality?.name ?? undefined;
 
 /**
+ * Identity of an item inside a profile. Groups carry a top-level `name`, plain qualities only
+ * `quality.name`, and both may share the same user-facing name, so the kind is part of the key.
+ */
+const itemKey = (item: QualityItem): string | undefined => {
+  const name = itemName(item);
+
+  return name == null ? undefined : `${item.name != null ? "group" : "quality"}:${name}`;
+};
+
+/**
  * Places qualities that the config does not declare back where the server has them, instead of
  * moving all of them to the top or bottom of the list. Each undeclared item is inserted after the
  * closest declared item that precedes it on the server, so declaring a subset no longer reorders
@@ -193,14 +203,14 @@ const mergeUndeclaredQualities = (
   const serverIndex = new Map<string, number>();
 
   serverItems.forEach((item, index) => {
-    const name = itemName(item);
+    const key = itemKey(item);
 
-    if (name != null) {
-      serverIndex.set(name, index);
+    if (key != null) {
+      serverIndex.set(key, index);
     }
   });
 
-  const declaredNames = new Set(declared.map(itemName).filter((name): name is string => name != null));
+  const declaredKeys = new Set(declared.map(itemKey).filter((key): key is string => key != null));
   const leading: QualityItem[] = [];
   const trailing: QualityItem[] = [];
   const after = new Map<string, QualityItem[]>();
@@ -211,7 +221,7 @@ const mergeUndeclaredQualities = (
   const missingFromServer: QualityItem[] = [];
 
   for (const item of undeclared) {
-    const index = serverIndex.get(itemName(item) ?? "");
+    const index = serverIndex.get(itemKey(item) ?? "");
 
     if (index == null) {
       missingFromServer.push(item);
@@ -226,10 +236,10 @@ const mergeUndeclaredQualities = (
     let anchor: string | undefined;
 
     for (let i = index - 1; i >= 0; i--) {
-      const previousName = itemName(serverItems[i]!);
+      const previousKey = itemKey(serverItems[i]!);
 
-      if (previousName != null && declaredNames.has(previousName)) {
-        anchor = previousName;
+      if (previousKey != null && declaredKeys.has(previousKey)) {
+        anchor = previousKey;
         break;
       }
     }
@@ -250,10 +260,10 @@ const mergeUndeclaredQualities = (
 
   for (const item of declared) {
     merged.push(item);
-    const name = itemName(item);
+    const key = itemKey(item);
 
-    if (name != null) {
-      merged.push(...(after.get(name) ?? []));
+    if (key != null) {
+      merged.push(...(after.get(key) ?? []));
     }
   }
 
@@ -573,13 +583,15 @@ const translateServerCutoff = (
   }
 
   const previous = (serverItems ?? []).find((item) => item.id === serverCutoff || item.quality?.id === serverCutoff);
-  const previousName = previous == null ? undefined : itemName(previous);
+  const previousKey = previous == null ? undefined : itemKey(previous);
 
-  if (previousName == null) {
+  if (previousKey == null) {
     return undefined;
   }
 
-  const next = nextItems.find((item) => itemName(item) === previousName);
+  // Match the kind as well: a plain quality may share its name with a group, and only the same
+  // item should keep the cutoff.
+  const next = nextItems.find((item) => itemKey(item) === previousKey);
 
   if (next == null || next.allowed === false) {
     return undefined;
