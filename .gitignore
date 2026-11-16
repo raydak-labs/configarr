@@ -171,4 +171,5 @@ result
 
 # Git worktrees
 .worktrees/
+mise.local.toml
 .claude/settings.local.json

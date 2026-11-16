@@ -1,0 +1,9 @@
+[tools]
+node = "26.13.1"
+pnpm = "12.21.0"
+actionlint = "1.7.12"
+shellcheck = "0.11.0"
+
+[tasks.check]
+description = "Build, lint, typecheck, and test"
+run = "pnpm check"
