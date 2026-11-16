@@ -104,7 +104,7 @@ export const run = async () => {
     entries: Record<string, TInstance> | undefined,
     runInstance: (instance: TInstance, instanceName: string) => Promise<InstanceDiffReport>,
   ) => {
-    if (enabled !== false) {
+    if (enabled == null || enabled) {
       const result = await runInstances(arrType, entries, runInstance);
       totalStatus.push(`${arrType}: (${result.status.success}/${result.status.failure}/${result.status.skipped})`);
       allReports.push(...result.reports);
