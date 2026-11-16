@@ -81,6 +81,15 @@ describe("MediaManagementSync.persistNaming", () => {
   });
 });
 
+describe("MediaManagementSync.mapNaming", () => {
+  it("returns undefined when the app has no friendly-name mapper", async () => {
+    const { sync, api } = createSync();
+
+    await expect(sync.mapNaming({ series: "default" })).resolves.toBeUndefined();
+    expect(api.getNaming).not.toHaveBeenCalled();
+  });
+});
+
 describe("MediaManagementSync.persistMediamanagement", () => {
   let ctx: ReturnType<typeof createSync>;
 

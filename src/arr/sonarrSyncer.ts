@@ -6,7 +6,6 @@ import { InstanceDiffReport } from "../diffReport/diffReport.types";
 import { getEnvs } from "../env";
 import { SonarrDownloadClientSync } from "../downloadClients/downloadClientSonarr";
 import { SonarrImportListSync } from "../importLists/importListSonarr";
-import { MediaNamingSonarr } from "../mediaNaming/mediaNamingSonarr";
 import { SonarrMediaManagementSync } from "../mediaManagement/mediaManagementSonarr";
 import { QualityDefinitionSonarrSync } from "../qualityDefinitions/qualityDefinitionSonarr";
 import { QualityProfileSonarrSync } from "../qualityProfiles/qualityProfileSonarr";
@@ -33,7 +32,6 @@ export class SonarrSyncer {
         hostConfig: new SonarrHostConfigSync(client),
         qd: new QualityDefinitionSonarrSync(client),
         mm: new SonarrMediaManagementSync(client),
-        mediaNaming: new MediaNamingSonarr(),
         qp: qualityProfiles,
         delay: new StandardDelayProfileSync(client, DownloadProtocol),
         releaseProfiles: new ReleaseProfileSonarrSync(client),

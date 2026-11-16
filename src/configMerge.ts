@@ -23,7 +23,7 @@ import { TrashCFGroupMapping, TrashQP, TrashQualityDefinition } from "./types/tr
 import { cloneWithJSON } from "./util";
 import { validateConfig } from "./config";
 import { expandAndAppendCustomFormatGroups, filterConfigarrReleaseProfiles, includeTemplateOrderDefault } from "./configTemplates";
-import type { MediaNamingBase } from "./mediaNaming/mediaNamingBase";
+import type { MediaNamingMapper } from "./mediaManagement/mediaManagement";
 
 type MergedScoreInfo = {
   score?: number;
@@ -108,7 +108,7 @@ export const mergeConfigsAndTemplates = async (
   globalConfig: InputConfigSchema,
   instanceConfig: InputConfigArrInstance,
   arrType: ArrType,
-  options: { supportsProfileQualitySizes?: boolean; mediaNaming?: MediaNamingBase } = {},
+  options: { supportsProfileQualitySizes?: boolean; mediaManagement?: MediaNamingMapper } = {},
 ): Promise<{ config: MergedConfigInstance }> => {
   const localTemplateMap = loadLocalRecyclarrTemplate(arrType);
   let recyclarrTemplateMap: Map<string, MappedTemplates> = new Map();
@@ -215,13 +215,11 @@ export const mergeConfigsAndTemplates = async (
   }
 
   if (instanceConfig.media_naming && Object.keys(instanceConfig.media_naming).length > 0) {
-    if (options.mediaNaming) {
-      mergedTemplates.media_naming_api = {
-        ...mergedTemplates.media_naming_api,
-        ...(await options.mediaNaming.map(instanceConfig.media_naming)),
-      };
-    } else {
+    const mappedNaming = options.mediaManagement ? await options.mediaManagement.mapNaming(instanceConfig.media_naming) : undefined;
+    if (mappedNaming === undefined) {
       logger.warn(`MediaNaming not supported for ${arrType}`);
+    } else {
+      mergedTemplates.media_naming_api = { ...mergedTemplates.media_naming_api, ...mappedNaming };
     }
   }
 

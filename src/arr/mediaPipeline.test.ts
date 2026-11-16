@@ -193,9 +193,13 @@ describe("runMediaSyncToQualityProfiles", () => {
 
   it("passes Sonarr profile-size support to template merging", async () => {
     const order: Order = [];
-    await run(order, syncs(order), undefined, true);
+    const syncObjects = syncs(order);
+    await run(order, syncObjects, undefined, true);
 
-    expect(mergeConfigsAndTemplates).toHaveBeenCalledWith({}, {}, "SONARR", { supportsProfileQualitySizes: true });
+    expect(mergeConfigsAndTemplates).toHaveBeenCalledWith({}, {}, "SONARR", {
+      supportsProfileQualitySizes: true,
+      mediaManagement: syncObjects.mm,
+    });
   });
 
   it("validates configuration before any mutating feature runs", async () => {

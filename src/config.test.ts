@@ -24,7 +24,8 @@ import {
 } from "./types/config.types";
 import { TrashQP, TrashQualityDefinition } from "./types/trashguide.types";
 import { cloneWithJSON } from "./util";
-import { MediaNamingRadarr } from "./mediaNaming/mediaNamingRadarr";
+import { MediaManagementSync } from "./mediaManagement/mediaManagement";
+import { RadarrMediaManagementSync } from "./mediaManagement/mediaManagementRadarr";
 import { logger } from "./logger";
 import { ConfigValidationError, validateConfig } from "./validation";
 
@@ -409,15 +410,15 @@ describe("mergeConfigsAndTemplates", () => {
     vi.spyOn(trashGuide, "loadQPFromTrash").mockResolvedValue(new Map());
     vi.spyOn(trashGuide, "loadAllQDsFromTrash").mockResolvedValue(new Map());
     vi.spyOn(trashGuide, "loadTrashCustomFormatGroups").mockResolvedValue(new Map());
-    const mapper = new MediaNamingRadarr();
-    const map = vi.spyOn(mapper, "map").mockResolvedValue({ standardMovieFormat: "mapped" });
+    const mapper = new RadarrMediaManagementSync({} as never);
+    const map = vi.spyOn(mapper, "mapNaming").mockResolvedValue({ standardMovieFormat: "mapped" });
     const inputConfig: InputConfigArrInstance = {
       base_url: "http://radarr:7878",
       api_key: "test",
       media_naming: { folder: "default" },
     };
 
-    const result = await mergeConfigsAndTemplates({}, inputConfig, "RADARR", { mediaNaming: mapper });
+    const result = await mergeConfigsAndTemplates({}, inputConfig, "RADARR", { mediaManagement: mapper });
 
     expect(map).toHaveBeenCalledWith({ folder: "default" });
     expect(result.config.media_naming_api).toEqual({ standardMovieFormat: "mapped" });
@@ -432,7 +433,7 @@ describe("mergeConfigsAndTemplates", () => {
       media_naming: { folder: "default" },
     };
 
-    const result = await mergeConfigsAndTemplates({}, inputConfig, "LIDARR");
+    const result = await mergeConfigsAndTemplates({}, inputConfig, "LIDARR", { mediaManagement: new MediaManagementSync({} as never) });
 
     expect(warn).toHaveBeenCalledWith("MediaNaming not supported for LIDARR");
     expect(result.config.media_naming_api).toBeUndefined();

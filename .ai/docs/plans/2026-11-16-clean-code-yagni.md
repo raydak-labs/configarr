@@ -43,3 +43,10 @@
     through `MediaFeatureSyncs`, and test config-merge injection.
 
 **Class design spec:** [2026-11-16-media-naming-classes-design.md](../specs/2026-11-16-media-naming-classes-design.md)
+
+14. Commit `refactor: consolidate media naming with media management`: move friendly-name mapping onto
+    `MediaManagementSync`, add a Radarr subclass, extend the Sonarr subclass, inject the existing `mm`
+    handler, and remove the separate `mediaNaming/` folder.
+
+**Consolidation spec:**
+[2026-11-16-media-naming-management-consolidation-design.md](../specs/2026-11-16-media-naming-management-consolidation-design.md)
