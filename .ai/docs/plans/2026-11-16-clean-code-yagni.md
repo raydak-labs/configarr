@@ -32,3 +32,8 @@
 10. Commit `refactor: split config loading templates and merging`: extract template includes, instance
     merging, and media naming; update mocks and run config, arr, and importer tests.
 11. Run the full validation gate on the combined commits, update PR #629, and check GitHub CI.
+12. Commit `refactor: split media naming by arr type`: create a dedicated media-naming resource with a
+    shared TRaSH lookup, thin Radarr and Sonarr mappers, and a contract-free dispatcher. Add focused tests,
+    remove `configMediaNaming.ts`, and rerun the full validation gate.
+
+**Follow-up spec:** [2026-11-16-media-naming-resource-design.md](../specs/2026-11-16-media-naming-resource-design.md)

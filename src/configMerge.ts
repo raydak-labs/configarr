@@ -23,7 +23,7 @@ import { TrashCFGroupMapping, TrashQP, TrashQualityDefinition } from "./types/tr
 import { cloneWithJSON } from "./util";
 import { validateConfig } from "./config";
 import { expandAndAppendCustomFormatGroups, filterConfigarrReleaseProfiles, includeTemplateOrderDefault } from "./configTemplates";
-import { mapConfigMediaNamingToApi } from "./configMediaNaming";
+import { mapConfigMediaNamingToApi } from "./mediaNaming/mediaNaming";
 
 type MergedScoreInfo = {
   score?: number;
