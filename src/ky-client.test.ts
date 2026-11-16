@@ -159,11 +159,23 @@ describe("HttpClient", () => {
       });
 
       const options = mockKyFn.mock.calls[0]?.[1] as KyOptions;
-      const body = options.json as FormData;
+      expect(options.json).toBeUndefined();
+      const body = options.body as FormData;
       expect(body).toBeInstanceOf(FormData);
       expect(body.get("plain")).toBe("value");
       expect(body.getAll("repeated")).toEqual(["one", "two"]);
       expect(body.get("nested")).toBe('{"enabled":true}');
+    });
+
+    test("uses the json option for non-FormData bodies", async () => {
+      mockKyFn.mockResolvedValueOnce(new Response("{}"));
+      const input = { plain: "value" };
+
+      await client.request({ path: "/api/test", method: "POST", type: ContentType.Json, body: input });
+
+      const options = mockKyFn.mock.calls[0]?.[1] as KyOptions;
+      expect(options.json).toEqual(input);
+      expect(options.body).toBeUndefined();
     });
   });
 });

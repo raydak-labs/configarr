@@ -254,7 +254,7 @@ export class HttpClient<SecurityDataType = unknown> {
         ...options,
         headers,
         searchParams,
-        json: body,
+        ...(type === ContentType.FormData ? { body: body as BodyInit } : { json: body }),
         hooks,
       });
 
