@@ -5,7 +5,10 @@ const TESTS = "tests/arr-e2e";
 
 /** One feature file against one container. The name is the app and version shown in vitest output. */
 function project(name: string, file: string, env: Record<string, string> = {}, groupOrder = 0) {
-  return { extends: true as const, test: { name, include: [`${TESTS}/${file}`], env, sequence: { groupOrder } } };
+  return {
+    extends: true as const,
+    test: { name, include: [`${TESTS}/${file}`], env: { ARR_E2E_PROJECT_NAME: name, ...env }, sequence: { groupOrder } },
+  };
 }
 
 const env = process.env;
