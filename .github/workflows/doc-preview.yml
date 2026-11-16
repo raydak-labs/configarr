@@ -27,12 +27,10 @@ jobs:
       - name: Inject enhanced GitHub environment variables
         uses: rlespinasse/github-slug-action@0e3299190dac9a700da92a90de4556116ea965ed # v5.7.1
 
-      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
-
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+      - name: Setup repo tools
+        uses: jdx/mise-action@b44d12e7d0d8ee7461bb893e1b1993500433185b # v5.2.7
         with:
-          node-version: lts/*
-          package-manager-cache: false
+          cache: false
 
       - name: Install & build
         working-directory: docs
@@ -40,6 +38,7 @@ jobs:
           PNPM_CONFIG_IGNORE_WORKSPACE: "true"
         run: |
           pnpm install --frozen-lockfile
+          pnpm typecheck
           pnpm build
 
       - name: Set deploy branch

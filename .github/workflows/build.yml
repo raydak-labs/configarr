@@ -59,11 +59,13 @@ jobs:
           # Set build timestamp
           BUILD_TIME="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
 
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "build_time=$BUILD_TIME" >> $GITHUB_OUTPUT
-          echo "run_id=${GITHUB_RUN_ID}" >> $GITHUB_OUTPUT
-          echo "repo=${GITHUB_REPOSITORY}" >> $GITHUB_OUTPUT
-          echo "sha=${GITHUB_SHA}" >> $GITHUB_OUTPUT
+          {
+            echo "version=$VERSION"
+            echo "build_time=$BUILD_TIME"
+            echo "run_id=${GITHUB_RUN_ID}"
+            echo "repo=${GITHUB_REPOSITORY}"
+            echo "sha=${GITHUB_SHA}"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Set build platforms
         id: set_platforms
@@ -71,19 +73,21 @@ jobs:
           EVENT_NAME: ${{ github.event_name }}
           GITHUB_REF: ${{ github.ref }}
         run: |
-          if [[ "${EVENT_NAME}" == 'workflow_dispatch' ]]; then
-            echo "MANUAL_RUN=true" >> $GITHUB_OUTPUT
-          else
-            echo "MANUAL_RUN=false" >> $GITHUB_OUTPUT
-          fi
+          {
+            if [[ "${EVENT_NAME}" == 'workflow_dispatch' ]]; then
+              echo "MANUAL_RUN=true"
+            else
+              echo "MANUAL_RUN=false"
+            fi
 
-          if [[ "${EVENT_NAME}" == 'workflow_dispatch' || "${GITHUB_REF}" == refs/tags/* ]]; then
-            echo "platforms=linux/amd64,linux/arm64" >> $GITHUB_OUTPUT
-            echo "push=true" >> $GITHUB_OUTPUT
-          else
-            echo "platforms=linux/amd64" >> $GITHUB_OUTPUT
-            echo "push=false" >> $GITHUB_OUTPUT
-          fi
+            if [[ "${EVENT_NAME}" == 'workflow_dispatch' || "${GITHUB_REF}" == refs/tags/* ]]; then
+              echo "platforms=linux/amd64,linux/arm64"
+              echo "push=true"
+            else
+              echo "platforms=linux/amd64"
+              echo "push=false"
+            fi
+          } >> "$GITHUB_OUTPUT"
 
       #      - name: Available platforms
       #        run: echo ${{ steps.buildx.outputs.platforms }}
