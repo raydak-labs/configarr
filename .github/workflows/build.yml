@@ -2,11 +2,20 @@ name: Docker Builds
 
 on:
   workflow_dispatch:
+  workflow_call:
+    inputs:
+      tag:
+        description: Release tag to build. Empty uses the caller ref.
+        required: false
+        type: string
+        default: ""
+    secrets:
+      DOCKERHUB_TOKEN:
+        description: Optional Docker Hub token.
+        required: false
   push:
     branches:
       - "main"
-    tags:
-      - "v*.*.*"
     paths-ignore:
       - "docs/**"
       - "**/*.md"
@@ -28,6 +37,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ inputs.tag }}
           persist-credentials: false
 
       - name: Inject enhanced GitHub environment variables
@@ -52,19 +62,27 @@ jobs:
           GITHUB_RUN_ID: ${{ github.run_id }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           GITHUB_SHA: ${{ github.sha }}
+          TAG_NAME: ${{ inputs.tag }}
         run: |
           # Set version based on tag or branch
-          VERSION="${GITHUB_REF_SLUG}"
+          VERSION="${TAG_NAME:-${GITHUB_REF_SLUG}}"
+          VERSION_NUMBER="${VERSION#v}"
+          MAJOR="${VERSION_NUMBER%%.*}"
+          MAJOR_MINOR="${VERSION_NUMBER%.*}"
 
           # Set build timestamp
           BUILD_TIME="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+          SHA="$(git rev-parse HEAD)"
 
           {
             echo "version=$VERSION"
+            echo "version_number=$VERSION_NUMBER"
+            echo "major=$MAJOR"
+            echo "major_minor=$MAJOR_MINOR"
             echo "build_time=$BUILD_TIME"
             echo "run_id=${GITHUB_RUN_ID}"
             echo "repo=${GITHUB_REPOSITORY}"
-            echo "sha=${GITHUB_SHA}"
+            echo "sha=${SHA}"
           } >> "$GITHUB_OUTPUT"
 
       - name: Set build platforms
@@ -72,15 +90,22 @@ jobs:
         env:
           EVENT_NAME: ${{ github.event_name }}
           GITHUB_REF: ${{ github.ref }}
+          TAG_NAME: ${{ inputs.tag }}
         run: |
           {
+            if [[ -n "${TAG_NAME}" ]]; then
+              echo "RELEASE=true"
+            else
+              echo "RELEASE=false"
+            fi
+
             if [[ "${EVENT_NAME}" == 'workflow_dispatch' ]]; then
               echo "MANUAL_RUN=true"
             else
               echo "MANUAL_RUN=false"
             fi
 
-            if [[ "${EVENT_NAME}" == 'workflow_dispatch' || "${GITHUB_REF}" == refs/tags/* ]]; then
+            if [[ -n "${TAG_NAME}" || "${EVENT_NAME}" == 'workflow_dispatch' || "${GITHUB_REF}" == refs/tags/* ]]; then
               echo "platforms=linux/amd64,linux/arm64"
               echo "push=true"
             else
@@ -118,11 +143,12 @@ jobs:
           # generate Docker tags based on the following events/attributes
           tags: |
             type=ref,event=branch,prefix=dev-,enable=${{ steps.set_platforms.outputs.MANUAL_RUN == 'true' }}
-            type=schedule,enable=${{ steps.set_platforms.outputs.MANUAL_RUN == 'false' }}
-            type=ref,event=branch,enable=${{ steps.set_platforms.outputs.MANUAL_RUN == 'false' }}
-            type=semver,pattern={{version}},enable=${{ steps.set_platforms.outputs.MANUAL_RUN == 'false' }}
-            type=semver,pattern={{major}}.{{minor}},enable=${{ steps.set_platforms.outputs.MANUAL_RUN == 'false' }}
-            type=semver,pattern={{major}},enable=${{ steps.set_platforms.outputs.MANUAL_RUN == 'false' }}
+            type=schedule,enable=${{ steps.set_platforms.outputs.RELEASE == 'false' && steps.set_platforms.outputs.MANUAL_RUN == 'false' }}
+            type=ref,event=branch,enable=${{ steps.set_platforms.outputs.RELEASE == 'false' && steps.set_platforms.outputs.MANUAL_RUN == 'false' }}
+            type=raw,value=${{ steps.vars.outputs.version_number }},enable=${{ steps.set_platforms.outputs.RELEASE == 'true' }}
+            type=raw,value=${{ steps.vars.outputs.major_minor }},enable=${{ steps.set_platforms.outputs.RELEASE == 'true' }}
+            type=raw,value=${{ steps.vars.outputs.major }},enable=${{ steps.set_platforms.outputs.RELEASE == 'true' }}
+            type=raw,value=latest,enable=${{ steps.set_platforms.outputs.RELEASE == 'true' }}
 
       - name: Build and push PMS
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
@@ -150,11 +176,12 @@ jobs:
             docker.io/${{ vars.DOCKERHUB_USERNAME }}/configarr,enable=${{ steps.set_platforms.outputs.MANUAL_RUN == 'false' && vars.DOCKERHUB_USERNAME != '' }}
           tags: |
             type=ref,event=branch,prefix=dev-,suffix=-alpine3.22,enable=${{ steps.set_platforms.outputs.MANUAL_RUN == 'true' }}
-            type=schedule,suffix=-alpine3.22,enable=${{ steps.set_platforms.outputs.MANUAL_RUN == 'false' }}
-            type=ref,event=branch,suffix=-alpine3.22,enable=${{ steps.set_platforms.outputs.MANUAL_RUN == 'false' }}
-            type=semver,pattern={{version}},suffix=-alpine3.22,enable=${{ steps.set_platforms.outputs.MANUAL_RUN == 'false' }}
-            type=semver,pattern={{major}}.{{minor}},suffix=-alpine3.22,enable=${{ steps.set_platforms.outputs.MANUAL_RUN == 'false' }}
-            type=semver,pattern={{major}},suffix=-alpine3.22,enable=${{ steps.set_platforms.outputs.MANUAL_RUN == 'false' }}
+            type=schedule,suffix=-alpine3.22,enable=${{ steps.set_platforms.outputs.RELEASE == 'false' && steps.set_platforms.outputs.MANUAL_RUN == 'false' }}
+            type=ref,event=branch,suffix=-alpine3.22,enable=${{ steps.set_platforms.outputs.RELEASE == 'false' && steps.set_platforms.outputs.MANUAL_RUN == 'false' }}
+            type=raw,value=${{ steps.vars.outputs.version_number }}-alpine3.22,enable=${{ steps.set_platforms.outputs.RELEASE == 'true' }}
+            type=raw,value=${{ steps.vars.outputs.major_minor }}-alpine3.22,enable=${{ steps.set_platforms.outputs.RELEASE == 'true' }}
+            type=raw,value=${{ steps.vars.outputs.major }}-alpine3.22,enable=${{ steps.set_platforms.outputs.RELEASE == 'true' }}
+            type=raw,value=latest-alpine3.22,enable=${{ steps.set_platforms.outputs.RELEASE == 'true' }}
 
       - name: Build and push alpine3.22 image
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0

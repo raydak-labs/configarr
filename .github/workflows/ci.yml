@@ -5,6 +5,13 @@ on:
     branches: [main]
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
+  workflow_call:
+    inputs:
+      ref:
+        description: Git ref to check out. Empty uses the caller ref.
+        required: false
+        type: string
+        default: ""
   workflow_dispatch:
 
 permissions:
@@ -30,13 +37,16 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ inputs.ref }}
           fetch-depth: 2
           persist-credentials: false
       - id: commit
         run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
       - id: areas
+        env:
+          CHECKOUT_REF: ${{ inputs.ref }}
         run: |
-          if [ "$GITHUB_EVENT_NAME" != pull_request ]; then
+          if [ "$GITHUB_EVENT_NAME" != pull_request ] || [ -n "$CHECKOUT_REF" ]; then
             { echo "app=true"; echo "lint=true"; } >> "$GITHUB_OUTPUT"
             exit 0
           fi

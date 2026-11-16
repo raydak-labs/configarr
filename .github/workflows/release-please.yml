@@ -1,62 +1,46 @@
-name: release-it
+name: Release Please
 
 on:
-  workflow_dispatch:
+  push:
+    branches: [main]
 
 permissions: {}
 
+concurrency:
+  group: release-please
+  cancel-in-progress: false
+
 jobs:
-  # The tag pushed below immediately triggers the binary and Docker image releases,
-  # so the exact tree that is about to be tagged has to pass the repo's own gates first.
-  # This job runs without the releaser token on purpose: only `release` needs write access.
-  quality-gates:
-    name: Quality Gates
+  release-please:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      # workflow_dispatch accepts no branch filter, so this assertion is what actually restricts a
-      # release to main. It runs before checkout, and before the release token exists.
-      - name: Ensure release is cut from main
-        run: |
-          if [ "${GITHUB_REF}" != "refs/heads/main" ]; then
-            echo "::error::Releases may only be dispatched from main, got ${GITHUB_REF}"
-            exit 1
-          fi
-
-      - name: Checkout code
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
-      - name: Setup repo tools
-        uses: jdx/mise-action@b44d12e7d0d8ee7461bb893e1b1993500433185b # v5.2.7
-        with:
-          cache: false
-
-      - run: pnpm install --frozen-lockfile
-
-      - run: mise run check
-
-  release:
-    needs: quality-gates
-    runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: write
+      pull-requests: write
+      issues: write
+    outputs:
+      created: ${{ steps.rp.outputs.release_created }}
+      tag: ${{ steps.rp.outputs.tag_name }}
+      pr: ${{ steps.rp.outputs.pr }}
     steps:
-      - name: Generate a token
-        id: generate_token
-        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+      - id: rp
+        uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
         with:
-          app-id: ${{ secrets.RELEASER_APP_ID }}
-          private-key: ${{ secrets.RELEASER_PRIVATE_KEY }}
-          permission-contents: write
-          permission-metadata: read
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
 
-      - name: Checkout code
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+  prepare:
+    needs: release-please
+    if: needs.release-please.outputs.pr != '' && needs.release-please.outputs.created != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      actions: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          token: ${{ steps.generate_token.outputs.token }}
+          ref: ${{ fromJSON(needs.release-please.outputs.pr).headBranchName }}
           fetch-depth: 0
           persist-credentials: false
 
@@ -65,32 +49,50 @@ jobs:
           git config user.email "raydak-releaser@users.noreply.github.com"
           git config user.name "raydak-releaser[bot]"
 
-      - name: Setup repo tools
-        uses: jdx/mise-action@b44d12e7d0d8ee7461bb893e1b1993500433185b # v5.2.7
-        with:
-          cache: false
-
-      - run: pnpm install --frozen-lockfile
-
-      - name: Configure git push credentials
-        env:
-          GH_TOKEN: ${{ steps.generate_token.outputs.token }}
-        run: |
-          git config --local http.https://github.com/.extraheader "AUTHORIZATION: basic $(printf '%s' "x-access-token:${GH_TOKEN}" | base64 | tr -d '\n')"
-
-      # The package builds the revision that contains pkgs/nix/package.nix, so a pinned
-      # tag builds that tag. The pnpmDeps hash is written into the release commit
-      # before the tag is created.
       - name: Install Nix
         uses: cachix/install-nix-action@75c75c31ebece974e48ebc36b4ad125bd97bd97b # v31.11.3
 
-      - name: Hash Nix pnpm dependencies
-        id: nix_pnpm
-        run: |
-          hash="$(bash scripts/prefetch-nix-pnpm-deps.sh)"
-          echo "hash=${hash}" >> "$GITHUB_OUTPUT"
-
-      - run: pnpm release-it --ci
+      - id: prepare
+        name: Update Nix release metadata
         env:
-          GITHUB_TOKEN: ${{ steps.generate_token.outputs.token }}
-          NIX_PNPM_DEPS_HASH: ${{ steps.nix_pnpm.outputs.hash }}
+          RELEASE_BRANCH: ${{ fromJSON(needs.release-please.outputs.pr).headBranchName }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version=$(jq -r .version package.json)
+          NIX_PNPM_DEPS_HASH="$(bash scripts/prefetch-nix-pnpm-deps.sh)"
+          export NIX_PNPM_DEPS_HASH
+          bash scripts/prepare-nix-release.sh "$version"
+
+          if git diff --quiet; then
+            exit 0
+          fi
+
+          git add pkgs/nix/package.nix
+          git commit -m "chore: update Nix release metadata"
+          git config --local http.https://github.com/.extraheader "AUTHORIZATION: basic $(printf '%s' "x-access-token:${GH_TOKEN}" | base64 | tr -d '\n')"
+          git push origin "HEAD:${RELEASE_BRANCH}"
+
+      - name: Run CI on the release branch
+        env:
+          RELEASE_BRANCH: ${{ fromJSON(needs.release-please.outputs.pr).headBranchName }}
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run ci.yml --ref "$RELEASE_BRANCH"
+
+  publish:
+    needs: release-please
+    if: needs.release-please.outputs.created == 'true'
+    uses: ./.github/workflows/release.yml # zizmor: ignore[self-repository] actionlint rejects `$/`
+    permissions:
+      contents: write
+      packages: write
+    with:
+      tag: ${{ needs.release-please.outputs.tag }}
+    secrets:
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+
+  release-comments:
+    needs: publish
+    uses: ./.github/workflows/release-comment.yml # zizmor: ignore[self-repository] actionlint rejects `$/`
+    permissions:
+      issues: write
+      pull-requests: write

@@ -1,0 +1,88 @@
+name: Release
+
+on:
+  workflow_call:
+    inputs:
+      tag:
+        description: Existing release tag to build and publish.
+        required: true
+        type: string
+      baseline:
+        description: Enable baseline CLI builds for older CPU architectures.
+        required: false
+        type: boolean
+        default: false
+    secrets:
+      DOCKERHUB_TOKEN:
+        description: Optional Docker Hub token.
+        required: false
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing release tag to build and publish.
+        required: true
+        type: string
+      baseline:
+        description: Enable baseline CLI builds for older CPU architectures.
+        required: false
+        type: boolean
+        default: false
+
+permissions: {}
+
+jobs:
+  checks:
+    uses: ./.github/workflows/ci.yml # zizmor: ignore[self-repository] actionlint rejects `$/`
+    permissions:
+      contents: read
+    with:
+      ref: ${{ inputs.tag }}
+
+  version:
+    needs: checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.tag }}
+          persist-credentials: false
+      - uses: jdx/mise-action@b44d12e7d0d8ee7461bb893e1b1993500433185b # v5.2.7
+        with:
+          cache: false
+      - name: Tag matches package and Nix versions
+        env:
+          TAG_NAME: ${{ inputs.tag }}
+        run: |
+          node -e '
+            const fs = require("node:fs");
+            const want = process.env.TAG_NAME.replace(/^v/, "");
+            const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
+            const nix = fs.readFileSync("pkgs/nix/package.nix", "utf8").match(/version \? "([^"]+)"/);
+            if (pkg.version !== want || nix?.[1] !== want) {
+              console.error("tag " + process.env.TAG_NAME + ": package=" + pkg.version + ", nix=" + nix?.[1]);
+              process.exit(1);
+            }
+          '
+
+  docker:
+    needs: version
+    uses: ./.github/workflows/build.yml # zizmor: ignore[self-repository] actionlint rejects `$/`
+    permissions:
+      contents: read
+      packages: write
+    secrets:
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+    with:
+      tag: ${{ inputs.tag }}
+
+  cli:
+    needs: version
+    uses: ./.github/workflows/cli-release.yml # zizmor: ignore[self-repository] actionlint rejects `$/`
+    permissions:
+      contents: write
+    with:
+      tag: ${{ inputs.tag }}
+      baseline: ${{ inputs.baseline }}
