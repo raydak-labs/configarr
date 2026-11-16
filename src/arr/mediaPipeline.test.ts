@@ -28,7 +28,7 @@ vi.mock("../env", async (importOriginal) => {
     })),
   };
 });
-vi.mock("../config", () => ({ mergeConfigsAndTemplates: vi.fn(async () => ({ config: {} })) }));
+vi.mock("../configMerge", () => ({ mergeConfigsAndTemplates: vi.fn(async () => ({ config: {} })) }));
 vi.mock("../customFormats/customFormats", () => ({
   calculateCFsToManage: vi.fn(() => new Set<string>()),
   deleteCustomFormat: vi.fn(async () => undefined),
@@ -60,7 +60,7 @@ vi.mock("../notifications/notifications", () => ({
   syncNotifications: vi.fn(async () => [{ resourceType: "Notification", name: "hook", action: "create" as const }]),
 }));
 
-import { mergeConfigsAndTemplates } from "../config";
+import { mergeConfigsAndTemplates } from "../configMerge";
 import { getEnvs } from "../env";
 import { logger } from "../logger";
 import { syncDownloadClientConfig } from "../downloadClientConfig/downloadClientConfigSyncer";

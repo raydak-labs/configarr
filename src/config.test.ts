@@ -1,14 +1,9 @@
 import path from "node:path";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import yaml from "yaml";
-import {
-  getSecrets,
-  isTrashQualityDefinition,
-  mergeConfigsAndTemplates,
-  resetSecretsCache,
-  transformConfig,
-  validateConfig as validateMergedConfig,
-} from "./config";
+import { getSecrets, resetSecretsCache, transformConfig, validateConfig as validateMergedConfig } from "./config";
+import { mergeConfigsAndTemplates } from "./configMerge";
+import { isTrashQualityDefinition } from "./configTemplates";
 import * as env from "./env";
 import * as localImporter from "./local-importer";
 import * as reclarrImporter from "./recyclarr-importer";

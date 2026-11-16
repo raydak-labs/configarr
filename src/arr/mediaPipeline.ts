@@ -5,7 +5,7 @@ import { ServerCache } from "../cache";
 import { ArrTypeToClient } from "../clients/client";
 import type { MetadataClient } from "../clients/capabilities";
 import type { MetadataResource } from "../__generated__/sonarr/data-contracts";
-import { mergeConfigsAndTemplates } from "../config";
+import { mergeConfigsAndTemplates } from "../configMerge";
 import { CFIDToConfigGroup, CFProcessing, CustomFormatRef } from "../customFormats/customFormat.types";
 import {
   calculateCFsToManage,
