@@ -15,6 +15,7 @@ import type { MappedTemplates } from "./types/common.types";
 import {
   type ConfigQualityProfile,
   type ConfigQualityProfileItem,
+  HostConfigSchema,
   type InputConfigArrInstance,
   InputConfigArrInstanceSchema,
   type InputConfigCustomFormat,
@@ -2710,5 +2711,19 @@ describe("InputConfigSchemaSchema (regression)", () => {
     };
 
     expect(InputConfigRootFolderSchema.parse(folder)).toMatchObject(folder);
+  });
+
+  test("host_config accepts a backup policy and keeps it", () => {
+    const backup = { backup_folder: "Backups", backup_interval: 7, backup_retention: 28 };
+    expect(HostConfigSchema.parse(backup)).toEqual(backup);
+  });
+
+  test.each([
+    { label: "zero interval", config: { backup_interval: 0 } },
+    { label: "zero retention", config: { backup_retention: 0 } },
+    { label: "fractional interval", config: { backup_interval: 1.5 } },
+    { label: "empty folder", config: { backup_folder: "" } },
+  ])("host_config rejects $label", ({ config }) => {
+    expect(() => HostConfigSchema.parse(config)).toThrow();
   });
 });

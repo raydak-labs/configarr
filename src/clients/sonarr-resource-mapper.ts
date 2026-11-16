@@ -24,6 +24,28 @@ export type SonarrProfileQualitySize = SonarrProfileQualitySizeValues & { qualit
 
 export type SonarrMediaManagementResource = MediaManagementConfigResource | SonarrMediaManagementV5;
 
+/**
+ * Settings shared by Sonarr v4's `/api/v3/config/host` and v5's `/api/v5/settings/general`.
+ * Authentication fields only exist on v5; backup settings exist on both.
+ */
+export type SonarrHostConfigResource = {
+  id?: number;
+  authenticationMethod?: string;
+  authenticationRequired?: string;
+  allowedHosts?: string | null;
+  oidcAuthority?: string | null;
+  oidcClientId?: string | null;
+  oidcUserIdentifier?: string | null;
+  oidcScopes?: string | null;
+  oidcClientSecret?: string | null;
+  enableSsl?: boolean;
+  sslCertPath?: string | null;
+  sslKeyPath?: string | null;
+  backupFolder?: string | null;
+  backupInterval?: number;
+  backupRetention?: number;
+};
+
 export type SonarrProfileQualitySizes = {
   id: number;
   name: string;

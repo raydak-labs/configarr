@@ -1465,9 +1465,47 @@ Prowlarr download clients use the same `download_clients` block as the other \*A
 General settings synchronization is experimental.
 :::
 
-`host_config` manages the authentication and TLS fields listed below on Radarr v7
-and Sonarr v5. Older Radarr and Sonarr versions reject this block before any sync
-changes. Omitted fields retain their current server values.
+`host_config` manages the backup policy on every \*arr. Authentication and TLS fields
+are additionally supported on Radarr v7 and Sonarr v5; older Radarr and Sonarr versions
+accept backup settings but reject authentication settings before any sync changes.
+Lidarr, Readarr and Prowlarr expose only the backup fields. Omitted fields retain their
+current server values.
+
+### Backup policy
+
+| Field              | Type    | Meaning                                                                                                                           |
+| ------------------ | ------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `backup_folder`    | string  | Folder for backups. Relative paths resolve against the app data directory (for example `Backups`); absolute paths are used as-is. |
+| `backup_interval`  | integer | Days between automatic backups (minimum `1`; current versions accept up to `7`).                                                  |
+| `backup_retention` | integer | Days to keep backups (minimum `1`; current versions accept up to `90`).                                                           |
+
+```yaml
+lidarr:
+  music:
+    base_url: http://lidarr:8686
+    api_key: !secret LIDARR_API_KEY
+    host_config:
+      backup_folder: Backups
+      backup_interval: 7
+      backup_retention: 28
+```
+
+The same block works on Sonarr, Radarr, Whisparr, Readarr and Prowlarr, on any
+supported API version. Relative folders stay under wherever the app data directory is
+mounted; absolute folders point at a path on the *arr server. The server validates the
+configured range, so limits may differ between apps and versions.
+
+Versions that expose an `allowedHosts` host setting (for example Sonarr v5 and current
+Lidarr, Readarr, Whisparr, Prowlarr and Radarr builds) reject a host-settings write when
+authentication is not `enabled` and that list is empty. Set a non-empty `allowedHosts`
+on such an instance (or enable authentication) before managing the backup policy.
+Sonarr v4 has no `allowedHosts` field and does not require it.
+
+### Authentication and TLS
+
+Radarr v7 and Sonarr v5 also accept the authentication and TLS fields below. The
+version gate applies only to these fields; a backup-only block is accepted on older
+versions.
 
 ```yaml
 radarr:
@@ -1503,7 +1541,8 @@ the existing secret. Set `update_oidc_client_secret: true` to rotate it, then re
 the flag: while it remains enabled Configarr submits the secret on every run. Secrets
 are redacted from the diff report. `DRY_RUN` reports changes without writing them.
 
-Whisparr v3 supports the following separate allow-list in `host_config`:
+Whisparr v3 supports the following separate allow-list in `host_config`, in addition to
+the backup policy:
 
 ```yaml
 whisparr:
@@ -1512,6 +1551,7 @@ whisparr:
     host_config:
       whisparrAutoMatchOnDate: false
       whisparrCorruptFileDetection: true
+      backup_interval: 7
 ```
 
 Omitted fields retain their server values. Whisparr rejects authentication, credential, network and other host settings in this block. Configarr reads back the settings after an update and reports an error if the server did not save them. The server must expose the requested fields and accept its current General settings when validating the update.

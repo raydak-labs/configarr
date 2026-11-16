@@ -4,6 +4,7 @@ import {
   type DelayProfileResource,
   type DownloadClientConfigResource,
   type DownloadClientResource,
+  type HostConfigResource,
   type IndexerConfigResource,
   LanguageResource,
   type MediaManagementConfigResource,
@@ -152,6 +153,14 @@ export class LidarrClient
 
   async updateUiConfig(id: string, data: UiConfigResource): Promise<UiConfigResource> {
     return this.api.v1ConfigUiUpdate(id, data);
+  }
+
+  async getHostConfig(): Promise<HostConfigResource> {
+    return this.api.v1ConfigHostList({ redactResponseErrors: true });
+  }
+
+  async updateHostConfig(id: string, data: HostConfigResource): Promise<void> {
+    await this.api.v1ConfigHostUpdate(id, data, { redactResponseErrors: true });
   }
 
   async getRootfolders(): Promise<RootFolderResource[]> {

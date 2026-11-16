@@ -38,6 +38,7 @@ import {
   type MediaBaseline,
   nonE2eLabels,
   nonE2eNames,
+  prepareHostConfigWrite,
   preservedRootFolderPaths,
   restoreMediaBaseline,
   snapshotMediaBaseline,
@@ -226,6 +227,27 @@ describe("radarr (live)", () => {
     expect(run.result.exitCode).not.toBe(0);
     expect(run.result.stdout + run.result.stderr).toContain("host_config requires Radarr v7 or Sonarr v5");
     expect((await client.getUiConfig()).firstDayOfWeek).toBe(before.firstDayOfWeek);
+  });
+
+  test("syncs the backup policy on every Radarr version", async () => {
+    const original = await prepareHostConfigWrite(client);
+    const backup_interval = original.backupInterval === 7 ? 1 : 7;
+    const backup_retention = original.backupRetention === 28 ? 7 : 28;
+    const backup_folder = original.backupFolder === "Backups-e2e" ? "Backups" : "Backups-e2e";
+    try {
+      const config = mediaConfig("RADARR", { host_config: { backup_folder, backup_interval, backup_retention } });
+      const first = await syncConfig(config);
+      assertPipelineSucceeded(first.result, ["RADARR"]);
+      const updated = await client.getHostConfig();
+      expect(updated.backupInterval).toBe(backup_interval);
+      expect(updated.backupRetention).toBe(backup_retention);
+      expect(updated.backupFolder).toBe(backup_folder);
+      const second = await syncConfig(config, first.workspace);
+      assertPipelineSucceeded(second.result, ["RADARR"]);
+      assertDiffUpToDate(second.result, ["RADARR"]);
+    } finally {
+      await client.updateHostConfig(String(original.id), original);
+    }
   });
 
   test("syncs host settings, metadata, and an import list in one run", async () => {

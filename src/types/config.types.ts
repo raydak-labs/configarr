@@ -522,6 +522,29 @@ export const InputConfigNotificationsSchema = z.object({
 });
 export type InputConfigNotifications = z.infer<typeof InputConfigNotificationsSchema>;
 
+export const HostConfigSchema = z
+  .object({
+    authenticationMethod: z.string().optional(),
+    authenticationRequired: z.string().optional(),
+    allowedHosts: z.string().optional(),
+    oidcAuthority: z.string().optional(),
+    oidcClientId: z.string().optional(),
+    oidcUserIdentifier: z.string().optional(),
+    oidcScopes: z.string().optional(),
+    enableSsl: z.boolean().optional(),
+    sslCertPath: z.string().optional(),
+    sslKeyPath: z.string().optional(),
+    oidcClientSecret: z.string().optional(),
+    update_oidc_client_secret: z.boolean().optional(),
+    whisparrAutoMatchOnDate: z.boolean().optional(),
+    whisparrCorruptFileDetection: z.boolean().optional(),
+    // Backup policy. Supported by every *arr; `backup_folder` is relative to the app data directory.
+    backup_folder: z.string().min(1).max(64).optional(),
+    backup_interval: z.number().int().min(1).optional(),
+    backup_retention: z.number().int().min(1).optional(),
+  })
+  .strict();
+
 export const InputConfigProwlarrInstanceSchema = z.object({
   base_url: z.string(),
   api_key: z.string(),
@@ -560,27 +583,10 @@ export const InputConfigProwlarrInstanceSchema = z.object({
   download_clients: InputConfigProwlarrDownloadClientsSchema.optional(),
   notifications: InputConfigNotificationsSchema.optional(),
   indexer_config: z.unknown().optional(),
+  host_config: HostConfigSchema.optional(),
 });
 export type InputConfigProwlarrInstance = z.infer<typeof InputConfigProwlarrInstanceSchema>;
 
-export const HostConfigSchema = z
-  .object({
-    authenticationMethod: z.string().optional(),
-    authenticationRequired: z.string().optional(),
-    allowedHosts: z.string().optional(),
-    oidcAuthority: z.string().optional(),
-    oidcClientId: z.string().optional(),
-    oidcUserIdentifier: z.string().optional(),
-    oidcScopes: z.string().optional(),
-    enableSsl: z.boolean().optional(),
-    sslCertPath: z.string().optional(),
-    sslKeyPath: z.string().optional(),
-    oidcClientSecret: z.string().optional(),
-    update_oidc_client_secret: z.boolean().optional(),
-    whisparrAutoMatchOnDate: z.boolean().optional(),
-    whisparrCorruptFileDetection: z.boolean().optional(),
-  })
-  .strict();
 export const InputConfigImportListSchema = z
   .object({
     name: z.string().min(1),

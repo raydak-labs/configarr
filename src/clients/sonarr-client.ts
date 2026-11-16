@@ -13,6 +13,7 @@ import type {
   QualityProfileResource,
   RemotePathMappingResource,
   RootFolderResource,
+  HostConfigResource as SonarrHostConfigV3,
   SystemResource,
   TagResource,
   UiConfigResource,
@@ -42,6 +43,7 @@ import type {
 import { forceSaveIfDisabled, logConnectionError, validateClientParams } from "./connection";
 import type {
   QualitySize,
+  SonarrHostConfigResource,
   SonarrMediaManagementResource,
   SonarrProfileQualitySize,
   SonarrProfileQualitySizes,
@@ -111,14 +113,20 @@ export class SonarrClient
     return (await this.getApiVersion()) === "v3" ? v3() : v5();
   }
 
-  async getHostConfig(): Promise<SonarrGeneralV5> {
-    if ((await this.getApiVersion()) !== "v5") throw new Error("Sonarr host settings require API v5");
-    return this.apiV5.v5SettingsGeneralList({ redactResponseErrors: true });
+  async getHostConfig(): Promise<SonarrHostConfigResource> {
+    return this.versioned<SonarrHostConfigResource>(
+      () => this.apiV3.v3ConfigHostList({ redactResponseErrors: true }),
+      () => this.apiV5.v5SettingsGeneralList({ redactResponseErrors: true }),
+    );
   }
 
-  async updateHostConfig(id: string, data: SonarrGeneralV5): Promise<void> {
-    if ((await this.getApiVersion()) !== "v5") throw new Error("Sonarr host settings require API v5");
-    await this.apiV5.v5SettingsGeneralUpdate(id, data, { redactResponseErrors: true });
+  async updateHostConfig(id: string, data: SonarrHostConfigResource): Promise<void> {
+    // The generated transport types differ per API version (enums and General settings
+    // fields), so the version-agnostic payload is narrowed at this boundary.
+    await this.versioned<unknown>(
+      () => this.apiV3.v3ConfigHostUpdate(id, data as SonarrHostConfigV3, { redactResponseErrors: true }),
+      () => this.apiV5.v5SettingsGeneralUpdate(id, data as SonarrGeneralV5, { redactResponseErrors: true }),
+    );
   }
 
   getImportListSchema(): Promise<ImportListResource[]> {

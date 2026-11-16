@@ -1,7 +1,9 @@
+import type { HostConfigResource } from "../__generated__/lidarr/data-contracts";
 import { getClient } from "../clients/client";
 import { DelayProfileLidarrSync } from "../delayProfiles/delayProfileLidarr";
 import type { InstanceDiffReport } from "../diffReport/diffReport.types";
 import { LidarrDownloadClientSync } from "../downloadClients/downloadClientLidarr";
+import { BackupHostConfigSync } from "../hostConfig/hostConfigSync";
 import { MediaManagementSync } from "../mediaManagement/mediaManagement";
 import { LidarrMetadataProfileSync } from "../metadataProfiles/metadataProfileLidarr";
 import { QualityDefinitionPreferredSync } from "../qualityDefinitions/qualityDefinition";
@@ -31,6 +33,7 @@ export class LidarrSyncer {
         root: new LidarrRootFolderSync(client),
         downloadClients: new LidarrDownloadClientSync(client),
         indexerConfig: client,
+        hostConfig: new BackupHostConfigSync<HostConfigResource>(client, "Lidarr"),
       },
     });
     const metadataSync = new LidarrMetadataProfileSync(client);

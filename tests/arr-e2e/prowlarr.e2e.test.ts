@@ -10,6 +10,7 @@ import {
   createProwlarrClient,
   findNamed,
   nonE2eNames,
+  prepareHostConfigWrite,
   syncConfig,
   waitUntil,
 } from "./helpers";
@@ -621,5 +622,32 @@ describe("prowlarr (live)", () => {
     const deleted = await syncConfig(yaml(false, false, false), created.workspace);
     assertPipelineSucceeded(deleted.result, ["PROWLARR"]);
     expect(findNamed(await client.getNotifications(), "e2e-notification")).toBeUndefined();
+  });
+
+  test("syncs the backup policy and stays idempotent", async () => {
+    const client = createProwlarrClient();
+    const original = await prepareHostConfigWrite(client);
+    const backup_interval = original.backupInterval === 7 ? 1 : 7;
+    const backup_retention = original.backupRetention === 28 ? 7 : 28;
+    const backup_folder = original.backupFolder === "Backups-e2e" ? "Backups" : "Backups-e2e";
+    try {
+      // Only the instance connection and host settings: application sync validates Prowlarr
+      // callbacks, which the host-settings fixture cannot satisfy without a restart.
+      const config = {
+        telemetry: false,
+        prowlarr: { e2e: { ...prowlarrConnection(), host_config: { backup_folder, backup_interval, backup_retention } } },
+      };
+      const first = await syncConfig(config);
+      assertPipelineSucceeded(first.result, ["PROWLARR"]);
+      const updated = await client.getHostConfig();
+      expect(updated.backupInterval).toBe(backup_interval);
+      expect(updated.backupRetention).toBe(backup_retention);
+      expect(updated.backupFolder).toBe(backup_folder);
+      const second = await syncConfig(config, first.workspace);
+      assertPipelineSucceeded(second.result, ["PROWLARR"]);
+      assertDiffUpToDate(second.result, ["PROWLARR"]);
+    } finally {
+      await client.updateHostConfig(String(original.id), original);
+    }
   });
 });

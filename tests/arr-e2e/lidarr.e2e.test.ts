@@ -30,6 +30,7 @@ import {
   LEGACY_DELAY_PROFILE,
   type MediaBaseline,
   nonE2eNames,
+  prepareHostConfigWrite,
   preservedRootFolderObjects,
   restoreMediaBaseline,
   snapshotMediaBaseline,
@@ -566,5 +567,26 @@ describe("lidarr (live)", () => {
     const deleted = await syncConfig(yaml(false, false, false), created.workspace);
     assertPipelineSucceeded(deleted.result, ["LIDARR"]);
     expect(findNamed(await client.getNotifications(), "e2e-notification")).toBeUndefined();
+  });
+
+  test("syncs the backup policy and stays idempotent", async () => {
+    const original = await prepareHostConfigWrite(client);
+    const backup_interval = original.backupInterval === 7 ? 1 : 7;
+    const backup_retention = original.backupRetention === 28 ? 7 : 28;
+    const backup_folder = original.backupFolder === "Backups-e2e" ? "Backups" : "Backups-e2e";
+    try {
+      const config = mediaConfig("LIDARR", { host_config: { backup_folder, backup_interval, backup_retention } });
+      const first = await syncConfig(config);
+      assertPipelineSucceeded(first.result, ["LIDARR"]);
+      const updated = await client.getHostConfig();
+      expect(updated.backupInterval).toBe(backup_interval);
+      expect(updated.backupRetention).toBe(backup_retention);
+      expect(updated.backupFolder).toBe(backup_folder);
+      const second = await syncConfig(config, first.workspace);
+      assertPipelineSucceeded(second.result, ["LIDARR"]);
+      assertDiffUpToDate(second.result, ["LIDARR"]);
+    } finally {
+      await client.updateHostConfig(String(original.id), original);
+    }
   });
 });
