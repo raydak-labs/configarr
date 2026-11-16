@@ -90,6 +90,16 @@ jobs:
     secrets:
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
 
+  docs:
+    needs: [publish, release-please]
+    uses: ./.github/workflows/documentation.yml # zizmor: ignore[self-repository] actionlint rejects `$/`
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    with:
+      tag: ${{ needs.release-please.outputs.tag }}
+
   release-comments:
     needs: publish
     uses: ./.github/workflows/release-comment.yml # zizmor: ignore[self-repository] actionlint rejects `$/`

@@ -7,6 +7,13 @@ on:
     paths:
       - docs/**
   workflow_dispatch:
+  workflow_call:
+    inputs:
+      tag:
+        description: Release tag to document. Empty uses the caller ref.
+        required: false
+        type: string
+        default: ""
 
 permissions: {}
 
@@ -19,6 +26,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ inputs.tag }}
           fetch-depth: 0
           persist-credentials: false
 
@@ -43,7 +51,7 @@ jobs:
           path: ./docs/build
 
   deploy:
-    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_call'
     needs: build
     permissions:
       pages: write
