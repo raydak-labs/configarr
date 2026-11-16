@@ -23,7 +23,7 @@ import { BaseDownloadClientSync } from "../downloadClients/downloadClientBase";
 import { getEnvs } from "../env";
 import { logger } from "../logger";
 import { MediaManagementSync, mediamanagementDiffToDiffEntries, namingDiffToDiffEntries } from "../mediaManagement/mediaManagement";
-import type { SonarrMediaManagementResource } from "../clients/sonarr-client";
+import type { SonarrMediaManagementResource } from "../clients/sonarr-resource-mapper";
 import { QualityDefinitionSync, qualityDefinitionsToDiffEntries } from "../qualityDefinitions/qualityDefinition";
 import { BaseQualityProfileSync, getUnmanagedQualityProfiles, qualityProfilesToDiffEntries } from "../qualityProfiles/qualityProfileBase";
 import { BaseReleaseProfileSync } from "../releaseProfiles/releaseProfileBase";

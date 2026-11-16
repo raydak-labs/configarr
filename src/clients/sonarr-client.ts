@@ -5,12 +5,10 @@ import {
   DelayProfileResource,
   DownloadClientConfigResource,
   DownloadClientResource,
-  MediaManagementConfigResource,
   NamingConfigResource,
   QualityDefinitionResource,
   QualityProfileResource,
   RemotePathMappingResource,
-  ReleaseProfileResource,
   RootFolderResource,
   SystemResource,
   TagResource,
@@ -24,11 +22,7 @@ import {
 import type {
   ApiInfoResource as SonarrApiInfoV5,
   GeneralSettingsResource as SonarrGeneralV5,
-  CustomFormatResource as SonarrCustomFormatV5,
   CustomFormatSpecificationSchema as SonarrCustomFormatSpecificationV5,
-  MediaManagementSettingsResource as SonarrMediaManagementV5,
-  NamingSettingsResource as SonarrNamingV5,
-  QualityProfileQualityItemResource as SonarrQualityItemV5,
   QualityDefinitionResource as SonarrQualityDefinitionV5,
   QualityProfileResource as SonarrQualityProfileV5,
   ReleaseProfileResource as SonarrReleaseProfileV5,
@@ -46,259 +40,27 @@ import {
   SystemClient,
   TagsClient,
 } from "./capabilities";
-
-type QualitySize = Pick<QualityDefinitionResource, "minSize" | "maxSize" | "preferredSize">;
-type SonarrProfileQualitySizeValues = Pick<SonarrQualityItemV5, "minSize" | "maxSize" | "preferredSize">;
-
-export type SonarrProfileQualitySize = SonarrProfileQualitySizeValues & { quality: string };
-
-export type SonarrMediaManagementResource = MediaManagementConfigResource | SonarrMediaManagementV5;
-
-export type SonarrProfileQualitySizes = {
-  id: number;
-  name: string;
-  items: SonarrProfileQualitySize[];
-};
-
-function copyV5Naming(settings: SonarrNamingV5): NamingConfigResource {
-  return { ...settings };
-}
-
-function copyV5QualityDefinition(definition: SonarrQualityDefinitionV5, sizes: QualitySize | undefined): QualityDefinitionResource {
-  return {
-    id: definition.id,
-    quality: definition.quality,
-    title: definition.title,
-    weight: definition.weight,
-    minSize: sizes?.minSize,
-    maxSize: sizes?.maxSize,
-    preferredSize: sizes?.preferredSize,
-  };
-}
-
-function copyV5QualityProfile(profile: SonarrQualityProfileV5): QualityProfileResource {
-  return {
-    id: profile.id,
-    name: profile.name,
-    upgradeAllowed: profile.upgradeAllowed,
-    cutoff: profile.cutoff,
-    items: profile.items?.map((item) => ({
-      id: item.id,
-      name: item.name,
-      quality: item.quality,
-      items: item.items?.map(copyV5QualityProfileItem),
-      allowed: item.allowed,
-    })),
-    minFormatScore: profile.minFormatScore,
-    cutoffFormatScore: profile.cutoffFormatScore,
-    minUpgradeFormatScore: profile.minUpgradeFormatScore,
-    formatItems: profile.formatItems,
-  };
-}
-
-function copyV5QualityProfileItem(item: SonarrQualityItemV5): NonNullable<QualityProfileResource["items"]>[number] {
-  return {
-    id: item.id,
-    name: item.name,
-    quality: item.quality,
-    items: item.items?.map(copyV5QualityProfileItem),
-    allowed: item.allowed,
-  };
-}
-
-function copyV3ReleaseProfile(profile: ReleaseProfileResource): SonarrReleaseProfileV5 {
-  return {
-    id: profile.id,
-    name: profile.name,
-    enabled: profile.enabled,
-    required: profile.required,
-    ignored: profile.ignored,
-    indexerIds: profile.indexerId == null || profile.indexerId <= 0 ? [] : [profile.indexerId],
-    tags: profile.tags,
-  };
-}
-
-function toV3ReleaseProfile(profile: SonarrReleaseProfileV5): ReleaseProfileResource {
-  return {
-    id: profile.id,
-    name: profile.name,
-    enabled: profile.enabled,
-    required: profile.required,
-    ignored: profile.ignored,
-    indexerId: profile.indexerIds?.[0] ?? 0,
-    tags: profile.tags,
-  };
-}
-
-function copyV5MediaManagementToV3(settings: SonarrMediaManagementResource): MediaManagementConfigResource {
-  const v3Settings = {
-    ...settings,
-    recycleBinCleanupDays: settings.recycleBinCleanupDays ?? undefined,
-    minimumFreeSpaceWhenImporting: settings.minimumFreeSpaceWhenImporting ?? undefined,
-  };
-  for (const key of ["skipFreeSpaceCheckWhenGrabbing", "seasonPackUpgrade", "seasonPackUpgradeThreshold", "userRejectedExtensions"]) {
-    Reflect.deleteProperty(v3Settings, key);
-  }
-  return v3Settings;
-}
-
-function mergeV5MediaManagement(settings: SonarrMediaManagementResource, current: SonarrMediaManagementV5): SonarrMediaManagementV5 {
-  return {
-    ...current,
-    ...settings,
-    recycleBinCleanupDays: settings.recycleBinCleanupDays ?? current.recycleBinCleanupDays ?? null,
-    minimumFreeSpaceWhenImporting: settings.minimumFreeSpaceWhenImporting ?? current.minimumFreeSpaceWhenImporting ?? null,
-  };
-}
-
-function toV5CustomFormat(format: CustomFormatRequest, specificationSchemas: SonarrCustomFormatSpecificationV5[]): SonarrCustomFormatV5 {
-  return {
-    id: format.id,
-    name: format.name,
-    includeCustomFormatWhenRenaming: format.includeCustomFormatWhenRenaming,
-    specifications:
-      format.specifications?.map((specification) => {
-        const schema = specificationSchemas.find((candidate) => candidate.implementation === specification.implementation);
-        if (!schema) {
-          throw new Error(
-            `Sonarr v5 did not provide a schema for custom-format specification '${specification.implementation ?? "unknown"}'.`,
-          );
-        }
-
-        const fields = specification.fields ?? [];
-        return {
-          id: specification.id,
-          name: specification.name ?? schema.name,
-          implementation: specification.implementation ?? schema.implementation,
-          implementationName: schema.implementationName,
-          infoLink: schema.infoLink,
-          negate: specification.negate,
-          required: specification.required,
-          fields: (schema.fields ?? []).map((field) => ({
-            ...field,
-            ...fields.find((requestField) => requestField.name === field.name),
-          })),
-        };
-      }) ?? null,
-  };
-}
-
-function collectQualitySizes(items: SonarrQualityProfileV5["items"], sizes: Map<string, QualitySize[]>): void {
-  for (const item of items ?? []) {
-    if (item.quality?.name) {
-      const found = sizes.get(item.quality.name) ?? [];
-      found.push({ minSize: item.minSize, maxSize: item.maxSize, preferredSize: item.preferredSize });
-      sizes.set(item.quality.name, found);
-    }
-    collectQualitySizes(item.items, sizes);
-  }
-}
-
-function collectProfileQualitySizes(items: SonarrQualityProfileV5["items"]): SonarrProfileQualitySize[] {
-  const sizes: SonarrProfileQualitySize[] = [];
-  const collect = (qualityItems: SonarrQualityProfileV5["items"]) => {
-    for (const item of qualityItems ?? []) {
-      if (item.quality?.name) {
-        sizes.push({
-          quality: item.quality.name,
-          minSize: item.minSize,
-          maxSize: item.maxSize,
-          preferredSize: item.preferredSize,
-        });
-      }
-      collect(item.items);
-    }
-  };
-  collect(items);
-  return sizes;
-}
-
-function mergeProfileQualitySizes(
-  items: SonarrQualityProfileV5["items"],
-  sizes: ReadonlyMap<string, QualitySize>,
-): SonarrQualityProfileV5["items"] {
-  if (items == null) {
-    return items;
-  }
-  return items.map((item) => {
-    const configured = item.quality?.name ? sizes.get(item.quality.name) : undefined;
-    const updated: SonarrQualityItemV5 = { ...item };
-    if (item.items != null) {
-      updated.items = mergeProfileQualitySizes(item.items, sizes);
-    }
-
-    for (const field of ["minSize", "maxSize", "preferredSize"] as const) {
-      if (configured?.[field] !== undefined) {
-        updated[field] = configured[field];
-      }
-    }
-    return updated;
-  });
-}
-
-function commonQualitySizes(profiles: SonarrQualityProfileV5[]): Map<string, QualitySize> {
-  const allSizes = new Map<string, QualitySize[]>();
-  for (const profile of profiles) collectQualitySizes(profile.items, allSizes);
-
-  const common = new Map<string, QualitySize>();
-  for (const [name, entries] of allSizes) {
-    const result: QualitySize = {};
-    for (const field of ["minSize", "maxSize", "preferredSize"] as const) {
-      const first = entries[0]?.[field];
-      if (entries.every((entry) => entry[field] === first)) {
-        result[field] = first;
-      }
-    }
-    common.set(name, result);
-  }
-  return common;
-}
-
-function indexV5QualityItems(items: SonarrQualityProfileV5["items"]): Map<string, SonarrQualityItemV5> {
-  const indexed = new Map<string, SonarrQualityItemV5>();
-  for (const item of items ?? []) {
-    if (item.quality?.name && !indexed.has(item.quality.name)) {
-      indexed.set(item.quality.name, item);
-    }
-    for (const [qualityName, qualityItem] of indexV5QualityItems(item.items)) {
-      if (!indexed.has(qualityName)) indexed.set(qualityName, qualityItem);
-    }
-  }
-  return indexed;
-}
-
-function mergeV5QualityItems(
-  desiredItems: QualityProfileResource["items"],
-  currentItems: SonarrQualityProfileV5["items"],
-  sizes: Map<string, QualitySize>,
-  qualityItems: ReadonlyMap<string, SonarrQualityItemV5> = indexV5QualityItems(currentItems),
-): SonarrQualityItemV5[] {
-  return (desiredItems ?? []).map((item) => {
-    const qualityName = item.quality?.name;
-    const existing = qualityName
-      ? qualityItems.get(qualityName)
-      : currentItems?.find((candidate) => (item.id != null ? candidate.id === item.id : candidate.name === item.name));
-    const configuredSize = qualityName ? sizes.get(qualityName) : undefined;
-    const mergedSize: QualitySize = {};
-
-    for (const field of ["minSize", "maxSize", "preferredSize"] as const) {
-      if (existing?.[field] !== undefined) {
-        mergedSize[field] = existing[field];
-      } else if (configuredSize && configuredSize[field] !== undefined) {
-        mergedSize[field] = configuredSize[field];
-      }
-    }
-
-    return {
-      id: item.id,
-      name: item.name,
-      quality: item.quality,
-      items: mergeV5QualityItems(item.items, existing?.items, sizes, qualityItems),
-      allowed: item.allowed,
-      ...mergedSize,
-    };
-  });
-}
+import {
+  collectProfileQualitySizes,
+  commonQualitySizes,
+  copyV3ReleaseProfile,
+  copyV5MediaManagementToV3,
+  copyV5Naming,
+  copyV5QualityDefinition,
+  copyV5QualityProfile,
+  mergeProfileQualitySizes,
+  mergeV5MediaManagement,
+  mergeV5QualityItems,
+  toV3ReleaseProfile,
+  toV5CustomFormat,
+} from "./sonarr-resource-mapper";
+import type {
+  QualitySize,
+  SonarrMediaManagementResource,
+  SonarrProfileQualitySize,
+  SonarrProfileQualitySizes,
+  SonarrProfileQualitySizeValues,
+} from "./sonarr-resource-mapper";
 
 export class SonarrClient
   implements

@@ -1,5 +1,5 @@
 import type { SonarrClient } from "../clients/sonarr-client";
-import type { SonarrMediaManagementResource } from "../clients/sonarr-client";
+import type { SonarrMediaManagementResource } from "../clients/sonarr-resource-mapper";
 import type { NamingConfigResource } from "../__generated__/sonarr/data-contracts";
 import type { MediaManagementType } from "../types/config.types";
 import { MediaManagementSync } from "./mediaManagement";

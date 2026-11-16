@@ -1,5 +1,6 @@
 import type { QualityProfileResource } from "../__generated__/sonarr/data-contracts";
-import type { SonarrClient, SonarrProfileQualitySize } from "../clients/sonarr-client";
+import type { SonarrClient } from "../clients/sonarr-client";
+import type { SonarrProfileQualitySize } from "../clients/sonarr-resource-mapper";
 import type { QualityProfilesClient } from "../clients/capabilities";
 import { DiffEntry, FieldChange } from "../diffReport/diffReport.types";
 import {
