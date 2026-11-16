@@ -94,18 +94,6 @@ function toErrorMessage(value: unknown): string {
   return String(value);
 }
 
-type KyResponse<Data> = Response & {
-  json<T extends Data = Data>(): Promise<T>;
-};
-
-export type ResponsePromise<Data> = {
-  arrayBuffer: () => Promise<ArrayBuffer>;
-  blob: () => Promise<Blob>;
-  formData: () => Promise<FormData>;
-  json<T extends Data = Data>(): Promise<T>;
-  text: () => Promise<string>;
-} & Promise<KyResponse<Data>>;
-
 export type ResponseFormat = keyof Omit<Body, "body" | "bodyUsed">;
 
 // Same as axios. Using provided SearchParamsOption by ky break some typings
@@ -161,37 +149,26 @@ export class HttpClient<SecurityDataType = unknown> {
     this.securityData = data;
   };
 
-  protected mergeRequestParams(params1: KyOptions, params2?: KyOptions): KyOptions {
-    return {
-      ...params1,
-      ...params2,
-      headers: {
-        ...params1.headers,
-        ...(params2 && params2.headers),
-      },
-    };
-  }
-
   protected stringifyFormItem(formItem: unknown) {
     if (typeof formItem === "object" && formItem !== null) {
       return JSON.stringify(formItem);
-    } else {
-      return `${formItem}`;
     }
+    return `${formItem}`;
   }
 
   protected createFormData(input: Record<string, unknown>): FormData {
-    return Object.keys(input || {}).reduce((formData, key) => {
-      const property = input[key];
-      const propertyContent: unknown[] = property instanceof Array ? property : [property]; // Changed `any[]` to `unknown[]`
+    const formData = new FormData();
+
+    for (const [key, property] of Object.entries(input)) {
+      const propertyContent = Array.isArray(property) ? property : [property];
 
       for (const formItem of propertyContent) {
         const isFileType = formItem instanceof Blob || formItem instanceof File;
         formData.append(key, isFileType ? formItem : this.stringifyFormItem(formItem));
       }
+    }
 
-      return formData;
-    }, new FormData());
+    return formData;
   }
 
   public request = async <T = any, _E = any>({
@@ -272,27 +249,16 @@ export class HttpClient<SecurityDataType = unknown> {
       searchParams = new URLSearchParams(query as Record<string, string>);
     }
 
-    // // Workaround for not working POSTs. Use JSON when json type else body
-    // const data: any = {};
-
-    // if (type == ContentType.Json) {
-    //   data.json = body;
-    // } else {
-    //   data.body = body as BodyInit;
-    // }
-
     try {
       const requestPromise = await this.ky<T>(path.replace(/^\//, ""), {
         ...options,
         headers,
         searchParams,
-        //...data,
-        // Use always JSON
-        json: body as BodyInit,
+        json: body,
         hooks,
       });
 
-      // 2025-02-09: Added workaround for delete stuff
+      // DELETE responses may have no JSON body.
       if (options.method === "DELETE") {
         if (requestPromise.headers.get("Content-Type")?.includes("application/json")) {
           return requestPromise.json();
@@ -302,16 +268,16 @@ export class HttpClient<SecurityDataType = unknown> {
       }
 
       return requestPromise.json();
-    } catch (error: any) {
+    } catch (error: unknown) {
       if (redactResponseErrors) {
         const status = error instanceof HTTPError ? ` (HTTP ${error.response.status})` : "";
         const message = `Request failed${status}; check server logs for details`;
         logger.error(message);
         throw new Error(message);
       }
-      logger.debug(`Error during request with error: ${error?.name}`);
+      const errorName = error instanceof Error ? error.name : "Unknown";
+      logger.debug(`Error during request with error: ${errorName}`);
 
-      // Use createConnectionErrorParts for consistent error handling
       const enhancedMessage = selectConnectionErrorDetail(createConnectionErrorParts(error));
 
       if (error instanceof HTTPError) {

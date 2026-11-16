@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import kyDefault, { HTTPError, NormalizedOptions, type Options as KyOptions } from "ky";
-import { HttpClient } from "./ky-client";
+import { ContentType, HttpClient } from "./ky-client";
 
 vi.mock("ky", async (importOriginal) => {
   const actual = await importOriginal<typeof import("ky")>();
@@ -26,7 +26,7 @@ const makeHTTPError = (status: number, statusText: string, body: string, content
   return new HTTPError(response, new Request("http://localhost/test"), {} as NormalizedOptions);
 };
 
-describe("HttpClient error handling", () => {
+describe("HttpClient", () => {
   let mockKyFn: ReturnType<typeof vi.fn>;
   let client: HttpClient;
 
@@ -144,6 +144,26 @@ describe("HttpClient error handling", () => {
       mockKyFn.mockRejectedValueOnce(typeError);
 
       await expect(client.request({ path: "/api/test", method: "GET" })).rejects.toThrow(/ECONNREFUSED/);
+    });
+  });
+
+  describe("request bodies", () => {
+    test("builds FormData from scalar, repeated, and object fields", async () => {
+      mockKyFn.mockResolvedValueOnce(new Response("{}"));
+
+      await client.request({
+        path: "/api/test",
+        method: "POST",
+        type: ContentType.FormData,
+        body: { plain: "value", repeated: ["one", "two"], nested: { enabled: true } },
+      });
+
+      const options = mockKyFn.mock.calls[0]?.[1] as KyOptions;
+      const body = options.json as FormData;
+      expect(body).toBeInstanceOf(FormData);
+      expect(body.get("plain")).toBe("value");
+      expect(body.getAll("repeated")).toEqual(["one", "two"]);
+      expect(body.get("nested")).toBe('{"enabled":true}');
     });
   });
 });

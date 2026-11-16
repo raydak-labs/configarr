@@ -293,10 +293,8 @@ export const runMediaSyncToQualityProfiles = async <T extends MediaArrType>(
   const cfUpdateResult = await manageCf(client, mergedCFs, serverCFMapping);
   collector.add(cfUpdateResult.diffEntries);
 
-  // add missing CFs to list because we need it for further steps
-  // serverCFs.push(...cfUpdateResult.createCFs);
   if (cfUpdateResult.createCFs.length > 0 || cfUpdateResult.updatedCFs.length > 0) {
-    // refresh cfs
+    // Later stages need the custom formats created or updated above.
     serverCache.customFormats = await loadServerCustomFormats(client);
   }
 

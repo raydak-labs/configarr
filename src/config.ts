@@ -655,13 +655,7 @@ const includeTemplateOrderDefault = async (
           }
           break;
         case "RECYCLARR":
-        // HINT: hard separation would break current default functionality.
-        // if (recyclarr.has(current.template)) {
-        //   previous.recyclarr.push(current);
-        // } else {
-        //   logger.warn(`Included 'RECYCLARR' template: ${current.template} not found.`);
-        // }
-        // break;
+        // RECYCLARR intentionally shares LOCAL fallback matching; strict separation would break defaults.
         case undefined:
           let recyclarrFound = false;
           let localFound = false;

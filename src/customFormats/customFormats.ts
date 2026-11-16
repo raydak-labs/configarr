@@ -31,10 +31,10 @@ export const manageCf = async <CF extends CustomFormatRef>(
 ) => {
   const { cfNameToCarrConfig } = cfProcessing;
 
-  let updatedCFs: CustomFormatRef[] = [];
-  let errorCFs: string[] = [];
+  const updatedCFs: CustomFormatRef[] = [];
+  const errorCFs: string[] = [];
   const validCFs: ConfigarrCF[] = [];
-  let createCFs: CustomFormatRef[] = [];
+  const createCFs: CustomFormatRef[] = [];
   const diffEntries: DiffEntry[] = [];
 
   const manageSingle = async (cfName: string, carrConfig: ConfigarrCF) => {
@@ -42,7 +42,6 @@ export const manageCf = async <CF extends CustomFormatRef>(
     const existingCf = serverCfs.get(cfName);
 
     if (existingCf) {
-      // Update if necessary
       const comparison = compareCustomFormats(existingCf, requestConfig);
 
       if (!comparison.equal) {
@@ -71,7 +70,6 @@ export const manageCf = async <CF extends CustomFormatRef>(
         validCFs.push(carrConfig);
       }
     } else {
-      // Create
       diffEntries.push({ resourceType: "CustomFormat", name: requestConfig.name!, action: "create" });
 
       try {

@@ -1,38 +1,20 @@
 import { DiffEntry } from "./diffReport.types";
 
-/** Placeholder rendered in place of a secret value. */
 export const SECRET_MASK = "********";
 
-/**
- * Field names whose values must never reach a diff report or the logs.
- *
- * Keyed on the name, not on the value: the same field can come back from a server as
- * `"********"`, `""`, `null` or as the real secret, so the value is not a usable signal.
- */
+// Match field names because server values can already be masked, empty, or null.
 const SECRET_FIELD_PATTERN = /password|api[_-]?key|secret|token/i;
 
-/**
- * Determines whether a field name matches known secret field patterns.
- * Returns true if the field name indicates a sensitive credential.
- */
 export function isSecretFieldName(fieldName: string): boolean {
   return SECRET_FIELD_PATTERN.test(fieldName);
 }
 
-/**
- * Checks whether a field path designates a notification URL.
- * Returns true if the final segment of the field path represents a URL.
- */
 export function isNotificationUrlFieldName(fieldName: string): boolean {
   const afterFields = fieldName.includes("fields.") ? fieldName.slice(fieldName.lastIndexOf("fields.") + "fields.".length) : fieldName;
   const lastSegment = afterFields.split(".").pop() ?? afterFields;
   return /url/i.test(lastSegment);
 }
 
-/**
- * Inspects a value for embedded user credentials in URL format.
- * Returns true if the value is a string containing credentials in a URL scheme.
- */
 export function hasUrlCredentials(value: unknown): boolean {
   if (typeof value !== "string") {
     return false;
@@ -48,21 +30,13 @@ export function hasUrlCredentials(value: unknown): boolean {
   return /[a-zA-Z][a-zA-Z0-9+.-]*:\/\/[^\s/?#]*[^\s/?#:][^\s/?#]*@[^\s/?#]+/.test(value);
 }
 
-/** Pattern matching any URL scheme prefix. */
 const URL_SCHEME_PATTERN = /^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//;
 
-/**
- * Checks whether a string value begins with a URL scheme.
- * Returns true if the trimmed string matches a URI scheme prefix.
- */
 function isSchemeUrl(value: string): boolean {
   return URL_SCHEME_PATTERN.test(value.trim());
 }
 
-/**
- * Recursively sanitizes non-string values such as objects and arrays in URL contexts.
- * Returns a sanitized copy with secrets, URL fields, and credential strings masked without mutating the input.
- */
+/** Redact nested URL trees without mutating the input. */
 function redactUrlTree(value: unknown): unknown {
   if (Array.isArray(value)) {
     return value.map(redactUrlTree);
@@ -92,11 +66,7 @@ function redactUrlTree(value: unknown): unknown {
   );
 }
 
-/**
- * Redact credential-bearing or path/query token URL values.
- *
- * Reasoning: path and query tokens are provider-specific (Slack, Discord, Telegram, Gotify, ntfy), so only the origin is safe to show.
- */
+/** Keep only the origin: URL paths and queries can contain provider-specific tokens. */
 export function redactUrlValue(value: unknown): unknown {
   if (value === null || value === undefined) {
     return value;
@@ -142,14 +112,8 @@ export function redactUrlValue(value: unknown): unknown {
 }
 
 /**
- * Mask secret-named keys anywhere inside a value, and mask the `value` of an object whose
- * own `name` is secret-named.
- *
- * Used for object/array field values (e.g. a whole `fields` bag reported as one change),
- * where the secret is nested under a key rather than being the changed field itself.
- * The named case is not hypothetical: custom-format comparison reports a reordered
- * `specifications[].fields` array as a single change, and its elements are `{ name, value }`
- * pairs, so the key alone never says the value is a secret.
+ * Mask secret-named keys and `{ name, value }` pairs. Custom-format diffs can contain whole
+ * `specifications[].fields` arrays, so nested values need the same protection as field names.
  */
 export function redactSecrets(value: unknown): unknown {
   if (Array.isArray(value)) {
@@ -176,13 +140,8 @@ export function redactSecrets(value: unknown): unknown {
 }
 
 /**
- * Mask both sides of every secret-named field change of a diff entry.
- *
- * `DiffCollector.add` is the one place every diff entry passes through, and both the
- * console formatter and the JSON report file read the entries it hands out, so
- * redacting here covers every sink at once. Unchanged-secret detection runs upstream
- * while the plaintext is still in scope, so a masked-but-equal secret never produces
- * an entry in the first place and redaction cannot turn one into a change.
+ * Redact at the collector boundary so console and JSON formatters share protection.
+ * Secret equality is checked upstream while plaintext remains available.
  */
 export function redactDiffEntry(entry: DiffEntry): DiffEntry {
   if (!entry.fieldChanges) {

@@ -3,94 +3,38 @@ import { z } from "zod";
 
 const DEFAULT_ROOT_PATH = path.resolve(process.cwd());
 
-// Build-time constants (defined by Bun at compile time)
-// These will be replaced at build time with actual values
-const CONFIGARR_VERSION = process.env.CONFIGARR_VERSION ?? "dev"; // Will be replaced by --define
-const BUILD_TIME = process.env.BUILD_TIME ?? ""; // Will be replaced by --define
-const GITHUB_RUN_ID = process.env.GITHUB_RUN_ID ?? ""; // Will be replaced by --define
-const GITHUB_REPO = process.env.GITHUB_REPO ?? ""; // Will be replaced by --define
-const GITHUB_SHA = process.env.GITHUB_SHA ?? ""; // Will be replaced by --define
+// Values injected by --define at build time.
+const CONFIGARR_VERSION = process.env.CONFIGARR_VERSION ?? "dev";
+const BUILD_TIME = process.env.BUILD_TIME ?? "";
+const GITHUB_RUN_ID = process.env.GITHUB_RUN_ID ?? "";
+const GITHUB_REPO = process.env.GITHUB_REPO ?? "";
+const GITHUB_SHA = process.env.GITHUB_SHA ?? "";
+
+const booleanFromEnv = z
+  .string()
+  .toLowerCase()
+  .transform((value) => value === "true")
+  .pipe(z.boolean());
 
 const schema = z.object({
-  // NODE_ENV: z.enum(["production", "development", "test"] as const),
   CONFIGARR_VERSION: z.string().optional().default(CONFIGARR_VERSION),
-  LOG_LEVEL: z
-    .enum(["trace", "debug", "info", "warn", "error", "fatal"] as const)
-    .optional()
-    .default("info"),
-  LOG_FORMAT: z
-    .enum(["text", "json"] as const)
-    .optional()
-    .default("text"),
+  LOG_LEVEL: z.enum(["trace", "debug", "info", "warn", "error", "fatal"]).optional().default("info"),
+  LOG_FORMAT: z.enum(["text", "json"]).optional().default("text"),
   CONFIG_LOCATION: z.string().optional(),
   SECRETS_LOCATION: z.string().optional(),
   CONFIGARR_DIFF_OUTPUT_FILE: z.string().optional(),
-  // TODO: deprecate?
   CUSTOM_REPO_ROOT: z.string().optional(),
   ROOT_PATH: z.string().optional().default(DEFAULT_ROOT_PATH),
-  DRY_RUN: z
-    .string()
-    .toLowerCase()
-    .transform((x) => x === "true")
-    .pipe(z.boolean())
-    .default(false),
-  LOAD_LOCAL_SAMPLES: z
-    .string()
-    .toLowerCase()
-    .transform((x) => x === "true")
-    .pipe(z.boolean())
-    .default(false),
-  DEBUG_CREATE_FILES: z
-    .string()
-    .toLowerCase()
-    .transform((x) => x === "true")
-    .pipe(z.boolean())
-    .default(false),
-  STOP_ON_ERROR: z
-    .string()
-    .toLowerCase()
-    .transform((x) => x === "true")
-    .pipe(z.boolean())
-    .default(false),
-  LOG_STACKTRACE: z
-    .string()
-    .toLowerCase()
-    .transform((x) => x === "true")
-    .pipe(z.boolean())
-    .default(false),
-  CONFIGARR_ENABLE_MERGE: z
-    .string()
-    .toLowerCase()
-    .transform((x) => x === "true")
-    .pipe(z.boolean())
-    .default(false),
-  CONFIGARR_ENFORCE_CONFIG_VALIDATION: z
-    .string()
-    .toLowerCase()
-    .transform((x) => x === "true")
-    .pipe(z.boolean())
-    .default(false),
-  CONFIGARR_ENFORCE_EXTERNAL_VALIDATION: z
-    .string()
-    .toLowerCase()
-    .transform((x) => x === "true")
-    .pipe(z.boolean())
-    .default(false),
-  TELEMETRY_ENABLED: z
-    .string()
-    .toLowerCase()
-    .transform((x) => x === "true")
-    .pipe(z.boolean())
-    .optional(),
+  DRY_RUN: booleanFromEnv.default(false),
+  LOAD_LOCAL_SAMPLES: booleanFromEnv.default(false),
+  DEBUG_CREATE_FILES: booleanFromEnv.default(false),
+  STOP_ON_ERROR: booleanFromEnv.default(false),
+  LOG_STACKTRACE: booleanFromEnv.default(false),
+  CONFIGARR_ENABLE_MERGE: booleanFromEnv.default(false),
+  CONFIGARR_ENFORCE_CONFIG_VALIDATION: booleanFromEnv.default(false),
+  CONFIGARR_ENFORCE_EXTERNAL_VALIDATION: booleanFromEnv.default(false),
+  TELEMETRY_ENABLED: booleanFromEnv.optional(),
 });
-
-// declare global {
-//   // eslint-disable-next-line @typescript-eslint/no-namespace
-//   namespace NodeJS {
-//     // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-//     interface ProcessEnv extends z.infer<typeof schema> {}
-//   }
-// }
 
 let envs: z.infer<typeof schema>;
 
@@ -113,15 +57,16 @@ export const getEnvs = () => {
   return envs;
 };
 
-export const getHelpers = () => ({
-  configLocation: getEnvs().CONFIG_LOCATION ?? `${getEnvs().ROOT_PATH}/config/config.yml`,
-  secretLocation: getEnvs().SECRETS_LOCATION ?? `${getEnvs().ROOT_PATH}/config/secrets.yml`,
-  // TODO: check for different env name
-  repoPath: getEnvs().CUSTOM_REPO_ROOT ?? `${getEnvs().ROOT_PATH}/repos`,
-  /** Enable YAML << merge keys when parsing config (CONFIGARR_ENABLE_MERGE=true). */
-  enableMerge: getEnvs().CONFIGARR_ENABLE_MERGE,
-  // TODO: add stuff like isDryRun,...?
-});
+export const getHelpers = () => {
+  const env = getEnvs();
+
+  return {
+    configLocation: env.CONFIG_LOCATION ?? `${env.ROOT_PATH}/config/config.yml`,
+    secretLocation: env.SECRETS_LOCATION ?? `${env.ROOT_PATH}/config/secrets.yml`,
+    repoPath: env.CUSTOM_REPO_ROOT ?? `${env.ROOT_PATH}/repos`,
+    enableMerge: env.CONFIGARR_ENABLE_MERGE,
+  };
+};
 
 export const getBuildInfo = () => ({
   version: getEnvs().CONFIGARR_VERSION,
