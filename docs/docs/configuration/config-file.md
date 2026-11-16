@@ -543,6 +543,39 @@ sonarr:
               - WEBRip-1080p
 ```
 
+Quality groups are named sets of qualities. The \*arr apps number groups from `1000` upwards,
+and a cutoff (and `upgrade.until_quality`) refers to that number. Configarr keeps the number
+stable: on update it reuses the id the server already uses for a group with the same name, and only
+allocates a new one for a group that does not exist yet. Inserting, removing or reordering groups in
+the config therefore no longer renumbers the remaining groups or silently moves `until_quality` to a
+different group.
+
+To pin a group id explicitly — for example to match a profile that is also edited outside Configarr —
+set `id` on the group. Ids must be `>= 1000` and unique; setting `id` on a plain quality is an error.
+Explicit ids are reserved first, so they win over a name match even if another group in the config
+already used that server id; the displaced group gets a new id.
+
+When `upgrade.allowed` is `false` and `until_quality` is omitted, Configarr leaves the server cutoff
+and `cutoffFormatScore` untouched instead of replacing them with a fallback. If a group id is
+remapped, the preserved cutoff follows the group by name. This keeps values set in the \*arr UI from
+being overwritten on every sync.
+
+```yml
+qualities:
+  - name: WEB 2160p
+    id: 1003 # optional, pinned group id
+    qualities:
+      - WEBDL-2160p
+      - WEBRip-2160p
+```
+
+The order of `qualities` is the preference ranking: the first entry is the highest priority (shown at
+the top in the \*arr UI), and Configarr sends it last in the API array. When updating an existing
+profile, qualities you do not list keep the position they already have on the server instead of being
+moved to the top or bottom; only qualities the server does not have yet are placed according to
+`quality_sort`. Declare the entries in the same order the \*arr UI shows them, otherwise Configarr
+intentionally changes the preference order.
+
 Sonarr v5 stores size limits on each quality-profile quality instead of globally. Keep
 `quality_definition` for a shared default, then set `quality_sizes` on a profile only
 where it needs a different value. Per-profile values take precedence field by field;

@@ -49,6 +49,10 @@ export type InputConfigIncludeItem = z.infer<typeof InputConfigIncludeItemSchema
 
 export const InputConfigQualityProfileItemSchema = z.object({
   name: z.string(),
+  // Stable id for a quality group. The *arr apps number groups from 1000 upwards. When omitted, configarr
+  // reuses the id of an existing server group with the same name, so reordering groups in YAML does not
+  // renumber them (and does not invalidate cutoffs pointing at a group).
+  id: z.number().int().min(1000, "quality group id must be >= 1000").optional(),
   qualities: z.array(z.string()).optional(),
   enabled: z.boolean().optional(),
 });
