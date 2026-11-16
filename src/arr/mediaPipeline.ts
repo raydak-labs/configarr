@@ -24,6 +24,7 @@ import { getEnvs } from "../env";
 import { logger } from "../logger";
 import { MediaManagementSync, mediamanagementDiffToDiffEntries, namingDiffToDiffEntries } from "../mediaManagement/mediaManagement";
 import type { SonarrMediaManagementResource } from "../clients/sonarr-resource-mapper";
+import type { MediaNamingBase } from "../mediaNaming/mediaNamingBase";
 import { QualityDefinitionSync, qualityDefinitionsToDiffEntries } from "../qualityDefinitions/qualityDefinition";
 import { getUnmanagedQualityProfiles, qualityProfilesToDiffEntries } from "../qualityProfiles/qualityProfileBase";
 import { BaseQualityProfileSync } from "../qualityProfiles/qualityProfileSyncBase";
@@ -162,6 +163,7 @@ export type MediaFeatureSyncs<T extends MediaArrType = MediaArrType> = {
   indexerConfig?: IndexerConfigClient;
   qd: QualityDefinitionSync<MediaArrResources[T]["qualityDefinition"]>;
   mm: MediaManagementSync<MediaArrResources[T]["naming"], MediaArrResources[T]["mediaManagement"]>;
+  mediaNaming?: MediaNamingBase<MediaArrResources[T]["naming"]>;
   qp: BaseQualityProfileSync<MediaArrResources[T]["qualityProfile"]>;
   // Delay profiles are synced through the shared `StandardDelayProfile` shape plus Lidarr's
   // plugin extension, so this slot intentionally is not per-arr resource typed: a per-arr
@@ -229,7 +231,10 @@ export const runMediaSyncToQualityProfiles = async <T extends MediaArrType>(
 
   logger.info(`Server objects: CustomFormats ${serverCFs.length}`);
 
-  const { config } = await mergeConfigsAndTemplates(globalConfig, instanceConfig, arrType, { supportsProfileQualitySizes });
+  const { config } = await mergeConfigsAndTemplates(globalConfig, instanceConfig, arrType, {
+    supportsProfileQualitySizes,
+    ...(syncs.mediaNaming ? { mediaNaming: syncs.mediaNaming } : {}),
+  });
   if (config.host_config !== undefined) {
     const parsed = HostConfigSchema.safeParse(config.host_config);
     if (!parsed.success)

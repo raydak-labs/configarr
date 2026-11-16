@@ -37,3 +37,9 @@
     remove `configMediaNaming.ts`, and rerun the full validation gate.
 
 **Follow-up spec:** [2026-11-16-media-naming-resource-design.md](../specs/2026-11-16-media-naming-resource-design.md)
+
+13. Commit `refactor: use app-specific media naming classes`: replace the function dispatcher with a typed
+    base class and thin per-app handlers. Construct handlers in the Radarr and Sonarr syncers, inject them
+    through `MediaFeatureSyncs`, and test config-merge injection.
+
+**Class design spec:** [2026-11-16-media-naming-classes-design.md](../specs/2026-11-16-media-naming-classes-design.md)

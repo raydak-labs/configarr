@@ -24,6 +24,7 @@ import {
 } from "./types/config.types";
 import { TrashQP, TrashQualityDefinition } from "./types/trashguide.types";
 import { cloneWithJSON } from "./util";
+import { MediaNamingRadarr } from "./mediaNaming/mediaNamingRadarr";
 import { logger } from "./logger";
 import { ConfigValidationError, validateConfig } from "./validation";
 
@@ -400,6 +401,41 @@ describe("mergeConfigsAndTemplates", () => {
 
     expect(result.config.custom_formats.length).toBe(2); // was 3, now 2 after deduplication
     expect(result.config.quality_profiles.length).toBe(3);
+  });
+
+  test("uses the injected media naming mapper", async () => {
+    vi.spyOn(localImporter, "loadLocalRecyclarrTemplate").mockReturnValue(new Map());
+    vi.spyOn(reclarrImporter, "loadRecyclarrTemplates").mockReturnValue(new Map());
+    vi.spyOn(trashGuide, "loadQPFromTrash").mockResolvedValue(new Map());
+    vi.spyOn(trashGuide, "loadAllQDsFromTrash").mockResolvedValue(new Map());
+    vi.spyOn(trashGuide, "loadTrashCustomFormatGroups").mockResolvedValue(new Map());
+    const mapper = new MediaNamingRadarr();
+    const map = vi.spyOn(mapper, "map").mockResolvedValue({ standardMovieFormat: "mapped" });
+    const inputConfig: InputConfigArrInstance = {
+      base_url: "http://radarr:7878",
+      api_key: "test",
+      media_naming: { folder: "default" },
+    };
+
+    const result = await mergeConfigsAndTemplates({}, inputConfig, "RADARR", { mediaNaming: mapper });
+
+    expect(map).toHaveBeenCalledWith({ folder: "default" });
+    expect(result.config.media_naming_api).toEqual({ standardMovieFormat: "mapped" });
+  });
+
+  test("warns when media naming has no app mapper", async () => {
+    vi.spyOn(localImporter, "loadLocalRecyclarrTemplate").mockReturnValue(new Map());
+    const warn = vi.spyOn(logger, "warn");
+    const inputConfig: InputConfigArrInstance = {
+      base_url: "http://lidarr:8686",
+      api_key: "test",
+      media_naming: { folder: "default" },
+    };
+
+    const result = await mergeConfigsAndTemplates({}, inputConfig, "LIDARR");
+
+    expect(warn).toHaveBeenCalledWith("MediaNaming not supported for LIDARR");
+    expect(result.config.media_naming_api).toBeUndefined();
   });
 
   test("applies referenced TRaSH quality sizes only to Sonarr v5 profiles", async () => {

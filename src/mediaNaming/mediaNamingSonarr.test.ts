@@ -1,11 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { loadNamingFromTrashSonarr } from "../trash-guide";
-import { mapSonarrMediaNamingToApi } from "./mediaNamingSonarr";
+import { MediaNamingSonarr } from "./mediaNamingSonarr";
 
 vi.mock("../trash-guide", () => ({ loadNamingFromTrashSonarr: vi.fn() }));
 vi.mock("../logger", () => ({ logger: { debug: vi.fn(), warn: vi.fn() } }));
 
-describe("mapSonarrMediaNamingToApi", () => {
+describe("MediaNamingSonarr", () => {
+  const mapper = new MediaNamingSonarr();
+
   beforeEach(() => {
     vi.resetAllMocks();
   });
@@ -22,7 +24,7 @@ describe("mapSonarrMediaNamingToApi", () => {
     });
 
     await expect(
-      mapSonarrMediaNamingToApi({
+      mapper.map({
         series: "default",
         season: "default",
         episodes: { standard: "default", daily: "default", anime: "default", rename: false },
@@ -40,6 +42,6 @@ describe("mapSonarrMediaNamingToApi", () => {
   it("returns null when TRaSH naming is unavailable", async () => {
     vi.mocked(loadNamingFromTrashSonarr).mockResolvedValue(null);
 
-    await expect(mapSonarrMediaNamingToApi({ series: "default" })).resolves.toBeNull();
+    await expect(mapper.map({ series: "default" })).resolves.toBeNull();
   });
 });

@@ -1,12 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { logger } from "../logger";
 import { loadNamingFromTrashRadarr } from "../trash-guide";
-import { mapRadarrMediaNamingToApi } from "./mediaNamingRadarr";
+import { MediaNamingRadarr } from "./mediaNamingRadarr";
 
 vi.mock("../trash-guide", () => ({ loadNamingFromTrashRadarr: vi.fn() }));
 vi.mock("../logger", () => ({ logger: { debug: vi.fn(), warn: vi.fn() } }));
 
-describe("mapRadarrMediaNamingToApi", () => {
+describe("MediaNamingRadarr", () => {
+  const mapper = new MediaNamingRadarr();
+
   beforeEach(() => {
     vi.resetAllMocks();
   });
@@ -17,7 +19,7 @@ describe("mapRadarrMediaNamingToApi", () => {
       file: { default: "movie-file" },
     });
 
-    await expect(mapRadarrMediaNamingToApi({ folder: "default", movie: { standard: "default", rename: true } })).resolves.toEqual({
+    await expect(mapper.map({ folder: "default", movie: { standard: "default", rename: true } })).resolves.toEqual({
       movieFolderFormat: "movie-folder",
       standardMovieFormat: "movie-file",
       renameMovies: true,
@@ -27,13 +29,13 @@ describe("mapRadarrMediaNamingToApi", () => {
   it("warns and omits an unknown TRaSH name", async () => {
     vi.mocked(loadNamingFromTrashRadarr).mockResolvedValue({ folder: {}, file: {} });
 
-    await expect(mapRadarrMediaNamingToApi({ folder: "missing" })).resolves.toEqual({});
+    await expect(mapper.map({ folder: "missing" })).resolves.toEqual({});
     expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining("mediaNaming.folder 'missing'"));
   });
 
   it("returns null when TRaSH naming is unavailable", async () => {
     vi.mocked(loadNamingFromTrashRadarr).mockResolvedValue(null);
 
-    await expect(mapRadarrMediaNamingToApi({ folder: "default" })).resolves.toBeNull();
+    await expect(mapper.map({ folder: "default" })).resolves.toBeNull();
   });
 });
