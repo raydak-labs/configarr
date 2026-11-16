@@ -173,7 +173,7 @@ export type ConfigWorkspace = { rootPath: string; configLocation: string; repoPa
 
 declare module "vitest" {
   export interface ProvidedContext {
-    /** Per-invocation temp dir holding the repo snapshot, per-file clones and config workspaces. */
+    /** Per-invocation temp dir holding the repo snapshot, per-project clones and config workspaces. */
     arrE2eRunRoot: string;
     /** TRaSH commit of the snapshot; pinned so configarr runs detached and never pulls. */
     arrE2eTrashRevision: string;
@@ -244,14 +244,12 @@ export async function setupRunRepos(project: TestProject): Promise<() => void> {
   return removeRunRoot;
 }
 
-/**
- * Repo clone for the running test file. configarr checks out its pinned revision on every
- * run, so two files sharing one clone would race on `.git/index.lock`.
- */
-function repoRootForCurrentFile(runRoot: string): string {
+/** Give each project an isolated clone because checkout uses `.git/index.lock`. */
+function repoRootForCurrentProject(runRoot: string): string {
   const testPath = expect.getState().testPath ?? "shared";
   const key = basename(testPath).replace(/\.e2e\.test\.ts$/, "");
-  const repoPath = join(runRoot, `repo-${key}`);
+  const projectName = process.env.ARR_E2E_PROJECT_NAME ?? "shared";
+  const repoPath = join(runRoot, `repo-${projectName}-${key}`);
   if (!existsSync(repoPath)) {
     cpSync(runRepoSnapshot(runRoot), repoPath, { recursive: true });
   }
@@ -262,7 +260,7 @@ export function writeConfigWorkspace(config: unknown, reuse?: ConfigWorkspace): 
   const runRoot = inject("arrE2eRunRoot");
   const rootPath = reuse?.rootPath ?? mkdtempSync(join(runRoot, "ws-"));
   const configDir = join(rootPath, "config");
-  const repoPath = reuse?.repoPath ?? repoRootForCurrentFile(runRoot);
+  const repoPath = reuse?.repoPath ?? repoRootForCurrentProject(runRoot);
   mkdirSync(configDir, { recursive: true });
   const configLocation = reuse?.configLocation ?? join(configDir, "config.yml");
   writeFileSync(configLocation, stringify(withPinnedTrashRevision(config)), "utf8");
