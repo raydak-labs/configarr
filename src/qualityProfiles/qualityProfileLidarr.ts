@@ -1,6 +1,7 @@
 import type { QualityProfileResource } from "../__generated__/lidarr/data-contracts";
 import { FieldChange } from "../diffReport/diffReport.types";
-import { BaseQualityProfileSync, warnUnsupportedQualityProfileLanguage } from "./qualityProfileBase";
+import { warnUnsupportedQualityProfileLanguage } from "./qualityProfileBase";
+import { BaseQualityProfileSync } from "./qualityProfileSyncBase";
 import { QualityProfileLanguage, QualityProfileShared } from "./qualityProfile.types";
 
 export class QualityProfileLidarrSync extends BaseQualityProfileSync<QualityProfileResource> {

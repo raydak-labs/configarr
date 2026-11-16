@@ -10,7 +10,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ServerCache } from "../cache";
 import type { ConfigQualityProfile, MergedConfigInstance } from "../types/config.types";
-import type { QualityProfileDiffResult } from "../qualityProfiles/qualityProfileBase";
+import type { QualityProfileDiffResult } from "../qualityProfiles/qualityProfileSyncBase";
 import { ConfigValidationError } from "../validation";
 import { completeMediaSync, runMediaSyncToQualityProfiles, type MediaFeatureSyncs } from "./mediaPipeline";
 

@@ -3,11 +3,11 @@ import { FieldChange } from "../diffReport/diffReport.types";
 import {
   attachLanguageOnCreate,
   attachMinUpgradeOnCreate,
-  BaseQualityProfileSync,
   diffLanguageOnUpdate,
   diffMinUpgradeOnUpdate,
   resolveQualityProfileLanguage,
 } from "./qualityProfileBase";
+import { BaseQualityProfileSync } from "./qualityProfileSyncBase";
 import { QualityProfileLanguage, QualityProfileShared } from "./qualityProfile.types";
 
 export class QualityProfileRadarrSync extends BaseQualityProfileSync<QualityProfileResource> {
