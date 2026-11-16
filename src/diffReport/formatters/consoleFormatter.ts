@@ -1,6 +1,6 @@
 import { logger } from "../../logger";
+import type { DiffEntry, DiffFormatter, InstanceDiffReport } from "../diffReport.types";
 import { formatDiffValue } from "../formatDiffValue";
-import { DiffEntry, DiffFormatter, InstanceDiffReport } from "../diffReport.types";
 
 export class ConsoleDiffFormatter implements DiffFormatter {
   format(report: InstanceDiffReport): void {

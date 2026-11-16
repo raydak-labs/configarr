@@ -3,8 +3,8 @@ import yaml from "yaml";
 import { getConfig } from "./config";
 import { logger } from "./logger";
 import { normalizeTemplateCustomFormats } from "./templateCustomFormats";
-import { MappedTemplates } from "./types/common.types";
-import { RecyclarrArrSupported, RecyclarrTemplates } from "./types/recyclarr.types";
+import type { MappedTemplates } from "./types/common.types";
+import type { RecyclarrArrSupported, RecyclarrTemplates } from "./types/recyclarr.types";
 import { cloneGitRepo, recyclarrRepoPaths } from "./util";
 
 const DEFAULT_RECYCLARR_GIT_URL = "https://github.com/recyclarr/config-templates";

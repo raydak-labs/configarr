@@ -1,5 +1,5 @@
+import kyDefault, { HTTPError, type Options as KyOptions, type NormalizedOptions } from "ky";
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import kyDefault, { HTTPError, NormalizedOptions, type Options as KyOptions } from "ky";
 import { ContentType, HttpClient } from "./ky-client";
 
 vi.mock("ky", async (importOriginal) => {

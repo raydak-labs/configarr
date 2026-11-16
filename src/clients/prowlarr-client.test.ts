@@ -25,11 +25,9 @@ const api = {
   v1AppprofileDelete: vi.fn(async () => undefined),
 };
 vi.mock("../__generated__/prowlarr/Api", () => ({
-  Api: class {
-    constructor() {
-      return api;
-    }
-  },
+  Api: vi.fn().mockImplementation(function Api() {
+    return api;
+  }),
 }));
 
 const client = () => new ProwlarrClient("http://prowlarr:9696", "api-key");

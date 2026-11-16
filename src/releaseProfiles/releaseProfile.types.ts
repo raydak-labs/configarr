@@ -1,5 +1,5 @@
-import { DiffEntry, FieldChange } from "../diffReport/diffReport.types";
-import { InputConfigReleaseProfile } from "../types/config.types";
+import type { DiffEntry, FieldChange } from "../diffReport/diffReport.types";
+import type { InputConfigReleaseProfile } from "../types/config.types";
 
 export type ReleaseProfileShared = {
   id?: number;

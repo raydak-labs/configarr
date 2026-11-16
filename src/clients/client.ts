@@ -1,5 +1,5 @@
 import { logger } from "../logger";
-import { ArrType } from "../types/common.types";
+import type { ArrType } from "../types/common.types";
 import { LidarrClient } from "./lidarr-client";
 import { ProwlarrClient } from "./prowlarr-client";
 import { RadarrClient } from "./radarr-client";

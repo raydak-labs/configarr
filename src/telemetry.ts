@@ -1,8 +1,8 @@
+import ky from "ky";
 import { getEnvs } from "./env";
 import { logger } from "./logger";
-import { ArrType } from "./types/common.types";
-import { InputConfigSchema, InputConfigArrInstance, MergedConfigInstance } from "./types/config.types";
-import ky from "ky";
+import type { ArrType } from "./types/common.types";
+import type { InputConfigArrInstance, InputConfigSchema, MergedConfigInstance } from "./types/config.types";
 
 export interface TelemetryConfig {
   enabled?: boolean;

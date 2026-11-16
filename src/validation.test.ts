@@ -1,7 +1,7 @@
-import { describe, expect, test, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 import { z } from "zod";
-import { ConfigValidationError, validateData, validateConfig, validateExternal, ValidationError, warnOrThrowConfig } from "./validation";
 import { InputConfigDelayProfileSchema, InputConfigReleaseProfileSchema, InputConfigReleaseProfilesSchema } from "./types/config.types";
+import { ConfigValidationError, ValidationError, validateConfig, validateData, validateExternal, warnOrThrowConfig } from "./validation";
 
 // Mock env module
 vi.mock("./env", () => ({
@@ -21,8 +21,8 @@ vi.mock("./logger", () => ({
   },
 }));
 
-import { logger } from "./logger";
 import { getEnvs } from "./env";
+import { logger } from "./logger";
 
 const testSchema = z.object({
   name: z.string(),

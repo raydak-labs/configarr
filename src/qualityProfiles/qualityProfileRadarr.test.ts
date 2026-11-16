@@ -1,27 +1,28 @@
 import path from "path";
 import { describe, expect, test, vi } from "vitest";
-import * as log from "../logger";
-import { CFProcessing, CustomFormatRequest } from "../customFormats/customFormat.types";
-import { QualityDefinitionShared } from "../qualityDefinitions/qualityDefinition.types";
-import { QualityProfileShared } from "./qualityProfile.types";
-import { ServerCache } from "../cache";
-import { QualityProfileRadarrSync } from "./qualityProfileRadarr";
 import type { QualityProfileResource } from "../__generated__/radarr/data-contracts";
+import { ServerCache } from "../cache";
 import type { QualityProfilesClient } from "../clients/capabilities";
+import type { CFProcessing, CustomFormatRequest } from "../customFormats/customFormat.types";
+import * as log from "../logger";
+import type { QualityDefinitionShared } from "../qualityDefinitions/qualityDefinition.types";
+import type { QualityProfileShared } from "./qualityProfile.types";
+import { QualityProfileRadarrSync } from "./qualityProfileRadarr";
 
 /** calculateQualityProfilesDiff never touches the API; the client is only required by the type. */
 const qpClient = {} as QualityProfilesClient<QualityProfileResource>;
-import { ConfigQualityProfile, ConfigQualityProfileItem, MergedConfigInstance } from "../types/config.types";
+
+import type { ConfigQualityProfile, ConfigQualityProfileItem, MergedConfigInstance } from "../types/config.types";
 import { cloneWithJSON, loadJsonFile } from "../util";
 
-describe("QualityProfileRadarrSync", async () => {
+describe("QualityProfileRadarrSync", () => {
   const sampleQualityProfile = loadJsonFile<QualityProfileShared>(
     path.resolve(__dirname, `../../tests/samples/single_quality_profile.json`),
   );
 
   const sampleCustomFormat = loadJsonFile<CustomFormatRequest>(path.resolve(__dirname, `../../tests/samples/single_custom_format.json`));
 
-  test("calculateQualityProfilesDiff - should diff if minUpgradeFormatScore / minFormatScore is different", async ({}) => {
+  test("calculateQualityProfilesDiff - should diff if minUpgradeFormatScore / minFormatScore is different", async () => {
     const cfMap: CFProcessing = { carrIdMapping: new Map(), cfNameToCarrConfig: new Map() };
 
     const fromConfig: ConfigQualityProfileItem[] = [{ name: "HDTV-1080p", enabled: false }];
@@ -84,7 +85,7 @@ describe("QualityProfileRadarrSync", async () => {
     expect(diff.noChanges.length).toBe(0);
   });
 
-  test("calculateQualityProfilesDiff - should not diff if minFormatScore is equal", async ({}) => {
+  test("calculateQualityProfilesDiff - should not diff if minFormatScore is equal", async () => {
     const cfMap: CFProcessing = { carrIdMapping: new Map(), cfNameToCarrConfig: new Map() };
 
     const fromConfig: ConfigQualityProfileItem[] = [{ name: "HDTV-1080p", enabled: false }];
@@ -128,11 +129,11 @@ describe("QualityProfileRadarrSync", async () => {
     expect(diff.noChanges.length).toBe(1);
   });
 
-  test("calculateQualityProfilesDiff - should not diff if minUpgradeFormatScore is not configured", async ({}) => {
+  test("calculateQualityProfilesDiff - should not diff if minUpgradeFormatScore is not configured", async () => {
     // TODO
   });
 
-  test("calculateQualityProfilesDiff - should diff for languageChange (radarr)", async ({}) => {
+  test("calculateQualityProfilesDiff - should diff for languageChange (radarr)", async () => {
     const cfMap: CFProcessing = { carrIdMapping: new Map(), cfNameToCarrConfig: new Map() };
 
     const fromConfig: ConfigQualityProfileItem[] = [{ name: "HDTV-1080p", enabled: false }];
@@ -183,7 +184,7 @@ describe("QualityProfileRadarrSync", async () => {
     expect(diff.noChanges.length).toBe(0);
   });
 
-  test("calculateQualityProfilesDiff - should default to Any language when not configured and server differs (radarr)", async ({}) => {
+  test("calculateQualityProfilesDiff - should default to Any language when not configured and server differs (radarr)", async () => {
     const cfMap: CFProcessing = { carrIdMapping: new Map(), cfNameToCarrConfig: new Map() };
 
     const fromConfig: ConfigQualityProfileItem[] = [{ name: "HDTV-1080p", enabled: false }];
@@ -233,7 +234,7 @@ describe("QualityProfileRadarrSync", async () => {
     expect((diff.changedQPs[0] as QualityProfileShared).language).toEqual({ id: 0, name: "Any" });
   });
 
-  test("calculateQualityProfilesDiff - should warn when default Any language is missing from server (radarr)", async ({}) => {
+  test("calculateQualityProfilesDiff - should warn when default Any language is missing from server (radarr)", async () => {
     const cfMap: CFProcessing = { carrIdMapping: new Map(), cfNameToCarrConfig: new Map() };
 
     const fromConfig: ConfigQualityProfileItem[] = [{ name: "HDTV-1080p", enabled: false }];
@@ -288,7 +289,7 @@ describe("QualityProfileRadarrSync", async () => {
     expect(diff.noChanges.length).toBe(1);
   });
 
-  test("calculateQualityProfilesDiff - should not diff for language (radarr)", async ({}) => {
+  test("calculateQualityProfilesDiff - should not diff for language (radarr)", async () => {
     const cfMap: CFProcessing = { carrIdMapping: new Map(), cfNameToCarrConfig: new Map() };
 
     const fromConfig: ConfigQualityProfileItem[] = [{ name: "HDTV-1080p", enabled: false }];
@@ -339,7 +340,7 @@ describe("QualityProfileRadarrSync", async () => {
     expect(diff.noChanges.length).toBe(1);
   });
 
-  test("calculateQualityProfilesDiff - should create profile with upgrade.allowed: false using until_quality as cutoff", async ({}) => {
+  test("calculateQualityProfilesDiff - should create profile with upgrade.allowed: false using until_quality as cutoff", async () => {
     const cfMap: CFProcessing = { carrIdMapping: new Map(), cfNameToCarrConfig: new Map() };
 
     // Mirrors the real-world config: groups + upgrade.allowed: false + until_quality pointing to a group
@@ -391,7 +392,7 @@ describe("QualityProfileRadarrSync", async () => {
     expect(createdProfile?.cutoff).toBe(1000);
   });
 
-  test("calculateQualityProfilesDiff - should create profile with upgrade: {allowed: false} and no until_quality", async ({}) => {
+  test("calculateQualityProfilesDiff - should create profile with upgrade: {allowed: false} and no until_quality", async () => {
     const cfMap: CFProcessing = { carrIdMapping: new Map(), cfNameToCarrConfig: new Map() };
 
     // Mirrors the exact failing config from the issue: upgrade block with only allowed: false
@@ -443,7 +444,7 @@ describe("QualityProfileRadarrSync", async () => {
     expect(createdProfile?.cutoff).toBe(10); // Remux-2160p = highest priority quality
   });
 
-  test("calculateQualityProfilesDiff - should update profile when changing upgrade.allowed from true to false (single quality)", async ({}) => {
+  test("calculateQualityProfilesDiff - should update profile when changing upgrade.allowed from true to false (single quality)", async () => {
     const cfMap: CFProcessing = { carrIdMapping: new Map(), cfNameToCarrConfig: new Map() };
 
     const fromConfig: ConfigQualityProfileItem[] = [{ name: "HDTV-1080p" }];
@@ -491,7 +492,7 @@ describe("QualityProfileRadarrSync", async () => {
     expect(updatedProfile?.cutoffFormatScore).toBe(0);
   });
 
-  test("calculateQualityProfilesDiff - should update profile when changing upgrade.allowed from true to false (quality group)", async ({}) => {
+  test("calculateQualityProfilesDiff - should update profile when changing upgrade.allowed from true to false (quality group)", async () => {
     const cfMap: CFProcessing = { carrIdMapping: new Map(), cfNameToCarrConfig: new Map() };
 
     // Mirrors the real-world Radarr ExampleInConfigProfile case: group qualities + upgrade disabled
@@ -574,7 +575,7 @@ describe("QualityProfileRadarrSync", async () => {
     expect(updatedProfile?.cutoffFormatScore).toBe(0);
   });
 
-  test("calculateQualityProfilesDiff - should update profile when changing upgrade.allowed from true to false with no until_quality", async ({}) => {
+  test("calculateQualityProfilesDiff - should update profile when changing upgrade.allowed from true to false with no until_quality", async () => {
     const cfMap: CFProcessing = { carrIdMapping: new Map(), cfNameToCarrConfig: new Map() };
 
     const fromConfig: ConfigQualityProfileItem[] = [{ name: "Remux-2160p" }, { name: "Remux-1080p" }];
@@ -629,7 +630,7 @@ describe("QualityProfileRadarrSync", async () => {
     expect(updatedProfile?.cutoffFormatScore).toBe(500);
   });
 
-  test("calculateQualityProfilesDiff - exposes minFormatScore diff as a structured FieldChange", async ({}) => {
+  test("calculateQualityProfilesDiff - exposes minFormatScore diff as a structured FieldChange", async () => {
     const cfMap: CFProcessing = { carrIdMapping: new Map(), cfNameToCarrConfig: new Map() };
 
     const fromConfig: ConfigQualityProfileItem[] = [{ name: "HDTV-1080p", enabled: false }];

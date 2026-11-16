@@ -6,27 +6,27 @@ import { mergeConfigsAndTemplates } from "./configMerge";
 import { isTrashQualityDefinition } from "./configTemplates";
 import * as env from "./env";
 import * as localImporter from "./local-importer";
+import { logger } from "./logger";
+import { MediaManagementSync } from "./mediaManagement/mediaManagement";
+import { RadarrMediaManagementSync } from "./mediaManagement/mediaManagementRadarr";
 import * as reclarrImporter from "./recyclarr-importer";
 import * as trashGuide from "./trash-guide";
-import { MappedTemplates } from "./types/common.types";
+import type { MappedTemplates } from "./types/common.types";
 import {
-  ConfigQualityProfile,
-  ConfigQualityProfileItem,
-  InputConfigArrInstance,
+  type ConfigQualityProfile,
+  type ConfigQualityProfileItem,
+  type InputConfigArrInstance,
   InputConfigArrInstanceSchema,
-  InputConfigCustomFormat,
+  type InputConfigCustomFormat,
   InputConfigCustomFormatGroupSchema,
   InputConfigIncludeItemSchema,
   InputConfigMetadataProfileSchema,
   InputConfigRootFolderSchema,
-  InputConfigSchema,
+  type InputConfigSchema,
   InputConfigSchemaSchema,
 } from "./types/config.types";
-import { TrashQP, TrashQualityDefinition } from "./types/trashguide.types";
+import type { TrashQP, TrashQualityDefinition } from "./types/trashguide.types";
 import { cloneWithJSON } from "./util";
-import { MediaManagementSync } from "./mediaManagement/mediaManagement";
-import { RadarrMediaManagementSync } from "./mediaManagement/mediaManagementRadarr";
-import { logger } from "./logger";
 import { ConfigValidationError, validateConfig } from "./validation";
 
 // Mock ky for URL template tests
@@ -61,7 +61,7 @@ vi.mock("node:fs", async () => {
   };
 });
 
-describe("transformConfig", async () => {
+describe("transformConfig", () => {
   const config: InputConfigSchema = yaml.parse(`
 sonarr:
   instance1:
@@ -1577,7 +1577,7 @@ describe("custom_formats ordering", () => {
     vi.spyOn(localImporter, "loadLocalRecyclarrTemplate").mockReturnValue(new Map());
     vi.spyOn(trashGuide, "loadQPFromTrash").mockReturnValue(Promise.resolve(new Map()));
 
-    let inputConfig: InputConfigArrInstance = {
+    const inputConfig: InputConfigArrInstance = {
       include: [{ template: "template1", source: "RECYCLARR" }],
       custom_format_groups: [],
       custom_formats: [],
@@ -1617,7 +1617,7 @@ describe("custom_formats ordering", () => {
     vi.spyOn(localImporter, "loadLocalRecyclarrTemplate").mockReturnValue(new Map());
     vi.spyOn(trashGuide, "loadQPFromTrash").mockReturnValue(Promise.resolve(new Map()));
 
-    let inputConfig: InputConfigArrInstance = {
+    const inputConfig: InputConfigArrInstance = {
       include: [{ template: "template1", source: "RECYCLARR" }],
       custom_format_groups: [],
       custom_formats: [],
@@ -1664,7 +1664,7 @@ describe("custom_formats ordering", () => {
     vi.spyOn(localImporter, "loadLocalRecyclarrTemplate").mockReturnValue(new Map());
     vi.spyOn(trashGuide, "loadQPFromTrash").mockReturnValue(Promise.resolve(new Map()));
 
-    let inputConfig: InputConfigArrInstance = {
+    const inputConfig: InputConfigArrInstance = {
       include: [{ template: "template1", source: "RECYCLARR" }],
       custom_format_groups: [],
       custom_formats: [],
@@ -1711,7 +1711,7 @@ describe("custom_formats ordering", () => {
     vi.spyOn(localImporter, "loadLocalRecyclarrTemplate").mockReturnValue(new Map());
     vi.spyOn(trashGuide, "loadQPFromTrash").mockReturnValue(Promise.resolve(new Map()));
 
-    let inputConfig: InputConfigArrInstance = {
+    const inputConfig: InputConfigArrInstance = {
       include: [{ template: "template1", source: "RECYCLARR" }],
       custom_format_groups: [],
       custom_formats: [],

@@ -1,7 +1,7 @@
 import { z } from "zod";
-import { ArrType } from "../types/common.types";
-import { InputConfigRemotePath } from "../types/config.types";
-import { DiffEntry } from "../diffReport/diffReport.types";
+import type { DiffEntry } from "../diffReport/diffReport.types";
+import type { ArrType } from "../types/common.types";
+import type { InputConfigRemotePath } from "../types/config.types";
 
 /**
  * Absolute paths: POSIX (`/…`), Windows drive (`X:/…` or `X:\…`) and UNC (`\\server\share`).

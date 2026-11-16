@@ -1,4 +1,4 @@
-import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
+import { type ChildProcessWithoutNullStreams, spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { join } from "node:path";
 import esbuild from "esbuild";
@@ -98,7 +98,8 @@ export function runConfigarrInWorker(env: Record<string, string>, runRoot: strin
   const job = queue.then(
     () =>
       new Promise<ConfigarrRunResult>((resolve, reject) => {
-        const state = (worker ??= startWorker(env, runRoot));
+        worker ??= startWorker(env, runRoot);
+        const state = worker;
         const id = randomUUID();
         const timer = setTimeout(() => {
           state.child.kill("SIGKILL");

@@ -1,14 +1,14 @@
 import path from "node:path";
-import { ServerCache } from "../cache";
+import type { ServerCache } from "../cache";
 import type { QualityProfilesClient } from "../clients/capabilities";
-import { FieldChange } from "../diffReport/diffReport.types";
+import type { CFProcessing } from "../customFormats/customFormat.types";
+import type { FieldChange } from "../diffReport/diffReport.types";
 import { getEnvs } from "../env";
 import { logger } from "../logger";
-import { CFProcessing } from "../customFormats/customFormat.types";
-import { ConfigQualityProfile, MergedConfigInstance } from "../types/config.types";
+import type { ConfigQualityProfile, MergedConfigInstance } from "../types/config.types";
 import { cloneWithJSON, loadJsonFile } from "../util";
 import { ConfigValidationError } from "../validation";
-import { FormatItem, QualityProfileLanguage, QualityProfileShared } from "./qualityProfile.types";
+import type { FormatItem, QualityProfileLanguage, QualityProfileShared } from "./qualityProfile.types";
 import { getUnmanagedQualityProfiles, mapQualityProfiles } from "./qualityProfileBase";
 import { getDisabledUpgradeCutoff, isOrderOfQualitiesEqual, mapQualities, translateServerCutoff } from "./qualityProfileQualities";
 

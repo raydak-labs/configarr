@@ -1,12 +1,12 @@
-import { ServerCache } from "../cache";
+import type { ServerCache } from "../cache";
 import type { TagsClient } from "../clients/capabilities";
-import { DiffEntry } from "../diffReport/diffReport.types";
-import { InputConfigProwlarrInstance } from "../types/config.types";
+import type { DiffEntry } from "../diffReport/diffReport.types";
+import { syncInstanceTags } from "../tags/tags";
+import type { InputConfigProwlarrInstance } from "../types/config.types";
 import { ApplicationSync } from "./applicationSync";
 import { IndexerProxySync } from "./indexerProxySync";
 import { IndexerSync } from "./indexerSync";
 import { deleteUnmanagedSyncProfiles, syncSyncProfiles } from "./syncProfileSync";
-import { syncInstanceTags } from "../tags/tags";
 
 /**
  * Runs the Prowlarr provider-resource syncs for one instance, in dependency order:

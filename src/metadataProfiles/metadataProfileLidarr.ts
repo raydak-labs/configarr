@@ -1,12 +1,12 @@
-import { MetadataProfileResource } from "../__generated__/lidarr/data-contracts";
-import { ServerCache } from "../cache";
+import type { MetadataProfileResource } from "../__generated__/lidarr/data-contracts";
+import type { ServerCache } from "../cache";
 import type { MetadataProfilesClient } from "../clients/capabilities";
-import { LidarrClient } from "../clients/lidarr-client";
-import { InputConfigLidarrMetadataProfile, InputConfigMetadataProfile } from "../types/config.types";
-import { FieldChange } from "../diffReport/diffReport.types";
-import { MetadataProfileDiff } from "./metadataProfile.types";
-import { BaseMetadataProfileSync } from "./metadataProfileBase";
+import type { LidarrClient } from "../clients/lidarr-client";
+import type { FieldChange } from "../diffReport/diffReport.types";
+import type { InputConfigLidarrMetadataProfile, InputConfigMetadataProfile } from "../types/config.types";
 import { ConfigValidationError } from "../validation";
+import type { MetadataProfileDiff } from "./metadataProfile.types";
+import { BaseMetadataProfileSync } from "./metadataProfileBase";
 
 export type LidarrMetadataProfileApi = MetadataProfilesClient<MetadataProfileResource> & Pick<LidarrClient, "getMetadataProfileSchema">;
 

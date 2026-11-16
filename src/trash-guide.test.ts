@@ -1,5 +1,7 @@
 import fs from "node:fs";
 import { beforeEach, describe, expect, test, vi } from "vitest";
+import * as envModule from "./env";
+import { logger } from "./logger";
 import {
   loadAllQDsFromTrash,
   loadNamingFromTrashRadarr,
@@ -12,14 +14,12 @@ import {
   transformTrashQDs,
   transformTrashQPCFGroups,
 } from "./trash-guide";
-import { InputConfigCustomFormatGroup } from "./types/config.types";
-import { TrashCFGroupMapping, TrashQualityDefinition, TrashQP, TrashQPSchema } from "./types/trashguide.types";
+import type { InputConfigCustomFormatGroup } from "./types/config.types";
+import { type TrashCFGroupMapping, type TrashQP, TrashQPSchema, type TrashQualityDefinition } from "./types/trashguide.types";
 import * as util from "./util";
-import { logger } from "./logger";
-import * as envModule from "./env";
 import { ConfigValidationError, ValidationError } from "./validation";
 
-describe("TrashGuide", async () => {
+describe("TrashGuide", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
   });
@@ -125,7 +125,7 @@ describe("TrashGuide", async () => {
     });
   });
 
-  test("loadQPFromTrash - normal", async ({}) => {
+  test("loadQPFromTrash - normal", async () => {
     const results = await loadQPFromTrash("RADARR");
 
     console.log(results.keys());
@@ -255,7 +255,7 @@ describe("TrashGuide", async () => {
     });
   });
 
-  test("transformTrashQDs - diff preferred size with ratio", async ({}) => {
+  test("transformTrashQDs - diff preferred size with ratio", async () => {
     const trashQualityDef = {
       trash_id: "aed34b9f60ee115dfa7918b742336277",
       type: "movie",
@@ -282,7 +282,7 @@ describe("TrashGuide", async () => {
     expect(resultHigh[0]!.preferred).toBe(100);
   });
 
-  test("transformTrashQDs - diff preferred size with ratio, ignore if out of range", async ({}) => {
+  test("transformTrashQDs - diff preferred size with ratio, ignore if out of range", async () => {
     const trashQualityDef = {
       trash_id: "aed34b9f60ee115dfa7918b742336277",
       type: "movie",
@@ -305,7 +305,7 @@ describe("TrashGuide", async () => {
     expect(resultHigh[0]!.preferred).toBe(95);
   });
 
-  test("transformTrashCFGroups - only include required cfs", async ({}) => {
+  test("transformTrashCFGroups - only include required cfs", async () => {
     const mapping: TrashCFGroupMapping = new Map();
     mapping.set("id1", {
       name: "name1",
@@ -332,7 +332,7 @@ describe("TrashGuide", async () => {
     expect(result[0]!.assign_scores_to![0]?.name).toBe("qp1");
   });
 
-  test("transformTrashCFGroups - include all if attribute set", async ({}) => {
+  test("transformTrashCFGroups - include all if attribute set", async () => {
     const mapping: TrashCFGroupMapping = new Map();
     mapping.set("id1", {
       name: "name1",
@@ -359,7 +359,7 @@ describe("TrashGuide", async () => {
     expect(result[0]!.assign_scores_to![0]?.name).toBe("qp1");
   });
 
-  test("transformTrashCFGroups - ignore if mapping missing", async ({}) => {
+  test("transformTrashCFGroups - ignore if mapping missing", async () => {
     const mapping: TrashCFGroupMapping = new Map();
     mapping.set("id2", {
       name: "name1",
@@ -382,7 +382,7 @@ describe("TrashGuide", async () => {
     expect(result).toHaveLength(0);
   });
 
-  test("transformTrashCFGroups - include score when specified", async ({}) => {
+  test("transformTrashCFGroups - include score when specified", async () => {
     const mapping: TrashCFGroupMapping = new Map();
     mapping.set("id1", {
       name: "name1",

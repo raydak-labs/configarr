@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { DiffEntry } from "./diffReport.types";
+import type { DiffEntry } from "./diffReport.types";
 import { hasUrlCredentials, isSecretFieldName, redactDiffEntry, redactSecrets, redactUrlValue, SECRET_MASK } from "./redactSecrets";
 
 describe("isSecretFieldName", () => {

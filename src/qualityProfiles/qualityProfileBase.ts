@@ -1,13 +1,13 @@
-import { DiffEntry, FieldChange } from "../diffReport/diffReport.types";
+import type { CFProcessing } from "../customFormats/customFormat.types";
+import type { DiffEntry, FieldChange } from "../diffReport/diffReport.types";
 import { getEnvs } from "../env";
 import { logger } from "../logger";
-import { CFProcessing } from "../customFormats/customFormat.types";
-import { MediaArrType } from "../types/common.types";
-import { ConfigQualityProfile, MergedConfigInstance } from "../types/config.types";
+import type { MediaArrType } from "../types/common.types";
+import type { ConfigQualityProfile, MergedConfigInstance } from "../types/config.types";
 import type { TrashCFConflict } from "../types/trashguide.types";
 import { ANY_LANGUAGE_NAME } from "../util";
 import { ConfigValidationError, warnOrThrowConfig } from "../validation";
-import { FormatItem, QualityProfileLanguage, QualityProfileShared } from "./qualityProfile.types";
+import type { FormatItem, QualityProfileLanguage, QualityProfileShared } from "./qualityProfile.types";
 
 type MinUpgradeProfile = { minUpgradeFormatScore?: number };
 type LanguageProfile = { language?: QualityProfileLanguage };

@@ -2,8 +2,8 @@ import type { ImportListResource } from "../__generated__/radarr/data-contracts"
 import type { RadarrClient } from "../clients/radarr-client";
 import type { FieldChange } from "../diffReport/diffReport.types";
 import type { InputConfigImportList } from "../types/config.types";
-import { BaseImportListSync } from "./importListBase";
 import { ConfigValidationError } from "../validation";
+import { BaseImportListSync } from "./importListBase";
 
 export class RadarrImportListSync extends BaseImportListSync<ImportListResource> {
   constructor(client: RadarrClient) {

@@ -10,17 +10,16 @@ import { ReadarrClient } from "../../src/clients/readarr-client";
 import { StandardDelayProfileSync } from "../../src/delayProfiles/delayProfileBase";
 import { InputConfigDelayProfileSchema } from "../../src/types/config.types";
 import {
-  E2E_ROOT_A,
-  E2E_ROOT_B,
   arrConnection,
   cfAssignBlock,
   downloadClientConfigBlock,
+  E2E_ROOT_A,
+  E2E_ROOT_B,
   e2eCustomFormatDefinition,
   e2eMediaSettings,
   mediaConfig,
 } from "./config";
 import {
-  MediaBaseline,
   assertDiffUpToDate,
   assertPipelineSucceeded,
   blackholeFromSchema,
@@ -29,6 +28,7 @@ import {
   cleanupMetadataProfilesE2e,
   defaultDelayProfile,
   findNamed,
+  type MediaBaseline,
   nonE2eNames,
   preservedRootFolderObjects,
   restoreMediaBaseline,

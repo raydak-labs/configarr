@@ -2,8 +2,8 @@ import type { ImportListResource } from "../__generated__/sonarr-v5/data-contrac
 import type { SonarrClient } from "../clients/sonarr-client";
 import type { FieldChange } from "../diffReport/diffReport.types";
 import type { InputConfigImportList } from "../types/config.types";
-import { BaseImportListSync } from "./importListBase";
 import { ConfigValidationError } from "../validation";
+import { BaseImportListSync } from "./importListBase";
 
 export class SonarrImportListSync extends BaseImportListSync<ImportListResource> {
   private languages: Array<{ id?: number; name?: string | null }> = [];

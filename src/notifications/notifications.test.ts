@@ -1,12 +1,12 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { ServerCache } from "../cache";
-import { initEnvs } from "../env";
+import type { NotificationsClient, TagsClient } from "../clients/capabilities";
 import { DiffCollector } from "../diffReport/diffCollector";
 import { SECRET_MASK } from "../diffReport/redactSecrets";
-import { ConfigValidationError } from "../validation";
+import { initEnvs } from "../env";
 import { InputConfigNotificationsSchema } from "../types/config.types";
-import { validateNotifications, syncNotifications, type NotificationResourceItem } from "./notifications";
-import type { NotificationsClient, TagsClient } from "../clients/capabilities";
+import { ConfigValidationError } from "../validation";
+import { type NotificationResourceItem, syncNotifications, validateNotifications } from "./notifications";
 
 describe("notifications", () => {
   afterEach(() => {

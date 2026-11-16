@@ -1,11 +1,14 @@
-import { KyHttpClient } from "../ky-client";
 import { Api as SonarrApiV3 } from "../__generated__/sonarr/Api";
-import { Api as SonarrApiV5 } from "../__generated__/sonarr-v5/Api";
-import {
+import type {
+  CustomFormatResource,
   DelayProfileResource,
   DownloadClientConfigResource,
   DownloadClientResource,
+  ImportListResource,
+  IndexerConfigResource,
+  MetadataResource,
   NamingConfigResource,
+  NotificationResource,
   QualityDefinitionResource,
   QualityProfileResource,
   RemotePathMappingResource,
@@ -13,26 +16,22 @@ import {
   SystemResource,
   TagResource,
   UiConfigResource,
-  CustomFormatResource,
-  ImportListResource,
-  IndexerConfigResource,
-  MetadataResource,
-  NotificationResource,
 } from "../__generated__/sonarr/data-contracts";
+import { Api as SonarrApiV5 } from "../__generated__/sonarr-v5/Api";
 import type {
   ApiInfoResource as SonarrApiInfoV5,
-  GeneralSettingsResource as SonarrGeneralV5,
   CustomFormatSpecificationSchema as SonarrCustomFormatSpecificationV5,
+  GeneralSettingsResource as SonarrGeneralV5,
   QualityDefinitionResource as SonarrQualityDefinitionV5,
   QualityProfileResource as SonarrQualityProfileV5,
   ReleaseProfileResource as SonarrReleaseProfileV5,
   SystemResource as SonarrSystemV5,
 } from "../__generated__/sonarr-v5/data-contracts";
 import { SkipValidation } from "../__generated__/sonarr-v5/data-contracts";
-import { logger } from "../logger";
 import type { CustomFormatRequest } from "../customFormats/customFormat.types";
-import { forceSaveIfDisabled, logConnectionError, validateClientParams } from "./connection";
-import {
+import { KyHttpClient } from "../ky-client";
+import { logger } from "../logger";
+import type {
   CustomFormatsClient,
   DownloadClientsClient,
   QualityDefinitionsClient,
@@ -40,6 +39,14 @@ import {
   SystemClient,
   TagsClient,
 } from "./capabilities";
+import { forceSaveIfDisabled, logConnectionError, validateClientParams } from "./connection";
+import type {
+  QualitySize,
+  SonarrMediaManagementResource,
+  SonarrProfileQualitySize,
+  SonarrProfileQualitySizes,
+  SonarrProfileQualitySizeValues,
+} from "./sonarr-resource-mapper";
 import {
   collectProfileQualitySizes,
   commonQualitySizes,
@@ -53,13 +60,6 @@ import {
   mergeV5QualityItems,
   toV3ReleaseProfile,
   toV5CustomFormat,
-} from "./sonarr-resource-mapper";
-import type {
-  QualitySize,
-  SonarrMediaManagementResource,
-  SonarrProfileQualitySize,
-  SonarrProfileQualitySizes,
-  SonarrProfileQualitySizeValues,
 } from "./sonarr-resource-mapper";
 
 export class SonarrClient
@@ -97,16 +97,14 @@ export class SonarrClient
   }
 
   private getApiVersion(): Promise<"v3" | "v5"> {
-    const apiVersion = (this.apiVersion ??= this.apiV5.http
-      .request<SonarrApiInfoV5>({ path: "/api", method: "GET", secure: true })
-      .then(({ current }) => {
-        if (current !== "v3" && current !== "v5") {
-          throw new Error(`Unsupported Sonarr API version '${current ?? "unknown"}'. Expected v3 or v5.`);
-        }
-        return current;
-      }));
+    this.apiVersion ??= this.apiV5.http.request<SonarrApiInfoV5>({ path: "/api", method: "GET", secure: true }).then(({ current }) => {
+      if (current !== "v3" && current !== "v5") {
+        throw new Error(`Unsupported Sonarr API version '${current ?? "unknown"}'. Expected v3 or v5.`);
+      }
+      return current;
+    });
 
-    return apiVersion;
+    return this.apiVersion;
   }
 
   private async versioned<T>(v3: () => Promise<T>, v5: () => Promise<T>): Promise<T> {
@@ -333,7 +331,8 @@ export class SonarrClient
   }
 
   private getV5CustomFormatSchema(): Promise<SonarrCustomFormatSpecificationV5[]> {
-    return (this.v5CustomFormatSchema ??= this.apiV5.v5CustomformatSchemaList());
+    this.v5CustomFormatSchema ??= this.apiV5.v5CustomformatSchemaList();
+    return this.v5CustomFormatSchema;
   }
 
   deleteCustomFormat(id: string) {

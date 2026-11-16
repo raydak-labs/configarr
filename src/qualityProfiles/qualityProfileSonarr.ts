@@ -1,16 +1,15 @@
 import type { QualityProfileResource } from "../__generated__/sonarr/data-contracts";
+import type { QualityProfilesClient } from "../clients/capabilities";
 import type { SonarrClient } from "../clients/sonarr-client";
 import type { SonarrProfileQualitySize } from "../clients/sonarr-resource-mapper";
-import type { QualityProfilesClient } from "../clients/capabilities";
-import { DiffEntry, FieldChange } from "../diffReport/diffReport.types";
+import type { DiffEntry, FieldChange } from "../diffReport/diffReport.types";
+import type { QualityDefinitionShared } from "../qualityDefinitions/qualityDefinition.types";
+import type { ConfigQualityProfile, InputConfigQualitySize } from "../types/config.types";
+import type { TrashQualityDefinitionQuality } from "../types/trashguide.types";
+import { ConfigValidationError } from "../validation";
+import type { QualityProfileLanguage, QualityProfileShared } from "./qualityProfile.types";
 import { attachMinUpgradeOnCreate, diffMinUpgradeOnUpdate, warnUnsupportedQualityProfileLanguage } from "./qualityProfileBase";
 import { BaseQualityProfileSync } from "./qualityProfileSyncBase";
-import { QualityProfileLanguage, QualityProfileShared } from "./qualityProfile.types";
-import { ConfigQualityProfile } from "../types/config.types";
-import type { QualityDefinitionShared } from "../qualityDefinitions/qualityDefinition.types";
-import { ConfigValidationError } from "../validation";
-import type { TrashQualityDefinitionQuality } from "../types/trashguide.types";
-import type { InputConfigQualitySize } from "../types/config.types";
 
 type SonarrQualityProfileClient = QualityProfilesClient<QualityProfileResource> &
   Pick<SonarrClient, "supportsProfileQualitySizes" | "getProfileQualitySizes" | "updateProfileQualitySizes" | "getQualityDefinitions">;

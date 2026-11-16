@@ -1,4 +1,4 @@
-import { ConfigQualityProfile, InputConfigArrInstance } from "./config.types";
+import type { ConfigQualityProfile, InputConfigArrInstance } from "./config.types";
 
 export type DynamicImportType<T> = { default: T };
 

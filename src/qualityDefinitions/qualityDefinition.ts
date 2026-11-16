@@ -1,12 +1,12 @@
 import path from "node:path";
-import { DiffEntry, FieldChange } from "../diffReport/diffReport.types";
+import type { QualityDefinitionsClient } from "../clients/capabilities";
+import type { DiffEntry, FieldChange } from "../diffReport/diffReport.types";
 import { getEnvs } from "../env";
 import { logger } from "../logger";
-import type { QualityDefinitionsClient } from "../clients/capabilities";
-import { TrashQualityDefinitionQuality } from "../types/trashguide.types";
+import type { TrashQualityDefinitionQuality } from "../types/trashguide.types";
 import { cloneWithJSON, loadJsonFile, roundToDecimal } from "../util";
 import { warnOrThrowConfig } from "../validation";
-import { QualityDefinitionShared } from "./qualityDefinition.types";
+import type { QualityDefinitionShared } from "./qualityDefinition.types";
 
 export function applyPreferredSizeDiff(
   clonedQuality: TrashQualityDefinitionQuality,

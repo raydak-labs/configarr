@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { DiffCollector } from "./diffCollector";
-import { DiffEntry } from "./diffReport.types";
+import type { DiffEntry } from "./diffReport.types";
 import { SECRET_MASK } from "./redactSecrets";
 
 describe("DiffCollector", () => {

@@ -1,17 +1,17 @@
-import { SonarrHostConfigSync } from "../hostConfig/hostConfigSonarr";
 import { DownloadProtocol } from "../__generated__/sonarr/data-contracts";
 import { getClient } from "../clients/client";
 import { StandardDelayProfileSync } from "../delayProfiles/delayProfileBase";
-import { InstanceDiffReport } from "../diffReport/diffReport.types";
-import { getEnvs } from "../env";
+import type { InstanceDiffReport } from "../diffReport/diffReport.types";
 import { SonarrDownloadClientSync } from "../downloadClients/downloadClientSonarr";
+import { getEnvs } from "../env";
+import { SonarrHostConfigSync } from "../hostConfig/hostConfigSonarr";
 import { SonarrImportListSync } from "../importLists/importListSonarr";
 import { SonarrMediaManagementSync } from "../mediaManagement/mediaManagementSonarr";
 import { QualityDefinitionSonarrSync } from "../qualityDefinitions/qualityDefinitionSonarr";
 import { QualityProfileSonarrSync } from "../qualityProfiles/qualityProfileSonarr";
 import { ReleaseProfileSonarrSync } from "../releaseProfiles/releaseProfileSonarr";
 import { PathRootFolderSync } from "../rootFolder/rootFolderBase";
-import { InputConfigArrInstance, InputConfigSchema } from "../types/config.types";
+import type { InputConfigArrInstance, InputConfigSchema } from "../types/config.types";
 import { completeMediaSync, runMediaSyncToQualityProfiles } from "./mediaPipeline";
 import { createTrashOps } from "./trashOps";
 

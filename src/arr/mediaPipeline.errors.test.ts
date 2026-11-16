@@ -27,8 +27,8 @@ vi.mock("../downloadClientConfig/downloadClientConfigSyncer", () => ({
 }));
 vi.mock("../remotePaths/remotePathSyncer", () => ({ syncRemotePaths: vi.fn(async () => ({ diffEntries: [] })) }));
 
-import { getEnvs } from "../env";
 import { syncDownloadClientConfig } from "../downloadClientConfig/downloadClientConfigSyncer";
+import { getEnvs } from "../env";
 import { logger } from "../logger";
 import { syncRemotePaths } from "../remotePaths/remotePathSyncer";
 

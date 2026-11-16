@@ -1,10 +1,10 @@
 import type { ArrTypeToClient } from "../clients/client";
-import { logger } from "../logger";
-import { MediaArrType } from "../types/common.types";
-import { RemotePathMappingResource, RemotePathSyncResult, RemotePathDiff } from "./remotePath.types";
-import { InputConfigRemotePath, MergedConfigInstance } from "../types/config.types";
+import type { DiffEntry } from "../diffReport/diffReport.types";
 import { getEnvs } from "../env";
-import { DiffEntry } from "../diffReport/diffReport.types";
+import { logger } from "../logger";
+import type { MediaArrType } from "../types/common.types";
+import type { InputConfigRemotePath, MergedConfigInstance } from "../types/config.types";
+import type { RemotePathDiff, RemotePathMappingResource, RemotePathSyncResult } from "./remotePath.types";
 import { normalizeRemotePath } from "./remotePath.util";
 
 type RemotePathClient = Pick<

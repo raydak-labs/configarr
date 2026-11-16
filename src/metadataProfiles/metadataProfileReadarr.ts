@@ -1,10 +1,10 @@
-import { MetadataProfileResource } from "../__generated__/readarr/data-contracts";
-import { ServerCache } from "../cache";
+import type { MetadataProfileResource } from "../__generated__/readarr/data-contracts";
+import type { ServerCache } from "../cache";
 import type { MetadataProfilesClient } from "../clients/capabilities";
-import { InputConfigReadarrMetadataProfile, InputConfigMetadataProfile } from "../types/config.types";
+import type { FieldChange } from "../diffReport/diffReport.types";
+import type { InputConfigMetadataProfile, InputConfigReadarrMetadataProfile } from "../types/config.types";
 import { compareObjectsCarr } from "../util";
-import { FieldChange } from "../diffReport/diffReport.types";
-import { MetadataProfileDiff } from "./metadataProfile.types";
+import type { MetadataProfileDiff } from "./metadataProfile.types";
 import { BaseMetadataProfileSync } from "./metadataProfileBase";
 
 export class ReadarrMetadataProfileSync extends BaseMetadataProfileSync<MetadataProfileResource> {

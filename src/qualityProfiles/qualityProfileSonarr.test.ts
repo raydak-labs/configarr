@@ -1,14 +1,14 @@
 import path from "path";
-import { beforeEach, afterEach, describe, expect, expectTypeOf, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, expectTypeOf, test, vi } from "vitest";
 import type { QualityProfileResource } from "../__generated__/sonarr/data-contracts";
 import { SonarrClient } from "../clients/sonarr-client";
 import type { QualityDefinitionShared } from "../qualityDefinitions/qualityDefinition.types";
 import type { ConfigQualityProfile, MergedConfigInstance } from "../types/config.types";
-import { QualityProfileShared } from "./qualityProfile.types";
-import { QualityProfileSonarrSync } from "./qualityProfileSonarr";
 import { cloneWithJSON, loadJsonFile } from "../util";
+import type { QualityProfileShared } from "./qualityProfile.types";
+import { QualityProfileSonarrSync } from "./qualityProfileSonarr";
 
-describe("QualityProfileSonarrSync", async () => {
+describe("QualityProfileSonarrSync", () => {
   const sampleQualityProfile = loadJsonFile<QualityProfileShared>(
     path.resolve(__dirname, `../../tests/samples/single_quality_profile.json`),
   );

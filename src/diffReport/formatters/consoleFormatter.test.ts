@@ -1,8 +1,8 @@
-import { describe, expect, test, vi, afterEach } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
 import { logger } from "../../logger";
-import { ConsoleDiffFormatter } from "./consoleFormatter";
 import { DiffCollector } from "../diffCollector";
-import { DiffEntry, InstanceDiffReport } from "../diffReport.types";
+import { DiffEntry, type InstanceDiffReport } from "../diffReport.types";
+import { ConsoleDiffFormatter } from "./consoleFormatter";
 
 describe("ConsoleDiffFormatter", () => {
   afterEach(() => {

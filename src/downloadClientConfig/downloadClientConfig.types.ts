@@ -1,4 +1,4 @@
-import { FieldChange } from "../diffReport/diffReport.types";
+import type { FieldChange } from "../diffReport/diffReport.types";
 
 /**
  * Download Client Configuration sync types

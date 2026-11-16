@@ -1,7 +1,7 @@
 import { DownloadProtocol } from "../__generated__/whisparr/data-contracts";
 import { getClient } from "../clients/client";
 import { StandardDelayProfileSync } from "../delayProfiles/delayProfileBase";
-import { InstanceDiffReport } from "../diffReport/diffReport.types";
+import type { InstanceDiffReport } from "../diffReport/diffReport.types";
 import { WhisparrDownloadClientSync } from "../downloadClients/downloadClientWhisparr";
 import { WhisparrHostConfigSync } from "../hostConfig/hostConfigWhisparr";
 import { MediaManagementSync } from "../mediaManagement/mediaManagement";
@@ -9,7 +9,7 @@ import { QualityDefinitionPreferredSync } from "../qualityDefinitions/qualityDef
 import { QualityProfileWhisparrSync } from "../qualityProfiles/qualityProfileWhisparr";
 import { ReleaseProfileWhisparrSync } from "../releaseProfiles/releaseProfileWhisparr";
 import { PathRootFolderSync } from "../rootFolder/rootFolderBase";
-import { InputConfigArrInstance, InputConfigSchema } from "../types/config.types";
+import type { InputConfigArrInstance, InputConfigSchema } from "../types/config.types";
 import { completeMediaSync, runMediaSyncToQualityProfiles } from "./mediaPipeline";
 
 const ARR = "WHISPARR" as const;

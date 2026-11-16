@@ -1,9 +1,9 @@
 import { logger } from "../logger";
-import { ConfigQualityProfile, ConfigQualityProfileItem } from "../types/config.types";
+import type { QualityDefinitionShared } from "../qualityDefinitions/qualityDefinition.types";
+import type { ConfigQualityProfile, ConfigQualityProfileItem } from "../types/config.types";
 import { cloneWithJSON, zip } from "../util";
 import { ConfigValidationError } from "../validation";
-import { QualityItem } from "./qualityProfile.types";
-import type { QualityDefinitionShared } from "../qualityDefinitions/qualityDefinition.types";
+import type { QualityItem } from "./qualityProfile.types";
 
 const itemName = (item: QualityItem): string | undefined => item.name ?? item.quality?.name ?? undefined;
 

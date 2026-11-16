@@ -1,9 +1,9 @@
-import { Tag } from "../tags/tag.types";
+import { type DelayProfileResource, DownloadProtocol } from "../__generated__/lidarr/data-contracts";
 import type { DelayProfilesClient } from "../clients/capabilities";
-import { FieldChange } from "../diffReport/diffReport.types";
-import { InputConfigDelayProfile } from "../types/config.types";
-import { DelayProfileResource, DownloadProtocol } from "../__generated__/lidarr/data-contracts";
-import { DelayProfileProtocolItem } from "./delayProfile.types";
+import type { FieldChange } from "../diffReport/diffReport.types";
+import type { Tag } from "../tags/tag.types";
+import type { InputConfigDelayProfile } from "../types/config.types";
+import type { DelayProfileProtocolItem } from "./delayProfile.types";
 import {
   areDelayProfileItemsEqual,
   BaseDelayProfileSync,

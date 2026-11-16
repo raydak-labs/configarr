@@ -1,7 +1,7 @@
 import { DownloadProtocol } from "../__generated__/readarr/data-contracts";
 import { getClient } from "../clients/client";
 import { StandardDelayProfileSync } from "../delayProfiles/delayProfileBase";
-import { InstanceDiffReport } from "../diffReport/diffReport.types";
+import type { InstanceDiffReport } from "../diffReport/diffReport.types";
 import { ReadarrDownloadClientSync } from "../downloadClients/downloadClientReadarr";
 import { MediaManagementSync } from "../mediaManagement/mediaManagement";
 import { ReadarrMetadataProfileSync } from "../metadataProfiles/metadataProfileReadarr";
@@ -9,7 +9,7 @@ import { QualityDefinitionSync } from "../qualityDefinitions/qualityDefinition";
 import { QualityProfileReadarrSync } from "../qualityProfiles/qualityProfileReadarr";
 import { ReleaseProfileReadarrSync } from "../releaseProfiles/releaseProfileReadarr";
 import { ReadarrRootFolderSync } from "../rootFolder/rootFolderReadarr";
-import { InputConfigArrInstance, InputConfigSchema } from "../types/config.types";
+import type { InputConfigArrInstance, InputConfigSchema } from "../types/config.types";
 import { completeMediaSync, runMediaSyncToQualityProfiles } from "./mediaPipeline";
 
 const ARR = "READARR" as const;

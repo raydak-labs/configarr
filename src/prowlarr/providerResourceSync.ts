@@ -1,8 +1,8 @@
-import { z } from "zod";
-import { ServerCache } from "../cache";
-import { ProwlarrClient } from "../clients/prowlarr-client";
+import type { z } from "zod";
+import type { ServerCache } from "../cache";
 import { getClient } from "../clients/client";
-import { DiffEntry, FieldChange } from "../diffReport/diffReport.types";
+import type { ProwlarrClient } from "../clients/prowlarr-client";
+import type { DiffEntry, FieldChange } from "../diffReport/diffReport.types";
 import { getEnvs } from "../env";
 import { logger } from "../logger";
 import type { Tag } from "../tags/tag.types";
@@ -378,7 +378,9 @@ export abstract class ProviderResourceSync<
     for (const config of configItems) {
       if (config.tags) {
         const { missing } = resolveTagNames(config.tags, serverCache.tags);
-        missing.forEach((tag) => allMissingTags.add(tag));
+        for (const tag of missing) {
+          allMissingTags.add(tag);
+        }
       }
     }
     if (allMissingTags.size === 0) return;

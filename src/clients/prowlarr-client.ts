@@ -1,6 +1,5 @@
-import { KyHttpClient } from "../ky-client";
 import { Api } from "../__generated__/prowlarr/Api";
-import {
+import type {
   ApplicationResource,
   AppProfileResource,
   CommandResource,
@@ -10,9 +9,10 @@ import {
   NotificationResource,
   TagResource,
 } from "../__generated__/prowlarr/data-contracts";
+import { KyHttpClient } from "../ky-client";
 import { logger } from "../logger";
+import type { DownloadClientsClient, SystemClient, TagsClient } from "./capabilities";
 import { forceSaveIfDisabled, logConnectionError, validateClientParams } from "./connection";
-import { DownloadClientsClient, SystemClient, TagsClient } from "./capabilities";
 
 /**
  * Prowlarr is an indexer manager, not a media manager. It implements System, Tags,

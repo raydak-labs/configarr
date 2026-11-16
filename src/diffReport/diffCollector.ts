@@ -1,4 +1,4 @@
-import { DiffEntry } from "./diffReport.types";
+import type { DiffEntry } from "./diffReport.types";
 import { redactDiffEntry } from "./redactSecrets";
 
 export class DiffCollector {

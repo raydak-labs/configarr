@@ -1,8 +1,8 @@
-import { KyInstance } from "ky";
+import type { KyInstance } from "ky";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import yaml from "yaml";
-import { MappedTemplates } from "./types/common.types";
-import { TrashQualityDefinition, TrashQP } from "./types/trashguide.types";
+import type { MappedTemplates } from "./types/common.types";
+import type { TrashQP, TrashQualityDefinition } from "./types/trashguide.types";
 import { isUrl, loadTemplateFromUrl } from "./url-template-importer";
 
 // Mock ky for URL template tests

@@ -1,10 +1,10 @@
-import { z } from "zod";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { z } from "zod";
 import type { ServerCache } from "../cache";
 import { getEnvs } from "../env";
 import { logger } from "../logger";
 import { ConfigValidationError } from "../validation";
-import { ExtraProp, ProviderResource, ProviderResourceSync } from "./providerResourceSync";
+import { type ExtraProp, type ProviderResource, ProviderResourceSync } from "./providerResourceSync";
 
 vi.mock("../env", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../env")>();

@@ -10,23 +10,22 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, onTestFinished, test } from "vitest";
-import { SonarrClient } from "../../src/clients/sonarr-client";
 import { DownloadProtocol } from "../../src/__generated__/sonarr/data-contracts";
 import type { IndexerResource as SonarrIndexerResource } from "../../src/__generated__/sonarr-v5/data-contracts";
+import { SonarrClient } from "../../src/clients/sonarr-client";
 import { StandardDelayProfileSync } from "../../src/delayProfiles/delayProfileBase";
 import { InputConfigDelayProfileSchema } from "../../src/types/config.types";
 import {
-  E2E_ROOT_A,
-  E2E_ROOT_B,
   arrConnection,
   cfAssignBlock,
   downloadClientConfigBlock,
+  E2E_ROOT_A,
+  E2E_ROOT_B,
   e2eCustomFormatDefinition,
   e2eMediaSettings,
   mediaConfig,
 } from "./config";
 import {
-  MediaBaseline,
   assertDiffUpToDate,
   assertNoErrorLogs,
   assertPipelineSucceeded,
@@ -36,6 +35,7 @@ import {
   cleanupMediaIndexerFixtures,
   defaultDelayProfile,
   findNamed,
+  type MediaBaseline,
   nonE2eNames,
   preservedRootFolderPaths,
   restoreMediaBaseline,
@@ -604,7 +604,10 @@ describe("sonarr (live)", () => {
     } finally {
       rmSync(templates, { recursive: true, force: true });
       const response = await fetch(`${url}/${original.id}`, { method: "PUT", headers, body: JSON.stringify(original) });
-      if (!response.ok) throw new Error(`Failed to restore metadata: ${response.status}`);
+      if (!response.ok) {
+        // biome-ignore lint/correctness/noUnsafeFinally: restoring server state is mandatory; restoration failures must fail the test.
+        throw new Error(`Failed to restore metadata: ${response.status}`);
+      }
     }
   });
 

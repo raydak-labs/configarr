@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { loadNamingFromTrashSonarr } from "../trash-guide";
+import { MediaManagementTypeSchema } from "../types/config.types";
 import { MediaManagementSync } from "./mediaManagement";
 import { SonarrMediaManagementSync } from "./mediaManagementSonarr";
-import { MediaManagementTypeSchema } from "../types/config.types";
 
 vi.mock("../trash-guide", () => ({ loadNamingFromTrashSonarr: vi.fn() }));
 vi.mock("../logger", () => ({ logger: { debug: vi.fn(), warn: vi.fn() } }));

@@ -1,8 +1,8 @@
 // Copied and modified from here: https://github.com/acacode/swagger-typescript-api/pull/690
 import type { AfterResponseHook, BeforeRequestHook, Hooks, KyInstance, Options as KyOptions, NormalizedOptions } from "ky";
 import ky, { HTTPError } from "ky";
-import { logger } from "./logger";
 import { createConnectionErrorParts, selectConnectionErrorDetail } from "./clients/connection";
+import { logger } from "./logger";
 
 /** Upper bound on an error body kept for the user-facing message. *arr error bodies are small. */
 const MAX_ERROR_BODY_BYTES = 64 * 1024;

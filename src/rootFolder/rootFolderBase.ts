@@ -1,13 +1,13 @@
-import { ServerCache } from "../cache";
+import type { ServerCache } from "../cache";
 import type { MetadataProfilesClient, QualityProfilesClient, RootFoldersClient, TagsClient } from "../clients/capabilities";
-import { DiffEntry, FieldChange } from "../diffReport/diffReport.types";
+import type { DiffEntry, FieldChange } from "../diffReport/diffReport.types";
 import { getEnvs } from "../env";
 import { logger } from "../logger";
-import { InputConfigRootFolder } from "../types/config.types";
 import { buildTagPlaceholders, ensureTags, resolveTagNames } from "../tags/tags";
+import type { InputConfigRootFolder } from "../types/config.types";
 import { compareObjectsCarr } from "../util";
 import { ConfigValidationError } from "../validation";
-import { InputConfigRootFolderObject, RootFolderDiff, RootFolderServerResource, RootFolderSyncResult } from "./rootFolder.types";
+import type { InputConfigRootFolderObject, RootFolderDiff, RootFolderServerResource, RootFolderSyncResult } from "./rootFolder.types";
 
 export function nameIdMap(profiles: { name?: string | null; id?: number }[]): Map<string, number> {
   const map = new Map<string, number>();
@@ -283,7 +283,10 @@ export abstract class ProfileAwareRootFolderSync<
   protected override async createMissingTags(rootFolders: TConfig[], serverCache: ServerCache): Promise<void> {
     const missingTags = new Set<string>();
     for (const config of rootFolders) {
-      this.resolveTagIds(config.tags, serverCache).missing.forEach((tag) => missingTags.add(tag));
+      const { missing } = this.resolveTagIds(config.tags, serverCache);
+      for (const tag of missing) {
+        missingTags.add(tag);
+      }
     }
 
     // `ensureTags` creates nothing while DRY_RUN is set and reports what it would create instead.

@@ -1,5 +1,5 @@
-import { afterAll, beforeAll, describe, expect, onTestFinished, test } from "vitest";
 import { randomUUID } from "node:crypto";
+import { afterAll, beforeAll, describe, expect, onTestFinished, test } from "vitest";
 import { E2E_API_KEY, prowlarrConnection } from "./config";
 import {
   assertDiffUpToDate,

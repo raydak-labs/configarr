@@ -2,8 +2,8 @@ import ky from "ky";
 import yaml from "yaml";
 import { logger } from "./logger";
 import { normalizeTemplateCustomFormats } from "./templateCustomFormats";
-import { MappedTemplates } from "./types/common.types";
-import { TrashQualityDefinition, TrashQualityDefinitionSchema, TrashQP, TrashQPSchema } from "./types/trashguide.types";
+import type { MappedTemplates } from "./types/common.types";
+import { type TrashQP, TrashQPSchema, type TrashQualityDefinition, TrashQualityDefinitionSchema } from "./types/trashguide.types";
 
 export const isUrl = (str: string): boolean => {
   try {

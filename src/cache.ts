@@ -1,6 +1,6 @@
-import { logger } from "./logger";
 import type { IndexerListItem } from "./clients/capabilities";
 import type { CustomFormatRequest } from "./customFormats/customFormat.types";
+import { logger } from "./logger";
 import type { QualityDefinitionShared } from "./qualityDefinitions/qualityDefinition.types";
 import type { QualityProfileLanguage, QualityProfileShared } from "./qualityProfiles/qualityProfile.types";
 import type { Tag } from "./tags/tag.types";

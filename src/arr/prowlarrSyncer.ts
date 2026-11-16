@@ -1,15 +1,14 @@
 import { ServerCache } from "../cache";
 import { getClient } from "../clients/client";
 import { DiffCollector } from "../diffReport/diffCollector";
-import { InstanceDiffReport } from "../diffReport/diffReport.types";
+import type { InstanceDiffReport } from "../diffReport/diffReport.types";
 import { ProwlarrDownloadClientSync } from "../downloadClients/downloadClientProwlarr";
 import { logger } from "../logger";
+import { syncNotifications, validateNotifications } from "../notifications/notifications";
 import { syncProwlarrProviders } from "../prowlarr/prowlarrSyncer";
-import { deleteUnmanagedInstanceTags } from "../tags/tags";
-import { loadServerTags } from "../tags/tags";
-import { InputConfigNotificationsSchema, InputConfigProwlarrInstance } from "../types/config.types";
+import { deleteUnmanagedInstanceTags, loadServerTags } from "../tags/tags";
+import { InputConfigNotificationsSchema, type InputConfigProwlarrInstance } from "../types/config.types";
 import { ConfigValidationError } from "../validation";
-import { validateNotifications, syncNotifications } from "../notifications/notifications";
 
 export class ProwlarrSyncer {
   /**

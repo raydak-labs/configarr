@@ -1,10 +1,10 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { Mocked } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MonitorTypes, NewItemMonitorTypes } from "../__generated__/lidarr/data-contracts";
-import { LidarrRootFolderApi, LidarrRootFolderSync } from "./rootFolderLidarr";
 import { ServerCache } from "../cache";
 import { getEnvs } from "../env";
-import { InputConfigRootFolderLidarr } from "../types/config.types";
+import type { InputConfigRootFolderLidarr } from "../types/config.types";
+import { type LidarrRootFolderApi, LidarrRootFolderSync } from "./rootFolderLidarr";
 
 vi.mock("../env", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../env")>();

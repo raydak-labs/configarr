@@ -1,11 +1,11 @@
-import { Tag } from "../tags/tag.types";
-import { resolveTagNames } from "../tags/tags";
-import { DiffEntry, FieldChange } from "../diffReport/diffReport.types";
-import { logger } from "../logger";
-import { InputConfigDelayProfile } from "../types/config.types";
 import type { DelayProfilesClient } from "../clients/capabilities";
+import type { DiffEntry, FieldChange } from "../diffReport/diffReport.types";
+import { logger } from "../logger";
+import type { Tag } from "../tags/tag.types";
+import { resolveTagNames } from "../tags/tags";
+import type { InputConfigDelayProfile } from "../types/config.types";
 import { toEnumOrThrow } from "../util";
-import { DelayProfileShared, DelayProfileProtocolItem } from "./delayProfile.types";
+import type { DelayProfileProtocolItem, DelayProfileShared } from "./delayProfile.types";
 
 export interface DelayProfilesDiff {
   defaultProfileChanged: boolean;
@@ -24,7 +24,7 @@ export function splitServerDelayProfiles<T extends { tags?: number[] | null }>(
   default?: T;
   additional?: T[];
 } {
-  let defaultProfile: T | undefined = undefined;
+  let defaultProfile: T | undefined;
   const additional: T[] = [];
   for (const p of serverProfiles) {
     if (!Array.isArray(p.tags) || p.tags.length === 0) {

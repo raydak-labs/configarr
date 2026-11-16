@@ -1,7 +1,7 @@
 import type { WhisparrClient } from "../clients/whisparr-client";
+import { ConfigValidationError } from "../validation";
 import type { HostConfig } from "./hostConfigSync";
 import { syncHostConfig } from "./hostConfigSync";
-import { ConfigValidationError } from "../validation";
 
 export class WhisparrHostConfigSync {
   constructor(private readonly client: WhisparrClient) {}

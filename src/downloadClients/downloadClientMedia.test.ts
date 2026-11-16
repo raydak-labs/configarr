@@ -1,4 +1,5 @@
 import { describe, expect, test, vi } from "vitest";
+
 vi.mock("../env", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../env")>();
   return {
@@ -7,19 +8,19 @@ vi.mock("../env", async (importOriginal) => {
   };
 });
 
-import { DownloadProtocol } from "../__generated__/radarr/data-contracts";
 import type { DownloadClientResource } from "../__generated__/radarr/data-contracts";
-import type { DownloadClientsClient, TagsClient } from "../clients/capabilities";
+import { DownloadProtocol } from "../__generated__/radarr/data-contracts";
 import { ServerCache } from "../cache";
+import type { DownloadClientsClient, TagsClient } from "../clients/capabilities";
 import type { DiffEntry } from "../diffReport/diffReport.types";
 import { getEnvs } from "../env";
-import { MediaArrType } from "../types/common.types";
+import type { MediaArrType } from "../types/common.types";
 import type { InputConfigDownloadClient } from "../types/config.types";
 import type { DownloadClientSyncResult } from "./downloadClient.types";
-import { MediaDownloadClientSync } from "./downloadClientMedia";
 import { LidarrDownloadClientSync } from "./downloadClientLidarr";
-import { ReadarrDownloadClientSync } from "./downloadClientReadarr";
+import { MediaDownloadClientSync } from "./downloadClientMedia";
 import { RadarrDownloadClientSync } from "./downloadClientRadarr";
+import { ReadarrDownloadClientSync } from "./downloadClientReadarr";
 import { SonarrDownloadClientSync } from "./downloadClientSonarr";
 import { WhisparrDownloadClientSync } from "./downloadClientWhisparr";
 

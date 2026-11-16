@@ -2,13 +2,13 @@ import fs from "node:fs";
 import path from "node:path";
 import type { CustomFormatsClient } from "../clients/capabilities";
 import { getConfig } from "../config";
-import { DiffEntry } from "../diffReport/diffReport.types";
+import type { DiffEntry } from "../diffReport/diffReport.types";
 import { getEnvs } from "../env";
 import { logger } from "../logger";
-import { ConfigCustomFormatList, CustomFormatDefinitions } from "../types/config.types";
-import { TrashCF } from "../types/trashguide.types";
+import type { ConfigCustomFormatList, CustomFormatDefinitions } from "../types/config.types";
+import type { TrashCF } from "../types/trashguide.types";
 import { compareCustomFormats, loadJsonFile, mapImportCfToRequestCf, toCarrCF } from "../util";
-import { CFIDToConfigGroup, CFProcessing, ConfigarrCF, CustomFormatRef, CustomFormatRequest } from "./customFormat.types";
+import type { CFIDToConfigGroup, CFProcessing, ConfigarrCF, CustomFormatRef, CustomFormatRequest } from "./customFormat.types";
 
 export const deleteCustomFormat = async <CF extends CustomFormatRef>(client: CustomFormatsClient<CF>, customFormat: CustomFormatRef) => {
   await client.deleteCustomFormat(customFormat.id + "");
@@ -176,11 +176,13 @@ export const loadCustomFormatDefinitions = async (
 export const calculateCFsToManage = (yaml: ConfigCustomFormatList) => {
   const cfTrashToManage: Set<string> = new Set();
 
-  yaml.custom_formats.map((cf) => {
+  for (const cf of yaml.custom_formats) {
     if (cf.trash_ids) {
-      cf.trash_ids.forEach((tid) => cfTrashToManage.add(tid));
+      cf.trash_ids.forEach((tid) => {
+        cfTrashToManage.add(tid);
+      });
     }
-  });
+  }
 
   return cfTrashToManage;
 };

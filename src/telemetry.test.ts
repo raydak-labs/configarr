@@ -1,8 +1,8 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { Telemetry, getTelemetryInstance, resetTelemetryInstance } from "./telemetry";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getEnvs } from "./env";
-import { ArrType } from "./types/common.types";
-import { InputConfigArrInstance } from "./types/config.types";
+import { getTelemetryInstance, resetTelemetryInstance, Telemetry } from "./telemetry";
+import type { ArrType } from "./types/common.types";
+import type { InputConfigArrInstance } from "./types/config.types";
 
 // Mock the env
 vi.mock("./env", () => ({

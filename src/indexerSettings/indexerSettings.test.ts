@@ -1,13 +1,15 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { prepareIndexerSettings, syncIndexerSettings, type IndexerSettingsClient } from "./indexerSettings";
 import type { MergedConfigInstance } from "../types/config.types";
 import { ConfigValidationError } from "../validation";
+import { type IndexerSettingsClient, prepareIndexerSettings, syncIndexerSettings } from "./indexerSettings";
 
 vi.mock("../env", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../env")>()),
   getEnvs: vi.fn(() => ({ DRY_RUN: false, LOG_LEVEL: "fatal" })),
 }));
+
 import { getEnvs } from "../env";
+
 const instance = { custom_formats: [], quality_profiles: [] } as MergedConfigInstance;
 const indexer = {
   id: 2,
