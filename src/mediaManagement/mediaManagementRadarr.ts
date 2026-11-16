@@ -10,8 +10,8 @@ export class RadarrMediaManagementSync extends MediaManagementSync<NamingConfigR
       return null;
     }
 
-    const folderFormat = this.resolveMediaNaming("RADARR", mediaNaming.folder, trashNaming.folder, "mediaNaming.folder");
-    const standardFormat = this.resolveMediaNaming("RADARR", mediaNaming.movie?.standard, trashNaming.file, "mediaNaming.movie.standard");
+    const folderFormat = this.resolveMediaNaming("RADARR", mediaNaming.folder, trashNaming.folder);
+    const standardFormat = this.resolveMediaNaming("RADARR", mediaNaming.movie?.standard, trashNaming.file);
     const apiObject: NamingConfigResource = {
       ...(folderFormat && { movieFolderFormat: folderFormat }),
       ...(standardFormat && { standardMovieFormat: standardFormat }),

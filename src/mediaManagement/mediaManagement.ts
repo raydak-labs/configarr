@@ -55,15 +55,6 @@ export function calculateMediamanagementDiffFor<T extends { id?: number }>(serve
   };
 }
 
-type MediaNamingConfigPath =
-  | "mediaNaming.folder"
-  | "mediaNaming.movie.standard"
-  | "mediaNaming.series"
-  | "mediaNaming.season"
-  | "mediaNaming.episodes.standard"
-  | "mediaNaming.episodes.daily"
-  | "mediaNaming.episodes.anime";
-
 export interface MediaNamingMapper {
   mapNaming(mediaNaming: MediaNamingType): Promise<object | null | undefined>;
 }
@@ -79,19 +70,14 @@ export class MediaManagementSync<Naming extends { id?: number }, Management exte
     return undefined;
   }
 
-  protected resolveMediaNaming(
-    arrType: TrashArrSupported,
-    key: string | undefined,
-    trashValues: Record<string, string>,
-    configPath: MediaNamingConfigPath,
-  ): string | null {
+  protected resolveMediaNaming(arrType: TrashArrSupported, key: string | undefined, trashValues: Record<string, string>): string | null {
     if (!key) {
       return null;
     }
 
     const value = trashValues[key];
     if (value == null) {
-      logger.warn(`(${arrType}) Specified ${configPath} '${key}' could not be found in TRaSH-Guide. Check debug logs for available keys.`);
+      logger.warn(`(${arrType}) TRaSH naming key '${key}' was not found. Check debug logs for available keys.`);
       return null;
     }
 

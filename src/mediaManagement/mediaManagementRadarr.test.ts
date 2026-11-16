@@ -30,7 +30,7 @@ describe("RadarrMediaManagementSync.mapNaming", () => {
     vi.mocked(loadNamingFromTrashRadarr).mockResolvedValue({ folder: {}, file: {} });
 
     await expect(sync.mapNaming({ folder: "missing" })).resolves.toEqual({});
-    expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining("mediaNaming.folder 'missing'"));
+    expect(logger.warn).toHaveBeenCalledWith("(RADARR) TRaSH naming key 'missing' was not found. Check debug logs for available keys.");
   });
 
   it("returns null when TRaSH naming is unavailable", async () => {

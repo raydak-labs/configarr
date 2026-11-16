@@ -24,26 +24,11 @@ export class SonarrMediaManagementSync extends MediaManagementSync<NamingConfigR
       return null;
     }
 
-    const seriesFormat = this.resolveMediaNaming("SONARR", mediaNaming.series, trashNaming.series, "mediaNaming.series");
-    const seasonsFormat = this.resolveMediaNaming("SONARR", mediaNaming.season, trashNaming.season, "mediaNaming.season");
-    const standardFormat = this.resolveMediaNaming(
-      "SONARR",
-      mediaNaming.episodes?.standard,
-      trashNaming.episodes.standard,
-      "mediaNaming.episodes.standard",
-    );
-    const dailyFormat = this.resolveMediaNaming(
-      "SONARR",
-      mediaNaming.episodes?.daily,
-      trashNaming.episodes.daily,
-      "mediaNaming.episodes.daily",
-    );
-    const animeFormat = this.resolveMediaNaming(
-      "SONARR",
-      mediaNaming.episodes?.anime,
-      trashNaming.episodes.anime,
-      "mediaNaming.episodes.anime",
-    );
+    const seriesFormat = this.resolveMediaNaming("SONARR", mediaNaming.series, trashNaming.series);
+    const seasonsFormat = this.resolveMediaNaming("SONARR", mediaNaming.season, trashNaming.season);
+    const standardFormat = this.resolveMediaNaming("SONARR", mediaNaming.episodes?.standard, trashNaming.episodes.standard);
+    const dailyFormat = this.resolveMediaNaming("SONARR", mediaNaming.episodes?.daily, trashNaming.episodes.daily);
+    const animeFormat = this.resolveMediaNaming("SONARR", mediaNaming.episodes?.anime, trashNaming.episodes.anime);
     const apiObject: NamingConfigResource = {
       ...(seriesFormat && { seriesFolderFormat: seriesFormat }),
       ...(seasonsFormat && { seasonFolderFormat: seasonsFormat }),
