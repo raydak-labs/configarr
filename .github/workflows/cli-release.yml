@@ -85,33 +85,33 @@ jobs:
           SHA: ${{ steps.vars.outputs.sha }}
           BASELINE: ${{ github.event.inputs.baseline }}
         run: |
-          FLAGS=""
+          FLAGS=()
 
           if [[ "${PLATFORM}" == windows-* ]]; then
             echo "No custom flags for windows"
           else
-            FLAGS="${FLAGS} --bytecode"
+            FLAGS+=(--bytecode)
           fi
 
           if [[ "${BASELINE}" == "true" ]]; then
-            FLAGS="${FLAGS} --target=bun"
+            FLAGS+=(--target=bun)
           else
             echo "Non baseline build"
           fi
 
-          echo "Using additional build flags: $FLAGS"
+          echo "Using additional build flags: ${FLAGS[*]}"
 
           bun build src/index.ts \
             --compile --minify --sourcemap src/index.ts \
             --outfile configarr \
-            --define 'process.env.CONFIGARR_VERSION="${VERSION}"' \
-            --define 'process.env.BUILD_TIME="${BUILD_TIME}"' \
-            --define 'process.env.GITHUB_RUN_ID="${RUN_ID}"' \
-            --define 'process.env.GITHUB_REPO="${REPO}"' \
-            --define 'process.env.GITHUB_SHA="${SHA}"' \
-            --define 'process.env.BUILD_PLATFORM="${PLATFORM}"' \
+            --define "process.env.CONFIGARR_VERSION=\"${VERSION}\"" \
+            --define "process.env.BUILD_TIME=\"${BUILD_TIME}\"" \
+            --define "process.env.GITHUB_RUN_ID=\"${RUN_ID}\"" \
+            --define "process.env.GITHUB_REPO=\"${REPO}\"" \
+            --define "process.env.GITHUB_SHA=\"${SHA}\"" \
+            --define "process.env.BUILD_PLATFORM=\"${PLATFORM}\"" \
             --target="${TARGET}" \
-            $FLAGS
+            "${FLAGS[@]}"
 
       - name: Compress CLI
         run: tar -cJf configarr-${{ matrix.platform }}.tar.xz configarr*
