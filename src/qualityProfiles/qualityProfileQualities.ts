@@ -7,23 +7,14 @@ import type { QualityDefinitionShared } from "../qualityDefinitions/qualityDefin
 
 const itemName = (item: QualityItem): string | undefined => item.name ?? item.quality?.name ?? undefined;
 
-/**
- * Identity of an item inside a profile. Groups carry a top-level `name`, plain qualities only
- * `quality.name`, and both may share the same user-facing name, so the kind is part of the key.
- */
+/** Distinguish same-named groups and qualities by kind. */
 const itemKey = (item: QualityItem): string | undefined => {
   const name = itemName(item);
 
   return name == null ? undefined : `${item.name != null ? "group" : "quality"}:${name}`;
 };
 
-/**
- * Places qualities that the config does not declare back where the server has them, instead of
- * moving all of them to the top or bottom of the list. Each undeclared item is inserted after the
- * closest declared item that precedes it on the server, so declaring a subset no longer reorders
- * the rest of the profile. Items the server does not have yet still go to the top or bottom,
- * according to `quality_sort`.
- */
+/** Keep undeclared qualities near their server positions; sort only new items. */
 const mergeUndeclaredQualities = (
   declared: QualityItem[],
   undeclared: QualityItem[],
@@ -45,8 +36,7 @@ const mergeUndeclaredQualities = (
   const trailing: QualityItem[] = [];
   const after = new Map<string, QualityItem[]>();
 
-  // Place server items in their own order first; `undeclared` arrives in quality-definition order,
-  // which differs from the ranking the server stores.
+  // Undeclared input uses definition order, not server rank.
   const onServer: Array<{ item: QualityItem; index: number }> = [];
   const missingFromServer: QualityItem[] = [];
 
@@ -81,7 +71,7 @@ const mergeUndeclaredQualities = (
     }
   }
 
-  // Qualities the server does not have yet are the only ones quality_sort still positions.
+  // Only new qualities use quality_sort positioning.
   for (const item of missingFromServer) {
     (atBottom ? trailing : leading).push(item);
   }
@@ -102,7 +92,6 @@ const mergeUndeclaredQualities = (
   return merged;
 };
 
-// TODO should we use clones or not?
 export const mapQualities = (
   qd_source: QualityDefinitionShared[],
   value_source: ConfigQualityProfile,
@@ -114,17 +103,13 @@ export const mapQualities = (
   const qdMap = new Map(qd.map((obj) => [obj.quality?.name, obj]));
   const qdLookupWithTitle = new Map(qdMap);
 
-  // Add title names to map and overwrite existing ones if they exist. This acts as fallback if someone used the title we do not want to keep it user friendly.
   qdLookupWithTitle.forEach((element) => {
     if (element.title) {
       qdLookupWithTitle.set(element.title, element);
     }
   });
 
-  // Group identity. Prefer an explicit config `id`, then the id the server already uses for a group with the
-  // same name, and only then a fresh id. Deriving group ids from the config array index (1000 + i) meant that
-  // inserting or reordering a group renumbered every group that followed it and silently moved any cutoff
-  // pointing at one of them. Server items with a `name` are groups; plain qualities only have `quality.name`.
+  // Prefer explicit ids, then server ids; allocate fresh ids last.
   const existingGroupIdByName = new Map<string, number>();
 
   for (const item of existingItems ?? []) {
@@ -133,13 +118,12 @@ export const mapQualities = (
     }
   }
 
-  // ids claimed by explicit config `id`s or reused from the server, so freshly allocated ids never collide
+  // Track claimed ids to prevent collisions.
   const claimedIdToGroupName = new Map<number, string>();
   const groupIdByName = new Map<string, number>();
   const groupNames = new Set<string>();
 
-  // First pass: explicit ids are reserved before any server id is reused by name, so an explicit id
-  // wins over name matching even when the group it collides with is declared earlier in the config.
+  // Reserve explicit ids before reusing server ids.
   for (const obj of value.qualities) {
     const isGroup = (obj.qualities?.length ?? 0) > 0;
 
@@ -163,9 +147,7 @@ export const mapQualities = (
       continue;
     }
 
-    // Lenient config validation keeps the raw value, so this range check has to exist at runtime too.
-    // The id shares its number space with the plain quality ids used by `cutoff`, which are small
-    // (1..N); a group id below 1000 could match a quality and make `cutoff` ambiguous on the server.
+    // Lenient input needs a runtime range check; low ids can collide with cutoffs.
     if (typeof obj.id !== "number" || !Number.isInteger(obj.id) || obj.id < 1000) {
       throw new ConfigValidationError(`QualityProfile '${value.name}': quality group '${obj.name}' id must be an integer >= 1000`);
     }
@@ -182,8 +164,7 @@ export const mapQualities = (
     groupIdByName.set(obj.name, obj.id);
   }
 
-  // Second pass: reuse the id the server already uses for a group with the same name, unless an
-  // explicit id claimed it already.
+  // Reuse unclaimed server group ids.
   for (const obj of value.qualities) {
     if ((obj.qualities?.length ?? 0) === 0 || obj.id != null) {
       continue;
@@ -272,7 +253,6 @@ export const mapQualities = (
     missingQualities.push({
       allowed: false,
       items: [],
-      //id: qualIndex++, // ID not allowed if not enabled
       quality: {
         id: value.quality?.id,
         name: key,
@@ -281,23 +261,19 @@ export const mapQualities = (
     });
   }
 
-  // Ordering of items in the array matters of how they will be displayed. First is last.
-  // Need to double check if always works as expected also regarding of templates etc.
+  // API arrays use reverse display order.
 
   const orderedQualities = allowedQualities.reverse();
 
-  // With an existing profile, keep undeclared qualities where the server has them. Moving them all
-  // to the top or bottom reordered the preference ranking even when the config only changed a
-  // single group.
+  // Preserve server positions for undeclared qualities.
   if (existingItems?.length && missingQualities.length > 0) {
     return mergeUndeclaredQualities(orderedQualities, missingQualities, existingItems, value.quality_sort === "bottom");
   }
 
-  // TODO no sure if a useful feature
   if (value.quality_sort === "bottom") {
     return [...orderedQualities, ...missingQualities];
   } else {
-    // default = top
+    // quality_sort defaults to top.
     return [...missingQualities, ...orderedQualities];
   }
 };
@@ -316,7 +292,7 @@ export const isOrderOfQualitiesEqual = (arr1: QualityItem[], arr2: QualityItem[]
       return false;
     }
 
-    // Group ids are stable now (see mapQualities), so a differing id means the config asks for another id.
+    // Ids distinguish otherwise identical groups.
     if (element1.id !== element2.id) {
       return false;
     }
@@ -336,14 +312,7 @@ export const isOrderOfQualitiesEqual = (arr1: QualityItem[], arr2: QualityItem[]
   return true;
 };
 
-/**
- * Method to check if the order of qualities in the configuration syntax is equals.
- * Does not check nested qualities!
- * @deprecated
- * @param obj1
- * @param obj2
- * @returns
- */
+/** @deprecated Compares top-level config quality names only. */
 export const isOrderOfConfigQualitiesEqual = (obj1: ConfigQualityProfileItem[], obj2: ConfigQualityProfileItem[]) => {
   if (obj1.length !== obj2.length) {
     return false;
@@ -358,11 +327,7 @@ export const isOrderOfConfigQualitiesEqual = (obj1: ConfigQualityProfileItem[], 
   return true;
 };
 
-/**
- * Resolves the cutoff ID to use when upgrades are disabled.
- * Prefers `untilQuality` when provided; falls back to the highest-priority
- * allowed quality in the mapped list. Throws when no allowed quality exists.
- */
+/** Resolve disabled-upgrade cutoff from untilQuality or the highest allowed quality. */
 export const getDisabledUpgradeCutoff = (
   mappedQualities: QualityItem[],
   qualityToId: Map<string, number>,
@@ -374,8 +339,7 @@ export const getDisabledUpgradeCutoff = (
     if (id != null) return id;
   }
 
-  // mappedQualities is in API order (reversed from config), so the last item is
-  // the highest-priority quality in user config.
+  // API order is reversed; the last allowed item has highest priority.
   const fallback = mappedQualities
     .slice()
     .reverse()
@@ -395,14 +359,7 @@ export const getDisabledUpgradeCutoff = (
   return fallbackId;
 };
 
-/**
- * Moves a cutoff the server already stores onto the id namespace of the profile about to be written.
- *
- * Group ids are profile-local tags: when an explicit id forces a group onto a new number, the cutoff
- * has to follow the item's name rather than its old number, or it would point at another group. The
- * server also requires the cutoff item to be allowed, so return undefined when it is not, letting the
- * caller fall back to a deterministic choice.
- */
+/** Remap cutoff by item identity; invalid targets return undefined. */
 export const translateServerCutoff = (
   serverCutoff: number | undefined,
   serverItems: QualityItem[] | null | undefined,
@@ -419,8 +376,7 @@ export const translateServerCutoff = (
     return undefined;
   }
 
-  // Match the kind as well: a plain quality may share its name with a group, and only the same
-  // item should keep the cutoff.
+  // Match kind so same-named groups and qualities stay distinct.
   const next = nextItems.find((item) => itemKey(item) === previousKey);
 
   if (next == null || next.allowed === false) {

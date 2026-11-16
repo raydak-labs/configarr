@@ -111,10 +111,7 @@ export function redactUrlValue(value: unknown): unknown {
   }
 }
 
-/**
- * Mask secret-named keys and `{ name, value }` pairs. Custom-format diffs can contain whole
- * `specifications[].fields` arrays, so nested values need the same protection as field names.
- */
+/** Mask secret-named keys and nested `{ name, value }` pairs. */
 export function redactSecrets(value: unknown): unknown {
   if (Array.isArray(value)) {
     return value.map(redactSecrets);
@@ -139,10 +136,7 @@ export function redactSecrets(value: unknown): unknown {
   );
 }
 
-/**
- * Redact at the collector boundary so console and JSON formatters share protection.
- * Secret equality is checked upstream while plaintext remains available.
- */
+/** Redact at the collector boundary; secret equality is checked upstream. */
 export function redactDiffEntry(entry: DiffEntry): DiffEntry {
   if (!entry.fieldChanges) {
     return entry;

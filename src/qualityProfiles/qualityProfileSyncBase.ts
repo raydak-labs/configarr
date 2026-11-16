@@ -24,10 +24,7 @@ export abstract class BaseQualityProfileSync<T extends QualityProfileShared> {
 
   constructor(protected readonly api: QualityProfilesClient<T>) {}
 
-  /**
-   * The diff pipeline produces the shared profile shape; each *arr writes it as its own
-   * generated `QualityProfileResource`, which is what `QualityProfilesClient<T>` accepts.
-   */
+  /** Convert the shared diff shape to the app-specific server resource. */
   protected abstract toServerProfile(profile: QualityProfileShared): T;
 
   protected abstract resolveLanguage(
@@ -109,7 +106,6 @@ export abstract class BaseQualityProfileSync<T extends QualityProfileShared> {
     config: MergedConfigInstance,
     serverCache: ServerCache,
   ): Promise<QualityProfileDiffResult> {
-    // TODO maybe improve?
     const scoring = mapQualityProfiles(cfMap, config);
     const qpMerged = new Map(config.quality_profiles.map((obj) => [obj.name, obj]));
     const serverQualityProfiles = serverCache.qualityProfiles;
@@ -192,8 +188,7 @@ export abstract class BaseQualityProfileSync<T extends QualityProfileShared> {
           const cutoffId = getDisabledUpgradeCutoff(mappedQualities, qualityToId, value.upgrade.until_quality, name);
 
           newP.cutoff = cutoffId;
-          // Upgrades are disabled, but until_score is still the cutoff score the config expects.
-          // Forcing 1 rewrote every profile that had it set to 0.
+          // Preserve configured until_score; forcing 1 rewrites valid zero scores.
           newP.cutoffFormatScore = value.upgrade.until_score ?? 1;
           newP.upgradeAllowed = false;
           this.attachMinUpgradeOnCreate(newP, 1);
@@ -211,7 +206,6 @@ export abstract class BaseQualityProfileSync<T extends QualityProfileShared> {
 
       let diffExist = false;
 
-      // TODO do we want to enforce the whole structure or only match those which are enabled by us?
       if (!isOrderOfQualitiesEqual(mappedQualities, serverMatch.items || [])) {
         logger.debug(`QualityProfile quality order mismatch.`);
         diffExist = true;
@@ -249,7 +243,6 @@ export abstract class BaseQualityProfileSync<T extends QualityProfileShared> {
           fieldChanges.push({ field: "upgradeAllowed", from: serverMatch.upgradeAllowed, to: value.upgrade.allowed });
         }
 
-        // Further diffs only necessary if upgrade is allowed
         if (value.upgrade.allowed) {
           if (value.upgrade.until_quality == null) {
             throw new ConfigValidationError(`QualityProfile '${name}': upgrade.until_quality is required when upgrade.allowed is true`);
@@ -280,14 +273,8 @@ export abstract class BaseQualityProfileSync<T extends QualityProfileShared> {
             diffExist = true;
           }
         } else {
-          // With upgrades disabled the *arr apps ignore cutoff and cutoffFormatScore at decision
-          // time, but the API still validates cutoff against an allowed item. When the config does
-          // not name a cutoff, keep the server value (translated onto the remapped ids) instead of
-          // inventing one and clobbering changes made outside configarr.
-          //
-          // Use the items that will actually be written: when the order is unchanged,
-          // `updatedServerObject` keeps the server items, including undeclared qualities that
-          // `mappedQualities` marks as disabled only because the config does not list them.
+          // Preserve and remap disabled-upgrade cutoffs when config omits them.
+          // Effective write items keep undeclared enabled qualities valid as cutoffs.
           const effectiveItems = updatedServerObject.items ?? mappedQualities;
           const cutoffId =
             value.upgrade.until_quality == null
@@ -318,7 +305,7 @@ export abstract class BaseQualityProfileSync<T extends QualityProfileShared> {
         diffExist = true;
       }
 
-      // CFs matching. Hint: make sure to execute the method with updated CFs. Otherwise if we create CFs and update existing profiles those could be missing.
+      // Use refreshed custom formats so new or updated entries are included.
       const serverProfileCFMap = new Map(serverMatch.formatItems!.map((obj) => [obj.name!, obj]));
 
       let scoringDiff = false;
@@ -330,7 +317,6 @@ export abstract class BaseQualityProfileSync<T extends QualityProfileShared> {
           const serverCF = serverProfileCFMap.get(scoreKey);
           serverProfileCFMap.delete(scoreKey);
 
-          // TODO (1): check where best handled
           if (scoreValue.score == null) {
             if (value.reset_unmatched_scores?.enabled && !resetScoreExceptions.has(scoreKey) && serverCF?.score !== 0) {
               scoringDiff = true;
@@ -396,7 +382,7 @@ export abstract class BaseQualityProfileSync<T extends QualityProfileShared> {
     }
 
     for (const unmanagedServerQp of serverQpsUnmanaged) {
-      // CFs matching. Hint: make sure to execute the method with updated CFs. Otherwise if we create CFs and update existing profiles those could be missing.
+      // Use refreshed custom formats so new or updated entries are included.
       const serverProfileCFMap = new Map(unmanagedServerQp.formatItems!.map((obj) => [obj.name!, obj]));
       const scoringForQP = scoring.get(unmanagedServerQp.name!);
       let scoringDiff = false;
@@ -410,7 +396,6 @@ export abstract class BaseQualityProfileSync<T extends QualityProfileShared> {
           const serverCF = serverProfileCFMap.get(scoreKey);
           serverProfileCFMap.delete(scoreKey);
 
-          // TODO (1): check where best handled
           if (scoreValue.score == null) {
             newCFFormats.push({ ...serverCF });
           } else {

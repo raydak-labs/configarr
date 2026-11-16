@@ -52,7 +52,7 @@ const mergeAndReduceCustomFormats = (cfs: InputConfigCustomFormat[]) => {
         const hasUseDefaultScore = qp.use_default_score === true;
 
         if (!existing.has(qp.name)) {
-          // If use_default_score is true, set score to undefined (will use default during resolution)
+          // Undefined score selects the TRaSH default during resolution.
           existing.set(qp.name, {
             score: hasUseDefaultScore ? undefined : qp.score,
             use_default_score: hasUseDefaultScore,
@@ -60,14 +60,14 @@ const mergeAndReduceCustomFormats = (cfs: InputConfigCustomFormat[]) => {
         } else {
           const current = existing.get(qp.name)!;
 
-          // If use_default_score is explicitly set to true, always override
+          // Explicit default overrides earlier scores.
           if (hasUseDefaultScore) {
             existing.set(qp.name, { score: undefined, use_default_score: true });
           } else if (qp.score != null && qp.score != current.score) {
-            // If explicit score is set and different from current, update it
+            // A new explicit score replaces the current score.
             existing.set(qp.name, { score: qp.score, use_default_score: false });
           }
-          // Otherwise, keep existing value (passive - no override)
+          // Keep the current score otherwise.
         }
       });
     });
@@ -89,12 +89,6 @@ const mergeAndReduceCustomFormats = (cfs: InputConfigCustomFormat[]) => {
   });
 };
 
-/**
- * Load data from trash, recyclarr, custom configs and merge.
- * Afterwards do sanitize and check against required configuration.
- * @param instanceConfig
- * @param arrType
- */
 function mergeQualitySizes(
   previous: ConfigQualityProfile["quality_sizes"],
   current: ConfigQualityProfile["quality_sizes"],
@@ -109,10 +103,7 @@ function mergeQualitySizes(
   return [...merged.values()];
 }
 
-/**
- * Merge global configuration, instance configuration, and referenced templates into a single instance configuration.
- * Returns the merged configuration instance, or throws a ConfigValidationError if validation fails.
- */
+/** Merge global, template, and instance config into one validated instance. */
 export const mergeConfigsAndTemplates = async (
   globalConfig: InputConfigSchema,
   instanceConfig: InputConfigArrInstance,
@@ -125,7 +116,6 @@ export const mergeConfigsAndTemplates = async (
   let trashQDTemplates: Map<string, TrashQualityDefinition> = new Map();
   let trashCFGroupMapping: TrashCFGroupMapping = new Map();
   if (arrType === "RADARR" || arrType === "SONARR") {
-    // TODO: separation maybe not the best. Maybe time to split up processing for each arrType
     recyclarrTemplateMap = loadRecyclarrTemplates(arrType);
     trashTemplates = await loadQPFromTrash(arrType);
     trashQDTemplates = await loadAllQDsFromTrash(arrType);
@@ -138,9 +128,7 @@ export const mergeConfigsAndTemplates = async (
     custom_formats: [],
     quality_profiles: [],
   };
-  // Determine which CF group semantics to use based on compatibility flag
-  // When true: use old "exclude" semantics (apply to all except excluded)
-  // When false/undefined: use new "include" semantics (apply only to included)
+  // Legacy flag selects exclude semantics; default is include semantics.
   const useExcludeSemantics = globalConfig.compatibilityTrashGuide20260219Enabled === true;
   const supportsProfileQualitySizes = arrType === "SONARR" && options.supportsProfileQualitySizes === true;
   const autoTrashCfGroupDefaults: TransformTrashQPCFGroupsOptions = {
@@ -174,7 +162,7 @@ export const mergeConfigsAndTemplates = async (
     );
   }
 
-  // Now handle instanceConfig custom_format_groups before direct custom_formats
+  // Expand groups before direct custom formats.
   if (instanceConfig.custom_format_groups) {
     expandAndAppendCustomFormatGroups(instanceConfig.custom_format_groups, trashCFGroupMapping, mergedTemplates, cfGroupOptions);
   }
@@ -190,12 +178,12 @@ export const mergeConfigsAndTemplates = async (
     mergedTemplates.delete_unmanaged_quality_profiles = instanceConfig.delete_unmanaged_quality_profiles;
   }
 
-  // Instance labels win over a template's, matching delay_profiles.
+  // Instance tags override template tags.
   if (instanceConfig.tags) {
     mergedTemplates.tags = instanceConfig.tags;
   }
 
-  // Unions the ignore lists: a template's protected tags stay protected when an instance adds its own.
+  // Keep template-protected tags when merging instance ignores.
   if (instanceConfig.delete_unmanaged_tags) {
     mergedTemplates.delete_unmanaged_tags = {
       enabled: instanceConfig.delete_unmanaged_tags.enabled,
@@ -206,9 +194,7 @@ export const mergeConfigsAndTemplates = async (
   }
 
   if (instanceConfig.quality_profiles) {
-    // Boundary assertion: user-authored quality_profiles are documented/conventionally expected
-    // to be fully specified (see examples/full), unlike template-sourced profiles which start
-    // partial and get filled in by the merge/reduce steps below. Not independently verified here.
+    // User profiles must be complete; templates are completed during merging.
     mergedTemplates.quality_profiles.push(...(instanceConfig.quality_profiles as ConfigQualityProfile[]));
   }
 
@@ -269,7 +255,6 @@ export const mergeConfigsAndTemplates = async (
     }
   }
 
-  // Rename quality profiles
   if (instanceConfig.renameQualityProfiles && instanceConfig.renameQualityProfiles.length > 0) {
     const renameOrder: string[] = [];
 
@@ -312,7 +297,6 @@ export const mergeConfigsAndTemplates = async (
     }
   }
 
-  // Cloning quality profiles
   if (instanceConfig.cloneQualityProfiles && instanceConfig.cloneQualityProfiles.length > 0) {
     const cloneOrder: string[] = [];
 
@@ -397,8 +381,7 @@ export const mergeConfigsAndTemplates = async (
   if (instanceConfig.metadata_profiles) {
     mergedTemplates.metadata_profiles = [...(mergedTemplates.metadata_profiles || []), ...instanceConfig.metadata_profiles];
 
-    // Merge by name: if a profile with the same name exists in both template and instance,
-    // instance config takes precedence (overwrites)
+    // Instance metadata profiles override same-named template profiles.
     const metadataProfilesByName = new Map<string, InputConfigMetadataProfile>();
 
     for (const profile of mergedTemplates.metadata_profiles) {
@@ -424,7 +407,7 @@ export const mergeConfigsAndTemplates = async (
   }
 
   if (mergedTemplates.root_folders) {
-    // cleanup duplicates by path
+    // Keep the first root folder for each path.
     const seenPaths = new Set<string>();
     mergedTemplates.root_folders = mergedTemplates.root_folders.filter((folder) => {
       const path = typeof folder === "string" ? folder : folder.path;
@@ -436,7 +419,6 @@ export const mergeConfigsAndTemplates = async (
     });
   }
 
-  // Overwrite delay_profiles if defined in instanceConfig
   if (instanceConfig.delay_profiles) {
     mergedTemplates.delay_profiles = instanceConfig.delay_profiles;
   }
@@ -448,7 +430,6 @@ export const mergeConfigsAndTemplates = async (
     }
   }
 
-  // Merge download_clients if defined in instanceConfig
   if (instanceConfig.download_clients) {
     const existingData = mergedTemplates.download_clients?.data || [];
     const instanceData = instanceConfig.download_clients.data || [];
@@ -476,16 +457,12 @@ export const mergeConfigsAndTemplates = async (
   }
 
   if (mergedTemplates.custom_formats && mergedTemplates.custom_formats.length > 0) {
-    // Merge custom formats with same trash_ids
     mergedTemplates.custom_formats = mergeAndReduceCustomFormats(mergedTemplates.custom_formats);
   }
 
   const validatedConfig = validateConfig(mergedTemplates);
-  // Log the shape only: the merged config carries download client `fields`, which hold
-  // plaintext passwords and API keys, and debug output routinely ends up in bug reports.
+  // Log section names only; download-client fields contain secrets.
   logger.debug(`Merged config sections: '${Object.keys(validatedConfig).join(", ")}'`);
-
-  // TODO: Decide whether local templates should contribute custom format definitions even when they are not explicitly included.
 
   return { config: validatedConfig };
 };

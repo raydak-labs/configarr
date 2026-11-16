@@ -61,10 +61,7 @@ export function filterConfigarrReleaseProfiles(
   return ours;
 }
 
-/**
- * Merge a single template into the accumulated instance template mapping.
- * Applies template rules and settings into the target merged template object.
- */
+/** Merge one Recyclarr-shaped template into accumulated config. */
 const includeRecyclarrTemplate = (
   template: MappedTemplates,
   {
@@ -77,11 +74,10 @@ const includeRecyclarrTemplate = (
     cfGroupOptions?: TransformTrashCFGroupsOptions;
   },
 ) => {
-  // First expand and append group custom formats
   if (template.custom_format_groups) {
     expandAndAppendCustomFormatGroups(template.custom_format_groups, trashCFGroupMapping, mergedTemplates, cfGroupOptions);
   }
-  // Then push direct custom formats after, so they always win
+  // Direct custom formats override group-expanded entries.
   if (template.custom_formats) {
     mergedTemplates.custom_formats.push(...template.custom_formats);
   }
@@ -117,8 +113,7 @@ const includeRecyclarrTemplate = (
     mergedTemplates.delete_unmanaged_metadata_profiles = template.delete_unmanaged_metadata_profiles;
   }
 
-  // Collectives accumulate across templates so a later include cannot drop what an earlier one
-  // contributed; the instance config still overrides, since it runs last.
+  // Accumulate collective settings; instance config overrides them last.
   if (template.tags) {
     mergedTemplates.tags = [...new Set([...(mergedTemplates.tags ?? []), ...template.tags])];
   }
@@ -182,13 +177,12 @@ const includeRecyclarrTemplate = (
     };
   }
 
-  // TODO Ignore recursive include for now
   if (template.include) {
     logger.warn(`Recursive includes not supported at the moment. Ignoring.`);
   }
 };
 
-// TODO: local TRaSH-Guides QP templates do not work yet
+// Local TRaSH quality-profile templates are unsupported.
 const includeTrashTemplate = (
   template: TrashQP,
   {
@@ -231,12 +225,10 @@ const includeTrashTemplate = (
     }
   }
 
-  // useExcludeSemantics=true means use old TRaSH-Guides behavior (before Feb 2026)
-  // This affects both CF groups semantics and quality ordering
+  // Legacy exclude semantics affect CF groups and quality ordering.
   mergedTemplates.quality_profiles.push(transformTrashQPToTemplate(template, useExcludeSemantics, qualitySizes));
   mergedTemplates.custom_formats.push(transformTrashQPCFs(template));
 
-  // For TrashGuide profiles, check and include default CF groups
   const requiredCFsFromCFGroups = transformTrashQPCFGroups(template, trashCFGroupMapping, useExcludeSemantics, autoTrashCfGroupOptions);
 
   const numberOfCfsLoaded = requiredCFsFromCFGroups.reduce((p, c) => {
@@ -244,7 +236,6 @@ const includeTrashTemplate = (
     return p;
   }, new Set<string>());
 
-  // Log how many CFs were loaded from groups
   logger.info(`Loaded ${numberOfCfsLoaded.size} default CFs from CF-Groups for TRaSH-Guide profile '${template.name}'`);
   mergedTemplates.custom_formats.push(...requiredCFsFromCFGroups);
 };
@@ -313,7 +304,6 @@ export const includeTemplateOrderDefault = async (
     url: InputConfigIncludeItem[];
   }>(
     (previous, current) => {
-      // Check if template is a URL - all URLs go to url array, source is passed to loader
       if (isUrl(current.template)) {
         previous.url.push(current);
         return previous;
@@ -328,7 +318,7 @@ export const includeTemplateOrderDefault = async (
           }
           break;
         case "RECYCLARR":
-        // RECYCLARR intentionally shares LOCAL fallback matching; strict separation would break defaults.
+        // RECYCLARR shares LOCAL fallback matching for backward compatibility.
         case undefined:
           let recyclarrFound = false;
           let localFound = false;
@@ -364,7 +354,7 @@ export const includeTemplateOrderDefault = async (
     `Found ${include.length} templates to include. Mapped to [recyclarr]=${mappedIncludes.recyclarr.length}, [local]=${mappedIncludes.local.length}, [trash]=${mappedIncludes.trash.length}, [url]=${mappedIncludes.url.length} ...`,
   );
 
-  // Load URL templates up front so profiles can resolve quality definitions regardless of include order.
+  // Load URLs first so quality definitions resolve in any include order.
   const urlTemplates: { include: InputConfigIncludeItem; template: MappedTemplates | TrashQP | TrashQualityDefinition }[] = [];
   for (const e of mappedIncludes.url) {
     const resolvedTemplate = await loadTemplateFromUrl(e.template, e.source);
@@ -379,9 +369,7 @@ export const includeTemplateOrderDefault = async (
     urlTemplates.push({ include: e, template: resolvedTemplate });
   }
 
-  // Process URL templates in their configured order.
   for (const { include: e, template: resolvedTemplate } of urlTemplates) {
-    // Route to appropriate handler based on source
     if (e.source === "TRASH") {
       if (isTrashQualityDefinition(resolvedTemplate)) {
         applyQualityDefinitionFromInclude(resolvedTemplate, e.preferred_ratio, mergedTemplates);
@@ -402,7 +390,7 @@ export const includeTemplateOrderDefault = async (
   }
 
   mappedIncludes.trash.forEach((e) => {
-    // Check QD map first — quality definitions have a different structure than quality profiles
+    // Quality definitions and profiles use different handlers.
     const qdTemplate = trashQD.get(e.template.toLowerCase());
     if (qdTemplate) {
       applyQualityDefinitionFromInclude(qdTemplate, e.preferred_ratio, mergedTemplates);
