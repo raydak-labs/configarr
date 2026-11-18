@@ -1495,21 +1495,23 @@ supported API version. Relative folders stay under wherever the app data directo
 mounted; absolute folders point at a path on the *arr server. The server validates the
 configured range, so limits may differ between apps and versions.
 
-Versions that expose an `allowedHosts` host setting (for example Sonarr v5 and current
-Lidarr, Readarr, Whisparr, Prowlarr and Radarr builds) reject a host-settings write when
-authentication is not `enabled` and that list is empty. Set a non-empty `allowedHosts`
+Versions that expose an `allowedHosts` host setting (for example Sonarr 4.0.20+ and v5,
+Radarr v6/v7 and current Lidarr, Whisparr and Prowlarr builds) reject a host-settings write
+when authentication is not `enabled` and that list is empty. Set a non-empty `allowedHosts`
 on such an instance (or enable authentication) before managing the backup policy.
-Sonarr v4 has no `allowedHosts` field and does not require it.
+Older builds without the field (for example Sonarr 4.0.16 and earlier, Radarr v5 and
+Readarr 0.4) do not require it.
 
 Host-settings writes replace the whole resource. Changes made in the *arr UI between
 configarr's read and its write are overwritten, so avoid editing host settings while a run
 is applying them.
 
-On Sonarr v4, `/api/v3/config/host` does not return the stored `trustCgnatIpAddresses`
-value, and its PUT binds that field as a boolean that defaults to `false`. Applying a
-backup-policy change on Sonarr v4 therefore resets `trustCgnatIpAddresses` to `false` when
-it was `true`; set it again afterwards if a reverse proxy depends on it. Sonarr v5 and the
-other \*arr apps do not expose this Sonarr v4 field in the host resource.
+The `/api/v3/config/host` and `/api/v1/config/host` endpoints (Sonarr v4, Radarr,
+Whisparr, Readarr, Lidarr and Prowlarr) do not return the stored `trustCgnatIpAddresses`
+value, and their PUT binds that field as a boolean that defaults to `false`. Applying a
+host-settings change on these apps therefore resets `trustCgnatIpAddresses` to `false`
+when it was `true`; set it again afterwards if a reverse proxy depends on it. Sonarr v5
+(`/api/v5/settings/general`) does not have this field and is not affected.
 
 ### Authentication and TLS
 
