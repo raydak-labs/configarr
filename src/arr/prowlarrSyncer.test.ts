@@ -14,7 +14,11 @@ const loadServerTags = vi.fn(async () => [{ id: 1, label: "keep" }]);
 const syncNotifications = vi.fn(async () => [{ resourceType: "Notification", name: "n", action: "create" as const }]);
 const validateNotifications = vi.fn(async () => undefined);
 
-const prowlarrClient = { getSystemStatus: vi.fn(async () => ({ version: "1" })) };
+const prowlarrClient = {
+  getSystemStatus: vi.fn(async () => ({ version: "1" })),
+  getHostConfig: vi.fn(async () => ({ id: 1, backupFolder: "Backups", backupInterval: 7, backupRetention: 28 })),
+  updateHostConfig: vi.fn(async () => undefined),
+};
 vi.mock("../logger", () => ({ logger: { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
 vi.mock("../clients/client", () => ({ getClient: vi.fn(() => prowlarrClient) }));
 vi.mock("../prowlarr/prowlarrSyncer", () => ({ syncProwlarrProviders: (...args: unknown[]) => syncProviders(...(args as [])) }));
@@ -67,6 +71,25 @@ describe("ProwlarrSyncer", () => {
     await new ProwlarrSyncer().run(instance({ tags: ["declared"] }), "e2e");
 
     expect(deleteUnmanagedInstanceTags.mock.calls[0]![2]).toMatchObject({ instanceLabels: ["declared"] });
+  });
+
+  it("syncs the backup policy from host_config", async () => {
+    const report = await new ProwlarrSyncer().run(instance({ host_config: { backup_interval: 1 } }), "e2e");
+
+    expect(prowlarrClient.updateHostConfig).toHaveBeenCalledWith(
+      "1",
+      expect.objectContaining({ backupFolder: "Backups", backupInterval: 1, backupRetention: 28 }),
+    );
+    expect(report.entries).toContainEqual(
+      expect.objectContaining({ resourceType: "HostConfig", fieldChanges: [{ field: "backupInterval", from: 7, to: 1 }] }),
+    );
+  });
+
+  it("rejects authentication host_config before syncing providers", async () => {
+    await expect(new ProwlarrSyncer().run(instance({ host_config: { oidcScopes: "openid" } }), "e2e")).rejects.toThrow(
+      "Prowlarr host_config supports only",
+    );
+    expect(syncProviders).not.toHaveBeenCalled();
   });
 
   it("skips tag cleanup when a download client change failed", async () => {

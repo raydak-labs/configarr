@@ -40,6 +40,7 @@ import {
   nonE2eNames,
   preservedRootFolderPaths,
   restoreMediaBaseline,
+  seedHostConfigWrite,
   snapshotMediaBaseline,
   stripVolatile,
   syncConfig,
@@ -87,6 +88,7 @@ describe("radarr (live)", () => {
     }
     await cleanupMediaIndexerFixtures(client, baseUrl, apiKey, "v3");
     await cleanupMediaE2e(client);
+    await seedHostConfigWrite(client);
     const snapshot = await snapshotMediaBaseline(client);
     const [profiles, tags] = await Promise.all([client.getDelayProfiles(), client.getTags()]);
     preexistingDelayProfileIds = new Set(profiles.flatMap((profile) => (profile.id == null ? [] : [profile.id])));
@@ -159,18 +161,7 @@ describe("radarr (live)", () => {
       if (!response.ok) throw new Error(`Failed to load host settings: ${response.status}`);
       return response.json();
     };
-    let original = await read();
-    // The fixture disables local authentication; v7 requires a nonempty allowed-hosts
-    // list on any General-settings write, even when it booted with an empty default.
-    if (!original.allowedHosts) {
-      const response = await fetch(`${baseUrl}/api/v3/config/host/${original.id}`, {
-        method: "PUT",
-        headers,
-        body: JSON.stringify({ ...original, allowedHosts: "localhost,127.0.0.1" }),
-      });
-      if (!response.ok) throw new Error(`Failed to prepare host settings: ${response.status}`);
-      original = await read();
-    }
+    const original = await read();
     const scopes = original.oidcScopes === "openid profile" ? "openid email" : "openid profile";
     try {
       const config = mediaConfig("RADARR", { host_config: { oidcScopes: scopes } });
@@ -226,6 +217,27 @@ describe("radarr (live)", () => {
     expect(run.result.exitCode).not.toBe(0);
     expect(run.result.stdout + run.result.stderr).toContain("host_config requires Radarr v7 or Sonarr v5");
     expect((await client.getUiConfig()).firstDayOfWeek).toBe(before.firstDayOfWeek);
+  });
+
+  test("syncs the backup policy on every Radarr version", async () => {
+    const original = await client.getHostConfig();
+    const backup_interval = original.backupInterval === 7 ? 1 : 7;
+    const backup_retention = original.backupRetention === 28 ? 7 : 28;
+    const backup_folder = original.backupFolder === "Backups-e2e" ? "Backups" : "Backups-e2e";
+    try {
+      const config = mediaConfig("RADARR", { host_config: { backup_folder, backup_interval, backup_retention } });
+      const first = await syncConfig(config);
+      assertPipelineSucceeded(first.result, ["RADARR"]);
+      const updated = await client.getHostConfig();
+      expect(updated.backupInterval).toBe(backup_interval);
+      expect(updated.backupRetention).toBe(backup_retention);
+      expect(updated.backupFolder).toBe(backup_folder);
+      const second = await syncConfig(config, first.workspace);
+      assertPipelineSucceeded(second.result, ["RADARR"]);
+      assertDiffUpToDate(second.result, ["RADARR"]);
+    } finally {
+      await client.updateHostConfig(String(original.id), original);
+    }
   });
 
   test("syncs host settings, metadata, and an import list in one run", async () => {

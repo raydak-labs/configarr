@@ -1,13 +1,15 @@
+import type { HostConfigResource } from "../__generated__/prowlarr/data-contracts";
 import { ServerCache } from "../cache";
 import { getClient } from "../clients/client";
 import { DiffCollector } from "../diffReport/diffCollector";
 import type { InstanceDiffReport } from "../diffReport/diffReport.types";
 import { ProwlarrDownloadClientSync } from "../downloadClients/downloadClientProwlarr";
+import { BackupHostConfigSync } from "../hostConfig/hostConfigSync";
 import { logger } from "../logger";
 import { syncNotifications, validateNotifications } from "../notifications/notifications";
 import { syncProwlarrProviders } from "../prowlarr/prowlarrSyncer";
 import { deleteUnmanagedInstanceTags, loadServerTags } from "../tags/tags";
-import { InputConfigNotificationsSchema, type InputConfigProwlarrInstance } from "../types/config.types";
+import { HostConfigSchema, InputConfigNotificationsSchema, type InputConfigProwlarrInstance } from "../types/config.types";
 import { ConfigValidationError } from "../validation";
 
 export class ProwlarrSyncer {
@@ -33,6 +35,17 @@ export class ProwlarrSyncer {
       }
       instance.notifications = parsed.data;
       await validateNotifications(client, instance.notifications);
+    }
+
+    if (instance.host_config !== undefined) {
+      const parsed = HostConfigSchema.safeParse(instance.host_config);
+      if (!parsed.success) {
+        throw new ConfigValidationError("Invalid host_config: " + parsed.error.issues.map((issue) => issue.message).join("; "));
+      }
+      const hostConfig = new BackupHostConfigSync<HostConfigResource>(client, "Prowlarr");
+      hostConfig.validate(parsed.data, system.version);
+      instance.host_config = parsed.data;
+      diffCollector.add(await hostConfig.sync(parsed.data));
     }
 
     // ServerCache is media-manager shaped; Prowlarr only needs its tags and download-client schema slots.

@@ -1,8 +1,9 @@
-import { DownloadProtocol } from "../__generated__/readarr/data-contracts";
+import { DownloadProtocol, type HostConfigResource } from "../__generated__/readarr/data-contracts";
 import { getClient } from "../clients/client";
 import { StandardDelayProfileSync } from "../delayProfiles/delayProfileBase";
 import type { InstanceDiffReport } from "../diffReport/diffReport.types";
 import { ReadarrDownloadClientSync } from "../downloadClients/downloadClientReadarr";
+import { BackupHostConfigSync } from "../hostConfig/hostConfigSync";
 import { MediaManagementSync } from "../mediaManagement/mediaManagement";
 import { ReadarrMetadataProfileSync } from "../metadataProfiles/metadataProfileReadarr";
 import { QualityDefinitionSync } from "../qualityDefinitions/qualityDefinition";
@@ -32,6 +33,7 @@ export class ReadarrSyncer {
         root: new ReadarrRootFolderSync(client),
         downloadClients: new ReadarrDownloadClientSync(client),
         indexerConfig: client,
+        hostConfig: new BackupHostConfigSync<HostConfigResource>(client, "Readarr"),
       },
     });
     const metadataSync = new ReadarrMetadataProfileSync(client);

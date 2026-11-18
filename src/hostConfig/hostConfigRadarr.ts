@@ -6,7 +6,16 @@ import type { HostConfig } from "./hostConfigSync";
 import { HostConfigSync } from "./hostConfigSync";
 
 function mapRadarrHostConfig(config: HostConfig) {
-  const { update_oidc_client_secret, authenticationMethod, authenticationRequired, ...fields } = config;
+  // Backup settings are mapped by the base class; the remaining keys are host API fields.
+  const {
+    update_oidc_client_secret,
+    backup_folder,
+    backup_interval,
+    backup_retention,
+    authenticationMethod,
+    authenticationRequired,
+    ...fields
+  } = config;
   const data: Partial<HostConfigResource> = {
     ...fields,
     ...(authenticationMethod === undefined
@@ -21,7 +30,7 @@ function mapRadarrHostConfig(config: HostConfig) {
 
 export class RadarrHostConfigSync extends HostConfigSync<HostConfigResource> {
   constructor(client: RadarrClient) {
-    super(client, 7);
+    super(client, 7, "Radarr");
   }
 
   protected map(config: HostConfig) {

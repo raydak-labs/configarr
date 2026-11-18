@@ -4,10 +4,19 @@ import type {
   QualityDefinitionResource,
   QualityProfileResource,
   ReleaseProfileResource,
+  HostConfigResource as SonarrHostConfigV3,
+} from "../__generated__/sonarr/data-contracts";
+import {
+  AuthenticationRequiredType as AuthenticationRequiredTypeV3,
+  AuthenticationType as AuthenticationTypeV3,
+  CertificateValidationType as CertificateValidationTypeV3,
+  ProxyType as ProxyTypeV3,
+  UpdateMechanism as UpdateMechanismV3,
 } from "../__generated__/sonarr/data-contracts";
 import type {
   CustomFormatSpecificationSchema as SonarrCustomFormatSpecificationV5,
   CustomFormatResource as SonarrCustomFormatV5,
+  GeneralSettingsResource as SonarrGeneralHostV5,
   MediaManagementSettingsResource as SonarrMediaManagementV5,
   NamingSettingsResource as SonarrNamingV5,
   QualityDefinitionResource as SonarrQualityDefinitionV5,
@@ -15,7 +24,15 @@ import type {
   QualityProfileResource as SonarrQualityProfileV5,
   ReleaseProfileResource as SonarrReleaseProfileV5,
 } from "../__generated__/sonarr-v5/data-contracts";
+import {
+  AuthenticationRequiredType as AuthenticationRequiredTypeV5,
+  AuthenticationType as AuthenticationTypeV5,
+  CertificateValidationType as CertificateValidationTypeV5,
+  ProxyType as ProxyTypeV5,
+  UpdateMechanism as UpdateMechanismV5,
+} from "../__generated__/sonarr-v5/data-contracts";
 import type { CustomFormatRequest } from "../customFormats/customFormat.types";
+import { toEnumOrThrow } from "../util";
 
 export type QualitySize = Pick<QualityDefinitionResource, "minSize" | "maxSize" | "preferredSize">;
 export type SonarrProfileQualitySizeValues = Pick<SonarrQualityItemV5, "minSize" | "maxSize" | "preferredSize">;
@@ -23,6 +40,59 @@ export type SonarrProfileQualitySizeValues = Pick<SonarrQualityItemV5, "minSize"
 export type SonarrProfileQualitySize = SonarrProfileQualitySizeValues & { quality: string };
 
 export type SonarrMediaManagementResource = MediaManagementConfigResource | SonarrMediaManagementV5;
+
+/**
+ * Settings shared by Sonarr v4's `/api/v3/config/host` and v5's `/api/v5/settings/general`.
+ * Derived from the generated contracts: v5's General settings are the superset, plus the
+ * fields only v3 exposes. The version-specific enums are converted in the two mappers below
+ * instead of widening them, so the transport calls stay compiler-checked.
+ */
+type SonarrV3OnlyHostSettings = Exclude<keyof SonarrHostConfigV3, keyof SonarrGeneralHostV5>;
+export type SonarrHostConfigResource = SonarrGeneralHostV5 & Pick<SonarrHostConfigV3, SonarrV3OnlyHostSettings>;
+
+/** `/api/v3/config/host` (Sonarr v4) to the cross-version host settings shape. */
+export function copyV3HostConfig(settings: SonarrHostConfigV3): SonarrHostConfigResource {
+  return {
+    ...settings,
+    authenticationMethod:
+      settings.authenticationMethod == null
+        ? undefined
+        : toEnumOrThrow(AuthenticationTypeV5, settings.authenticationMethod, "authenticationMethod"),
+    authenticationRequired:
+      settings.authenticationRequired == null
+        ? undefined
+        : toEnumOrThrow(AuthenticationRequiredTypeV5, settings.authenticationRequired, "authenticationRequired"),
+    updateMechanism:
+      settings.updateMechanism == null ? undefined : toEnumOrThrow(UpdateMechanismV5, settings.updateMechanism, "updateMechanism"),
+    proxyType: settings.proxyType == null ? undefined : toEnumOrThrow(ProxyTypeV5, settings.proxyType, "proxyType"),
+    certificateValidation:
+      settings.certificateValidation == null
+        ? undefined
+        : toEnumOrThrow(CertificateValidationTypeV5, settings.certificateValidation, "certificateValidation"),
+  };
+}
+
+/** The cross-version host settings shape to the `/api/v3/config/host` (Sonarr v4) payload. */
+export function toV3HostConfig(settings: SonarrHostConfigResource): SonarrHostConfigV3 {
+  return {
+    ...settings,
+    authenticationMethod:
+      settings.authenticationMethod == null
+        ? undefined
+        : toEnumOrThrow(AuthenticationTypeV3, settings.authenticationMethod, "authenticationMethod"),
+    authenticationRequired:
+      settings.authenticationRequired == null
+        ? undefined
+        : toEnumOrThrow(AuthenticationRequiredTypeV3, settings.authenticationRequired, "authenticationRequired"),
+    updateMechanism:
+      settings.updateMechanism == null ? undefined : toEnumOrThrow(UpdateMechanismV3, settings.updateMechanism, "updateMechanism"),
+    proxyType: settings.proxyType == null ? undefined : toEnumOrThrow(ProxyTypeV3, settings.proxyType, "proxyType"),
+    certificateValidation:
+      settings.certificateValidation == null
+        ? undefined
+        : toEnumOrThrow(CertificateValidationTypeV3, settings.certificateValidation, "certificateValidation"),
+  };
+}
 
 export type SonarrProfileQualitySizes = {
   id: number;

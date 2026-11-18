@@ -6,7 +6,7 @@ import { ConfigValidationError } from "../validation";
 
 export type HostConfig = NonNullable<InputConfigArrInstance["host_config"]>;
 
-type HostResource = {
+export type HostResource = {
   id?: number;
   authenticationMethod?: string;
   authenticationRequired?: string;
@@ -21,8 +21,11 @@ type HostResource = {
   sslKeyPath?: string | null;
   whisparrAutoMatchOnDate?: boolean;
   whisparrCorruptFileDetection?: boolean;
+  backupFolder?: string | null;
+  backupInterval?: number;
+  backupRetention?: number;
 };
-type HostClient<T extends HostResource> = {
+export type HostClient<T extends HostResource> = {
   getHostConfig(): Promise<T>;
   updateHostConfig(id: string, data: T): Promise<void>;
 };
@@ -39,7 +42,35 @@ const fields = [
   "sslKeyPath",
   "whisparrAutoMatchOnDate",
   "whisparrCorruptFileDetection",
+  "backupFolder",
+  "backupInterval",
+  "backupRetention",
 ] as const;
+
+const backupFields = {
+  backup_folder: "backupFolder",
+  backup_interval: "backupInterval",
+  backup_retention: "backupRetention",
+} as const;
+
+type BackupConfigField = keyof typeof backupFields;
+
+function isBackupConfigField(key: string): key is BackupConfigField {
+  return key in backupFields;
+}
+
+/** Backup settings exist on every *arr and are independent of the Radarr v7 / Sonarr v5 authentication API. */
+export function hasAuthenticationSettings(config: HostConfig): boolean {
+  return Object.keys(config).some((key) => !isBackupConfigField(key));
+}
+
+export function mapBackupFields(config: HostConfig): Pick<HostResource, "backupFolder" | "backupInterval" | "backupRetention"> {
+  const mapped: Pick<HostResource, "backupFolder" | "backupInterval" | "backupRetention"> = {};
+  if (config.backup_folder !== undefined) mapped.backupFolder = config.backup_folder;
+  if (config.backup_interval !== undefined) mapped.backupInterval = config.backup_interval;
+  if (config.backup_retention !== undefined) mapped.backupRetention = config.backup_retention;
+  return mapped;
+}
 
 export async function syncHostConfig<T extends HostResource>(
   client: HostClient<T>,
@@ -72,7 +103,9 @@ export async function syncHostConfig<T extends HostResource>(
 export abstract class HostConfigSync<T extends HostResource> {
   constructor(
     protected readonly client: HostClient<T>,
-    private readonly minimumMajor: number,
+    // `null` marks an app whose host API has no authentication settings (Lidarr, Readarr, Prowlarr).
+    private readonly authenticationMinimumMajor: number | null,
+    private readonly appLabel: string,
   ) {}
 
   protected abstract map(config: HostConfig): { data: Partial<T>; rotateSecret?: boolean };
@@ -81,8 +114,15 @@ export abstract class HostConfigSync<T extends HostResource> {
     if (config.whisparrAutoMatchOnDate !== undefined || config.whisparrCorruptFileDetection !== undefined) {
       throw new ConfigValidationError("Whisparr host settings are not supported by Radarr or Sonarr");
     }
-    const major = Number(version?.split(".")[0]);
-    if (!(major >= this.minimumMajor)) throw new ConfigValidationError("host_config requires Radarr v7 or Sonarr v5");
+    if (this.authenticationMinimumMajor === null) {
+      const unsupported = Object.keys(config).filter((key) => !isBackupConfigField(key));
+      if (unsupported.length) {
+        throw new ConfigValidationError(`${this.appLabel} host_config supports only backup_folder, backup_interval and backup_retention`);
+      }
+    } else if (hasAuthenticationSettings(config)) {
+      const major = Number(version?.split(".")[0]);
+      if (!(major >= this.authenticationMinimumMajor)) throw new ConfigValidationError("host_config requires Radarr v7 or Sonarr v5");
+    }
     if (config.oidcClientSecret === SECRET_MASK) throw new ConfigValidationError("oidcClientSecret cannot be the masked placeholder");
     if (config.update_oidc_client_secret && config.oidcClientSecret === undefined) {
       throw new ConfigValidationError("update_oidc_client_secret requires oidcClientSecret");
@@ -92,6 +132,20 @@ export abstract class HostConfigSync<T extends HostResource> {
 
   sync(config: HostConfig): Promise<DiffEntry[]> {
     const { data, rotateSecret } = this.map(config);
-    return syncHostConfig(this.client, data, rotateSecret);
+    return syncHostConfig(this.client, { ...mapBackupFields(config), ...data }, rotateSecret);
+  }
+}
+
+/**
+ * Host settings sync for apps whose host API has no authentication settings. Only the
+ * backup policy is managed; every version of these apps exposes it.
+ */
+export class BackupHostConfigSync<T extends HostResource> extends HostConfigSync<T> {
+  constructor(client: HostClient<T>, appLabel: string) {
+    super(client, null, appLabel);
+  }
+
+  protected map() {
+    return { data: {} as Partial<T> };
   }
 }

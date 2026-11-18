@@ -4,6 +4,7 @@ import type {
   AppProfileResource,
   CommandResource,
   DownloadClientResource,
+  HostConfigResource,
   IndexerProxyResource,
   IndexerResource,
   NotificationResource,
@@ -181,6 +182,14 @@ export class ProwlarrClient implements SystemClient, TagsClient<TagResource>, Do
 
   getSystemStatus() {
     return this.api.v1SystemStatusList();
+  }
+
+  async getHostConfig(): Promise<HostConfigResource> {
+    return this.api.v1ConfigHostList({ redactResponseErrors: true });
+  }
+
+  async updateHostConfig(id: string, data: HostConfigResource): Promise<void> {
+    await this.api.v1ConfigHostUpdate(id, data, { redactResponseErrors: true });
   }
 
   async testConnection() {

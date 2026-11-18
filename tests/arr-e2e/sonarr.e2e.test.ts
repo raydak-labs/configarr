@@ -39,6 +39,7 @@ import {
   nonE2eNames,
   preservedRootFolderPaths,
   restoreMediaBaseline,
+  seedHostConfigWrite,
   snapshotMediaBaseline,
   stripVolatile,
   syncConfig,
@@ -153,6 +154,7 @@ describe("sonarr (live)", () => {
     await cleanupMediaIndexerFixtures(client, baseUrl, apiKey, (await client.supportsMediaManagementControls()) ? "v5" : "v3");
     await cleanupMediaE2e(client);
     await cleanupReleaseProfileIndexers(client, baseUrl, apiKey);
+    await seedHostConfigWrite(client);
     baseline = await snapshotMediaBaseline(client);
   }, 180_000);
 
@@ -175,11 +177,7 @@ describe("sonarr (live)", () => {
       expect((await client.getUiConfig()).firstDayOfWeek).toBe(before.firstDayOfWeek);
       return;
     }
-    let original = await client.getHostConfig();
-    if (!original.allowedHosts) {
-      await client.updateHostConfig(String(original.id), { ...original, allowedHosts: "localhost,127.0.0.1" });
-      original = await client.getHostConfig();
-    }
+    const original = await client.getHostConfig();
     const scopes = original.oidcScopes === "openid profile" ? "openid email" : "openid profile";
     try {
       const config = mediaConfig("SONARR", { host_config: { oidcScopes: scopes } });
@@ -187,6 +185,27 @@ describe("sonarr (live)", () => {
       assertPipelineSucceeded(first.result, ["SONARR"]);
       expect((await client.getHostConfig()).oidcScopes).toBe(scopes);
       expect((await client.getHostConfig()).authenticationMethod).toBe(original.authenticationMethod);
+      const second = await syncConfig(config, first.workspace);
+      assertPipelineSucceeded(second.result, ["SONARR"]);
+      assertDiffUpToDate(second.result, ["SONARR"]);
+    } finally {
+      await client.updateHostConfig(String(original.id), original);
+    }
+  });
+
+  test("syncs the backup policy on every Sonarr version", async () => {
+    const original = await client.getHostConfig();
+    const backup_interval = original.backupInterval === 7 ? 1 : 7;
+    const backup_retention = original.backupRetention === 28 ? 7 : 28;
+    const backup_folder = original.backupFolder === "Backups-e2e" ? "Backups" : "Backups-e2e";
+    try {
+      const config = mediaConfig("SONARR", { host_config: { backup_folder, backup_interval, backup_retention } });
+      const first = await syncConfig(config);
+      assertPipelineSucceeded(first.result, ["SONARR"]);
+      const updated = await client.getHostConfig();
+      expect(updated.backupInterval).toBe(backup_interval);
+      expect(updated.backupRetention).toBe(backup_retention);
+      expect(updated.backupFolder).toBe(backup_folder);
       const second = await syncConfig(config, first.workspace);
       assertPipelineSucceeded(second.result, ["SONARR"]);
       assertDiffUpToDate(second.result, ["SONARR"]);

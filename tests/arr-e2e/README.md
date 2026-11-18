@@ -32,7 +32,9 @@ Each project's global setup waits for its containers, warms a shared Recyclarr/T
 
 Each project's global setup also bundles `src/index.ts` (the Docker image's CLI) and `configarrWorker.ts` with esbuild. The warm-up runs the CLI as a fresh process. Tests run configarr in one long-lived worker per test file (`configarrRunner.ts`): it resets env, config, TRaSH cache, telemetry and the API client before each job, and returns stdout, stderr and the exit code like a process would. Per-run process startup was about 60% of CI time.
 
-Each file cleans its *arr in `beforeAll`, snapshots the server-wide settings it overwrites (UI, media management, naming, default delay profile, quality definitions, download-client config), and restores plus cleans again in `afterAll` — regardless of which test failed.
+Each file cleans its *arr in `beforeAll`, seeds the host-settings prerequisite described below, snapshots the server-wide settings it overwrites (UI, media management, naming, default delay profile, quality definitions, download-client config), and restores plus cleans again in `afterAll` — regardless of which test failed.
+
+Every *arr that exposes `allowedHosts` rejects a host-settings write when authentication is not `enabled` and the list is empty. An empty list cannot be written back through the API, so `beforeAll` seeds `localhost,127.0.0.1` as fixture state (Whisparr ships it in its `config.xml`). Tests snapshot host settings after that seed and restore them normally; the seed itself is not reverted.
 
 ## Ports / API key
 
@@ -87,7 +89,8 @@ Per-*arr files are deliberately duplicated instead of generated from a shared fa
 
 ## Coverage
 
-Host settings run on Sonarr v5 and Radarr v7; v4/v5/v6 reject the v7/v5-only block before other writes.
+Host settings run on Sonarr v5 and Radarr v7; v4/v5/v6 reject the v7/v5-only authentication block before other writes.
+The backup policy (`backup_folder`, `backup_interval`, `backup_retention`) is a separate part of `host_config` and runs on every app and version.
 
 Feature × arr × create / update / delete / idempotent (second run Diff Report `(up to date - no changes)` + GET). `C` create, `U` update, `D` delete, `I` idempotent. `—` not applicable.
 
@@ -99,6 +102,7 @@ Feature × arr × create / update / delete / idempotent (second run Diff Report 
 | Root folders                   | CDI      | CDI      | CDI      | CUDI     | CUDI     | —        |
 | Media settings (MM/naming/UI)  | CUI      | CUI      | CUI      | CUI      | CUI      | —        |
 | General auth/TLS settings      | CUI      | CUI      | —        | —        | —        | —        |
+| Backup policy (`host_config`)  | CUI      | CUI      | CUI      | CUI      | CUI      | CUI      |
 | Delay profiles                 | CUDI     | CUDI     | CUDI     | CUDI     | CUDI     | —        |
 | Release profiles               | CUDI     | CUDI     | CUDI     | CUDI     | CUDI     | —        |
 | Download clients (blackhole)   | CUDI     | CUDI     | CUDI     | CUDI     | CUDI     | CUDI     |
@@ -123,7 +127,7 @@ Letters = asserted GET after a configarr write/omit. Root-folder **update** for 
 - Prefix managed names `e2e-`. Ignore lists for `delete_unmanaged_*` come from `nonE2eNames(...)`, never from the raw server list. Never `root_folders: []` — keep the pre-existing folders in the YAML.
 - Assert GET + second-run diff up to date. Do not regex stdout for `Created`/`Updated`/`Deleted`.
 - Poll with `waitUntil` where the *arr applies a write asynchronously (quality definitions, remote paths).
-- Snapshot anything server-wide you overwrite and restore it in `afterAll`.
+- Snapshot anything server-wide you overwrite and restore it in `afterAll`. Host settings are snapshotted after the `beforeAll` `allowedHosts` seed, which is fixture state because an empty list cannot be written back.
 - Construct clients with `new SonarrClient(...)` (etc.). Do not call `configureApi`.
 - See this README as the coverage source of truth.
 

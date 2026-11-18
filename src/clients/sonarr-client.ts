@@ -21,7 +21,6 @@ import { Api as SonarrApiV5 } from "../__generated__/sonarr-v5/Api";
 import type {
   ApiInfoResource as SonarrApiInfoV5,
   CustomFormatSpecificationSchema as SonarrCustomFormatSpecificationV5,
-  GeneralSettingsResource as SonarrGeneralV5,
   QualityDefinitionResource as SonarrQualityDefinitionV5,
   QualityProfileResource as SonarrQualityProfileV5,
   ReleaseProfileResource as SonarrReleaseProfileV5,
@@ -42,6 +41,7 @@ import type {
 import { forceSaveIfDisabled, logConnectionError, validateClientParams } from "./connection";
 import type {
   QualitySize,
+  SonarrHostConfigResource,
   SonarrMediaManagementResource,
   SonarrProfileQualitySize,
   SonarrProfileQualitySizes,
@@ -50,6 +50,7 @@ import type {
 import {
   collectProfileQualitySizes,
   commonQualitySizes,
+  copyV3HostConfig,
   copyV3ReleaseProfile,
   copyV5MediaManagementToV3,
   copyV5Naming,
@@ -58,6 +59,7 @@ import {
   mergeProfileQualitySizes,
   mergeV5MediaManagement,
   mergeV5QualityItems,
+  toV3HostConfig,
   toV3ReleaseProfile,
   toV5CustomFormat,
 } from "./sonarr-resource-mapper";
@@ -111,14 +113,19 @@ export class SonarrClient
     return (await this.getApiVersion()) === "v3" ? v3() : v5();
   }
 
-  async getHostConfig(): Promise<SonarrGeneralV5> {
-    if ((await this.getApiVersion()) !== "v5") throw new Error("Sonarr host settings require API v5");
-    return this.apiV5.v5SettingsGeneralList({ redactResponseErrors: true });
+  async getHostConfig(): Promise<SonarrHostConfigResource> {
+    return this.versioned<SonarrHostConfigResource>(
+      async () => copyV3HostConfig(await this.apiV3.v3ConfigHostList({ redactResponseErrors: true })),
+      () => this.apiV5.v5SettingsGeneralList({ redactResponseErrors: true }),
+    );
   }
 
-  async updateHostConfig(id: string, data: SonarrGeneralV5): Promise<void> {
-    if ((await this.getApiVersion()) !== "v5") throw new Error("Sonarr host settings require API v5");
-    await this.apiV5.v5SettingsGeneralUpdate(id, data, { redactResponseErrors: true });
+  async updateHostConfig(id: string, data: SonarrHostConfigResource): Promise<void> {
+    // The PUT endpoints echo their own resource type, so unify the unused return value.
+    await this.versioned<unknown>(
+      () => this.apiV3.v3ConfigHostUpdate(id, toV3HostConfig(data), { redactResponseErrors: true }),
+      () => this.apiV5.v5SettingsGeneralUpdate(id, data, { redactResponseErrors: true }),
+    );
   }
 
   getImportListSchema(): Promise<ImportListResource[]> {

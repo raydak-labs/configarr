@@ -201,7 +201,11 @@ sonarr:
     base_url: http://sonarr-v5:8989
     api_key: !secret SONARR_V5_API_KEY
     # (experimental) since v1.39.0. Optional Sonarr v5 General settings (paths are inside the Sonarr container).
+    # Backup settings also work on Sonarr v4; OIDC/TLS settings require v5.
     # host_config:
+    #   backup_folder: Backups
+    #   backup_interval: 7
+    #   backup_retention: 28
     #   oidcScopes: "openid profile email"
 
     include:
@@ -454,7 +458,11 @@ radarr:
     base_url: http://radarr-v7:7878
     api_key: !secret RADARR_V7_API_KEY
     # (experimental) since v1.39.0. Optional Radarr v7 General settings; see the configuration docs for OIDC/TLS.
+    # Backup settings also work on Radarr v5/v6; OIDC/TLS settings require v7.
     # host_config:
+    #   backup_folder: Backups
+    #   backup_interval: 7
+    #   backup_retention: 28
     #   oidcScopes: "openid profile email"
     root_folders:
       - "/app"
@@ -481,6 +489,8 @@ whisparr:
     # host_config:
     #   whisparrAutoMatchOnDate: false
     #   whisparrCorruptFileDetection: true
+    #   backup_interval: 7
+    #   backup_retention: 28
 
     # not supported
     # quality_definition:
@@ -556,6 +566,12 @@ readarr:
   instance1: # Instance name (can be any unique identifier)
     base_url: http://readarr:8787 # instance URL
     api_key: !secret READARR_API_KEY # Reference to API key in secrets.yml
+
+    # (experimental) since v1.39.0. Backup policy (supported on every Readarr version).
+    # host_config:
+    #   backup_folder: Backups
+    #   backup_interval: 7
+    #   backup_retention: 28
 
     # not supported
     # quality_definition:
@@ -662,6 +678,12 @@ lidarr:
     base_url: http://lidarr:8686
     api_key: !secret LIDARR_API_KEY
 
+    # (experimental) since v1.39.0. Backup policy (supported on every Lidarr version).
+    # host_config:
+    #   backup_folder: Backups
+    #   backup_interval: 7
+    #   backup_retention: 28
+
     # not supported
     # quality_definition:
     #   type: movie # Quality definition type
@@ -763,6 +785,12 @@ prowlarr:
   instance1:
     base_url: http://prowlarr:9696
     api_key: !secret PROWLARR_API_KEY
+
+    # (experimental) since v1.39.0. Backup policy.
+    # host_config:
+    #   backup_folder: Backups
+    #   backup_interval: 7
+    #   backup_retention: 28
 
     # Ensure these tag labels exist (created if missing)
     tags:

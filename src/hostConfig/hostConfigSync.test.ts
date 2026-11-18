@@ -1,13 +1,41 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
+import { LidarrClient } from "../clients/lidarr-client";
+import { ProwlarrClient } from "../clients/prowlarr-client";
 import { RadarrClient } from "../clients/radarr-client";
+import { ReadarrClient } from "../clients/readarr-client";
 import { SonarrClient } from "../clients/sonarr-client";
 import { WhisparrClient } from "../clients/whisparr-client";
 import { initEnvs } from "../env";
 import { logger } from "../logger";
 import { RadarrHostConfigSync } from "./hostConfigRadarr";
 import { SonarrHostConfigSync } from "./hostConfigSonarr";
-import { syncHostConfig } from "./hostConfigSync";
+import type { HostClient, HostConfig, HostResource } from "./hostConfigSync";
+import { BackupHostConfigSync, syncHostConfig } from "./hostConfigSync";
 import { WhisparrHostConfigSync } from "./hostConfigWhisparr";
+
+type StoredHostSettings = Record<string, unknown>;
+
+function stubHostApi(initial: StoredHostSettings, apiVersion?: "v3" | "v5") {
+  let stored = { ...initial };
+  const requests: string[] = [];
+  const writes: StoredHostSettings[] = [];
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (request: Request) => {
+      const path = new URL(request.url).pathname;
+      requests.push(`${request.method} ${path}`);
+      if (path === "/api") return Response.json({ current: apiVersion ?? "v3" });
+      if (request.method === "PUT") {
+        const body = (await request.json()) as StoredHostSettings;
+        writes.push(body);
+        stored = { ...stored, ...body };
+        return Response.json({ id: 1 }, { status: 202 });
+      }
+      return Response.json(stored);
+    }),
+  );
+  return { requests, writes, stored: () => stored };
+}
 
 describe("host settings synchronization", () => {
   afterEach(() => {
@@ -233,5 +261,121 @@ describe("host settings synchronization", () => {
     const client = new RadarrClient("http://radarr.test", "key");
     await expect(new RadarrHostConfigSync(client).sync({ oidcScopes: "openid" })).rejects.not.toThrow("read-secret");
     expect(JSON.stringify(log.mock.calls)).not.toContain("read-secret");
+  });
+
+  test("accepts the backup policy on every app, including versions without the authentication API", () => {
+    const backup: HostConfig = { backup_folder: "Backups", backup_interval: 7, backup_retention: 28 };
+    const apps = [
+      { label: "Lidarr", create: () => new LidarrClient("http://lidarr.test", "key") },
+      { label: "Readarr", create: () => new ReadarrClient("http://readarr.test", "key") },
+      { label: "Prowlarr", create: () => new ProwlarrClient("http://prowlarr.test", "key") },
+    ];
+    for (const app of apps) {
+      const sync = new BackupHostConfigSync<HostResource>(app.create(), app.label);
+      expect(() => sync.validate(backup, "0.1.0.0")).not.toThrow();
+    }
+    expect(() => new RadarrHostConfigSync(new RadarrClient("http://radarr.test", "key")).validate(backup, "5.14.0")).not.toThrow();
+    expect(() => new SonarrHostConfigSync(new SonarrClient("http://sonarr.test", "key")).validate(backup, "4.0.14")).not.toThrow();
+    expect(() => new WhisparrHostConfigSync(new WhisparrClient("http://whisparr.test", "key")).validate(backup, "3.0.0")).not.toThrow();
+  });
+
+  test("rejects authentication settings on apps without an authentication host API", () => {
+    const lidarr = new BackupHostConfigSync<HostResource>(new LidarrClient("http://lidarr.test", "key"), "Lidarr");
+    expect(() => lidarr.validate({ oidcScopes: "openid" }, "3.0.0")).toThrow("Lidarr host_config supports only");
+    expect(() => lidarr.validate({ authenticationMethod: "none", backup_interval: 7 }, "3.0.0")).toThrow(
+      "Lidarr host_config supports only",
+    );
+  });
+
+  test("keeps the authentication version gate for Radarr and Sonarr", () => {
+    const radarr = new RadarrHostConfigSync(new RadarrClient("http://radarr.test", "key"));
+    const sonarr = new SonarrHostConfigSync(new SonarrClient("http://sonarr.test", "key"));
+    expect(() => radarr.validate({ oidcScopes: "openid" }, "6.0.0")).toThrow("host_config requires Radarr v7 or Sonarr v5");
+    expect(() => sonarr.validate({ oidcScopes: "openid" }, "4.0.14")).toThrow("host_config requires Radarr v7 or Sonarr v5");
+    expect(() => radarr.validate({ oidcScopes: "openid" }, "7.0.0")).not.toThrow();
+    expect(() => sonarr.validate({ oidcScopes: "openid" }, "5.0.0")).not.toThrow();
+  });
+
+  test("syncs and re-reads the backup policy on Lidarr, Readarr and Prowlarr", async () => {
+    const apps: Array<{ label: string; path: string; create: () => HostClient<HostResource> }> = [
+      { label: "Lidarr", path: "/api/v1/config/host", create: () => new LidarrClient("http://lidarr.test", "key") },
+      { label: "Readarr", path: "/api/v1/config/host", create: () => new ReadarrClient("http://readarr.test", "key") },
+      { label: "Prowlarr", path: "/api/v1/config/host", create: () => new ProwlarrClient("http://prowlarr.test", "key") },
+    ];
+    for (const app of apps) {
+      const api = stubHostApi({ id: 1, backupFolder: "Backups", backupInterval: 7, backupRetention: 28, logLevel: "info" });
+      const sync = new BackupHostConfigSync<HostResource>(app.create(), app.label);
+      const diff = await sync.sync({ backup_interval: 1, backup_retention: 7 });
+      expect(diff[0]?.fieldChanges).toEqual([
+        { field: "backupInterval", from: 7, to: 1 },
+        { field: "backupRetention", from: 28, to: 7 },
+      ]);
+      expect(api.requests).toEqual([`GET ${app.path}`, `PUT ${app.path}/1`]);
+      expect(api.stored()).toMatchObject({ backupFolder: "Backups", backupInterval: 1, backupRetention: 7, logLevel: "info" });
+
+      const second = await sync.sync({ backup_interval: 1, backup_retention: 7 });
+      expect(second).toEqual([]);
+      expect(api.writes).toHaveLength(1);
+      vi.unstubAllGlobals();
+    }
+  });
+
+  test("uses the versioned Sonarr host endpoint for backup settings", async () => {
+    for (const version of ["v3", "v5"] as const) {
+      const api = stubHostApi(
+        { id: 1, backupFolder: "Backups", backupInterval: 7, backupRetention: 28, authenticationRequired: "enabled" },
+        version,
+      );
+      const sync = new SonarrHostConfigSync(new SonarrClient("http://sonarr.test", "key"));
+      sync.validate({ backup_interval: 1 }, version === "v3" ? "4.0.14" : "5.0.0");
+      const diff = await sync.sync({ backup_interval: 1 });
+      const hostPath = version === "v3" ? "/api/v3/config/host" : "/api/v5/settings/general";
+      expect(api.requests).toEqual(["GET /api", `GET ${hostPath}`, `PUT ${hostPath}/1`]);
+      expect(diff[0]?.fieldChanges).toEqual([{ field: "backupInterval", from: 7, to: 1 }]);
+      expect(api.stored()).toMatchObject({ backupFolder: "Backups", backupInterval: 1, backupRetention: 28 });
+      vi.unstubAllGlobals();
+    }
+  });
+
+  test("syncs the backup policy on Radarr versions before v7", async () => {
+    const api = stubHostApi({ id: 1, backupFolder: "Backups", backupInterval: 7, backupRetention: 28 });
+    const sync = new RadarrHostConfigSync(new RadarrClient("http://radarr.test", "key"));
+    sync.validate({ backup_retention: 7 }, "6.0.0");
+    const diff = await sync.sync({ backup_retention: 7 });
+    expect(api.requests).toEqual(["GET /api/v3/config/host", "PUT /api/v3/config/host/1"]);
+    expect(diff[0]?.fieldChanges).toEqual([{ field: "backupRetention", from: 28, to: 7 }]);
+    expect(api.stored()).toMatchObject({ backupFolder: "Backups", backupInterval: 7, backupRetention: 7 });
+  });
+
+  test("syncs the backup policy on Whisparr without touching its own settings", async () => {
+    const api = stubHostApi({
+      id: 1,
+      backupFolder: "Backups",
+      backupInterval: 7,
+      backupRetention: 28,
+      whisparrAutoMatchOnDate: true,
+      whisparrCorruptFileDetection: false,
+    });
+    const sync = new WhisparrHostConfigSync(new WhisparrClient("http://whisparr.test", "key"));
+    sync.validate({ backup_interval: 1 }, "3.0.0");
+    const diff = await sync.sync({ backup_interval: 1 });
+    expect(api.requests).toEqual([
+      "GET /api/v3/config/host",
+      "GET /api/v3/config/host",
+      "PUT /api/v3/config/host/1",
+      "GET /api/v3/config/host",
+    ]);
+    expect(diff[0]?.fieldChanges).toEqual([{ field: "backupInterval", from: 7, to: 1 }]);
+    expect(api.stored()).toMatchObject({ whisparrAutoMatchOnDate: true, whisparrCorruptFileDetection: false, backupInterval: 1 });
+  });
+
+  test("dry run reports backup changes without writing them", async () => {
+    vi.stubEnv("DRY_RUN", "true");
+    initEnvs();
+    const api = stubHostApi({ id: 1, backupFolder: "Backups", backupInterval: 7, backupRetention: 28 });
+    const sync = new BackupHostConfigSync<HostResource>(new LidarrClient("http://lidarr.test", "key"), "Lidarr");
+    const report = await sync.sync({ backup_interval: 1 });
+    expect(report[0]?.fieldChanges).toEqual([{ field: "backupInterval", from: 7, to: 1 }]);
+    expect(api.writes).toHaveLength(0);
   });
 });
