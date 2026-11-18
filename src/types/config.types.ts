@@ -538,8 +538,9 @@ export const HostConfigSchema = z
     update_oidc_client_secret: z.boolean().optional(),
     whisparrAutoMatchOnDate: z.boolean().optional(),
     whisparrCorruptFileDetection: z.boolean().optional(),
-    // Backup policy. Supported by every *arr; `backup_folder` is relative to the app data directory.
-    backup_folder: z.string().min(1).max(64).optional(),
+    // Backup policy. Supported by every *arr; a relative `backup_folder` resolves against the
+    // app data directory, an absolute one is used as-is, so no length limit applies here.
+    backup_folder: z.string().min(1).optional(),
     backup_interval: z.number().int().min(1).optional(),
     backup_retention: z.number().int().min(1).optional(),
   })

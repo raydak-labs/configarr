@@ -59,6 +59,51 @@ describe("SonarrClient", () => {
     expect(requests).toEqual(["GET /api", "GET /api/v3/config/naming"]);
   });
 
+  it("projects v3 host settings through the generated contract and maps them back", async () => {
+    const writes: Array<Record<string, unknown>> = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (request: Request) => {
+        const url = new URL(request.url);
+        if (url.pathname === "/api") {
+          return Response.json({ current: "v3", deprecated: [] });
+        }
+        if (request.method === "GET" && url.pathname === "/api/v3/config/host") {
+          return Response.json({
+            id: 1,
+            authenticationMethod: "forms",
+            authenticationRequired: "enabled",
+            updateMechanism: "docker",
+            backupFolder: "Backups",
+            backupInterval: 7,
+            backupRetention: 28,
+          });
+        }
+        if (request.method === "PUT" && url.pathname === "/api/v3/config/host/1") {
+          writes.push((await request.json()) as Record<string, unknown>);
+          return Response.json({});
+        }
+
+        throw new Error(`Unexpected request ${request.method} ${url.pathname}`);
+      }),
+    );
+
+    const client = new SonarrClient("http://sonarr.test", "api-key");
+
+    const host = await client.getHostConfig();
+    expect(host).toMatchObject({ authenticationMethod: "forms", updateMechanism: "docker", backupFolder: "Backups" });
+
+    await client.updateHostConfig("1", { ...host, backupInterval: 1 });
+    expect(writes).toHaveLength(1);
+    expect(writes[0]).toMatchObject({
+      authenticationMethod: "forms",
+      authenticationRequired: "enabled",
+      updateMechanism: "docker",
+      backupInterval: 1,
+      backupRetention: 28,
+    });
+  });
+
   it("reads and updates Sonarr v5 media-management controls without losing other settings", async () => {
     const current = {
       id: 1,

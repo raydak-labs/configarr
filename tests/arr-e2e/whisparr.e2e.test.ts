@@ -29,9 +29,9 @@ import {
   findNamed,
   type MediaBaseline,
   nonE2eNames,
-  prepareHostConfigWrite,
   preservedRootFolderPaths,
   restoreMediaBaseline,
+  seedHostConfigWrite,
   snapshotMediaBaseline,
   stripVolatile,
   syncConfig,
@@ -71,6 +71,7 @@ describe("whisparr (live)", () => {
 
   beforeAll(async () => {
     await cleanupMediaE2e(client);
+    await seedHostConfigWrite(client);
     baseline = await snapshotMediaBaseline(client);
   }, 180_000);
 
@@ -549,7 +550,7 @@ describe("whisparr (live)", () => {
   });
 
   test("syncs the backup policy and stays idempotent", async () => {
-    const original = await prepareHostConfigWrite(client);
+    const original = await client.getHostConfig();
     const backup_interval = original.backupInterval === 7 ? 1 : 7;
     const backup_retention = original.backupRetention === 28 ? 7 : 28;
     const backup_folder = original.backupFolder === "Backups-e2e" ? "Backups" : "Backups-e2e";

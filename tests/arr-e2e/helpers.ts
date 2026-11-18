@@ -22,18 +22,19 @@ const FLARESOLVERR_DEFAULT_BASE_URL = "http://127.0.0.1:18191";
 export type MediaArrClient = SonarrClient | RadarrClient | WhisparrClient | ReadarrClient | LidarrClient;
 
 /**
- * Every *arr rejects a host-settings write when authentication is not `enabled` and
- * `allowedHosts` is empty, even when the write only changes backup settings. Seed a
- * non-empty value so the backup policy can be written; callers restore afterwards.
+ * Fixture step for the backup-policy tests. Every *arr that exposes an `allowedHosts`
+ * host setting rejects a host-settings write when authentication is not `enabled` and that
+ * list is empty. The empty state cannot be written back through the API, so seed a non-empty
+ * value once per file in `beforeAll`, before any test snapshots host settings, and treat it
+ * as part of the disposable fixture state rather than a per-test mutation.
  */
-export async function prepareHostConfigWrite<T extends { id?: number; allowedHosts?: string | null }>(client: {
+export async function seedHostConfigWrite<T extends { id?: number; allowedHosts?: string | null }>(client: {
   getHostConfig(): Promise<T>;
   updateHostConfig(id: string, data: T): Promise<void>;
-}): Promise<T> {
+}): Promise<void> {
   const current = await client.getHostConfig();
-  if (current.allowedHosts || current.id == null) return current;
+  if (current.id == null || !("allowedHosts" in current) || current.allowedHosts) return;
   await client.updateHostConfig(String(current.id), { ...current, allowedHosts: "localhost,127.0.0.1" });
-  return client.getHostConfig();
 }
 
 /** Status endpoint per *arr, for the readiness wait in `globalSetup`. */

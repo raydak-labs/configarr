@@ -10,7 +10,7 @@ import {
   createProwlarrClient,
   findNamed,
   nonE2eNames,
-  prepareHostConfigWrite,
+  seedHostConfigWrite,
   syncConfig,
   waitUntil,
 } from "./helpers";
@@ -163,6 +163,7 @@ function snakeFieldYaml(opts: {
 describe("prowlarr (live)", () => {
   beforeAll(async () => {
     await cleanupProwlarrE2e(createProwlarrClient());
+    await seedHostConfigWrite(createProwlarrClient());
   }, 180_000);
 
   afterAll(async () => {
@@ -626,7 +627,7 @@ describe("prowlarr (live)", () => {
 
   test("syncs the backup policy and stays idempotent", async () => {
     const client = createProwlarrClient();
-    const original = await prepareHostConfigWrite(client);
+    const original = await client.getHostConfig();
     const backup_interval = original.backupInterval === 7 ? 1 : 7;
     const backup_retention = original.backupRetention === 28 ? 7 : 28;
     const backup_folder = original.backupFolder === "Backups-e2e" ? "Backups" : "Backups-e2e";

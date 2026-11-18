@@ -13,7 +13,6 @@ import type {
   QualityProfileResource,
   RemotePathMappingResource,
   RootFolderResource,
-  HostConfigResource as SonarrHostConfigV3,
   SystemResource,
   TagResource,
   UiConfigResource,
@@ -22,7 +21,6 @@ import { Api as SonarrApiV5 } from "../__generated__/sonarr-v5/Api";
 import type {
   ApiInfoResource as SonarrApiInfoV5,
   CustomFormatSpecificationSchema as SonarrCustomFormatSpecificationV5,
-  GeneralSettingsResource as SonarrGeneralV5,
   QualityDefinitionResource as SonarrQualityDefinitionV5,
   QualityProfileResource as SonarrQualityProfileV5,
   ReleaseProfileResource as SonarrReleaseProfileV5,
@@ -52,6 +50,7 @@ import type {
 import {
   collectProfileQualitySizes,
   commonQualitySizes,
+  copyV3HostConfig,
   copyV3ReleaseProfile,
   copyV5MediaManagementToV3,
   copyV5Naming,
@@ -60,6 +59,7 @@ import {
   mergeProfileQualitySizes,
   mergeV5MediaManagement,
   mergeV5QualityItems,
+  toV3HostConfig,
   toV3ReleaseProfile,
   toV5CustomFormat,
 } from "./sonarr-resource-mapper";
@@ -115,17 +115,16 @@ export class SonarrClient
 
   async getHostConfig(): Promise<SonarrHostConfigResource> {
     return this.versioned<SonarrHostConfigResource>(
-      () => this.apiV3.v3ConfigHostList({ redactResponseErrors: true }),
+      async () => copyV3HostConfig(await this.apiV3.v3ConfigHostList({ redactResponseErrors: true })),
       () => this.apiV5.v5SettingsGeneralList({ redactResponseErrors: true }),
     );
   }
 
   async updateHostConfig(id: string, data: SonarrHostConfigResource): Promise<void> {
-    // The generated transport types differ per API version (enums and General settings
-    // fields), so the version-agnostic payload is narrowed at this boundary.
+    // The PUT endpoints echo their own resource type, so unify the unused return value.
     await this.versioned<unknown>(
-      () => this.apiV3.v3ConfigHostUpdate(id, data as SonarrHostConfigV3, { redactResponseErrors: true }),
-      () => this.apiV5.v5SettingsGeneralUpdate(id, data as SonarrGeneralV5, { redactResponseErrors: true }),
+      () => this.apiV3.v3ConfigHostUpdate(id, toV3HostConfig(data), { redactResponseErrors: true }),
+      () => this.apiV5.v5SettingsGeneralUpdate(id, data, { redactResponseErrors: true }),
     );
   }
 

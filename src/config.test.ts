@@ -2718,6 +2718,11 @@ describe("InputConfigSchemaSchema (regression)", () => {
     expect(HostConfigSchema.parse(backup)).toEqual(backup);
   });
 
+  test("host_config accepts a long absolute backup folder", () => {
+    const backup_folder = "/mnt/storage/application-backups/production/media-management/sonarr/backups";
+    expect(HostConfigSchema.parse({ backup_folder })).toEqual({ backup_folder });
+  });
+
   test.each([
     { label: "zero interval", config: { backup_interval: 0 } },
     { label: "zero retention", config: { backup_retention: 0 } },

@@ -38,9 +38,9 @@ import {
   type MediaBaseline,
   nonE2eLabels,
   nonE2eNames,
-  prepareHostConfigWrite,
   preservedRootFolderPaths,
   restoreMediaBaseline,
+  seedHostConfigWrite,
   snapshotMediaBaseline,
   stripVolatile,
   syncConfig,
@@ -88,6 +88,7 @@ describe("radarr (live)", () => {
     }
     await cleanupMediaIndexerFixtures(client, baseUrl, apiKey, "v3");
     await cleanupMediaE2e(client);
+    await seedHostConfigWrite(client);
     const snapshot = await snapshotMediaBaseline(client);
     const [profiles, tags] = await Promise.all([client.getDelayProfiles(), client.getTags()]);
     preexistingDelayProfileIds = new Set(profiles.flatMap((profile) => (profile.id == null ? [] : [profile.id])));
@@ -160,18 +161,7 @@ describe("radarr (live)", () => {
       if (!response.ok) throw new Error(`Failed to load host settings: ${response.status}`);
       return response.json();
     };
-    let original = await read();
-    // The fixture disables local authentication; v7 requires a nonempty allowed-hosts
-    // list on any General-settings write, even when it booted with an empty default.
-    if (!original.allowedHosts) {
-      const response = await fetch(`${baseUrl}/api/v3/config/host/${original.id}`, {
-        method: "PUT",
-        headers,
-        body: JSON.stringify({ ...original, allowedHosts: "localhost,127.0.0.1" }),
-      });
-      if (!response.ok) throw new Error(`Failed to prepare host settings: ${response.status}`);
-      original = await read();
-    }
+    const original = await read();
     const scopes = original.oidcScopes === "openid profile" ? "openid email" : "openid profile";
     try {
       const config = mediaConfig("RADARR", { host_config: { oidcScopes: scopes } });
@@ -230,7 +220,7 @@ describe("radarr (live)", () => {
   });
 
   test("syncs the backup policy on every Radarr version", async () => {
-    const original = await prepareHostConfigWrite(client);
+    const original = await client.getHostConfig();
     const backup_interval = original.backupInterval === 7 ? 1 : 7;
     const backup_retention = original.backupRetention === 28 ? 7 : 28;
     const backup_folder = original.backupFolder === "Backups-e2e" ? "Backups" : "Backups-e2e";
