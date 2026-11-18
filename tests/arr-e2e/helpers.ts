@@ -30,17 +30,9 @@ export type MediaArrClient = SonarrClient | RadarrClient | WhisparrClient | Read
  */
 export async function seedHostConfigWrite<
   T extends { id?: number; allowedHosts?: string | null; authenticationRequired?: string | null },
->(client: {
-  getHostConfig(): Promise<T>;
-  updateHostConfig(id: string, data: T): Promise<void>;
-}): Promise<void> {
+>(client: { getHostConfig(): Promise<T>; updateHostConfig(id: string, data: T): Promise<void> }): Promise<void> {
   const current = await client.getHostConfig();
-  if (
-    current.id == null ||
-    !("allowedHosts" in current) ||
-    current.allowedHosts ||
-    current.authenticationRequired === "enabled"
-  ) {
+  if (current.id == null || !("allowedHosts" in current) || current.allowedHosts || current.authenticationRequired === "enabled") {
     return;
   }
   await client.updateHostConfig(String(current.id), { ...current, allowedHosts: "localhost,127.0.0.1" });
