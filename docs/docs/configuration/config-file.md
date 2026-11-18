@@ -1501,6 +1501,16 @@ authentication is not `enabled` and that list is empty. Set a non-empty `allowed
 on such an instance (or enable authentication) before managing the backup policy.
 Sonarr v4 has no `allowedHosts` field and does not require it.
 
+Host-settings writes replace the whole resource. Changes made in the *arr UI between
+configarr's read and its write are overwritten, so avoid editing host settings while a run
+is applying them.
+
+On Sonarr v4, `/api/v3/config/host` does not return the stored `trustCgnatIpAddresses`
+value, and its PUT binds that field as a boolean that defaults to `false`. Applying a
+backup-policy change on Sonarr v4 therefore resets `trustCgnatIpAddresses` to `false` when
+it was `true`; set it again afterwards if a reverse proxy depends on it. Sonarr v5 and the
+other \*arr apps do not expose this Sonarr v4 field in the host resource.
+
 ### Authentication and TLS
 
 Radarr v7 and Sonarr v5 also accept the authentication and TLS fields below. The
