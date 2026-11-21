@@ -44,6 +44,10 @@ export default defineConfig({
       }),
       project("whisparr-v3", "whisparr.e2e.test.ts"),
       project("readarr-v0", "readarr.e2e.test.ts"),
+      project("chaptarr", "chaptarr.e2e.test.ts", {
+        CHAPTARR_BASE_URL: env.CHAPTARR_BASE_URL ?? "http://127.0.0.1:18788",
+        CHAPTARR_API_KEY: env.CHAPTARR_API_KEY ?? API_KEY,
+      }),
       project("lidarr-nightly", "lidarr.e2e.test.ts"),
       project("prowlarr-v2", "prowlarr.e2e.test.ts"),
       project("pipeline", "pipeline.e2e.test.ts", {}, 1),

@@ -145,6 +145,8 @@ describe("readarr (live)", () => {
     const afterCreate = findNamed(await client.getQualityProfiles(), "e2e-qp");
     expect(afterCreate).toBeTruthy();
     expect(afterCreate?.minFormatScore ?? 0).toBe(0);
+    // Chaptarr-only profile field; Readarr must not receive it.
+    expect(afterCreate).not.toHaveProperty("profileType");
     const snap = stripVolatile(afterCreate);
 
     const second = await syncConfig(withScore(0), created.workspace);
@@ -254,7 +256,11 @@ describe("readarr (live)", () => {
     const created = await syncConfig(mediaConfig("READARR", e2eMediaSettings(1)));
     assertPipelineSucceeded(created.result, ["READARR"]);
     expect(((await client.getMediamanagement()) as { recycleBin?: string }).recycleBin).toBe("/tmp");
-    expect(((await client.getNaming()) as { replaceIllegalCharacters?: boolean }).replaceIllegalCharacters).toBe(true);
+    const naming = await client.getNaming();
+    expect(naming.replaceIllegalCharacters).toBe(true);
+    // Chaptarr-only naming keys; Readarr must keep the generic book keys.
+    expect(naming).not.toHaveProperty("ebookStandardBookFormat");
+    expect(naming).not.toHaveProperty("ebookAuthorFolderFormat");
     expect(((await client.getUiConfig()) as { firstDayOfWeek?: number }).firstDayOfWeek).toBe(1);
 
     const updated = await syncConfig(mediaConfig("READARR", e2eMediaSettings(0)), created.workspace);
@@ -385,6 +391,9 @@ describe("readarr (live)", () => {
     const e2ePathMapped = async () =>
       (await client.getRemotePathMappings()).some((p) => p.host === "e2e-host" && (p.localPath ?? "").replace(/\/+$/, "") === E2E_ROOT_A);
     await waitUntil(e2ePathMapped);
+    const mapped = (await client.getRemotePathMappings()).find((mapping) => mapping.host === "e2e-host");
+    // Chaptarr-only required field; Readarr must not receive it.
+    expect(mapped).not.toHaveProperty("downloadClientId");
     // A UNC remote path keeps a trailing `\` in *arr; the next run must still match it.
     const e2eUncPath = async () => (await client.getRemotePathMappings()).find((p) => p.host === "e2e-unc");
     await waitUntil(async () => (await e2eUncPath())?.remotePath === "\\\\server\\share\\downloads\\");
@@ -448,6 +457,10 @@ describe("readarr (live)", () => {
     );
     assertPipelineSucceeded(created.result, ["READARR"]);
     expect(await pathsOf()).toEqual(expect.arrayContaining([E2E_ROOT_A, E2E_ROOT_B]));
+    const root = (await client.getRootfolders()).find((folder) => folder.path === E2E_ROOT_A);
+    // Chaptarr-only typed folder fields.
+    expect(root).not.toHaveProperty("folderType");
+    expect(root).not.toHaveProperty("ebookQualityProfileId");
 
     const second = await syncConfig(
       yaml([{ ...rootFolder(E2E_ROOT_A, "e2e-root"), tags: ["e2e-release"] }, rootFolder(E2E_ROOT_B, "e2e-root-b")]),
@@ -582,5 +595,11 @@ describe("readarr (live)", () => {
     } finally {
       await client.updateHostConfig(String(original.id), original);
     }
+  });
+
+  test("rejects media_type, which is Chaptarr-only", async () => {
+    const run = await syncConfig(mediaConfig("READARR", { media_type: "ebook" }));
+    expect(run.result.exitCode).not.toBe(0);
+    expect(run.result.stdout + run.result.stderr).toContain("media_type is supported only by Chaptarr");
   });
 });

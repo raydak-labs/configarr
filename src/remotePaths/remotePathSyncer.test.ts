@@ -297,6 +297,26 @@ describe("remotePathSyncer", () => {
       expect(result.unchanged).toBe(0);
     });
 
+    it("keeps server-only mapping fields on an update", async () => {
+      mockRadarrClient.getRemotePathMappings.mockResolvedValue([
+        { id: 1, host: "transmission", remotePath: "/downloads", localPath: "/old/path", downloadClientId: 42 },
+      ]);
+
+      const result = await syncRemotePaths(mockRadarrClient, "CHAPTARR", {
+        custom_formats: [],
+        quality_profiles: [],
+        download_clients: {
+          remote_paths: [{ host: "transmission", remote_path: "/downloads", local_path: "/new/path" }],
+        },
+      } as any);
+
+      expect(result.updated).toBe(1);
+      expect(mockRadarrClient.updateRemotePathMapping).toHaveBeenCalledWith(
+        "1",
+        expect.objectContaining({ id: 1, localPath: "/new/path", downloadClientId: 42 }),
+      );
+    });
+
     it("should delete all mappings when delete_unmanaged_remote_paths is true with empty array", async () => {
       const serverMappings: RemotePathMappingResource[] = [
         { id: 1, host: "transmission", remotePath: "/downloads", localPath: "/data/downloads" },

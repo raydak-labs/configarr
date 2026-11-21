@@ -8,12 +8,15 @@ import type { MetadataProfileDiff } from "./metadataProfile.types";
 import { BaseMetadataProfileSync } from "./metadataProfileBase";
 
 export class ReadarrMetadataProfileSync extends BaseMetadataProfileSync<MetadataProfileResource> {
-  constructor(api: MetadataProfilesClient<MetadataProfileResource>) {
+  constructor(
+    api: MetadataProfilesClient<MetadataProfileResource>,
+    private readonly arrType: "READARR" | "CHAPTARR" = "READARR",
+  ) {
     super(api);
   }
 
-  protected getArrType(): "READARR" {
-    return "READARR";
+  protected getArrType(): "READARR" | "CHAPTARR" {
+    return this.arrType;
   }
 
   private normalizeReadarrAllowedLanguages(value: string | string[] | null | undefined): string | null {

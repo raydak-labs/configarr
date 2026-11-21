@@ -1,3 +1,4 @@
+import { ChaptarrSyncer } from "./arr/chaptarrSyncer";
 import { LidarrSyncer } from "./arr/lidarrSyncer";
 import { ProwlarrSyncer } from "./arr/prowlarrSyncer";
 import { RadarrSyncer } from "./arr/radarrSyncer";
@@ -121,6 +122,7 @@ export const run = async () => {
       { type: "RADARR", config: globalConfig.radarr },
       { type: "WHISPARR", config: globalConfig.whisparr },
       { type: "READARR", config: globalConfig.readarr },
+      { type: "CHAPTARR", config: globalConfig.chaptarr },
       { type: "LIDARR", config: globalConfig.lidarr },
     ];
     for (const { type, config } of telemetryArrs) {
@@ -141,6 +143,9 @@ export const run = async () => {
   );
   await runEnabled("READARR", globalConfig.readarrEnabled, globalConfig.readarr, (instance, name) =>
     new ReadarrSyncer().run(globalConfig, instance, name),
+  );
+  await runEnabled("CHAPTARR", globalConfig.chaptarrEnabled, globalConfig.chaptarr, (instance, name) =>
+    new ChaptarrSyncer().run(globalConfig, instance, name),
   );
   await runEnabled("LIDARR", globalConfig.lidarrEnabled, globalConfig.lidarr, (instance, name) =>
     new LidarrSyncer().run(globalConfig, instance, name),

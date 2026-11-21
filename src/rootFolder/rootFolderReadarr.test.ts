@@ -520,4 +520,19 @@ describe("ReadarrRootFolderSync", () => {
       expect(result.diffEntries[0]).toMatchObject({ resourceType: "RootFolder", name: "/books", action: "update" });
     });
   });
+
+  describe("Chaptarr-only fields", () => {
+    const config: InputConfigRootFolderReadarr = {
+      path: "/books",
+      name: "Books",
+      metadata_profile: "Standard",
+      quality_profile: "eBook",
+    };
+
+    it("does not send typed fields for vanilla Readarr", async () => {
+      const result = await new ReadarrRootFolderSync(mockApi).resolveRootFolderConfig(config, serverCache);
+      expect(result).not.toHaveProperty("folderType");
+      expect(result).not.toHaveProperty("ebookQualityProfileId");
+    });
+  });
 });
