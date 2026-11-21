@@ -10,7 +10,6 @@ import {
   createProwlarrClient,
   findNamed,
   nonE2eNames,
-  seedHostConfigWrite,
   syncConfig,
   waitUntil,
 } from "./helpers";
@@ -163,7 +162,6 @@ function snakeFieldYaml(opts: {
 describe("prowlarr (live)", () => {
   beforeAll(async () => {
     await cleanupProwlarrE2e(createProwlarrClient());
-    await seedHostConfigWrite(createProwlarrClient());
   }, 180_000);
 
   afterAll(async () => {
