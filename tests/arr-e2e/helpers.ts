@@ -12,7 +12,8 @@ import type { ReadarrClient } from "../../src/clients/readarr-client";
 import { SonarrClient } from "../../src/clients/sonarr-client";
 import type { WhisparrClient } from "../../src/clients/whisparr-client";
 import type { DelayProfileShared } from "../../src/delayProfiles/delayProfile.types";
-import type { ArrType, MediaArrType } from "../../src/types/common.types";
+import type { ChaptarrRootFolderFields } from "../../src/rootFolder/rootFolderChaptarr";
+import { type ArrType, ArrTypeConst, type MediaArrType } from "../../src/types/common.types";
 import { arrConnection } from "./config";
 import { buildConfigarrBundles, type ConfigarrRunResult, runConfigarrInWorker, runConfigarrProcess } from "./configarrRunner";
 
@@ -26,6 +27,7 @@ const STATUS_PATHS: Omit<Record<MediaArrType, string>, "SONARR"> = {
   RADARR: "/api/v3/system/status",
   WHISPARR: "/api/v3/system/status",
   READARR: "/api/v1/system/status",
+  CHAPTARR: "/api/v1/system/status",
   LIDARR: "/api/v1/system/status",
 };
 
@@ -167,6 +169,40 @@ export async function waitForAllArrApis(timeoutMs = 180_000): Promise<void> {
     waitForArrApi(prowlarr.baseUrl, prowlarr.apiKey, PROWLARR_STATUS_PATH, timeoutMs),
     waitForArrApi(flaresolverr, "", "/", timeoutMs),
   ]);
+}
+
+/**
+ * Wait for the container a vitest project owns. The project name starts with the app
+ * (`chaptarr`, `radarr-v7`, ...), so only that service's URL and key select the check;
+ * shared projects such as `pipeline` fall back to the whole stack.
+ */
+export async function waitForProjectArrApis(
+  projectName: string | undefined,
+  projectEnv: Record<string, string | undefined>,
+  timeoutMs = 180_000,
+): Promise<void> {
+  const prefix = projectName?.split("-")[0]?.toUpperCase();
+  const kind = ArrTypeConst.find((candidate) => candidate === prefix);
+  if (kind === undefined) {
+    await waitForAllArrApis(timeoutMs);
+    return;
+  }
+
+  // Project env wins over the shell, so one project's exported URL never selects another's check.
+  const env = { ...process.env, ...projectEnv };
+  const { baseUrl, apiKey } = arrConnection(kind, env);
+  if (kind === "SONARR") {
+    await waitForSonarrApi(baseUrl, apiKey, timeoutMs);
+    return;
+  }
+  if (kind === "PROWLARR") {
+    // Prowlarr's fixtures depend on FlareSolverr, so its project keeps waiting for both.
+    const flaresolverr = env.FLARESOLVERR_BASE_URL ?? FLARESOLVERR_DEFAULT_BASE_URL;
+    await Promise.all([waitForArrApi(baseUrl, apiKey, PROWLARR_STATUS_PATH, timeoutMs), waitForArrApi(flaresolverr, "", "/", timeoutMs)]);
+    return;
+  }
+  const statusPath = STATUS_PATHS[kind];
+  await waitForArrApi(baseUrl, apiKey, statusPath, timeoutMs);
 }
 
 export type ConfigWorkspace = { rootPath: string; configLocation: string; repoPath: string };
@@ -668,9 +704,37 @@ export async function preservedRootFolderPaths(client: MediaArrClient): Promise<
 export async function preservedRootFolderObjects(client: LidarrClient | ReadarrClient): Promise<Record<string, unknown>[]> {
   const folders = (await client.getRootfolders()).filter((f) => f.path && !f.path.includes("/data/e2e"));
   const [qualityProfiles, metadataProfiles] = await Promise.all([client.getQualityProfiles(), client.getMetadataProfiles()]);
-  return folders.map((folder) => {
-    const quality_profile = qualityProfiles.find((p) => p.id === folder.defaultQualityProfileId)?.name;
-    const metadata_profile = metadataProfiles.find((p) => p.id === folder.defaultMetadataProfileId)?.name;
+  const nameOf = (profiles: { id?: number; name?: string | null }[], id: number | undefined): string | undefined =>
+    id == null ? undefined : (profiles.find((profile) => profile.id === id)?.name ?? undefined);
+
+  return folders.map((rawFolder) => {
+    // Chaptarr types each folder and moves the profile references to per-media ids.
+    const folder: typeof rawFolder & Partial<ChaptarrRootFolderFields> = rawFolder;
+    const ebookQuality = nameOf(qualityProfiles, folder.ebookQualityProfileId);
+    const ebookMetadata = nameOf(metadataProfiles, folder.ebookMetadataProfileId);
+    const audiobookQuality = nameOf(qualityProfiles, folder.audiobookQualityProfileId);
+    const audiobookMetadata = nameOf(metadataProfiles, folder.audiobookMetadataProfileId);
+
+    if (folder.folderType !== undefined) {
+      // 0 = mixed, 1 = audiobook, 2 = ebook.
+      const quality_profile = folder.folderType === 1 ? audiobookQuality : (ebookQuality ?? audiobookQuality);
+      const metadata_profile = folder.folderType === 1 ? audiobookMetadata : (ebookMetadata ?? audiobookMetadata);
+      if (!quality_profile || !metadata_profile) {
+        throw new Error(`Cannot preserve root folder '${folder.path}': unresolved typed profiles`);
+      }
+      const preserved: Record<string, unknown> = { path: folder.path, name: folder.name, metadata_profile, quality_profile };
+      if (folder.folderType === 0) {
+        // Each media side falls back to the primary profile, so only add explicit side overrides.
+        if (ebookQuality) preserved.ebook_quality_profile = ebookQuality;
+        if (ebookMetadata) preserved.ebook_metadata_profile = ebookMetadata;
+        if (audiobookQuality) preserved.audiobook_quality_profile = audiobookQuality;
+        if (audiobookMetadata) preserved.audiobook_metadata_profile = audiobookMetadata;
+      }
+      return preserved;
+    }
+
+    const quality_profile = nameOf(qualityProfiles, folder.defaultQualityProfileId);
+    const metadata_profile = nameOf(metadataProfiles, folder.defaultMetadataProfileId);
     if (!quality_profile || !metadata_profile) {
       throw new Error(`Cannot preserve root folder '${folder.path}': unresolved default profiles`);
     }

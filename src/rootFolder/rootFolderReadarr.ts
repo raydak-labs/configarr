@@ -8,14 +8,22 @@ import {
   ProfileAwareRootFolderSync,
 } from "./rootFolderBase";
 
-export type ReadarrRootFolderApi = ProfileAwareRootFolderApi<RootFolderResource>;
+export type ReadarrRootFolderApi<TResource extends RootFolderResource = RootFolderResource> = ProfileAwareRootFolderApi<TResource>;
 
 type ReadarrRootFolderConfig = InputConfigRootFolderReadarr & ProfileAwareRootFolderConfig;
 
-export class ReadarrRootFolderSync extends ProfileAwareRootFolderSync<ReadarrRootFolderConfig, RootFolderResource> {
-  protected readonly arrName = "Readarr";
+export class ReadarrRootFolderSync<TResource extends RootFolderResource = RootFolderResource> extends ProfileAwareRootFolderSync<
+  ReadarrRootFolderConfig,
+  TResource
+> {
+  protected readonly arrName: string;
 
-  protected buildResource(config: ReadarrRootFolderConfig, fields: ProfileAwareRootFolderFields): RootFolderResource {
+  constructor(api: ReadarrRootFolderApi<TResource>, arrName = "Readarr") {
+    super(api);
+    this.arrName = arrName;
+  }
+
+  protected buildResource(config: ReadarrRootFolderConfig, fields: ProfileAwareRootFolderFields): TResource {
     const result: RootFolderResource = {
       path: fields.path,
       name: fields.name,
@@ -46,11 +54,11 @@ export class ReadarrRootFolderSync extends ProfileAwareRootFolderSync<ReadarrRoo
       result.useSsl = config.calibre_use_ssl;
     }
 
-    return result;
+    return result as TResource;
   }
 
   // Password is excluded since the API returns masked values, not the actual password.
-  protected override extraComparableFields(resource: RootFolderResource): Record<string, unknown> {
+  protected override extraComparableFields(resource: TResource): Record<string, unknown> {
     return {
       isCalibreLibrary: resource.isCalibreLibrary,
       host: resource.host,

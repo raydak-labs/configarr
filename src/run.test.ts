@@ -49,6 +49,11 @@ vi.mock("./arr/readarrSyncer", () => ({
     run = vi.fn();
   },
 }));
+vi.mock("./arr/chaptarrSyncer", () => ({
+  ChaptarrSyncer: class {
+    run = vi.fn();
+  },
+}));
 vi.mock("./arr/lidarrSyncer", () => ({
   LidarrSyncer: class {
     run = vi.fn();

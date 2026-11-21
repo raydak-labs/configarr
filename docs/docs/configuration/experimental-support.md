@@ -175,6 +175,32 @@ readarr:
 Readarr metadata profiles use **ISO 639-3** language codes (3-letter codes like `eng`, `deu`, `fra`).
 :::
 
+## Chaptarr
+
+Chaptarr is the media-typed Readarr fork. It has its own `chaptarr:` section and uses the
+same book pipeline as `readarr:`, including metadata profiles, release profiles, download
+clients and notifications.
+
+```yaml title="config.yml"
+chaptarr:
+  books:
+    base_url: http://chaptarr:8787
+    api_key: !secret CHAPTARR_API_KEY
+    media_type: ebook # ebook | audiobook | mixed
+    root_folders:
+      - path: /books
+        name: Books
+        metadata_profile: Standard
+        quality_profile: E-Book
+    quality_profiles:
+      - name: E-Book
+        upgrade:
+          until_score: 200
+```
+
+See [Chaptarr media types](/docs/configuration/config-file#chaptarr-media-types) for the
+root-folder and naming rules.
+
 ## Lidarr v2
 
 Experimental support for Lidarr was added with [v1.8.0](https://github.com/raydak-labs/configarr/releases/tag/v1.8.0).

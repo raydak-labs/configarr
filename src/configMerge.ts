@@ -203,6 +203,7 @@ export const mergeConfigsAndTemplates = async (
   }
 
   if (instanceConfig.host_config !== undefined) mergedTemplates.host_config = instanceConfig.host_config;
+  if (instanceConfig.media_type !== undefined) mergedTemplates.media_type = instanceConfig.media_type;
   if (instanceConfig.import_lists !== undefined) mergedTemplates.import_lists = instanceConfig.import_lists;
 
   if (instanceConfig.ui_config && Object.keys(instanceConfig.ui_config).length > 0) {

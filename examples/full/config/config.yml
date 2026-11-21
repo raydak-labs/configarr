@@ -573,6 +573,14 @@ readarr:
     #   backup_interval: 7
     #   backup_retention: 28
 
+    # Chaptarr only: ebook, audiobook or mixed. Leave unset for vanilla Readarr.
+    # media_type: ebook
+    # root_folders:
+    #   - path: /books
+    #     name: Books
+    #     metadata_profile: Standard
+    #     quality_profile: E-Book
+
     # not supported
     # quality_definition:
     #   type: movie # Quality definition type
@@ -671,6 +679,20 @@ readarr:
         - host: "qbittorrent"
           remote_path: "/downloads"
           local_path: "/downloads/2"
+
+chaptarr:
+  instance1:
+    base_url: http://chaptarr:8787
+    api_key: !secret CHAPTARR_API_KEY
+    # ebook, audiobook or mixed
+    media_type: ebook
+    root_folders:
+      - path: /books
+        name: Books
+        metadata_profile: Standard
+        quality_profile: E-Book
+    include:
+      - template: readarr
 
 lidarr:
   instance1:

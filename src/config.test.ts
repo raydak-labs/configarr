@@ -587,6 +587,26 @@ describe("mergeConfigsAndTemplates", () => {
     });
   });
 
+  test("a template can set media_type and the instance still overrides it", async () => {
+    const templates: Map<string, MappedTemplates> = new Map([["books", { media_type: "audiobook" } as MappedTemplates]]);
+    vi.spyOn(reclarrImporter, "loadRecyclarrTemplates").mockReturnValue(new Map());
+    vi.spyOn(localImporter, "loadLocalRecyclarrTemplate").mockReturnValue(templates);
+    vi.spyOn(trashGuide, "loadQPFromTrash").mockReturnValue(Promise.resolve(new Map()));
+    vi.spyOn(trashGuide, "loadTrashCustomFormatGroups").mockReturnValue(Promise.resolve(new Map()));
+
+    const base: InputConfigArrInstance = {
+      api_key: "test",
+      base_url: "http://chaptarr:8788",
+      include: [{ template: "books" }],
+    };
+
+    const templateOnly = await mergeConfigsAndTemplates({}, base, "CHAPTARR");
+    expect(templateOnly.config.media_type).toBe("audiobook");
+
+    const overridden = await mergeConfigsAndTemplates({}, { ...base, media_type: "mixed" }, "CHAPTARR");
+    expect(overridden.config.media_type).toBe("mixed");
+  });
+
   test("an instance download_clients block keeps a template secret flag it does not set", async () => {
     const templates: Map<string, MappedTemplates> = new Map([
       [
@@ -2730,5 +2750,21 @@ describe("InputConfigSchemaSchema (regression)", () => {
     { label: "empty folder", config: { backup_folder: "" } },
   ])("host_config rejects $label", ({ config }) => {
     expect(() => HostConfigSchema.parse(config)).toThrow();
+  });
+
+  test("accepts a chaptarr instance and enable flag", () => {
+    const parsed = InputConfigSchemaSchema.parse({
+      chaptarrEnabled: true,
+      chaptarr: { books: { base_url: "http://chaptarr", api_key: "key", media_type: "ebook" } },
+    });
+    expect(parsed.chaptarrEnabled).toBe(true);
+    expect(parsed.chaptarr?.books?.media_type).toBe("ebook");
+  });
+
+  test("readarr media_type accepts ebook, audiobook and mixed", () => {
+    for (const media_type of ["ebook", "audiobook", "mixed"] as const) {
+      expect(InputConfigArrInstanceSchema.parse({ base_url: "http://readarr", api_key: "key", media_type }).media_type).toBe(media_type);
+    }
+    expect(() => InputConfigArrInstanceSchema.parse({ base_url: "http://readarr", api_key: "key", media_type: "paperback" })).toThrow();
   });
 });

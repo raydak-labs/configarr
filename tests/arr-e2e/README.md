@@ -91,6 +91,7 @@ Per-*arr files are deliberately duplicated instead of generated from a shared fa
 
 Host settings run on Sonarr v5 and Radarr v7; v4/v5/v6 reject the v7/v5-only authentication block before other writes.
 The backup policy (`backup_folder`, `backup_interval`, `backup_retention`) is a separate part of `host_config` and runs on every app and version.
+Chaptarr runs the same suite as Readarr in `chaptarr.e2e.test.ts`; the compose stack exposes it as `CHAPTARR` on `18788`.
 
 Feature × arr × create / update / delete / idempotent (second run Diff Report `(up to date - no changes)` + GET). `C` create, `U` update, `D` delete, `I` idempotent. `—` not applicable.
 

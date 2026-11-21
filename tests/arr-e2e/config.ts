@@ -14,15 +14,16 @@ const DEFAULT_BASE_URL: Record<ArrType, string> = {
   RADARR: "http://127.0.0.1:17878",
   WHISPARR: "http://127.0.0.1:16969",
   READARR: "http://127.0.0.1:18787",
+  CHAPTARR: "http://127.0.0.1:18788",
   LIDARR: "http://127.0.0.1:18686",
   PROWLARR: "http://127.0.0.1:19696",
 };
 
 /** `<ARR>_BASE_URL` / `<ARR>_API_KEY` env override, else the compose defaults. */
-export function arrConnection(kind: ArrType): { baseUrl: string; apiKey: string } {
+export function arrConnection(kind: ArrType, env: Record<string, string | undefined> = process.env): { baseUrl: string; apiKey: string } {
   return {
-    baseUrl: process.env[`${kind}_BASE_URL`] ?? DEFAULT_BASE_URL[kind],
-    apiKey: process.env[`${kind}_API_KEY`] ?? E2E_API_KEY,
+    baseUrl: env[`${kind}_BASE_URL`] ?? DEFAULT_BASE_URL[kind],
+    apiKey: env[`${kind}_API_KEY`] ?? E2E_API_KEY,
   };
 }
 

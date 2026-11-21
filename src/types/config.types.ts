@@ -178,11 +178,19 @@ export const InputConfigRootFolderLidarrSchema = z.object({
 });
 export type InputConfigRootFolderLidarr = z.infer<typeof InputConfigRootFolderLidarrSchema>;
 
+export const ReadarrMediaTypeSchema = z.enum(["ebook", "audiobook", "mixed"]);
+export type ReadarrMediaType = z.infer<typeof ReadarrMediaTypeSchema>;
+
 export const InputConfigRootFolderReadarrSchema = z.object({
   path: z.string(),
   name: z.string(),
   metadata_profile: z.string(),
   quality_profile: z.string(),
+  // Chaptarr typed folders. For a mixed folder each side falls back to the primary profile.
+  ebook_quality_profile: z.string().optional(),
+  ebook_metadata_profile: z.string().optional(),
+  audiobook_quality_profile: z.string().optional(),
+  audiobook_metadata_profile: z.string().optional(),
   monitor: MonitorSchema.optional(),
   monitor_new_items: z.enum(["all", "none", "new"]).optional(),
   tags: z.array(z.string()).optional(),
@@ -638,6 +646,8 @@ export const InputConfigArrInstanceSchema = z.object({
   ui_config: UiConfigTypeSchema.optional(),
   // @experimental @since v1.39.0
   host_config: HostConfigSchema.optional(),
+  // Chaptarr exposes ebook and audiobook sides; vanilla Readarr leaves this unset.
+  media_type: ReadarrMediaTypeSchema.optional(),
   // @experimental @since v1.39.0
   import_lists: InputConfigImportListsSchema.optional(),
   // @experimental @since v1.39.0
@@ -707,6 +717,9 @@ export const InputConfigSchemaSchema = z.object({
 
   readarr: z.record(z.string(), InputConfigArrInstanceSchema).optional(),
   readarrEnabled: z.boolean().optional(),
+
+  chaptarr: z.record(z.string(), InputConfigArrInstanceSchema).optional(),
+  chaptarrEnabled: z.boolean().optional(),
 
   lidarr: z.record(z.string(), InputConfigArrInstanceSchema).optional(),
   lidarrEnabled: z.boolean().optional(),
