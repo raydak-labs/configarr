@@ -189,8 +189,9 @@ export async function syncRemotePaths(
           if (existingMapping && existingMapping.id) {
             logger.debug(`RemotePath '${config.host} + ${config.remote_path}' already exists. Attempting to update instead.`);
             try {
+              // Keep server-only fields (for example Chaptarr's downloadClientId) on a path update.
               await client.updateRemotePathMapping(existingMapping.id.toString(), {
-                id: existingMapping.id,
+                ...existingMapping,
                 host: config.host,
                 remotePath: config.remote_path,
                 localPath: config.local_path,
@@ -212,9 +213,11 @@ export async function syncRemotePaths(
     }
 
     // Update existing mappings
-    for (const { id, config } of diff.toUpdate) {
+    for (const { id, config, server } of diff.toUpdate) {
       try {
+        // Keep server-only fields (for example Chaptarr's downloadClientId) on a path update.
         await client.updateRemotePathMapping(id.toString(), {
+          ...server,
           id,
           host: config.host,
           remotePath: config.remote_path,

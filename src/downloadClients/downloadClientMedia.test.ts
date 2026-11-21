@@ -17,6 +17,7 @@ import { getEnvs } from "../env";
 import type { MediaArrType } from "../types/common.types";
 import type { InputConfigDownloadClient } from "../types/config.types";
 import type { DownloadClientSyncResult } from "./downloadClient.types";
+import { ChaptarrDownloadClientSync } from "./downloadClientChaptarr";
 import { LidarrDownloadClientSync } from "./downloadClientLidarr";
 import { MediaDownloadClientSync } from "./downloadClientMedia";
 import { RadarrDownloadClientSync } from "./downloadClientRadarr";
@@ -29,6 +30,7 @@ const syncByArrType: Record<MediaArrType, () => MediaDownloadClientSync<Download
   SONARR: () => new SonarrDownloadClientSync({} as any),
   LIDARR: () => new LidarrDownloadClientSync({} as any),
   READARR: () => new ReadarrDownloadClientSync({} as any),
+  CHAPTARR: () => new ChaptarrDownloadClientSync({} as any),
   WHISPARR: () => new WhisparrDownloadClientSync({} as any),
 };
 
@@ -61,6 +63,10 @@ describe("MediaDownloadClientSync – ARR type handling", () => {
       expect(syncByArrType.READARR()).toBeInstanceOf(MediaDownloadClientSync);
     });
 
+    test("creates instance for CHAPTARR", () => {
+      expect(syncByArrType.CHAPTARR()).toBeInstanceOf(MediaDownloadClientSync);
+    });
+
     test("creates instance for WHISPARR", () => {
       expect(syncByArrType.WHISPARR()).toBeInstanceOf(MediaDownloadClientSync);
     });
@@ -68,7 +74,7 @@ describe("MediaDownloadClientSync – ARR type handling", () => {
 
   describe("ARR type-specific behavior", () => {
     test("normalizes fields consistently across different ARR types", () => {
-      const testCases: [MediaArrType][] = [["SONARR"], ["LIDARR"], ["RADARR"], ["WHISPARR"], ["READARR"]];
+      const testCases: [MediaArrType][] = [["SONARR"], ["LIDARR"], ["RADARR"], ["WHISPARR"], ["READARR"], ["CHAPTARR"]];
 
       testCases.forEach(([arrType]) => {
         const sync = syncByArrType[arrType]();

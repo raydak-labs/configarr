@@ -126,6 +126,14 @@ type MediaArrResources = {
     releaseProfile: ReadarrReleaseProfileResource;
     downloadClient: ReadarrDownloadClientResource;
   };
+  CHAPTARR: {
+    qualityDefinition: ReadarrQualityDefinitionResource;
+    naming: ReadarrNamingConfigResource;
+    mediaManagement: ReadarrMediaManagementConfigResource;
+    qualityProfile: ReadarrQualityProfileResource;
+    releaseProfile: ReadarrReleaseProfileResource;
+    downloadClient: ReadarrDownloadClientResource;
+  };
   SONARR: {
     qualityDefinition: SonarrQualityDefinitionResource;
     naming: SonarrNamingConfigResource;
@@ -196,6 +204,11 @@ export type MediaSyncToQualityProfilesArgs<T extends MediaArrType = MediaArrType
   instanceConfig: InputConfigArrInstance;
   client: ArrTypeToClient[T];
   syncs: MediaFeatureSyncs<T>;
+  /**
+   * Media-dependent syncs, rebuilt from the merged media type. Templates can supply
+   * `media_type`, so the runtime value is only final after the merge.
+   */
+  mediaSyncs?: (mediaType: MergedConfigInstance["media_type"]) => Pick<MediaFeatureSyncs<T>, "mm" | "qp" | "root">;
   trash?: MediaTrashOps;
   supportsProfileQualitySizes?: boolean;
 };
@@ -208,7 +221,7 @@ export const runMediaSyncToQualityProfiles = async <T extends MediaArrType>(
   args: MediaSyncToQualityProfilesArgs<T>,
 ): Promise<MediaSyncContext<T>> => {
   const { arrType, instanceName, globalConfig, instanceConfig, client, syncs, trash, supportsProfileQualitySizes = false } = args;
-  const { qd: qdSync, mm: mmSync, qp: qpSync } = syncs;
+  const qdSync = syncs.qd;
   const collector = new DiffCollector();
   let qualityDefinitionDefaults: TrashQualityDefinitionQuality[] = [];
 
@@ -231,6 +244,9 @@ export const runMediaSyncToQualityProfiles = async <T extends MediaArrType>(
     supportsProfileQualitySizes,
     mediaManagement: syncs.mm,
   });
+  // A template can set media_type, so rebuild the media-dependent syncs from the merged value.
+  if (args.mediaSyncs) Object.assign(syncs, args.mediaSyncs(config.media_type));
+  const { mm: mmSync, qp: qpSync } = syncs;
   if (config.host_config !== undefined) {
     const parsed = HostConfigSchema.safeParse(config.host_config);
     if (!parsed.success)
@@ -238,6 +254,9 @@ export const runMediaSyncToQualityProfiles = async <T extends MediaArrType>(
     config.host_config = parsed.data;
     if (!syncs.hostConfig) throw new ConfigValidationError("host_config requires Radarr v7 or Sonarr v5");
     syncs.hostConfig.validate(config.host_config, system.version);
+  }
+  if (config.media_type !== undefined && arrType !== "CHAPTARR") {
+    throw new ConfigValidationError(`media_type is supported only by Chaptarr, not ${arrType}`);
   }
   if (config.import_lists && !syncs.importLists) throw new ConfigValidationError("import_lists is not supported for this application");
   if (config.import_lists) {

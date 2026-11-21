@@ -1,10 +1,11 @@
 import path from "node:path";
 import type { ServerCache } from "../cache";
 import type { QualityProfilesClient } from "../clients/capabilities";
-import type { CFProcessing } from "../customFormats/customFormat.types";
+import type { CFProcessing, CustomFormatRequest } from "../customFormats/customFormat.types";
 import type { FieldChange } from "../diffReport/diffReport.types";
 import { getEnvs } from "../env";
 import { logger } from "../logger";
+import type { QualityDefinitionShared } from "../qualityDefinitions/qualityDefinition.types";
 import type { ConfigQualityProfile, MergedConfigInstance } from "../types/config.types";
 import { cloneWithJSON, loadJsonFile } from "../util";
 import { ConfigValidationError } from "../validation";
@@ -51,6 +52,27 @@ export abstract class BaseQualityProfileSync<T extends QualityProfileShared> {
     configMinUpgrade: number | undefined,
     fieldChanges: FieldChange[],
   ): boolean;
+
+  /**
+   * Restrict the quality universe for an app-specific profile. Defaults to every quality
+   * the server exposes. Readarr overrides this for Chaptarr's media-typed profiles.
+   */
+  protected qualityDefinitionsForProfile(
+    definitions: QualityDefinitionShared[],
+    _serverMatch: QualityProfileShared | undefined,
+    _profile: ConfigQualityProfile,
+  ): QualityDefinitionShared[] {
+    return definitions;
+  }
+
+  /** Restrict custom formats to the ones valid for this profile. Defaults to all. */
+  protected customFormatsForProfile(
+    customFormats: CustomFormatRequest[],
+    _profile: ConfigQualityProfile,
+    _serverMatch?: QualityProfileShared,
+  ): CustomFormatRequest[] {
+    return customFormats;
+  }
 
   createOnServer(profile: QualityProfileShared) {
     return this.api.createQualityProfile(this.toServerProfile(profile));
@@ -110,7 +132,6 @@ export abstract class BaseQualityProfileSync<T extends QualityProfileShared> {
     const qpMerged = new Map(config.quality_profiles.map((obj) => [obj.name, obj]));
     const serverQualityProfiles = serverCache.qualityProfiles;
     const qpServerMap = new Map(serverQualityProfiles.map((obj) => [obj.name!, obj]));
-    const cfServerMap = new Map(serverCache.customFormats.map((obj) => [obj.name!, obj]));
     const languageMap = new Map(serverCache.languages.map((obj) => [obj.name!, obj]));
 
     const createQPs: QualityProfileShared[] = [];
@@ -122,7 +143,8 @@ export abstract class BaseQualityProfileSync<T extends QualityProfileShared> {
     for (const [name, value] of qpMerged.entries()) {
       const serverMatch = qpServerMap.get(name);
       const scoringForQP = scoring.get(name);
-      const mappedQualities = mapQualities(serverCache.qualityDefinitions, value, serverMatch?.items);
+      const definitions = this.qualityDefinitionsForProfile(serverCache.qualityDefinitions, serverMatch, value);
+      const mappedQualities = mapQualities(definitions, value, serverMatch?.items);
 
       const profileLanguage = this.resolveLanguage(name, value.language, languageMap);
 
@@ -134,6 +156,8 @@ export abstract class BaseQualityProfileSync<T extends QualityProfileShared> {
 
       if (serverMatch == null) {
         logger.info(`QualityProfile '${name}' not found in server. Will be created.`);
+
+        const cfServerMap = new Map(this.customFormatsForProfile(serverCache.customFormats, value).map((obj) => [obj.name!, obj]));
 
         const qualityToId = mappedQualities.reduce<Map<string, number>>((p, c) => {
           const id = c.id ?? c.quality?.id;
@@ -307,6 +331,11 @@ export abstract class BaseQualityProfileSync<T extends QualityProfileShared> {
 
       // Use refreshed custom formats so new or updated entries are included.
       const serverProfileCFMap = new Map(serverMatch.formatItems!.map((obj) => [obj.name!, obj]));
+      // Formats this profile excludes must not receive a score: the server profile has no item
+      // to attach it to, so the update would send an item without a format id.
+      const allowedCustomFormats = new Set(
+        this.customFormatsForProfile(serverCache.customFormats, value, serverMatch).map((format) => format.name),
+      );
 
       let scoringDiff = false;
 
@@ -314,6 +343,8 @@ export abstract class BaseQualityProfileSync<T extends QualityProfileShared> {
         const newCFFormats: FormatItem[] = [];
 
         for (const [scoreKey, scoreValue] of scoringForQP.entries()) {
+          if (!allowedCustomFormats.has(scoreKey)) continue;
+
           const serverCF = serverProfileCFMap.get(scoreKey);
           serverProfileCFMap.delete(scoreKey);
 

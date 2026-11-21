@@ -227,6 +227,7 @@ export const transformConfig = (input: InputConfigSchema): ConfigSchema => {
     sonarr: mappedCustomFormats(input.sonarr),
     whisparr: mappedCustomFormats(input.whisparr),
     readarr: mappedCustomFormats(input.readarr),
+    chaptarr: mappedCustomFormats(input.chaptarr),
     lidarr: mappedCustomFormats(input.lidarr),
   };
 };

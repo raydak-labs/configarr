@@ -17,6 +17,7 @@ export interface TelemetryData {
   radarr_enabled: boolean;
   whisparr_enabled: boolean;
   readarr_enabled: boolean;
+  chaptarr_enabled: boolean;
   lidarr_enabled: boolean;
 
   // Template sources
@@ -64,6 +65,7 @@ export interface TelemetryData {
   radarr_instances: number;
   whisparr_instances: number;
   readarr_instances: number;
+  chaptarr_instances: number;
   lidarr_instances: number;
   total_instances: number;
 
@@ -149,6 +151,9 @@ export class Telemetry {
         break;
       case "READARR":
         data.readarr_instances++;
+        break;
+      case "CHAPTARR":
+        data.chaptarr_instances++;
         break;
       case "LIDARR":
         data.lidarr_instances++;
@@ -295,6 +300,7 @@ export class Telemetry {
       radarr_enabled: globalConfig.radarrEnabled !== false,
       whisparr_enabled: globalConfig.whisparrEnabled !== false,
       readarr_enabled: globalConfig.readarrEnabled !== false,
+      chaptarr_enabled: globalConfig.chaptarrEnabled !== false,
       lidarr_enabled: globalConfig.lidarrEnabled !== false,
 
       recyclarr_templates: recyclarrTemplateCount > 0,
@@ -333,6 +339,7 @@ export class Telemetry {
       radarr_instances: 0,
       whisparr_instances: 0,
       readarr_instances: 0,
+      chaptarr_instances: 0,
       lidarr_instances: 0,
       total_instances: 0,
 

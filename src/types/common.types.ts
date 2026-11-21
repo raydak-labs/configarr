@@ -15,6 +15,7 @@ export type MappedTemplates = Partial<
     | "media_naming_api"
     | "ui_config"
     | "host_config"
+    | "media_type"
     | "metadata"
     | "indexer_settings"
     | "indexer_config"
@@ -40,7 +41,7 @@ export type MappedTemplates = Partial<
 
 export type MappedMergedTemplates = MappedTemplates & Required<Pick<MappedTemplates, "custom_formats" | "quality_profiles">>;
 
-export const ArrTypeConst = ["RADARR", "SONARR", "WHISPARR", "READARR", "LIDARR", "PROWLARR"] as const;
+export const ArrTypeConst = ["RADARR", "SONARR", "WHISPARR", "READARR", "CHAPTARR", "LIDARR", "PROWLARR"] as const;
 export type ArrType = (typeof ArrTypeConst)[number];
 export type MediaArrType = Exclude<ArrType, "PROWLARR">;
 
