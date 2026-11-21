@@ -31,7 +31,6 @@ import {
   nonE2eNames,
   preservedRootFolderPaths,
   restoreMediaBaseline,
-  seedHostConfigWrite,
   snapshotMediaBaseline,
   stripVolatile,
   syncConfig,
@@ -71,7 +70,6 @@ describe("whisparr (live)", () => {
 
   beforeAll(async () => {
     await cleanupMediaE2e(client);
-    await seedHostConfigWrite(client);
     baseline = await snapshotMediaBaseline(client);
   }, 180_000);
 
