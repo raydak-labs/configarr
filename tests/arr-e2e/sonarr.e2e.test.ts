@@ -39,7 +39,6 @@ import {
   nonE2eNames,
   preservedRootFolderPaths,
   restoreMediaBaseline,
-  seedHostConfigWrite,
   snapshotMediaBaseline,
   stripVolatile,
   syncConfig,
@@ -154,7 +153,6 @@ describe("sonarr (live)", () => {
     await cleanupMediaIndexerFixtures(client, baseUrl, apiKey, (await client.supportsMediaManagementControls()) ? "v5" : "v3");
     await cleanupMediaE2e(client);
     await cleanupReleaseProfileIndexers(client, baseUrl, apiKey);
-    await seedHostConfigWrite(client);
     baseline = await snapshotMediaBaseline(client);
   }, 180_000);
 

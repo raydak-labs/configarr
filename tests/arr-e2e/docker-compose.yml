@@ -16,8 +16,10 @@ services:
       - SONARR__AUTH__REQUIRED=DisabledForLocalAddresses
     volumes:
       - sonarr-data:/config
+      - ./seed-arr-config.sh:/seed-arr-config.sh:ro
       - ./fixtures/media/e2e:/data/e2e
       - ./fixtures/media/e2e-b:/data/e2e-b
+    entrypoint: ["/bin/sh", "/seed-arr-config.sh", "sonarr"]
     ports:
       - "18989:8989"
 
@@ -34,8 +36,10 @@ services:
       - SONARR__AUTH__REQUIRED=DisabledForLocalAddresses
     volumes:
       - sonarr-v5-data:/config
+      - ./seed-arr-config.sh:/seed-arr-config.sh:ro
       - ./fixtures/media/e2e:/data/e2e
       - ./fixtures/media/e2e-b:/data/e2e-b
+    entrypoint: ["/bin/sh", "/seed-arr-config.sh", "sonarr-v5"]
     ports:
       - "18990:8989"
 
@@ -51,8 +55,10 @@ services:
       - RADARR__AUTH__REQUIRED=DisabledForLocalAddresses
     volumes:
       - radarr-data:/config
+      - ./seed-arr-config.sh:/seed-arr-config.sh:ro
       - ./fixtures/media/e2e:/data/e2e
       - ./fixtures/media/e2e-b:/data/e2e-b
+    entrypoint: ["/bin/sh", "/seed-arr-config.sh", "radarr"]
     ports:
       - "17878:7878"
 
@@ -86,8 +92,10 @@ services:
       - RADARR__AUTH__REQUIRED=DisabledForLocalAddresses
     volumes:
       - radarr-v7-data:/config
+      - ./seed-arr-config.sh:/seed-arr-config.sh:ro
       - ./fixtures/media/e2e:/data/e2e
       - ./fixtures/media/e2e-b:/data/e2e-b
+    entrypoint: ["/bin/sh", "/seed-arr-config.sh", "radarr-v7"]
     ports:
       - "17880:7878"
 
@@ -140,8 +148,10 @@ services:
       - LIDARR__AUTH__REQUIRED=DisabledForLocalAddresses
     volumes:
       - lidarr-data:/config
+      - ./seed-arr-config.sh:/seed-arr-config.sh:ro
       - ./fixtures/media/e2e:/data/e2e
       - ./fixtures/media/e2e-b:/data/e2e-b
+    entrypoint: ["/bin/sh", "/seed-arr-config.sh", "lidarr"]
     ports:
       - "18686:8686"
 
@@ -187,8 +197,10 @@ services:
       - PROWLARR__AUTH__REQUIRED=DisabledForLocalAddresses
     volumes:
       - prowlarr-data:/config
+      - ./seed-arr-config.sh:/seed-arr-config.sh:ro
       - ./fixtures/media/e2e:/data/e2e
       - ./fixtures/media/e2e-b:/data/e2e-b
+    entrypoint: ["/bin/sh", "/seed-arr-config.sh", "prowlarr"]
     ports:
       - "19696:9696"
 
