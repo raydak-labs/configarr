@@ -17,11 +17,23 @@ jobs:
     timeout-minutes: 45
     permissions:
       contents: read
+      statuses: write
+    env:
+      IS_RELEASE_BRANCH: ${{ startsWith(github.ref_name, 'release-please--') }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+
+      - name: Report pending status
+        if: env.IS_RELEASE_BRANCH == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          gh api "repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" \
+            -f state=pending -f context="Arr E2E" -f description="Running" -f target_url="$RUN_URL"
 
       - name: Setup repo tools
         uses: jdx/mise-action@b44d12e7d0d8ee7461bb893e1b1993500433185b # v5.2.7
@@ -84,3 +96,15 @@ jobs:
         if: always()
         working-directory: tests/arr-e2e
         run: docker compose down -v
+
+      - name: Report final status
+        if: always() && env.IS_RELEASE_BRANCH == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          JOB_STATUS: ${{ job.status }}
+        run: |
+          state=failure
+          [ "$JOB_STATUS" = success ] && state=success
+          gh api "repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" \
+            -f state="$state" -f context="Arr E2E" -f description="Live *arr e2e: ${state}" -f target_url="$RUN_URL"

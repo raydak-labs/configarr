@@ -72,11 +72,13 @@ jobs:
           git config --local http.https://github.com/.extraheader "AUTHORIZATION: basic $(printf '%s' "x-access-token:${GH_TOKEN}" | base64 | tr -d '\n')"
           git push origin "HEAD:${RELEASE_BRANCH}"
 
-      - name: Run CI on the release branch
+      - name: Run CI and e2e on the release branch
         env:
           RELEASE_BRANCH: ${{ fromJSON(needs.release-please.outputs.pr).headBranchName }}
           GH_TOKEN: ${{ github.token }}
-        run: gh workflow run ci.yml --ref "$RELEASE_BRANCH"
+        run: |
+          gh workflow run ci.yml --ref "$RELEASE_BRANCH"
+          gh workflow run arr-e2e.yml --ref "$RELEASE_BRANCH"
 
   publish:
     needs: release-please
