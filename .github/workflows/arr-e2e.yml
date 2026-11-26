@@ -69,7 +69,7 @@ jobs:
           start=$(date +%s)
           docker compose config --images | sort -u | xargs docker save -o "${RUNNER_TEMP}/arr-e2e-images.tar"
           echo "image-cache: docker save $(( $(date +%s) - start ))s, tar $(du -h "${RUNNER_TEMP}/arr-e2e-images.tar" | cut -f1)" | tee -a "$GITHUB_STEP_SUMMARY"
-          docker compose config --images | sort -u | xargs docker image ls --format '{{.Repository}}:{{.Tag}} {{.Size}}' | tee -a "$GITHUB_STEP_SUMMARY"
+          docker compose config --images | sort -u | xargs -n1 docker image ls --format '{{.Repository}}:{{.Tag}} {{.Size}}' | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Save docker image cache
         if: steps.image-cache.outputs.cache-hit != 'true'
