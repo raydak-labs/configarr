@@ -32,6 +32,8 @@ jobs:
     permissions:
       contents: read
       packages: write
+      id-token: write # keyless attestation signing
+      attestations: write
     steps:
       # Get the repositery's code
       - name: Checkout
@@ -151,6 +153,7 @@ jobs:
             type=raw,value=latest,enable=${{ steps.set_platforms.outputs.RELEASE == 'true' }}
 
       - name: Build and push PMS
+        id: build_pms
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
@@ -166,6 +169,14 @@ jobs:
             GITHUB_RUN_ID=${{ steps.vars.outputs.run_id }}
             GITHUB_REPO=${{ steps.vars.outputs.repo }}
             GITHUB_SHA=${{ steps.vars.outputs.sha }}
+
+      - name: Attest PMS image provenance
+        if: steps.set_platforms.outputs.push == 'true'
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-name: ghcr.io/${{ github.repository }}
+          subject-digest: ${{ steps.build_pms.outputs.digest }}
+          push-to-registry: true
 
       - name: Docker meta for alpine3.22 image
         id: meta_alpine322
@@ -184,6 +195,7 @@ jobs:
             type=raw,value=latest-alpine3.22,enable=${{ steps.set_platforms.outputs.RELEASE == 'true' }}
 
       - name: Build and push alpine3.22 image
+        id: build_alpine322
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
@@ -199,6 +211,14 @@ jobs:
             GITHUB_RUN_ID=${{ steps.vars.outputs.run_id }}
             GITHUB_REPO=${{ steps.vars.outputs.repo }}
             GITHUB_SHA=${{ steps.vars.outputs.sha }}
+
+      - name: Attest alpine3.22 image provenance
+        if: steps.set_platforms.outputs.push == 'true'
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-name: ghcr.io/${{ github.repository }}
+          subject-digest: ${{ steps.build_alpine322.outputs.digest }}
+          push-to-registry: true
 
       # - name: Docker Hub Description
       #   if: github.event_name != 'pull_request'
