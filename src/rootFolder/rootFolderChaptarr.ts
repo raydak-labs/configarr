@@ -107,3 +107,33 @@ function resolveProfileId(name: string | undefined, profiles: Map<string, number
   if (id === undefined) throw new ConfigValidationError(`${kind} profile '${name}' not found on Chaptarr server`);
   return id;
 }
+
+const typedProfileKeys = [
+  "ebook_quality_profile",
+  "ebook_metadata_profile",
+  "audiobook_quality_profile",
+  "audiobook_metadata_profile",
+] as const;
+
+/** The per-media profile keys apply to Chaptarr `mixed` folders only; anywhere else they would be dropped silently. */
+export function validateChaptarrRootFolderFields(
+  rootFolders: ReadonlyArray<string | InputConfigRootFolderReadarr> | undefined,
+  arrType: string,
+  mediaType: ReadarrMediaType | undefined,
+): void {
+  if (arrType === "CHAPTARR" && mediaType === "mixed") return;
+
+  const used = new Set<string>();
+  for (const folder of rootFolders ?? []) {
+    if (typeof folder === "string") continue;
+    for (const key of typedProfileKeys) if (key in folder) used.add(key);
+  }
+  if (used.size === 0) return;
+
+  const keys = [...used].join(", ");
+  throw new ConfigValidationError(
+    arrType === "CHAPTARR"
+      ? `root folder fields ${keys} apply only to media_type: mixed`
+      : `root folder fields ${keys} are supported only by Chaptarr, not ${arrType}`,
+  );
+}

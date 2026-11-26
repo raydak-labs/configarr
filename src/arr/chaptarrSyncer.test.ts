@@ -58,6 +58,17 @@ describe("ChaptarrSyncer", () => {
     expect(report).toMatchObject({ arrType: "CHAPTARR" });
   });
 
+  it("treats an omitted media_type as ebook for every media-dependent sync", () => {
+    const syncer = new ChaptarrSyncer() as unknown as {
+      createQualityProfileSync(api: unknown, mediaType: undefined): { mediaType?: string };
+      createRootFolderSync(api: unknown, mediaType: undefined): { mediaType?: string };
+      createMediaManagementSync(api: unknown, mediaType: undefined): { mediaType?: string };
+    };
+    expect(syncer.createQualityProfileSync(client, undefined).mediaType).toBe("ebook");
+    expect(syncer.createRootFolderSync(client, undefined).mediaType).toBe("ebook");
+    expect(syncer.createMediaManagementSync(client, undefined).mediaType).toBe("ebook");
+  });
+
   it("uses the Chaptarr metadata profile label", () => {
     const syncer = new ChaptarrSyncer() as unknown as { createMetadataProfileSync(api: unknown): unknown };
     expect(syncer.createMetadataProfileSync(client)).toBeInstanceOf(ChaptarrMetadataProfileSync);

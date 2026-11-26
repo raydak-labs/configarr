@@ -81,7 +81,7 @@ export class QualityProfileChaptarrSync extends QualityProfileReadarrSync {
    */
   protected override customFormatsForProfile(
     customFormats: CustomFormatRequest[],
-    _profile: ConfigQualityProfile,
+    _profile: ConfigQualityProfile | undefined,
     serverMatch?: QualityProfileShared,
   ): CustomFormatRequest[] {
     const existing = serverMatch ? existingProfileType(serverMatch) : undefined;

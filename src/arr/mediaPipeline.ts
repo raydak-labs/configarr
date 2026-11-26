@@ -72,6 +72,7 @@ import type { BaseQualityProfileSync } from "../qualityProfiles/qualityProfileSy
 import type { BaseReleaseProfileSync } from "../releaseProfiles/releaseProfileBase";
 import { syncRemotePaths } from "../remotePaths/remotePathSyncer";
 import type { BaseRootFolderSync } from "../rootFolder/rootFolderBase";
+import { validateChaptarrRootFolderFields } from "../rootFolder/rootFolderChaptarr";
 import { TagDeletionError } from "../tags/tag.types";
 import { deleteUnmanagedInstanceTags, ensureTags, loadServerTags, syncInstanceTags } from "../tags/tags";
 import { getTelemetryInstance, Telemetry } from "../telemetry";
@@ -258,6 +259,7 @@ export const runMediaSyncToQualityProfiles = async <T extends MediaArrType>(
   if (config.media_type !== undefined && arrType !== "CHAPTARR") {
     throw new ConfigValidationError(`media_type is supported only by Chaptarr, not ${arrType}`);
   }
+  validateChaptarrRootFolderFields(config.root_folders, arrType, config.media_type);
   if (config.import_lists && !syncs.importLists) throw new ConfigValidationError("import_lists is not supported for this application");
   if (config.import_lists) {
     const parsed = InputConfigImportListsSchema.safeParse(config.import_lists);

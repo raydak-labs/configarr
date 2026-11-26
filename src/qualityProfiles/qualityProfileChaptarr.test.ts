@@ -311,4 +311,46 @@ describe("QualityProfileChaptarrSync", () => {
     expect(formatItems.map((item) => item.name)).toEqual(["ebook-only"]);
     expect(formatItems.every((item) => item.format != null)).toBe(true);
   });
+
+  test("does not score a custom format the media type excludes on an unmanaged profile", async () => {
+    const cfMap = {
+      carrIdMapping: new Map([
+        ["audio-trash", { carrConfig: { configarr_id: "audio-trash", name: "audio-only" }, requestConfig: {} }],
+        ["ebook-trash", { carrConfig: { configarr_id: "ebook-trash", name: "ebook-only" }, requestConfig: {} }],
+      ]),
+      cfNameToCarrConfig: new Map(),
+    } satisfies CFProcessing;
+    const config = {
+      custom_formats: [
+        { trash_ids: ["audio-trash"], assign_scores_to: [{ name: "Unmanaged", score: 100 }] },
+        { trash_ids: ["ebook-trash"], assign_scores_to: [{ name: "Unmanaged", score: 25 }] },
+      ],
+      quality_profiles: [],
+      customFormatDefinitions: [],
+      media_management: {},
+      media_naming: {},
+    } as unknown as MergedConfigInstance;
+    const serverProfile: QualityProfileShared = {
+      id: 9,
+      name: "Unmanaged",
+      minFormatScore: 0,
+      upgradeAllowed: false,
+      items: [{ allowed: true, items: [], quality: { id: 1, name: "EPUB" } }],
+      formatItems: [{ name: "ebook-only", format: 20, score: 0 }],
+    };
+    const cache = new ServerCache({
+      qualityDefinitions: definitions,
+      qualityProfiles: [serverProfile],
+      customFormats: [
+        { id: 30, name: "audio-only", appliesTo: "audiobook" },
+        { id: 20, name: "ebook-only", appliesTo: "ebook" },
+      ],
+      languages: [],
+    });
+
+    const result = await new QualityProfileChaptarrSync(client, "ebook").calculateQualityProfilesDiff(cfMap, config, cache);
+
+    const formatItems = result.changedQPs[0]?.formatItems ?? [];
+    expect(formatItems).toEqual([expect.objectContaining({ name: "ebook-only", format: 20, score: 25 })]);
+  });
 });

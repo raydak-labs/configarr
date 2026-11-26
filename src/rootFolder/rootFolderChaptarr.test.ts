@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ServerCache } from "../cache";
 import { getEnvs } from "../env";
 import type { InputConfigRootFolderReadarr } from "../types/config.types";
-import { type ChaptarrRootFolderApi, ChaptarrRootFolderSync } from "./rootFolderChaptarr";
+import { type ChaptarrRootFolderApi, ChaptarrRootFolderSync, validateChaptarrRootFolderFields } from "./rootFolderChaptarr";
 
 vi.mock("../env", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../env")>();
@@ -132,5 +132,35 @@ describe("ChaptarrRootFolderSync", () => {
       },
     ]);
     expect(await new ChaptarrRootFolderSync(mockApi).calculateDiff([config], serverCache)).not.toBeNull();
+  });
+});
+
+describe("validateChaptarrRootFolderFields", () => {
+  const typed = {
+    path: "/books",
+    name: "Books",
+    metadata_profile: "Standard",
+    quality_profile: "E-Book",
+    audiobook_quality_profile: "Audio",
+  };
+  const plain = { ...typed, audiobook_quality_profile: undefined };
+  delete (plain as Partial<typeof typed>).audiobook_quality_profile;
+
+  it("accepts typed profile keys on a mixed Chaptarr instance", () => {
+    expect(() => validateChaptarrRootFolderFields([typed], "CHAPTARR", "mixed")).not.toThrow();
+  });
+
+  it("rejects typed profile keys on a single-media Chaptarr instance", () => {
+    expect(() => validateChaptarrRootFolderFields([typed], "CHAPTARR", "audiobook")).toThrow(/only to media_type: mixed/);
+    expect(() => validateChaptarrRootFolderFields([typed], "CHAPTARR", undefined)).toThrow(/only to media_type: mixed/);
+  });
+
+  it("rejects typed profile keys on other apps", () => {
+    expect(() => validateChaptarrRootFolderFields([typed], "READARR", undefined)).toThrow(/only by Chaptarr, not READARR/);
+  });
+
+  it("ignores folders without typed keys and string folders", () => {
+    expect(() => validateChaptarrRootFolderFields([plain, "/other"], "READARR", undefined)).not.toThrow();
+    expect(() => validateChaptarrRootFolderFields(undefined, "SONARR", undefined)).not.toThrow();
   });
 });

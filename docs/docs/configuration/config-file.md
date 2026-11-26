@@ -945,14 +945,14 @@ Notes:
 ### Chaptarr media types
 
 Chaptarr has its own `chaptarr:` section, backed by the same book pipeline as Readarr.
-Set `media_type` to tell Configarr which side of the fork the instance manages. If an
+Set `media_type` to tell Configarr which side of the fork the instance manages; when omitted it behaves as `ebook`. If an
 existing `readarr:` instance points at Chaptarr, move it to the `chaptarr:` section; vanilla
 Readarr rejects `media_type`.
 
 ```yml
 chaptarr:
   ebook:
-    base_url: http://chaptarr:8787
+    base_url: http://chaptarr:8789
     api_key: !secret CHAPTARR_API_KEY
     media_type: ebook
     root_folders:
@@ -973,7 +973,8 @@ chaptarr:
 
 For `mixed`, set `ebook_quality_profile`, `ebook_metadata_profile`,
 `audiobook_quality_profile` and `audiobook_metadata_profile` on the folder. Each side falls
-back to `quality_profile` / `metadata_profile` when omitted.
+back to `quality_profile` / `metadata_profile` when omitted. These four keys are rejected on any other
+`media_type` and on every other app.
 
 With `media_type` set, a media-typed quality profile only considers its own media side:
 the qualities the existing server profile already contains plus the qualities the config

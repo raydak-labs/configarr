@@ -184,7 +184,7 @@ clients and notifications.
 ```yaml title="config.yml"
 chaptarr:
   books:
-    base_url: http://chaptarr:8787
+    base_url: http://chaptarr:8789
     api_key: !secret CHAPTARR_API_KEY
     media_type: ebook # ebook | audiobook | mixed
     root_folders:
