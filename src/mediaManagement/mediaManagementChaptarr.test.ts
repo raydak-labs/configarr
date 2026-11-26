@@ -39,8 +39,8 @@ describe("ChaptarrMediaManagementSync", () => {
     ]);
   });
 
-  test("keeps the generic keys for audiobook and vanilla Readarr", async () => {
-    for (const mediaType of ["audiobook", undefined] as const) {
+  test("keeps the generic keys for audiobook and mixed", async () => {
+    for (const mediaType of ["audiobook", "mixed"] as const) {
       const api = stubApi({ id: 1, standardBookFormat: "old", authorFolderFormat: "old" });
       const sync = new ChaptarrMediaManagementSync(api as never, mediaType);
       await sync.persistNaming({ standardBookFormat: "{Author}/{Title}" }, true);

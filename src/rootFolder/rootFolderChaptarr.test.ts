@@ -143,8 +143,7 @@ describe("validateChaptarrRootFolderFields", () => {
     quality_profile: "E-Book",
     audiobook_quality_profile: "Audio",
   };
-  const plain = { ...typed, audiobook_quality_profile: undefined };
-  delete (plain as Partial<typeof typed>).audiobook_quality_profile;
+  const plain = { path: "/books", name: "Books", metadata_profile: "Standard", quality_profile: "E-Book" };
 
   it("accepts typed profile keys on a mixed Chaptarr instance", () => {
     expect(() => validateChaptarrRootFolderFields([typed], "CHAPTARR", "mixed")).not.toThrow();

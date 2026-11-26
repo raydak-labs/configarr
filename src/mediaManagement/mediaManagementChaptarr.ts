@@ -12,7 +12,7 @@ import { MediaManagementSync } from "./mediaManagement";
 export class ChaptarrMediaManagementSync extends MediaManagementSync<NamingConfigResource, MediaManagementConfigResource> {
   constructor(
     api: MediaManagementClient<NamingConfigResource, MediaManagementConfigResource>,
-    private readonly mediaType?: ReadarrMediaType,
+    private readonly mediaType: ReadarrMediaType = "ebook",
   ) {
     super(api);
   }

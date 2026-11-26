@@ -74,6 +74,16 @@ export abstract class BaseQualityProfileSync<T extends QualityProfileShared> {
     return customFormats;
   }
 
+  /** Only names the filter drops: formats not on the server yet (dry run) must still be reported. */
+  private excludedCustomFormatNames(
+    customFormats: CustomFormatRequest[],
+    profile: ConfigQualityProfile | undefined,
+    serverMatch: QualityProfileShared,
+  ): Set<string | null | undefined> {
+    const allowed = new Set(this.customFormatsForProfile(customFormats, profile, serverMatch));
+    return new Set(customFormats.filter((format) => !allowed.has(format)).map((format) => format.name));
+  }
+
   createOnServer(profile: QualityProfileShared) {
     return this.api.createQualityProfile(this.toServerProfile(profile));
   }
@@ -333,9 +343,7 @@ export abstract class BaseQualityProfileSync<T extends QualityProfileShared> {
       const serverProfileCFMap = new Map(serverMatch.formatItems!.map((obj) => [obj.name!, obj]));
       // Formats this profile excludes must not receive a score: the server profile has no item
       // to attach it to, so the update would send an item without a format id.
-      const allowedCustomFormats = new Set(
-        this.customFormatsForProfile(serverCache.customFormats, value, serverMatch).map((format) => format.name),
-      );
+      const excludedCustomFormats = this.excludedCustomFormatNames(serverCache.customFormats, value, serverMatch);
 
       let scoringDiff = false;
 
@@ -343,7 +351,7 @@ export abstract class BaseQualityProfileSync<T extends QualityProfileShared> {
         const newCFFormats: FormatItem[] = [];
 
         for (const [scoreKey, scoreValue] of scoringForQP.entries()) {
-          if (!allowedCustomFormats.has(scoreKey)) continue;
+          if (excludedCustomFormats.has(scoreKey)) continue;
 
           const serverCF = serverProfileCFMap.get(scoreKey);
           serverProfileCFMap.delete(scoreKey);
@@ -417,9 +425,7 @@ export abstract class BaseQualityProfileSync<T extends QualityProfileShared> {
       const serverProfileCFMap = new Map(unmanagedServerQp.formatItems!.map((obj) => [obj.name!, obj]));
       const scoringForQP = scoring.get(unmanagedServerQp.name!);
       // Formats this profile excludes have no server item to attach a score to.
-      const allowedCustomFormats = new Set(
-        this.customFormatsForProfile(serverCache.customFormats, undefined, unmanagedServerQp).map((format) => format.name),
-      );
+      const excludedCustomFormats = this.excludedCustomFormatNames(serverCache.customFormats, undefined, unmanagedServerQp);
       let scoringDiff = false;
       const fieldChanges: FieldChange[] = [];
       changes.set(unmanagedServerQp.name!, fieldChanges);
@@ -428,7 +434,7 @@ export abstract class BaseQualityProfileSync<T extends QualityProfileShared> {
         const newCFFormats: FormatItem[] = [];
 
         for (const [scoreKey, scoreValue] of scoringForQP.entries()) {
-          if (!allowedCustomFormats.has(scoreKey)) continue;
+          if (excludedCustomFormats.has(scoreKey)) continue;
 
           const serverCF = serverProfileCFMap.get(scoreKey);
           serverProfileCFMap.delete(scoreKey);

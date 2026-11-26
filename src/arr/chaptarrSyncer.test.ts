@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { ServerCache } from "../cache";
 import { ChaptarrDownloadClientSync } from "../downloadClients/downloadClientChaptarr";
+import { ChaptarrMediaManagementSync } from "../mediaManagement/mediaManagementChaptarr";
 import { ChaptarrMetadataProfileSync } from "../metadataProfiles/metadataProfileChaptarr";
 import { QualityProfileChaptarrSync } from "../qualityProfiles/qualityProfileChaptarr";
 import { ChaptarrRootFolderSync } from "../rootFolder/rootFolderChaptarr";
@@ -58,15 +59,15 @@ describe("ChaptarrSyncer", () => {
     expect(report).toMatchObject({ arrType: "CHAPTARR" });
   });
 
-  it("treats an omitted media_type as ebook for every media-dependent sync", () => {
+  it("builds every media-dependent sync, omitted media_type included", () => {
     const syncer = new ChaptarrSyncer() as unknown as {
       createQualityProfileSync(api: unknown, mediaType: undefined): { mediaType?: string };
       createRootFolderSync(api: unknown, mediaType: undefined): { mediaType?: string };
       createMediaManagementSync(api: unknown, mediaType: undefined): { mediaType?: string };
     };
-    expect(syncer.createQualityProfileSync(client, undefined).mediaType).toBe("ebook");
-    expect(syncer.createRootFolderSync(client, undefined).mediaType).toBe("ebook");
-    expect(syncer.createMediaManagementSync(client, undefined).mediaType).toBe("ebook");
+    expect(syncer.createQualityProfileSync(client, undefined)).toBeInstanceOf(QualityProfileChaptarrSync);
+    expect(syncer.createRootFolderSync(client, undefined)).toBeInstanceOf(ChaptarrRootFolderSync);
+    expect(syncer.createMediaManagementSync(client, undefined)).toBeInstanceOf(ChaptarrMediaManagementSync);
   });
 
   it("uses the Chaptarr metadata profile label", () => {

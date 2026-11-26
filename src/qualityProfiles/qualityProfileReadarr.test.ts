@@ -74,4 +74,25 @@ describe("QualityProfileReadarrSync", () => {
 
     expect(diff.changedQPs).toHaveLength(1);
   });
+
+  test("scores a custom format missing from the server on an unmanaged profile (dry run)", async () => {
+    const pendingCfMap = {
+      carrIdMapping: new Map([["new-trash", { carrConfig: { configarr_id: "new-trash", name: "new-cf" }, requestConfig: {} }]]),
+      cfNameToCarrConfig: new Map(),
+    } satisfies CFProcessing;
+    const unmanagedConfig = {
+      ...config,
+      quality_profiles: [],
+      custom_formats: [{ trash_ids: ["new-trash"], assign_scores_to: [{ name: "E-Book", score: 50 }] }],
+    } as unknown as MergedConfigInstance;
+
+    const diff = await new QualityProfileReadarrSync(qpClient).calculateQualityProfilesDiff(
+      pendingCfMap,
+      unmanagedConfig,
+      new ServerCache({ qualityDefinitions: definitions, qualityProfiles: [serverProfile], customFormats: [] }),
+    );
+
+    expect(diff.changedQPs).toHaveLength(1);
+    expect(diff.changes.get("E-Book")).toEqual([{ field: "customFormats.new-cf", from: undefined, to: 50 }]);
+  });
 });

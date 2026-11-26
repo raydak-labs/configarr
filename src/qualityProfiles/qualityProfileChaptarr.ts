@@ -17,7 +17,7 @@ function existingProfileType(profile: QualityProfileShared): "ebook" | "audioboo
 export class QualityProfileChaptarrSync extends QualityProfileReadarrSync {
   constructor(
     api: QualityProfilesClient<QualityProfileResource>,
-    private readonly mediaType?: ReadarrMediaType,
+    private readonly mediaType: ReadarrMediaType = "ebook",
   ) {
     super(api, "CHAPTARR");
   }
@@ -32,8 +32,6 @@ export class QualityProfileChaptarrSync extends QualityProfileReadarrSync {
     serverMatch: QualityProfileShared | undefined,
     profile: ConfigQualityProfile,
   ): QualityDefinitionShared[] {
-    if (this.mediaType === undefined) return definitions;
-
     const names = new Set<string>();
     const collectServerLeaves = (items: QualityItem[]) => {
       for (const item of items) {

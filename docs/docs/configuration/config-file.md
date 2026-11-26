@@ -976,7 +976,7 @@ For `mixed`, set `ebook_quality_profile`, `ebook_metadata_profile`,
 back to `quality_profile` / `metadata_profile` when omitted. These four keys are rejected on any other
 `media_type` and on every other app.
 
-With `media_type` set, a media-typed quality profile only considers its own media side:
+A quality profile only considers its own media side:
 the qualities the existing server profile already contains plus the qualities the config
 declares, so a configured quality can be added later. The other side is not appended as
 disabled rows. A new profile is built from the qualities the config declares; when the

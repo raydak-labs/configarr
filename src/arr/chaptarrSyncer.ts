@@ -9,23 +9,20 @@ import { ReadarrSyncer } from "./readarrSyncer";
 
 type BookMediaType = InputConfigArrInstance["media_type"];
 
-// An omitted media_type means ebook for every media-dependent feature.
-const withDefault = (mediaType: BookMediaType) => mediaType ?? "ebook";
-
 export class ChaptarrSyncer extends ReadarrSyncer {
   protected override readonly arrType = "CHAPTARR" as const;
   protected override readonly arrLabel = "Chaptarr";
 
   protected override createMediaManagementSync(client: ReadarrClient, mediaType: BookMediaType) {
-    return new ChaptarrMediaManagementSync(client, withDefault(mediaType));
+    return new ChaptarrMediaManagementSync(client, mediaType);
   }
 
   protected override createQualityProfileSync(client: ReadarrClient, mediaType: BookMediaType) {
-    return new QualityProfileChaptarrSync(client, withDefault(mediaType));
+    return new QualityProfileChaptarrSync(client, mediaType);
   }
 
   protected override createRootFolderSync(client: ReadarrClient, mediaType: BookMediaType) {
-    return new ChaptarrRootFolderSync(client, withDefault(mediaType));
+    return new ChaptarrRootFolderSync(client, mediaType);
   }
 
   protected override createDownloadClientSync(client: ReadarrClient) {
