@@ -178,22 +178,10 @@ export const InputConfigRootFolderLidarrSchema = z.object({
 });
 export type InputConfigRootFolderLidarr = z.infer<typeof InputConfigRootFolderLidarrSchema>;
 
-export const ReadarrMediaTypeSchema = z.enum(["ebook", "audiobook", "mixed"]);
-export type ReadarrMediaType = z.infer<typeof ReadarrMediaTypeSchema>;
+export const ChaptarrMediaTypeSchema = z.enum(["ebook", "audiobook", "mixed"]);
+export type ChaptarrMediaType = z.infer<typeof ChaptarrMediaTypeSchema>;
 
-export const InputConfigRootFolderReadarrSchema = z.object({
-  path: z.string(),
-  name: z.string(),
-  metadata_profile: z.string(),
-  quality_profile: z.string(),
-  // Chaptarr typed folders. For a mixed folder each side falls back to the primary profile.
-  ebook_quality_profile: z.string().optional(),
-  ebook_metadata_profile: z.string().optional(),
-  audiobook_quality_profile: z.string().optional(),
-  audiobook_metadata_profile: z.string().optional(),
-  monitor: MonitorSchema.optional(),
-  monitor_new_items: z.enum(["all", "none", "new"]).optional(),
-  tags: z.array(z.string()).optional(),
+const calibreRootFolderShape = {
   is_calibre_library: z.boolean().optional(),
   calibre_host: z.string().optional(),
   calibre_port: z.number().optional(),
@@ -204,8 +192,34 @@ export const InputConfigRootFolderReadarrSchema = z.object({
   calibre_output_format: z.string().optional(),
   calibre_output_profile: z.string().optional(),
   calibre_use_ssl: z.boolean().optional(),
+};
+
+export const InputConfigRootFolderReadarrSchema = z.object({
+  path: z.string(),
+  name: z.string(),
+  metadata_profile: z.string(),
+  quality_profile: z.string(),
+  monitor: MonitorSchema.optional(),
+  monitor_new_items: z.enum(["all", "none", "new"]).optional(),
+  tags: z.array(z.string()).optional(),
+  ...calibreRootFolderShape,
 });
 export type InputConfigRootFolderReadarr = z.infer<typeof InputConfigRootFolderReadarrSchema>;
+
+export const InputConfigRootFolderChaptarrSchema = z.object({
+  path: z.string(),
+  name: z.string(),
+  metadata_profile: z.string(),
+  quality_profile: z.string(),
+  // Typed folders. For a mixed folder each side falls back to the primary profile.
+  ebook_quality_profile: z.string().optional(),
+  ebook_metadata_profile: z.string().optional(),
+  audiobook_quality_profile: z.string().optional(),
+  audiobook_metadata_profile: z.string().optional(),
+  tags: z.array(z.string()).optional(),
+  ...calibreRootFolderShape,
+});
+export type InputConfigRootFolderChaptarr = z.infer<typeof InputConfigRootFolderChaptarrSchema>;
 
 export const InputConfigRootFolderGenericSchema = z.string();
 export type InputConfigRootFolderGeneric = z.infer<typeof InputConfigRootFolderGenericSchema>;
@@ -215,6 +229,7 @@ export const InputConfigRootFolderSchema = z.union([
   z.object({
     ...InputConfigRootFolderLidarrSchema.shape,
     ...InputConfigRootFolderReadarrSchema.shape,
+    ...InputConfigRootFolderChaptarrSchema.shape,
   }),
 ]);
 export type InputConfigRootFolder = z.infer<typeof InputConfigRootFolderSchema>;
@@ -646,8 +661,8 @@ export const InputConfigArrInstanceSchema = z.object({
   ui_config: UiConfigTypeSchema.optional(),
   // @experimental @since v1.39.0
   host_config: HostConfigSchema.optional(),
-  // Chaptarr exposes ebook and audiobook sides; vanilla Readarr leaves this unset.
-  media_type: ReadarrMediaTypeSchema.optional(),
+  // Chaptarr only: which media side the instance manages. Rejected on every other app.
+  media_type: ChaptarrMediaTypeSchema.optional(),
   // @experimental @since v1.39.0
   import_lists: InputConfigImportListsSchema.optional(),
   // @experimental @since v1.39.0

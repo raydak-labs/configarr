@@ -8,6 +8,7 @@ import * as env from "./env";
 import * as localImporter from "./local-importer";
 import { logger } from "./logger";
 import { MediaManagementSync } from "./mediaManagement/mediaManagement";
+import { ChaptarrMediaManagementSync } from "./mediaManagement/mediaManagementChaptarr";
 import { RadarrMediaManagementSync } from "./mediaManagement/mediaManagementRadarr";
 import * as reclarrImporter from "./recyclarr-importer";
 import * as trashGuide from "./trash-guide";
@@ -606,6 +607,40 @@ describe("mergeConfigsAndTemplates", () => {
     const overridden = await mergeConfigsAndTemplates({}, { ...base, media_type: "mixed" }, "CHAPTARR");
     expect(overridden.config.media_type).toBe("mixed");
   });
+
+  test.each([
+    { templateType: "audiobook", instanceType: undefined, key: "standardBookFormat", absent: "ebookStandardBookFormat" },
+    { templateType: "audiobook", instanceType: "ebook", key: "ebookStandardBookFormat", absent: "standardBookFormat" },
+    { templateType: "ebook", instanceType: "mixed", key: "standardBookFormat", absent: "ebookStandardBookFormat" },
+  ] as const)(
+    "chaptarr naming uses the merged media_type (template $templateType, instance $instanceType)",
+    async ({ templateType, instanceType, key, absent }) => {
+      const templates: Map<string, MappedTemplates> = new Map([
+        ["books", { media_type: templateType, media_naming_api: { standardBookFormat: "{Author}/{Title}" } } as MappedTemplates],
+      ]);
+      vi.spyOn(reclarrImporter, "loadRecyclarrTemplates").mockReturnValue(new Map());
+      vi.spyOn(localImporter, "loadLocalRecyclarrTemplate").mockReturnValue(templates);
+      const api = {
+        getNaming: vi.fn(async () => ({ id: 1, standardBookFormat: "old", ebookStandardBookFormat: "old" })),
+        updateNaming: vi.fn(async () => ({})),
+      };
+      const preMergeSync = new ChaptarrMediaManagementSync(api as never, instanceType);
+
+      const { config } = await mergeConfigsAndTemplates(
+        {},
+        { api_key: "test", base_url: "http://chaptarr:8788", include: [{ template: "books" }], media_type: instanceType },
+        "CHAPTARR",
+        { mediaManagement: preMergeSync },
+      );
+      expect(config.media_naming_api).toEqual({ standardBookFormat: "{Author}/{Title}" });
+
+      await new ChaptarrMediaManagementSync(api as never, config.media_type).persistNaming(config.media_naming_api, true);
+
+      const sent = (api.updateNaming.mock.calls[0] as unknown as [string, Record<string, unknown>])[1];
+      expect(sent[key]).toBe("{Author}/{Title}");
+      expect(sent[absent]).toBe("old");
+    },
+  );
 
   test("an instance download_clients block keeps a template secret flag it does not set", async () => {
     const templates: Map<string, MappedTemplates> = new Map([

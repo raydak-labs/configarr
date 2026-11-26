@@ -1,9 +1,13 @@
-import type { MetadataProfileResource } from "../__generated__/readarr/data-contracts";
+import type { MetadataProfileResource } from "../__generated__/chaptarr/data-contracts";
 import type { MetadataProfilesClient } from "../clients/capabilities";
-import { ReadarrMetadataProfileSync } from "./metadataProfileReadarr";
+import { BookMetadataProfileSync } from "./metadataProfileBook";
 
-export class ChaptarrMetadataProfileSync extends ReadarrMetadataProfileSync {
+export class ChaptarrMetadataProfileSync extends BookMetadataProfileSync {
   constructor(api: MetadataProfilesClient<MetadataProfileResource>) {
-    super(api, "CHAPTARR");
+    super(api);
+  }
+
+  protected getArrType(): "CHAPTARR" {
+    return "CHAPTARR";
   }
 }

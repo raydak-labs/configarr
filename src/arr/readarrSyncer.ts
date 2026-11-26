@@ -1,6 +1,5 @@
 import { DownloadProtocol, type HostConfigResource } from "../__generated__/readarr/data-contracts";
 import { getClient } from "../clients/client";
-import type { ReadarrClient } from "../clients/readarr-client";
 import { StandardDelayProfileSync } from "../delayProfiles/delayProfileBase";
 import type { InstanceDiffReport } from "../diffReport/diffReport.types";
 import { ReadarrDownloadClientSync } from "../downloadClients/downloadClientReadarr";
@@ -14,58 +13,30 @@ import { ReadarrRootFolderSync } from "../rootFolder/rootFolderReadarr";
 import type { InputConfigArrInstance, InputConfigSchema } from "../types/config.types";
 import { completeMediaSync, runMediaSyncToQualityProfiles } from "./mediaPipeline";
 
-type BookMediaType = InputConfigArrInstance["media_type"];
+const ARR = "READARR" as const;
 
 export class ReadarrSyncer {
-  protected readonly arrType: "READARR" | "CHAPTARR" = "READARR";
-  protected readonly arrLabel: string = "Readarr";
-
-  protected createMediaManagementSync(client: ReadarrClient, _mediaType: BookMediaType) {
-    return new MediaManagementSync(client);
-  }
-
-  protected createQualityProfileSync(client: ReadarrClient, _mediaType: BookMediaType) {
-    return new QualityProfileReadarrSync(client);
-  }
-
-  protected createRootFolderSync(client: ReadarrClient, _mediaType: BookMediaType) {
-    return new ReadarrRootFolderSync(client, this.arrLabel);
-  }
-
-  protected createDownloadClientSync(client: ReadarrClient) {
-    return new ReadarrDownloadClientSync(client, this.arrType);
-  }
-
-  protected createMetadataProfileSync(client: ReadarrClient) {
-    return new ReadarrMetadataProfileSync(client, this.arrType);
-  }
-
   async run(globalConfig: InputConfigSchema, instance: InputConfigArrInstance, instanceName: string): Promise<InstanceDiffReport> {
-    const client = getClient(this.arrType);
+    const client = getClient(ARR);
     const ctx = await runMediaSyncToQualityProfiles({
-      arrType: this.arrType,
+      arrType: ARR,
       instanceName,
       globalConfig,
       instanceConfig: instance,
       client,
       syncs: {
         qd: new QualityDefinitionSync(client),
-        mm: this.createMediaManagementSync(client, instance.media_type),
-        qp: this.createQualityProfileSync(client, instance.media_type),
+        mm: new MediaManagementSync(client),
+        qp: new QualityProfileReadarrSync(client),
         delay: new StandardDelayProfileSync(client, DownloadProtocol),
         releaseProfiles: new ReleaseProfileReadarrSync(client),
-        root: this.createRootFolderSync(client, instance.media_type),
-        downloadClients: this.createDownloadClientSync(client),
+        root: new ReadarrRootFolderSync(client),
+        downloadClients: new ReadarrDownloadClientSync(client),
         indexerConfig: client,
-        hostConfig: new BackupHostConfigSync<HostConfigResource>(client, this.arrLabel),
+        hostConfig: new BackupHostConfigSync<HostConfigResource>(client, "Readarr"),
       },
-      mediaSyncs: (mediaType) => ({
-        mm: this.createMediaManagementSync(client, mediaType),
-        qp: this.createQualityProfileSync(client, mediaType),
-        root: this.createRootFolderSync(client, mediaType),
-      }),
     });
-    const metadataSync = this.createMetadataProfileSync(client);
+    const metadataSync = new ReadarrMetadataProfileSync(client);
     ctx.collector.add((await metadataSync.syncMetadataProfiles(ctx.config, ctx.serverCache)).diffEntries);
     return completeMediaSync(ctx);
   }

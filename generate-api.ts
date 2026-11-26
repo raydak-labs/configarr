@@ -11,6 +11,7 @@ const OPENAPI_SPECS = {
   radarr: "https://raw.githubusercontent.com/Radarr/Radarr/v7.0.0.10815/src/Radarr.Api.V3/openapi.json",
   whisparr: "https://raw.githubusercontent.com/Whisparr/Whisparr/develop/src/Whisparr.Api.V3/openapi.json",
   readarr: "https://raw.githubusercontent.com/Readarr/Readarr/develop/src/Readarr.Api.V1/openapi.json",
+  chaptarr: "https://raw.githubusercontent.com/Chaptarr/chaptarr/v0.9.1000/src/Chaptarr.Api.V1/openapi.json",
   lidarr: "https://raw.githubusercontent.com/lidarr/Lidarr/develop/src/Lidarr.Api.V1/openapi.json",
   prowlarr: "https://raw.githubusercontent.com/Prowlarr/Prowlarr/develop/src/Prowlarr.Api.V1/openapi.json",
 } as const;

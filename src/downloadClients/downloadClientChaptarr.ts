@@ -1,9 +1,14 @@
-import type { DownloadClientResource } from "../__generated__/readarr/data-contracts";
+import type { DownloadClientResource } from "../__generated__/chaptarr/data-contracts";
 import type { DownloadClientsClient, TagsClient } from "../clients/capabilities";
-import { ReadarrDownloadClientSync } from "./downloadClientReadarr";
+import type { MediaArrType } from "../types/common.types";
+import { MediaDownloadClientSync } from "./downloadClientMedia";
 
-export class ChaptarrDownloadClientSync extends ReadarrDownloadClientSync {
+export class ChaptarrDownloadClientSync extends MediaDownloadClientSync<DownloadClientResource> {
   constructor(api: DownloadClientsClient<DownloadClientResource> & TagsClient) {
-    super(api, "CHAPTARR");
+    super(api);
+  }
+
+  protected getArrType(): MediaArrType {
+    return "CHAPTARR";
   }
 }

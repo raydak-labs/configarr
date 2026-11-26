@@ -1,25 +1,37 @@
-import type { QualityProfileResource } from "../__generated__/readarr/data-contracts";
+import { CustomFormatMediaType, ProfileType } from "../__generated__/chaptarr/data-contracts";
 import type { QualityProfilesClient } from "../clients/capabilities";
 import type { CustomFormatRequest } from "../customFormats/customFormat.types";
+import { customFormatMediaType } from "../customFormats/customFormatChaptarr.types";
+import type { FieldChange } from "../diffReport/diffReport.types";
 import type { QualityDefinitionShared } from "../qualityDefinitions/qualityDefinition.types";
-import type { ConfigQualityProfile, ReadarrMediaType } from "../types/config.types";
-import type { QualityItem, QualityProfileShared } from "./qualityProfile.types";
-import { QualityProfileReadarrSync } from "./qualityProfileReadarr";
+import type { ChaptarrMediaType, ConfigQualityProfile } from "../types/config.types";
+import type { QualityItem, QualityProfileLanguage, QualityProfileShared } from "./qualityProfile.types";
+import { warnUnsupportedQualityProfileLanguage } from "./qualityProfileBase";
+import type { ChaptarrQualityProfileResource } from "./qualityProfileChaptarr.types";
+import { BaseQualityProfileSync } from "./qualityProfileSyncBase";
 
-type ChaptarrQualityProfileResource = QualityProfileResource & { profileType: "ebook" | "audiobook" };
-
-/** Read the profile type of an existing server profile, if it has one. */
-function existingProfileType(profile: QualityProfileShared): "ebook" | "audiobook" | undefined {
+/** The profile type of an existing server profile, if it has one. */
+function existingProfileType(profile: QualityProfileShared): ProfileType | undefined {
   if (!("profileType" in profile)) return undefined;
-  return profile.profileType === "ebook" || profile.profileType === "audiobook" ? profile.profileType : undefined;
+  return Object.values(ProfileType).find((value) => value === profile.profileType);
 }
 
-export class QualityProfileChaptarrSync extends QualityProfileReadarrSync {
+const formatSideByProfileType: Record<ProfileType, CustomFormatMediaType> = {
+  [ProfileType.Ebook]: CustomFormatMediaType.Ebook,
+  [ProfileType.Audiobook]: CustomFormatMediaType.Audiobook,
+};
+
+export class QualityProfileChaptarrSync extends BaseQualityProfileSync<ChaptarrQualityProfileResource> {
   constructor(
-    api: QualityProfilesClient<QualityProfileResource>,
-    private readonly mediaType: ReadarrMediaType = "ebook",
+    api: QualityProfilesClient<ChaptarrQualityProfileResource>,
+    private readonly mediaType: ChaptarrMediaType = "ebook",
   ) {
-    super(api, "CHAPTARR");
+    super(api);
+  }
+
+  /** The side a new profile belongs to: the instance type, or ebook for a mixed instance. */
+  private get newProfileType(): ProfileType {
+    return this.mediaType === "audiobook" ? ProfileType.Audiobook : ProfileType.Ebook;
   }
 
   /**
@@ -64,26 +76,57 @@ export class QualityProfileChaptarrSync extends QualityProfileReadarrSync {
   /**
    * Chaptarr requires a profile type on every quality profile. An update keeps the type the
    * server profile already has, so a mixed instance never turns an audiobook profile into an
-   * ebook one. New profiles default to the instance media type, or ebook when mixed.
+   * ebook one.
    */
-  protected override toServerProfile(profile: QualityProfileShared): QualityProfileResource {
-    const profileType = existingProfileType(profile) ?? (this.mediaType === "audiobook" ? "audiobook" : "ebook");
-    const result: ChaptarrQualityProfileResource = { ...profile, profileType };
-    return result;
+  protected toServerProfile(profile: QualityProfileShared): ChaptarrQualityProfileResource {
+    return { ...profile, profileType: existingProfileType(profile) ?? this.newProfileType };
   }
 
   /**
    * A profile must not receive custom formats that belong to the other media side. An existing
-   * server profile decides the side through its own type, which matters for a mixed instance;
-   * new profiles fall back to the instance type, or ebook when mixed or omitted.
+   * server profile decides the side through its own type, which matters for a mixed instance.
    */
   protected override customFormatsForProfile(
     customFormats: CustomFormatRequest[],
     _profile: ConfigQualityProfile | undefined,
     serverMatch?: QualityProfileShared,
   ): CustomFormatRequest[] {
-    const existing = serverMatch ? existingProfileType(serverMatch) : undefined;
-    const appliesTo = existing ?? (this.mediaType === "audiobook" ? "audiobook" : "ebook");
-    return customFormats.filter((format) => format.appliesTo == null || format.appliesTo === "both" || format.appliesTo === appliesTo);
+    const side = formatSideByProfileType[(serverMatch ? existingProfileType(serverMatch) : undefined) ?? this.newProfileType];
+    return customFormats.filter((format) => {
+      const appliesTo = customFormatMediaType(format);
+      return appliesTo === undefined || appliesTo === CustomFormatMediaType.Both || appliesTo === side;
+    });
+  }
+
+  protected resolveLanguage(
+    profileName: string,
+    configLanguage: string | undefined,
+    _languageMap: Map<string, QualityProfileLanguage>,
+  ): QualityProfileLanguage | undefined {
+    warnUnsupportedQualityProfileLanguage(profileName, "CHAPTARR", configLanguage);
+    return undefined;
+  }
+
+  protected attachLanguageOnCreate(_profile: QualityProfileShared, _language: QualityProfileLanguage | undefined): void {}
+
+  protected diffLanguageOnUpdate(
+    _updated: QualityProfileShared,
+    _serverMatch: QualityProfileShared,
+    _language: QualityProfileLanguage | undefined,
+    _fieldChanges: FieldChange[],
+  ): boolean {
+    return false;
+  }
+
+  protected attachMinUpgradeOnCreate(_profile: QualityProfileShared, _minUpgradeFormatScore: number): void {}
+
+  protected diffMinUpgradeOnUpdate(
+    _updated: QualityProfileShared,
+    _serverMatch: QualityProfileShared,
+    _upgradeAllowed: boolean,
+    _configMinUpgrade: number | undefined,
+    _fieldChanges: FieldChange[],
+  ): boolean {
+    return false;
   }
 }

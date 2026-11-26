@@ -1,5 +1,12 @@
 import fs from "node:fs";
 import type {
+  DownloadClientResource as ChaptarrDownloadClientResource,
+  MediaManagementConfigResource as ChaptarrMediaManagementConfigResource,
+  NamingConfigResource as ChaptarrNamingConfigResource,
+  QualityDefinitionResource as ChaptarrQualityDefinitionResource,
+  ReleaseProfileResource as ChaptarrReleaseProfileResource,
+} from "../__generated__/chaptarr/data-contracts";
+import type {
   DownloadClientResource as LidarrDownloadClientResource,
   MediaManagementConfigResource as LidarrMediaManagementConfigResource,
   NamingConfigResource as LidarrNamingConfigResource,
@@ -68,6 +75,7 @@ import { prepareMetadata, syncMetadata } from "../metadata/metadataSync";
 import { syncNotifications, validateNotifications } from "../notifications/notifications";
 import { type QualityDefinitionSync, qualityDefinitionsToDiffEntries } from "../qualityDefinitions/qualityDefinition";
 import { getUnmanagedQualityProfiles, qualityProfilesToDiffEntries } from "../qualityProfiles/qualityProfileBase";
+import type { ChaptarrQualityProfileResource } from "../qualityProfiles/qualityProfileChaptarr.types";
 import type { BaseQualityProfileSync } from "../qualityProfiles/qualityProfileSyncBase";
 import type { BaseReleaseProfileSync } from "../releaseProfiles/releaseProfileBase";
 import { syncRemotePaths } from "../remotePaths/remotePathSyncer";
@@ -128,12 +136,12 @@ type MediaArrResources = {
     downloadClient: ReadarrDownloadClientResource;
   };
   CHAPTARR: {
-    qualityDefinition: ReadarrQualityDefinitionResource;
-    naming: ReadarrNamingConfigResource;
-    mediaManagement: ReadarrMediaManagementConfigResource;
-    qualityProfile: ReadarrQualityProfileResource;
-    releaseProfile: ReadarrReleaseProfileResource;
-    downloadClient: ReadarrDownloadClientResource;
+    qualityDefinition: ChaptarrQualityDefinitionResource;
+    naming: ChaptarrNamingConfigResource;
+    mediaManagement: ChaptarrMediaManagementConfigResource;
+    qualityProfile: ChaptarrQualityProfileResource;
+    releaseProfile: ChaptarrReleaseProfileResource;
+    downloadClient: ChaptarrDownloadClientResource;
   };
   SONARR: {
     qualityDefinition: SonarrQualityDefinitionResource;

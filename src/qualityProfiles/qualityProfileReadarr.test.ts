@@ -6,7 +6,6 @@ import type { CFProcessing } from "../customFormats/customFormat.types";
 import type { QualityDefinitionShared } from "../qualityDefinitions/qualityDefinition.types";
 import type { MergedConfigInstance } from "../types/config.types";
 import type { QualityProfileShared } from "./qualityProfile.types";
-import { QualityProfileChaptarrSync } from "./qualityProfileChaptarr";
 import { QualityProfileReadarrSync } from "./qualityProfileReadarr";
 
 /** calculateQualityProfilesDiff never touches the API; the client is only required by the type. */
@@ -54,17 +53,6 @@ const config: MergedConfigInstance = {
 const cfMap: CFProcessing = { carrIdMapping: new Map(), cfNameToCarrConfig: new Map() };
 
 describe("QualityProfileReadarrSync", () => {
-  test("restricts an existing media-typed profile to its own qualities", async () => {
-    const diff = await new QualityProfileChaptarrSync(qpClient, "ebook").calculateQualityProfilesDiff(
-      cfMap,
-      config,
-      new ServerCache({ qualityDefinitions: definitions, qualityProfiles: [serverProfile] }),
-    );
-
-    expect(diff.changedQPs).toHaveLength(0);
-    expect(diff.noChanges).toEqual(["E-Book"]);
-  });
-
   test("vanilla Readarr keeps the whole quality universe", async () => {
     const diff = await new QualityProfileReadarrSync(qpClient).calculateQualityProfilesDiff(
       cfMap,

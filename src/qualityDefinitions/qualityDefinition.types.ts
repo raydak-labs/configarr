@@ -9,5 +9,5 @@ export type QualityDefinitionShared = {
     id?: number;
     name?: string | null;
     resolution?: number;
-  };
+  } | null;
 };

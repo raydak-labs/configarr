@@ -2,7 +2,6 @@ import { describe, expect, it, vi } from "vitest";
 import { ServerCache } from "../cache";
 import { ChaptarrDownloadClientSync } from "../downloadClients/downloadClientChaptarr";
 import { ChaptarrMediaManagementSync } from "../mediaManagement/mediaManagementChaptarr";
-import { ChaptarrMetadataProfileSync } from "../metadataProfiles/metadataProfileChaptarr";
 import { QualityProfileChaptarrSync } from "../qualityProfiles/qualityProfileChaptarr";
 import { ChaptarrRootFolderSync } from "../rootFolder/rootFolderChaptarr";
 import type { InputConfigArrInstance } from "../types/config.types";
@@ -54,24 +53,41 @@ describe("ChaptarrSyncer", () => {
     expect(args.syncs.root).toBeInstanceOf(ChaptarrRootFolderSync);
     expect(args.syncs.downloadClients).toBeInstanceOf(ChaptarrDownloadClientSync);
     // Templates can supply media_type, so the pipeline rebuilds these from the merged value.
+    expect(args.mediaSyncs("audiobook").mm).toBeInstanceOf(ChaptarrMediaManagementSync);
     expect(args.mediaSyncs("audiobook").qp).toBeInstanceOf(QualityProfileChaptarrSync);
     expect(args.mediaSyncs("audiobook").root).toBeInstanceOf(ChaptarrRootFolderSync);
     expect(report).toMatchObject({ arrType: "CHAPTARR" });
   });
 
-  it("builds every media-dependent sync, omitted media_type included", () => {
-    const syncer = new ChaptarrSyncer() as unknown as {
-      createQualityProfileSync(api: unknown, mediaType: undefined): { mediaType?: string };
-      createRootFolderSync(api: unknown, mediaType: undefined): { mediaType?: string };
-      createMediaManagementSync(api: unknown, mediaType: undefined): { mediaType?: string };
-    };
-    expect(syncer.createQualityProfileSync(client, undefined)).toBeInstanceOf(QualityProfileChaptarrSync);
-    expect(syncer.createRootFolderSync(client, undefined)).toBeInstanceOf(ChaptarrRootFolderSync);
-    expect(syncer.createMediaManagementSync(client, undefined)).toBeInstanceOf(ChaptarrMediaManagementSync);
+  it("builds every media-dependent sync when media_type is omitted", async () => {
+    runMedia.mockResolvedValue({
+      arrType: "CHAPTARR",
+      instanceName: "e2e",
+      config: {},
+      serverCache: new ServerCache(),
+      collector: { add: vi.fn() },
+    });
+
+    await new ChaptarrSyncer().run({}, { base_url: "http://chaptarr", api_key: "key" }, "e2e");
+
+    const args = runMedia.mock.calls.at(-1)?.[0] as { syncs: { mm: unknown; qp: unknown; root: unknown } };
+    expect(args.syncs.mm).toBeInstanceOf(ChaptarrMediaManagementSync);
+    expect(args.syncs.qp).toBeInstanceOf(QualityProfileChaptarrSync);
+    expect(args.syncs.root).toBeInstanceOf(ChaptarrRootFolderSync);
   });
 
-  it("uses the Chaptarr metadata profile label", () => {
-    const syncer = new ChaptarrSyncer() as unknown as { createMetadataProfileSync(api: unknown): unknown };
-    expect(syncer.createMetadataProfileSync(client)).toBeInstanceOf(ChaptarrMetadataProfileSync);
+  it("syncs metadata profiles with the Chaptarr metadata sync", async () => {
+    const add = vi.fn();
+    runMedia.mockResolvedValue({
+      arrType: "CHAPTARR",
+      instanceName: "e2e",
+      config: {},
+      serverCache: new ServerCache(),
+      collector: { add },
+    });
+
+    await new ChaptarrSyncer().run({}, instance, "e2e");
+
+    expect(add).toHaveBeenCalledWith([]);
   });
 });
