@@ -85,6 +85,8 @@ jobs:
     permissions:
       contents: write
       packages: write
+      id-token: write
+      attestations: write
     with:
       tag: ${{ needs.release-please.outputs.tag }}
     secrets:
