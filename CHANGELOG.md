@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.40.0](https://github.com/raydak-labs/configarr/compare/v1.39.2...v1.40.0) (2026-11-26)
+
+
+### Features
+
+* **chaptarr:** add media-typed Chaptarr support ([#635](https://github.com/raydak-labs/configarr/issues/635)) ([f6693ef](https://github.com/raydak-labs/configarr/commit/f6693ef2b19aaf72e9c226014156b735de4fa70b))
+* manage host backup policy on every *arr ([#633](https://github.com/raydak-labs/configarr/issues/633)) ([3287700](https://github.com/raydak-labs/configarr/commit/3287700c504d1322cb6fc5677068a8b952ba61b9))
+
+
+### (internal) Refactorings
+
+* **chaptarr:** make Chaptarr standalone from Readarr ([#638](https://github.com/raydak-labs/configarr/issues/638)) ([c6f1f78](https://github.com/raydak-labs/configarr/commit/c6f1f786b33749fea7090e6c5bb423e41d06c808))
+
 ## [1.39.2](https://github.com/raydak-labs/configarr/compare/v1.39.1...v1.39.2) (2026-11-16)
 
 
