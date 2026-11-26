@@ -99,16 +99,25 @@ const typedProfileKeys = [
   "audiobook_metadata_profile",
 ] as const;
 
-/** The per-media profile keys apply to Chaptarr `mixed` folders only; anywhere else they would be dropped silently. */
+/** Readarr and Lidarr keys Chaptarr's root folder API has no field for. */
+const unsupportedKeys = ["monitor", "monitor_new_items", "monitor_new_album"] as const;
+
+/** Keys that would otherwise be dropped silently: typed profile keys outside Chaptarr `mixed`, and keys Chaptarr has no field for. */
 export function validateChaptarrRootFolderFields(
   rootFolders: ReadonlyArray<InputConfigRootFolder> | undefined,
   arrType: string,
   mediaType: ChaptarrMediaType | undefined,
 ): void {
-  if (arrType === "CHAPTARR" && mediaType === "mixed") return;
-
   const folders = (rootFolders ?? []).filter((folder) => typeof folder !== "string");
   const keysUsed = (candidates: readonly string[]) => candidates.filter((key) => folders.some((folder) => key in folder));
+
+  if (arrType === "CHAPTARR") {
+    const unsupported = keysUsed(unsupportedKeys);
+    if (unsupported.length > 0)
+      throw new ConfigValidationError(`root folder fields ${unsupported.join(", ")} are not supported by Chaptarr`);
+  }
+
+  if (arrType === "CHAPTARR" && mediaType === "mixed") return;
 
   const used = new Set(keysUsed(typedProfileKeys));
   if (used.size === 0) return;

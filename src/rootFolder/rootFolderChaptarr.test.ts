@@ -158,6 +158,12 @@ describe("validateChaptarrRootFolderFields", () => {
     expect(() => validateChaptarrRootFolderFields([typed], "READARR", undefined)).toThrow(/only by Chaptarr, not READARR/);
   });
 
+  it("rejects root folder keys Chaptarr has no field for", () => {
+    const withMonitor = { ...plain, monitor: "all" as const };
+    expect(() => validateChaptarrRootFolderFields([withMonitor], "CHAPTARR", "mixed")).toThrow(/monitor are not supported by Chaptarr/);
+    expect(() => validateChaptarrRootFolderFields([withMonitor], "READARR", undefined)).not.toThrow();
+  });
+
   it("ignores folders without typed keys and string folders", () => {
     expect(() => validateChaptarrRootFolderFields([plain, "/other"], "READARR", undefined)).not.toThrow();
     expect(() => validateChaptarrRootFolderFields(undefined, "SONARR", undefined)).not.toThrow();
