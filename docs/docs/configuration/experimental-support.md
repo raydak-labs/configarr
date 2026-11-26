@@ -179,8 +179,8 @@ Readarr metadata profiles use **ISO 639-3** language codes (3-letter codes like 
 
 Chaptarr is a Readarr fork with separate ebook and audiobook sides. It has its own `chaptarr:`
 section and its own API client, generated from Chaptarr's OpenAPI spec. It covers metadata
-profiles, release profiles, download clients and notifications like `readarr:`. Root folders do
-not take `monitor` or `monitor_new_items`, and quality profiles do not take `language`.
+profiles, release profiles, download clients and notifications like `readarr:`. Root folders ignore
+`monitor` and `monitor_new_items` with a warning, and quality profiles do not take `language`.
 
 ```yaml title="config.yml"
 chaptarr:

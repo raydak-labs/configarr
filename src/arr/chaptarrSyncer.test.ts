@@ -53,6 +53,7 @@ describe("ChaptarrSyncer", () => {
     expect(args.syncs.root).toBeInstanceOf(ChaptarrRootFolderSync);
     expect(args.syncs.downloadClients).toBeInstanceOf(ChaptarrDownloadClientSync);
     // Templates can supply media_type, so the pipeline rebuilds these from the merged value.
+    expect(args.mediaSyncs("audiobook").mm).toBeInstanceOf(ChaptarrMediaManagementSync);
     expect(args.mediaSyncs("audiobook").qp).toBeInstanceOf(QualityProfileChaptarrSync);
     expect(args.mediaSyncs("audiobook").root).toBeInstanceOf(ChaptarrRootFolderSync);
     expect(report).toMatchObject({ arrType: "CHAPTARR" });

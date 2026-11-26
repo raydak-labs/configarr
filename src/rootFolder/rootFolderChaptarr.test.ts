@@ -1,7 +1,8 @@
 import type { Mocked } from "vitest";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ServerCache } from "../cache";
 import { getEnvs } from "../env";
+import { logger } from "../logger";
 import type { InputConfigRootFolderChaptarr } from "../types/config.types";
 import { type ChaptarrRootFolderApi, ChaptarrRootFolderSync, validateChaptarrRootFolderFields } from "./rootFolderChaptarr";
 
@@ -136,6 +137,8 @@ describe("ChaptarrRootFolderSync", () => {
 });
 
 describe("validateChaptarrRootFolderFields", () => {
+  afterEach(() => vi.restoreAllMocks());
+
   const typed = {
     path: "/books",
     name: "Books",
@@ -158,10 +161,23 @@ describe("validateChaptarrRootFolderFields", () => {
     expect(() => validateChaptarrRootFolderFields([typed], "READARR", undefined)).toThrow(/only by Chaptarr, not READARR/);
   });
 
-  it("rejects root folder keys Chaptarr has no field for", () => {
-    const withMonitor = { ...plain, monitor: "all" as const };
-    expect(() => validateChaptarrRootFolderFields([withMonitor], "CHAPTARR", "mixed")).toThrow(/monitor are not supported by Chaptarr/);
+  it("warns once and ignores root folder keys Chaptarr has no field for", () => {
+    const warn = vi.spyOn(logger, "warn").mockImplementation(() => {});
+    const withMonitor = { ...plain, monitor: "all" as const, monitor_new_items: "all" as const };
+    expect(() => validateChaptarrRootFolderFields([withMonitor, withMonitor], "CHAPTARR", "mixed")).not.toThrow();
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining("monitor, monitor_new_items"));
+
+    warn.mockClear();
     expect(() => validateChaptarrRootFolderFields([withMonitor], "READARR", undefined)).not.toThrow();
+    expect(warn).not.toHaveBeenCalled();
+  });
+
+  it("still rejects typed profile keys next to ignored monitor keys", () => {
+    vi.spyOn(logger, "warn").mockImplementation(() => {});
+    expect(() => validateChaptarrRootFolderFields([{ ...typed, monitor: "all" as const }], "CHAPTARR", "ebook")).toThrow(
+      /only to media_type: mixed/,
+    );
   });
 
   it("ignores folders without typed keys and string folders", () => {

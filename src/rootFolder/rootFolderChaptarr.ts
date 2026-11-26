@@ -1,5 +1,6 @@
 import type { RootFolderResource } from "../__generated__/chaptarr/data-contracts";
 import type { ServerCache } from "../cache";
+import { logger } from "../logger";
 import type { ChaptarrMediaType, InputConfigRootFolder, InputConfigRootFolderChaptarr } from "../types/config.types";
 import { ConfigValidationError } from "../validation";
 import { nameIdMap, type ProfileAwareRootFolderApi, type ProfileAwareRootFolderFields, ProfileAwareRootFolderSync } from "./rootFolderBase";
@@ -102,7 +103,7 @@ const typedProfileKeys = [
 /** Readarr and Lidarr keys Chaptarr's root folder API has no field for. */
 const unsupportedKeys = ["monitor", "monitor_new_items", "monitor_new_album"] as const;
 
-/** Keys that would otherwise be dropped silently: typed profile keys outside Chaptarr `mixed`, and keys Chaptarr has no field for. */
+/** Typed profile keys outside Chaptarr `mixed` throw; keys Chaptarr has no field for are ignored with a warning. */
 export function validateChaptarrRootFolderFields(
   rootFolders: ReadonlyArray<InputConfigRootFolder> | undefined,
   arrType: string,
@@ -113,8 +114,11 @@ export function validateChaptarrRootFolderFields(
 
   if (arrType === "CHAPTARR") {
     const unsupported = keysUsed(unsupportedKeys);
-    if (unsupported.length > 0)
-      throw new ConfigValidationError(`root folder fields ${unsupported.join(", ")} are not supported by Chaptarr`);
+    if (unsupported.length > 0) {
+      logger.warn(
+        `Chaptarr root folders have no field for ${unsupported.join(", ")}; these keys are ignored. Remove them from the config.`,
+      );
+    }
   }
 
   if (arrType === "CHAPTARR" && mediaType === "mixed") return;
