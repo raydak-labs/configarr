@@ -40,7 +40,6 @@ import {
   nonE2eNames,
   preservedRootFolderPaths,
   restoreMediaBaseline,
-  seedHostConfigWrite,
   snapshotMediaBaseline,
   stripVolatile,
   syncConfig,
@@ -88,7 +87,6 @@ describe("radarr (live)", () => {
     }
     await cleanupMediaIndexerFixtures(client, baseUrl, apiKey, "v3");
     await cleanupMediaE2e(client);
-    await seedHostConfigWrite(client);
     const snapshot = await snapshotMediaBaseline(client);
     const [profiles, tags] = await Promise.all([client.getDelayProfiles(), client.getTags()]);
     preexistingDelayProfileIds = new Set(profiles.flatMap((profile) => (profile.id == null ? [] : [profile.id])));
