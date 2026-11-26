@@ -18,7 +18,7 @@ export type DownloadClientField = {
   selectOptionsProviderAction?: string | null;
   section?: string | null;
   hidden?: string | null;
-  privacy?: string;
+  privacy?: string | null;
   placeholder?: string | null;
   isFloat?: boolean;
 };

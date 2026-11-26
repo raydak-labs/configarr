@@ -177,9 +177,9 @@ Readarr metadata profiles use **ISO 639-3** language codes (3-letter codes like 
 
 ## Chaptarr
 
-Chaptarr is the media-typed Readarr fork. It has its own `chaptarr:` section and uses the
-same book pipeline as `readarr:`, including metadata profiles, release profiles, download
-clients and notifications.
+Chaptarr is a Readarr fork with separate ebook and audiobook sides. It has its own `chaptarr:`
+section and its own API client, generated from Chaptarr's OpenAPI spec. It covers metadata
+profiles, release profiles, download clients and notifications like `readarr:`.
 
 ```yaml title="config.yml"
 chaptarr:

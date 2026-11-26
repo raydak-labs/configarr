@@ -30,7 +30,8 @@ const syncByArrType: Record<MediaArrType, () => MediaDownloadClientSync<Download
   SONARR: () => new SonarrDownloadClientSync({} as any),
   LIDARR: () => new LidarrDownloadClientSync({} as any),
   READARR: () => new ReadarrDownloadClientSync({} as any),
-  CHAPTARR: () => new ChaptarrDownloadClientSync({} as any),
+  // The record is typed with Radarr resources; Chaptarr has its own generated resource of the same shape.
+  CHAPTARR: () => new ChaptarrDownloadClientSync({} as any) as unknown as MediaDownloadClientSync<DownloadClientResource>,
   WHISPARR: () => new WhisparrDownloadClientSync({} as any),
 };
 

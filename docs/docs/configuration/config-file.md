@@ -944,7 +944,7 @@ Notes:
 
 ### Chaptarr media types
 
-Chaptarr has its own `chaptarr:` section, backed by the same book pipeline as Readarr.
+Chaptarr has its own `chaptarr:` section and API client.
 Set `media_type` to tell Configarr which side of the fork the instance manages; when omitted it behaves as `ebook`. If an
 existing `readarr:` instance points at Chaptarr, move it to the `chaptarr:` section; vanilla
 Readarr rejects `media_type`.

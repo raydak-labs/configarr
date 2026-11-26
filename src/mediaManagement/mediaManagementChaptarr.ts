@@ -1,6 +1,6 @@
-import type { MediaManagementConfigResource, NamingConfigResource } from "../__generated__/readarr/data-contracts";
+import type { MediaManagementConfigResource, NamingConfigResource } from "../__generated__/chaptarr/data-contracts";
 import type { MediaManagementClient } from "../clients/capabilities";
-import type { MediaNamingApiType, ReadarrMediaType } from "../types/config.types";
+import type { ChaptarrMediaType, MediaNamingApiType } from "../types/config.types";
 import { MediaManagementSync } from "./mediaManagement";
 
 /**
@@ -12,7 +12,7 @@ import { MediaManagementSync } from "./mediaManagement";
 export class ChaptarrMediaManagementSync extends MediaManagementSync<NamingConfigResource, MediaManagementConfigResource> {
   constructor(
     api: MediaManagementClient<NamingConfigResource, MediaManagementConfigResource>,
-    private readonly mediaType: ReadarrMediaType = "ebook",
+    private readonly mediaType: ChaptarrMediaType = "ebook",
   ) {
     super(api);
   }

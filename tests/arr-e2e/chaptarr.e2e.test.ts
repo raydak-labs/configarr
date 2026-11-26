@@ -5,7 +5,7 @@
  * shared factory would hide that behind branches. Shared code stays in `helpers.ts`.
  */
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
-import { DownloadProtocol } from "../../src/__generated__/readarr/data-contracts";
+import { DownloadProtocol } from "../../src/__generated__/chaptarr/data-contracts";
 import { ChaptarrClient } from "../../src/clients/chaptarr-client";
 import { StandardDelayProfileSync } from "../../src/delayProfiles/delayProfileBase";
 import { InputConfigDelayProfileSchema } from "../../src/types/config.types";
@@ -30,7 +30,7 @@ import {
   findNamed,
   type MediaBaseline,
   nonE2eNames,
-  preservedRootFolderObjects,
+  preservedChaptarrRootFolders,
   restoreMediaBaseline,
   snapshotMediaBaseline,
   stripVolatile,
@@ -74,7 +74,7 @@ const delayProfiles = (usenetDelay: number, additional: boolean) => ({
   ...(additional ? { additional: [{ ...delayDefault(usenetDelay), order: 1, tags: ["e2e-delay"] }] } : {}),
 });
 
-/** Readarr root folders are objects and need both profiles by name. */
+/** Chaptarr root folders are objects and need both profiles by name. */
 const rootFolder = (path: string, name: string) => ({ path, name, metadata_profile: "e2e-meta", quality_profile: "e2e-qp" });
 
 describe("chaptarr (live)", () => {
@@ -237,7 +237,7 @@ describe("chaptarr (live)", () => {
 
     const created = await syncConfig(chaptarrConfig({ quality_definition: qualityDefinition(2) }));
     assertPipelineSucceeded(created.result, ["CHAPTARR"]);
-    // Readarr applies the bulk update asynchronously, so the first GET can still be stale.
+    // Chaptarr applies the bulk update asynchronously, so the first GET can still be stale.
     await waitUntil(async () => (await epub())?.minSize === 2);
     expect((await epub())?.maxSize).toBe(199.9);
 
@@ -451,7 +451,7 @@ describe("chaptarr (live)", () => {
   });
 
   test("root folders", async () => {
-    const preserved = await preservedRootFolderObjects(client);
+    const preserved = await preservedChaptarrRootFolders(client);
     const yaml = (folders: Record<string, unknown>[]) =>
       chaptarrConfig({
         quality_profiles: [qualityProfile()],
@@ -468,7 +468,7 @@ describe("chaptarr (live)", () => {
     const root = (await client.getRootfolders()).find((folder) => folder.path === E2E_ROOT_A);
     expect(root).toMatchObject({ folderType: 2 });
     expect(root).toHaveProperty("ebookQualityProfileId");
-    // Typed folders use the per-media ids, not the Readarr defaults.
+    // Typed folders use the per-media ids, not the default profile ids.
     expect(root).not.toHaveProperty("defaultQualityProfileId");
     expect(root).not.toHaveProperty("defaultMetadataProfileId");
 

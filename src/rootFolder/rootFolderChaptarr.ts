@@ -1,64 +1,53 @@
-import type { RootFolderResource } from "../__generated__/readarr/data-contracts";
+import type { RootFolderResource } from "../__generated__/chaptarr/data-contracts";
 import type { ServerCache } from "../cache";
-import type { InputConfigRootFolderReadarr, ReadarrMediaType } from "../types/config.types";
+import type { ChaptarrMediaType, InputConfigRootFolder, InputConfigRootFolderChaptarr } from "../types/config.types";
 import { ConfigValidationError } from "../validation";
-import { nameIdMap, type ProfileAwareRootFolderApi, type ProfileAwareRootFolderFields } from "./rootFolderBase";
-import { ReadarrRootFolderSync } from "./rootFolderReadarr";
+import { nameIdMap, type ProfileAwareRootFolderApi, type ProfileAwareRootFolderFields, ProfileAwareRootFolderSync } from "./rootFolderBase";
+import { calibreComparableFields, calibreFieldsFromConfig } from "./rootFolderCalibre";
 
-/** Chaptarr fields that the generated vanilla-Readarr contract does not declare. */
-export type ChaptarrRootFolderFields = {
-  /** 0 = mixed, 1 = audiobook, 2 = ebook. */
-  folderType?: number;
-  ebookQualityProfileId?: number;
-  ebookMetadataProfileId?: number;
-  audiobookQualityProfileId?: number;
-  audiobookMetadataProfileId?: number;
-};
+export type ChaptarrRootFolderApi = ProfileAwareRootFolderApi<RootFolderResource>;
 
-export type ChaptarrRootFolderResource = RootFolderResource & ChaptarrRootFolderFields;
-export type ChaptarrRootFolderApi = ProfileAwareRootFolderApi<ChaptarrRootFolderResource>;
+type ChaptarrRootFolderConfig = InputConfigRootFolderChaptarr;
 
-type ChaptarrRootFolderConfig = InputConfigRootFolderReadarr;
-
-const folderTypeByMediaType: Record<ReadarrMediaType, number> = {
+/** Chaptarr's `folderType`. */
+const folderTypeByMediaType: Record<ChaptarrMediaType, number> = {
   mixed: 0,
   audiobook: 1,
   ebook: 2,
 };
 
-export class ChaptarrRootFolderSync extends ReadarrRootFolderSync<ChaptarrRootFolderResource> {
+export class ChaptarrRootFolderSync extends ProfileAwareRootFolderSync<ChaptarrRootFolderConfig, RootFolderResource> {
+  protected readonly arrName = "Chaptarr";
+
   constructor(
     api: ChaptarrRootFolderApi,
-    private readonly mediaType: ReadarrMediaType = "ebook",
+    private readonly mediaType: ChaptarrMediaType = "ebook",
   ) {
-    super(api, "Chaptarr");
+    super(api);
   }
 
-  protected override buildResource(config: ChaptarrRootFolderConfig, fields: ProfileAwareRootFolderFields): ChaptarrRootFolderResource {
-    const result = super.buildResource(config, fields);
+  protected buildResource(config: ChaptarrRootFolderConfig, fields: ProfileAwareRootFolderFields): RootFolderResource {
+    const result: RootFolderResource = {
+      path: fields.path,
+      name: fields.name,
+      defaultTags: fields.defaultTags,
+      folderType: folderTypeByMediaType[this.mediaType],
+      ...calibreFieldsFromConfig(config),
+    };
 
-    // Typed Chaptarr folders use their per-media profile ids instead of the defaults.
-    delete result.defaultMetadataProfileId;
-    delete result.defaultQualityProfileId;
-    result.folderType = folderTypeByMediaType[this.mediaType];
-
-    const qualityProfileId = fields.defaultQualityProfileId;
-    const metadataProfileId = fields.defaultMetadataProfileId;
+    // A typed folder keeps its profiles per media side; mixed folders are completed in resolveRootFolderConfig.
     if (this.mediaType === "ebook") {
-      result.ebookQualityProfileId = qualityProfileId;
-      result.ebookMetadataProfileId = metadataProfileId;
+      result.ebookQualityProfileId = fields.defaultQualityProfileId;
+      result.ebookMetadataProfileId = fields.defaultMetadataProfileId;
     } else if (this.mediaType === "audiobook") {
-      result.audiobookQualityProfileId = qualityProfileId;
-      result.audiobookMetadataProfileId = metadataProfileId;
+      result.audiobookQualityProfileId = fields.defaultQualityProfileId;
+      result.audiobookMetadataProfileId = fields.defaultMetadataProfileId;
     }
 
     return result;
   }
 
-  public override async resolveRootFolderConfig(
-    config: ChaptarrRootFolderConfig,
-    serverCache: ServerCache,
-  ): Promise<ChaptarrRootFolderResource> {
+  public override async resolveRootFolderConfig(config: ChaptarrRootFolderConfig, serverCache: ServerCache): Promise<RootFolderResource> {
     const resource = await super.resolveRootFolderConfig(config, serverCache);
 
     // A mixed folder owns both media sides. Each side falls back to the primary profiles.
@@ -80,19 +69,14 @@ export class ChaptarrRootFolderSync extends ReadarrRootFolderSync<ChaptarrRootFo
     return resource;
   }
 
-  protected override extraComparableFields(resource: ChaptarrRootFolderResource): Record<string, unknown> {
-    const fields = super.extraComparableFields(resource);
-    fields.folderType = resource.folderType;
+  protected override extraComparableFields(resource: RootFolderResource): Record<string, unknown> {
+    const fields: Record<string, unknown> = { ...calibreComparableFields(resource), folderType: resource.folderType };
 
-    if (this.mediaType === "ebook") {
+    if (this.mediaType !== "audiobook") {
       fields.ebookQualityProfileId = resource.ebookQualityProfileId;
       fields.ebookMetadataProfileId = resource.ebookMetadataProfileId;
-    } else if (this.mediaType === "audiobook") {
-      fields.audiobookQualityProfileId = resource.audiobookQualityProfileId;
-      fields.audiobookMetadataProfileId = resource.audiobookMetadataProfileId;
-    } else if (this.mediaType === "mixed") {
-      fields.ebookQualityProfileId = resource.ebookQualityProfileId;
-      fields.ebookMetadataProfileId = resource.ebookMetadataProfileId;
+    }
+    if (this.mediaType !== "ebook") {
       fields.audiobookQualityProfileId = resource.audiobookQualityProfileId;
       fields.audiobookMetadataProfileId = resource.audiobookMetadataProfileId;
     }
@@ -117,17 +101,16 @@ const typedProfileKeys = [
 
 /** The per-media profile keys apply to Chaptarr `mixed` folders only; anywhere else they would be dropped silently. */
 export function validateChaptarrRootFolderFields(
-  rootFolders: ReadonlyArray<string | InputConfigRootFolderReadarr> | undefined,
+  rootFolders: ReadonlyArray<InputConfigRootFolder> | undefined,
   arrType: string,
-  mediaType: ReadarrMediaType | undefined,
+  mediaType: ChaptarrMediaType | undefined,
 ): void {
   if (arrType === "CHAPTARR" && mediaType === "mixed") return;
 
-  const used = new Set<string>();
-  for (const folder of rootFolders ?? []) {
-    if (typeof folder === "string") continue;
-    for (const key of typedProfileKeys) if (key in folder) used.add(key);
-  }
+  const folders = (rootFolders ?? []).filter((folder) => typeof folder !== "string");
+  const keysUsed = (candidates: readonly string[]) => candidates.filter((key) => folders.some((folder) => key in folder));
+
+  const used = new Set(keysUsed(typedProfileKeys));
   if (used.size === 0) return;
 
   const keys = [...used].join(", ");

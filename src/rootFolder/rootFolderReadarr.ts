@@ -7,23 +7,16 @@ import {
   type ProfileAwareRootFolderFields,
   ProfileAwareRootFolderSync,
 } from "./rootFolderBase";
+import { calibreComparableFields, calibreFieldsFromConfig } from "./rootFolderCalibre";
 
-export type ReadarrRootFolderApi<TResource extends RootFolderResource = RootFolderResource> = ProfileAwareRootFolderApi<TResource>;
+export type ReadarrRootFolderApi = ProfileAwareRootFolderApi<RootFolderResource>;
 
 type ReadarrRootFolderConfig = InputConfigRootFolderReadarr & ProfileAwareRootFolderConfig;
 
-export class ReadarrRootFolderSync<TResource extends RootFolderResource = RootFolderResource> extends ProfileAwareRootFolderSync<
-  ReadarrRootFolderConfig,
-  TResource
-> {
-  protected readonly arrName: string;
+export class ReadarrRootFolderSync extends ProfileAwareRootFolderSync<ReadarrRootFolderConfig, RootFolderResource> {
+  protected readonly arrName = "Readarr";
 
-  constructor(api: ReadarrRootFolderApi<TResource>, arrName = "Readarr") {
-    super(api);
-    this.arrName = arrName;
-  }
-
-  protected buildResource(config: ReadarrRootFolderConfig, fields: ProfileAwareRootFolderFields): TResource {
+  protected buildResource(config: ReadarrRootFolderConfig, fields: ProfileAwareRootFolderFields): RootFolderResource {
     const result: RootFolderResource = {
       path: fields.path,
       name: fields.name,
@@ -40,35 +33,12 @@ export class ReadarrRootFolderSync<TResource extends RootFolderResource = RootFo
       result.defaultNewItemMonitorOption = toEnumOrThrow(NewItemMonitorTypes, config.monitor_new_items, "Readarr monitor_new_items");
     }
 
-    // Calibre integration fields (Readarr-specific)
-    if (config.is_calibre_library !== undefined) {
-      result.isCalibreLibrary = config.is_calibre_library;
-      result.host = config.calibre_host;
-      result.port = config.calibre_port;
-      result.urlBase = config.calibre_url_base;
-      result.username = config.calibre_username;
-      result.password = config.calibre_password;
-      result.library = config.calibre_library;
-      result.outputFormat = config.calibre_output_format;
-      result.outputProfile = config.calibre_output_profile;
-      result.useSsl = config.calibre_use_ssl;
-    }
+    Object.assign(result, calibreFieldsFromConfig(config));
 
-    return result as TResource;
+    return result;
   }
 
-  // Password is excluded since the API returns masked values, not the actual password.
-  protected override extraComparableFields(resource: TResource): Record<string, unknown> {
-    return {
-      isCalibreLibrary: resource.isCalibreLibrary,
-      host: resource.host,
-      port: resource.port,
-      urlBase: resource.urlBase,
-      username: resource.username,
-      library: resource.library,
-      outputFormat: resource.outputFormat,
-      outputProfile: resource.outputProfile,
-      useSsl: resource.useSsl,
-    };
+  protected override extraComparableFields(resource: RootFolderResource): Record<string, unknown> {
+    return calibreComparableFields(resource);
   }
 }

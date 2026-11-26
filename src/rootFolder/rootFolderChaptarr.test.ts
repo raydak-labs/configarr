@@ -2,7 +2,7 @@ import type { Mocked } from "vitest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ServerCache } from "../cache";
 import { getEnvs } from "../env";
-import type { InputConfigRootFolderReadarr } from "../types/config.types";
+import type { InputConfigRootFolderChaptarr } from "../types/config.types";
 import { type ChaptarrRootFolderApi, ChaptarrRootFolderSync, validateChaptarrRootFolderFields } from "./rootFolderChaptarr";
 
 vi.mock("../env", async (importOriginal) => {
@@ -29,7 +29,7 @@ describe("ChaptarrRootFolderSync", () => {
     deleteTag: vi.fn(),
   };
 
-  const config: InputConfigRootFolderReadarr = {
+  const config: InputConfigRootFolderChaptarr = {
     path: "/books",
     name: "Books",
     metadata_profile: "Standard",

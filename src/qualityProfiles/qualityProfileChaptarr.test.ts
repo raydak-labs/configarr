@@ -1,20 +1,27 @@
 import { describe, expect, test } from "vitest";
-import type { QualityProfileResource } from "../__generated__/readarr/data-contracts";
+import { CustomFormatMediaType } from "../__generated__/chaptarr/data-contracts";
 import { ServerCache } from "../cache";
 import type { QualityProfilesClient } from "../clients/capabilities";
 import type { CFProcessing, CustomFormatRequest } from "../customFormats/customFormat.types";
+import type { ChaptarrCustomFormatRequest } from "../customFormats/customFormatChaptarr.types";
 import type { QualityDefinitionShared } from "../qualityDefinitions/qualityDefinition.types";
 import type { MergedConfigInstance } from "../types/config.types";
 import type { QualityProfileShared } from "./qualityProfile.types";
 import { QualityProfileChaptarrSync } from "./qualityProfileChaptarr";
+import type { ChaptarrQualityProfileResource } from "./qualityProfileChaptarr.types";
 
-const client = {} as QualityProfilesClient<QualityProfileResource>;
+const client = {} as QualityProfilesClient<ChaptarrQualityProfileResource>;
 
-const formats: CustomFormatRequest[] = [
-  { name: "audio-only", appliesTo: "audiobook" },
-  { name: "ebook-only", appliesTo: "ebook" },
-  { name: "both", appliesTo: "both" },
+const formats: ChaptarrCustomFormatRequest[] = [
+  { name: "audio-only", appliesTo: CustomFormatMediaType.Audiobook },
+  { name: "ebook-only", appliesTo: CustomFormatMediaType.Ebook },
+  { name: "both", appliesTo: CustomFormatMediaType.Both },
   { name: "untyped" },
+];
+
+const serverCustomFormats: ChaptarrCustomFormatRequest[] = [
+  { id: 30, name: "audio-only", appliesTo: CustomFormatMediaType.Audiobook },
+  { id: 20, name: "ebook-only", appliesTo: CustomFormatMediaType.Ebook },
 ];
 
 describe("QualityProfileChaptarrSync", () => {
@@ -159,10 +166,7 @@ describe("QualityProfileChaptarrSync", () => {
     const cache = new ServerCache({
       qualityDefinitions: definitions,
       qualityProfiles: [serverProfile],
-      customFormats: [
-        { id: 30, name: "audio-only", appliesTo: "audiobook" },
-        { id: 20, name: "ebook-only", appliesTo: "ebook" },
-      ],
+      customFormats: serverCustomFormats,
       languages: [],
     });
 
@@ -205,10 +209,7 @@ describe("QualityProfileChaptarrSync", () => {
     const cache = new ServerCache({
       qualityDefinitions: definitions,
       qualityProfiles: [serverProfile],
-      customFormats: [
-        { id: 30, name: "audio-only", appliesTo: "audiobook" },
-        { id: 20, name: "ebook-only", appliesTo: "ebook" },
-      ],
+      customFormats: serverCustomFormats,
       languages: [],
     });
 
@@ -255,10 +256,7 @@ describe("QualityProfileChaptarrSync", () => {
     const cache = new ServerCache({
       qualityDefinitions: definitions,
       qualityProfiles: [serverProfile],
-      customFormats: [
-        { id: 30, name: "audio-only", appliesTo: "audiobook" },
-        { id: 20, name: "ebook-only", appliesTo: "ebook" },
-      ],
+      customFormats: serverCustomFormats,
       languages: [],
     });
 
@@ -298,10 +296,7 @@ describe("QualityProfileChaptarrSync", () => {
     const cache = new ServerCache({
       qualityDefinitions: definitions,
       qualityProfiles: [],
-      customFormats: [
-        { id: 30, name: "audio-only", appliesTo: "audiobook" },
-        { id: 20, name: "ebook-only", appliesTo: "ebook" },
-      ],
+      customFormats: serverCustomFormats,
       languages: [],
     });
 
@@ -341,10 +336,7 @@ describe("QualityProfileChaptarrSync", () => {
     const cache = new ServerCache({
       qualityDefinitions: definitions,
       qualityProfiles: [serverProfile],
-      customFormats: [
-        { id: 30, name: "audio-only", appliesTo: "audiobook" },
-        { id: 20, name: "ebook-only", appliesTo: "ebook" },
-      ],
+      customFormats: serverCustomFormats,
       languages: [],
     });
 
@@ -352,5 +344,51 @@ describe("QualityProfileChaptarrSync", () => {
 
     const formatItems = result.changedQPs[0]?.formatItems ?? [];
     expect(formatItems).toEqual([expect.objectContaining({ name: "ebook-only", format: 20, score: 25 })]);
+  });
+
+  test("restricts an existing profile to its own media side's qualities", async () => {
+    const ebook = ["EPUB", "MOBI"];
+    const universe: QualityDefinitionShared[] = [...ebook, "M4B", "MP3"].map((name, index) => ({
+      id: index + 1,
+      title: name,
+      quality: { id: index + 1, name },
+    }));
+    const server: QualityProfileShared = {
+      name: "E-Book",
+      upgradeAllowed: true,
+      cutoff: 1,
+      cutoffFormatScore: 0,
+      minFormatScore: 0,
+      items: [...ebook].reverse().map((name) => ({
+        allowed: true,
+        items: [],
+        quality: { id: universe.find((definition) => definition.quality?.name === name)?.quality?.id, name },
+      })),
+      formatItems: [],
+    };
+    const config = {
+      custom_formats: [],
+      quality_profiles: [
+        {
+          name: "E-Book",
+          min_format_score: 0,
+          qualities: ebook.map((name) => ({ name })),
+          quality_sort: "top",
+          upgrade: { allowed: true, until_quality: "EPUB", until_score: 0 },
+        },
+      ],
+      customFormatDefinitions: [],
+      media_management: {},
+      media_naming: {},
+    } as unknown as MergedConfigInstance;
+
+    const diff = await new QualityProfileChaptarrSync(client, "ebook").calculateQualityProfilesDiff(
+      { carrIdMapping: new Map(), cfNameToCarrConfig: new Map() },
+      config,
+      new ServerCache({ qualityDefinitions: universe, qualityProfiles: [server] }),
+    );
+
+    expect(diff.changedQPs).toHaveLength(0);
+    expect(diff.noChanges).toEqual(["E-Book"]);
   });
 });

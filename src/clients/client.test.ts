@@ -36,6 +36,13 @@ vi.mock("./readarr-client", () => ({
     }
   },
 }));
+vi.mock("./chaptarr-client", () => ({
+  ChaptarrClient: class {
+    async testConnection() {
+      return true;
+    }
+  },
+}));
 vi.mock("./whisparr-client", () => ({
   WhisparrClient: class {
     async testConnection() {

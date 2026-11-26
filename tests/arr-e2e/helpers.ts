@@ -5,6 +5,7 @@ import { basename, join } from "node:path";
 import { expect, inject } from "vitest";
 import type { TestProject } from "vitest/node";
 import { stringify } from "yaml";
+import type { ChaptarrClient } from "../../src/clients/chaptarr-client";
 import type { LidarrClient } from "../../src/clients/lidarr-client";
 import { ProwlarrClient } from "../../src/clients/prowlarr-client";
 import type { RadarrClient } from "../../src/clients/radarr-client";
@@ -12,7 +13,6 @@ import type { ReadarrClient } from "../../src/clients/readarr-client";
 import { SonarrClient } from "../../src/clients/sonarr-client";
 import type { WhisparrClient } from "../../src/clients/whisparr-client";
 import type { DelayProfileShared } from "../../src/delayProfiles/delayProfile.types";
-import type { ChaptarrRootFolderFields } from "../../src/rootFolder/rootFolderChaptarr";
 import { type ArrType, ArrTypeConst, type MediaArrType } from "../../src/types/common.types";
 import { arrConnection } from "./config";
 import { buildConfigarrBundles, type ConfigarrRunResult, runConfigarrInWorker, runConfigarrProcess } from "./configarrRunner";
@@ -20,7 +20,7 @@ import { buildConfigarrBundles, type ConfigarrRunResult, runConfigarrInWorker, r
 const PROWLARR_STATUS_PATH = "/api/v1/system/status";
 const FLARESOLVERR_DEFAULT_BASE_URL = "http://127.0.0.1:18191";
 
-export type MediaArrClient = SonarrClient | RadarrClient | WhisparrClient | ReadarrClient | LidarrClient;
+export type MediaArrClient = SonarrClient | RadarrClient | WhisparrClient | ReadarrClient | ChaptarrClient | LidarrClient;
 
 /** Status endpoint per *arr, for the readiness wait in `globalSetup`. */
 const STATUS_PATHS: Omit<Record<MediaArrType, string>, "SONARR"> = {
@@ -561,8 +561,8 @@ export async function cleanupMediaE2e(client: MediaArrClient): Promise<void> {
   throwCleanupErrors(errors);
 }
 
-/** Lidarr and Readarr only. Call after `cleanupMediaE2e`, which drops the root folders using them. */
-export async function cleanupMetadataProfilesE2e(client: LidarrClient | ReadarrClient): Promise<void> {
+/** Lidarr, Readarr and Chaptarr only. Call after `cleanupMediaE2e`, which drops the root folders using them. */
+export async function cleanupMetadataProfilesE2e(client: LidarrClient | ReadarrClient | ChaptarrClient): Promise<void> {
   const errors: string[] = [];
   for (const meta of await client.getMetadataProfiles()) {
     if (meta.id != null && isE2eName(meta.name)) {
@@ -700,44 +700,51 @@ export async function preservedRootFolderPaths(client: MediaArrClient): Promise<
   return folders.filter((f) => f.path && !f.path.includes("/data/e2e")).map((f) => f.path!);
 }
 
+type PreservedObjectFolder = Record<string, unknown>;
+
+const profileNameOf = (profiles: { id?: number; name?: string | null }[], id: number | null | undefined): string | undefined =>
+  id == null ? undefined : (profiles.find((profile) => profile.id === id)?.name ?? undefined);
+
 /** Same, for Lidarr and Readarr, whose root folders are objects with profiles by name. */
-export async function preservedRootFolderObjects(client: LidarrClient | ReadarrClient): Promise<Record<string, unknown>[]> {
+export async function preservedRootFolderObjects(client: LidarrClient | ReadarrClient): Promise<PreservedObjectFolder[]> {
   const folders = (await client.getRootfolders()).filter((f) => f.path && !f.path.includes("/data/e2e"));
   const [qualityProfiles, metadataProfiles] = await Promise.all([client.getQualityProfiles(), client.getMetadataProfiles()]);
-  const nameOf = (profiles: { id?: number; name?: string | null }[], id: number | undefined): string | undefined =>
-    id == null ? undefined : (profiles.find((profile) => profile.id === id)?.name ?? undefined);
 
-  return folders.map((rawFolder) => {
-    // Chaptarr types each folder and moves the profile references to per-media ids.
-    const folder: typeof rawFolder & Partial<ChaptarrRootFolderFields> = rawFolder;
-    const ebookQuality = nameOf(qualityProfiles, folder.ebookQualityProfileId);
-    const ebookMetadata = nameOf(metadataProfiles, folder.ebookMetadataProfileId);
-    const audiobookQuality = nameOf(qualityProfiles, folder.audiobookQualityProfileId);
-    const audiobookMetadata = nameOf(metadataProfiles, folder.audiobookMetadataProfileId);
-
-    if (folder.folderType !== undefined) {
-      // 0 = mixed, 1 = audiobook, 2 = ebook.
-      const quality_profile = folder.folderType === 1 ? audiobookQuality : (ebookQuality ?? audiobookQuality);
-      const metadata_profile = folder.folderType === 1 ? audiobookMetadata : (ebookMetadata ?? audiobookMetadata);
-      if (!quality_profile || !metadata_profile) {
-        throw new Error(`Cannot preserve root folder '${folder.path}': unresolved typed profiles`);
-      }
-      const preserved: Record<string, unknown> = { path: folder.path, name: folder.name, metadata_profile, quality_profile };
-      if (folder.folderType === 0) {
-        // Each media side falls back to the primary profile, so only add explicit side overrides.
-        if (ebookQuality) preserved.ebook_quality_profile = ebookQuality;
-        if (ebookMetadata) preserved.ebook_metadata_profile = ebookMetadata;
-        if (audiobookQuality) preserved.audiobook_quality_profile = audiobookQuality;
-        if (audiobookMetadata) preserved.audiobook_metadata_profile = audiobookMetadata;
-      }
-      return preserved;
-    }
-
-    const quality_profile = nameOf(qualityProfiles, folder.defaultQualityProfileId);
-    const metadata_profile = nameOf(metadataProfiles, folder.defaultMetadataProfileId);
+  return folders.map((folder) => {
+    const quality_profile = profileNameOf(qualityProfiles, folder.defaultQualityProfileId);
+    const metadata_profile = profileNameOf(metadataProfiles, folder.defaultMetadataProfileId);
     if (!quality_profile || !metadata_profile) {
       throw new Error(`Cannot preserve root folder '${folder.path}': unresolved default profiles`);
     }
     return { path: folder.path, name: folder.name, metadata_profile, quality_profile };
+  });
+}
+
+/** Chaptarr types each folder and keeps its profile references per media side. */
+export async function preservedChaptarrRootFolders(client: ChaptarrClient): Promise<PreservedObjectFolder[]> {
+  const folders = (await client.getRootfolders()).filter((f) => f.path && !f.path.includes("/data/e2e"));
+  const [qualityProfiles, metadataProfiles] = await Promise.all([client.getQualityProfiles(), client.getMetadataProfiles()]);
+
+  return folders.map((folder) => {
+    const ebookQuality = profileNameOf(qualityProfiles, folder.ebookQualityProfileId);
+    const ebookMetadata = profileNameOf(metadataProfiles, folder.ebookMetadataProfileId);
+    const audiobookQuality = profileNameOf(qualityProfiles, folder.audiobookQualityProfileId);
+    const audiobookMetadata = profileNameOf(metadataProfiles, folder.audiobookMetadataProfileId);
+
+    // 0 = mixed, 1 = audiobook, 2 = ebook.
+    const quality_profile = folder.folderType === 1 ? audiobookQuality : (ebookQuality ?? audiobookQuality);
+    const metadata_profile = folder.folderType === 1 ? audiobookMetadata : (ebookMetadata ?? audiobookMetadata);
+    if (!quality_profile || !metadata_profile) {
+      throw new Error(`Cannot preserve root folder '${folder.path}': unresolved typed profiles`);
+    }
+    const preserved: PreservedObjectFolder = { path: folder.path, name: folder.name, metadata_profile, quality_profile };
+    if (folder.folderType === 0) {
+      // Each media side falls back to the primary profile, so only add explicit side overrides.
+      if (ebookQuality) preserved.ebook_quality_profile = ebookQuality;
+      if (ebookMetadata) preserved.ebook_metadata_profile = ebookMetadata;
+      if (audiobookQuality) preserved.audiobook_quality_profile = audiobookQuality;
+      if (audiobookMetadata) preserved.audiobook_metadata_profile = audiobookMetadata;
+    }
+    return preserved;
   });
 }
