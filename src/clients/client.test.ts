@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { ChaptarrClient } from "./chaptarr-client";
 import { configureApi, getClient, unsetApi } from "./client";
 import { LidarrClient } from "./lidarr-client";
 import { ProwlarrClient } from "./prowlarr-client";
@@ -65,6 +66,7 @@ describe("configureApi / getClient", () => {
     expect(await configureApi("RADARR", "http://localhost", "key")).toBeInstanceOf(RadarrClient);
     expect(await configureApi("LIDARR", "http://localhost", "key")).toBeInstanceOf(LidarrClient);
     expect(await configureApi("READARR", "http://localhost", "key")).toBeInstanceOf(ReadarrClient);
+    expect(await configureApi("CHAPTARR", "http://localhost", "key")).toBeInstanceOf(ChaptarrClient);
     expect(await configureApi("WHISPARR", "http://localhost", "key")).toBeInstanceOf(WhisparrClient);
     expect(await configureApi("PROWLARR", "http://localhost", "key")).toBeInstanceOf(ProwlarrClient);
   });

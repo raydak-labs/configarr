@@ -34,7 +34,7 @@ Each project's global setup also bundles `src/index.ts` (the Docker image's CLI)
 
 Each file cleans its *arr in `beforeAll`, snapshots the server-wide settings it overwrites (UI, media management, naming, default delay profile, quality definitions, download-client config), and restores plus cleans again in `afterAll` — regardless of which test failed.
 
-Every *arr that exposes `allowedHosts` rejects a host-settings write when authentication is not `enabled` and the list is empty, and Host Filtering reads the list once at process start. `seed-arr-config.sh` is the compose entrypoint for Sonarr (v4/v5), Radarr (v6/v7), Lidarr and Prowlarr: before `/init` it merges `localhost,127.0.0.1,<service>` into `config.xml`, so the list is non-empty and container-to-container calls pass after any restart on retained volumes. Radarr v5 and Readarr have no `allowedHosts` field; Whisparr ships it in its `config.xml`.
+Every *arr that exposes `allowedHosts` rejects a host-settings write when authentication is not `enabled` and the list is empty, and Host Filtering reads the list once at process start. `seed-arr-config.sh` is the compose entrypoint for Sonarr (v4/v5), Radarr (v6/v7), Lidarr, Prowlarr and Chaptarr: before the image's own start command (`/init`, or Chaptarr's `/entrypoint.sh`) it merges `localhost,127.0.0.1,<service>` into `config.xml`, so the list is non-empty and container-to-container calls pass after any restart on retained volumes. Radarr v5 and Readarr have no `allowedHosts` field; Whisparr ships it in its `config.xml`.
 
 ## Ports / API key
 
@@ -91,6 +91,7 @@ Per-*arr files are deliberately duplicated instead of generated from a shared fa
 
 Host settings run on Sonarr v5 and Radarr v7; v4/v5/v6 reject the v7/v5-only authentication block before other writes.
 The backup policy (`backup_folder`, `backup_interval`, `backup_retention`) is a separate part of `host_config` and runs on every app and version.
+Chaptarr runs the same suite as Readarr in `chaptarr.e2e.test.ts`; the compose stack exposes it as `CHAPTARR` on `18788`.
 
 Feature × arr × create / update / delete / idempotent (second run Diff Report `(up to date - no changes)` + GET). `C` create, `U` update, `D` delete, `I` idempotent. `—` not applicable.
 

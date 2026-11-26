@@ -1,5 +1,6 @@
 import { logger } from "../logger";
 import type { ArrType } from "../types/common.types";
+import { ChaptarrClient } from "./chaptarr-client";
 import { LidarrClient } from "./lidarr-client";
 import { ProwlarrClient } from "./prowlarr-client";
 import { RadarrClient } from "./radarr-client";
@@ -12,6 +13,7 @@ export type ArrTypeToClient = {
   SONARR: SonarrClient;
   LIDARR: LidarrClient;
   READARR: ReadarrClient;
+  CHAPTARR: ChaptarrClient;
   WHISPARR: WhisparrClient;
   PROWLARR: ProwlarrClient;
 };
@@ -34,6 +36,8 @@ const createClient = (type: ArrType, baseUrl: string, apiKey: string): ArrTypeTo
       return new RadarrClient(baseUrl, apiKey);
     case "READARR":
       return new ReadarrClient(baseUrl, apiKey);
+    case "CHAPTARR":
+      return new ChaptarrClient(baseUrl, apiKey);
     case "WHISPARR":
       return new WhisparrClient(baseUrl, apiKey);
     case "LIDARR":

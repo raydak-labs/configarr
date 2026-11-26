@@ -223,6 +223,7 @@ sonarrEnabled: false
 radarrEnabled: false
 whisparrEnabled: false
 readarrEnabled: false
+chaptarrEnabled: false
 lidarrEnabled: false
 
 # You can also disable on per instance basis
@@ -443,7 +444,7 @@ quality_definition:
   It applies to `type`-based and `include`-based loading; it has no effect on manual `qualities`.
 - `preferred_ratio` on `include` items applies only to that specific include.
 - Merge order: TRaSH/Recyclarr templates → local templates → config file (`quality_definition.qualities` last).
-- Only supported for Radarr and Sonarr. Not available for Lidarr, Readarr, Whisparr.
+- Only supported for Radarr and Sonarr. Not available for Lidarr, Readarr, Chaptarr, Whisparr.
 - Available since `v1.9.0`. Include-based QD detection available since `v1.x.0` (TBD).
 
 ## Media Naming
@@ -788,7 +789,7 @@ sonarr:
 
 Notes:
 
-- available since `v1.34.0` for Sonarr, Radarr, Lidarr, Readarr and Whisparr. Prowlarr has the same block, see [Prowlarr](/docs/configuration/experimental-support#prowlarr-v1)
+- available since `v1.34.0` for Sonarr, Radarr, Lidarr, Readarr, Chaptarr and Whisparr. Prowlarr has the same block, see [Prowlarr](/docs/configuration/experimental-support#prowlarr-v1)
 - Tag labels are matched **case-insensitively**: a label that only differs in casing resolves to the existing server tag instead of creating a second one
 - `tags` is optional. The tags referenced by your managed features (`delay_profiles`, `release_profiles`, `root_folders`, `download_clients`, `import_lists`) are created as well, so listing them here is a declarative way to see and keep all your labels in one place
 - `delete_unmanaged_tags` deletes every server tag which is neither listed under `tags`, nor listed under `ignore`, nor referenced by one of the managed features listed above. If it stops part-way (a server error after some tags were already deleted), the report still lists the deletions that went through
@@ -941,13 +942,54 @@ Notes:
 
 - **experimental**, available since `v1.14.0`
 
+### Chaptarr media types
+
+Chaptarr has its own `chaptarr:` section, backed by the same book pipeline as Readarr.
+Set `media_type` to tell Configarr which side of the fork the instance manages; when omitted it behaves as `ebook`. If an
+existing `readarr:` instance points at Chaptarr, move it to the `chaptarr:` section; vanilla
+Readarr rejects `media_type`.
+
+```yml
+chaptarr:
+  ebook:
+    base_url: http://chaptarr:8789
+    api_key: !secret CHAPTARR_API_KEY
+    media_type: ebook
+    root_folders:
+      - path: /books
+        name: Books
+        metadata_profile: Standard
+        quality_profile: E-Book
+    media_naming_api:
+      standardBookFormat: "{Author}/{Title}"
+      authorFolderFormat: "{Author}"
+```
+
+| Value       | Effect                                                                                       |
+| ----------- | -------------------------------------------------------------------------------------------- |
+| `ebook`     | Root folders use folder type `2`; naming writes the `ebook*` keys.                            |
+| `audiobook` | Root folders use folder type `1`; naming keeps the generic book keys.                         |
+| `mixed`     | Root folders use folder type `0`; both profile pairs are sent.                               |
+
+For `mixed`, set `ebook_quality_profile`, `ebook_metadata_profile`,
+`audiobook_quality_profile` and `audiobook_metadata_profile` on the folder. Each side falls
+back to `quality_profile` / `metadata_profile` when omitted. These four keys are rejected on any other
+`media_type` and on every other app.
+
+A quality profile only considers its own media side:
+the qualities the existing server profile already contains plus the qualities the config
+declares, so a configured quality can be added later. The other side is not appended as
+disabled rows. A new profile is built from the qualities the config declares; when the
+config declares none, the server's full quality list is used. `media_type` is available on
+Chaptarr instances and rejected on every other app, including `readarr:`.
+
 ## Global Indexer Configuration
 
 :::warning Experimental since v1.39.0
 Global indexer configuration is experimental.
 :::
 
-Configarr can manage instance-wide indexer configuration via the `indexer_config` block. This setting applies to Sonarr (v4 and v5), Radarr (v5, v6, and v7), Lidarr, Readarr, and Whisparr. It is not supported on Prowlarr.
+Configarr can manage instance-wide indexer configuration via the `indexer_config` block. This setting applies to Sonarr (v4 and v5), Radarr (v5, v6, and v7), Lidarr, Readarr, Chaptarr, and Whisparr. It is not supported on Prowlarr.
 
 ```yaml
 sonarr:
@@ -1118,7 +1160,7 @@ YAML key `Items` is accepted as an alias for `items`.
 Notes:
 
 - **experimental**, available since `v1.14.0`; protocol `items` since `v1.30.1`
-- Supported for Sonarr, Radarr, Whisparr, Lidarr, and Readarr (if the API supports it)
+- Supported for Sonarr, Radarr, Whisparr, Lidarr, Readarr, and Chaptarr (if the API supports it)
 - If a delay profile exists on the server but not in your config, it will be deleted
 - If a delay profile is in your config but not on the server, it will be created (if supported)
 - If a delay profile differs, it will be updated
@@ -1159,9 +1201,9 @@ yourarr:
 Notes:
 
 - **experimental**
-- Supported for Sonarr, Radarr, Whisparr, Lidarr, and Readarr
+- Supported for Sonarr, Radarr, Whisparr, Lidarr, Readarr, and Chaptarr
 - Match by `name` when the *arr API has that field and you set one. Otherwise match by content (`enabled`, `required`, `ignored`, indexer, tags). A nameless config entry matches a named server profile with the same content and leaves the name in place.
-- Lidarr and Readarr have no name field, so a change to required/ignored/tags/indexer is treated as a new profile (delete + create).
+- Lidarr, Readarr and Chaptarr have no name field, so a change to required/ignored/tags/indexer is treated as a new profile (delete + create).
 - Duplicate names (or duplicate nameless content) in the list fail validation
 - Unknown indexer names fail validation
 - Sonarr v5 also supports multiple `indexers`, `excluded_tags`, and air-date/season-pack policies. `indexer` and `indexers` cannot be used together; `indexers: []` means any indexer, as on the Sonarr server.
@@ -1321,7 +1363,7 @@ For more details, check the \*Arr-specific API documentation under the `RemotePa
 Notification connections are experimental.
 :::
 
-Configarr can manage notification connections across Sonarr, Radarr, Lidarr, Readarr, Whisparr, and Prowlarr via the `notifications` block.
+Configarr can manage notification connections across Sonarr, Radarr, Lidarr, Readarr, Chaptarr, Whisparr, and Prowlarr via the `notifications` block.
 
 ```yaml title="config.yml"
 sonarr:
@@ -1368,7 +1410,7 @@ When `delete_unmanaged.enabled` is `true`, any notifications present on the serv
 
 ### Templates
 
-Notification templates apply to the media managers only (Sonarr, Radarr, Lidarr, Readarr, Whisparr). A Prowlarr instance takes no `include`, so it defines its `notifications` directly.
+Notification templates apply to the media managers only (Sonarr, Radarr, Lidarr, Readarr, Chaptarr, Whisparr). A Prowlarr instance takes no `include`, so it defines its `notifications` directly.
 
 When templates and the instance both define `notifications`, entries with the same name (case-insensitive) are replaced by the later definition, the instance last. `update_password` keeps the earlier value unless a later block sets it. `delete_unmanaged.ignore` lists are combined, and the last block that sets `delete_unmanaged` decides `enabled`. Two entries with the same name inside one block are refused.
 

@@ -8,7 +8,10 @@
 # one-off "make the list non-empty" write.
 set -eu
 
-service="${1:?usage: seed-arr-config.sh <compose-service-name>}"
+service="${1:?usage: seed-arr-config.sh <compose-service-name> [command...]}"
+shift
+# Linuxserver images start through /init; other images pass their own command.
+if [ "$#" -eq 0 ]; then set -- /init; fi
 config=/config/config.xml
 required="localhost,127.0.0.1,${service}"
 
@@ -20,7 +23,7 @@ if [ ! -f "$config" ]; then
 </Config>
 EOF
   chown "${PUID:-1000}:${PGID:-1000}" "$config"
-  exec /init
+  exec "$@"
 fi
 
 flattened=$(tr '\n' ' ' < "$config")
@@ -54,4 +57,4 @@ if [ "$merged" != "$current" ]; then
 fi
 
 chown "${PUID:-1000}:${PGID:-1000}" "$config"
-exec /init
+exec "$@"

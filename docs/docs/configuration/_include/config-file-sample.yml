@@ -55,6 +55,7 @@ customFormatDefinitions:
 #radarrEnabled: false
 #whisparrEnabled: false
 #readarrEnabled: false
+#chaptarrEnabled: false
 #lidarrEnabled: false
 
 # Sonarr Configuration
@@ -334,6 +335,7 @@ whisparr: {}
 
 # experimental support: check https://configarr.rayak.de/docs/configuration/experimental-support
 readarr: {}
+chaptarr: {}
 
 # experimental support: check https://configarr.rayak.de/docs/configuration/experimental-support
 lidarr: {}

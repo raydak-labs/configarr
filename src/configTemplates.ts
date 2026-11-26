@@ -125,6 +125,8 @@ const includeRecyclarrTemplate = (
     };
   }
 
+  if (template.media_type !== undefined) mergedTemplates.media_type = template.media_type;
+
   if (template.media_management) {
     mergedTemplates.media_management = { ...mergedTemplates.media_management, ...template.media_management };
   }

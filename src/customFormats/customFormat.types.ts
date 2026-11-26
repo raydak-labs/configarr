@@ -31,6 +31,8 @@ export type CustomFormatRequest = {
   name?: string | null;
   includeCustomFormatWhenRenaming?: boolean | null;
   specifications?: CustomFormatSpecification[] | null;
+  /** Chaptarr: which media side the format applies to. Absent on vanilla Readarr. */
+  appliesTo?: string | null;
 };
 
 export type ReleaseTitleOrLanguageSpecification = OmitTyped<CustomFormatSpecification, "fields"> & {

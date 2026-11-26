@@ -672,6 +672,20 @@ readarr:
           remote_path: "/downloads"
           local_path: "/downloads/2"
 
+chaptarr:
+  instance1:
+    base_url: http://chaptarr:8789
+    api_key: !secret CHAPTARR_API_KEY
+    # ebook, audiobook or mixed
+    media_type: ebook
+    root_folders:
+      - path: /books
+        name: Books
+        metadata_profile: Standard
+        quality_profile: ExampleProfile
+    include:
+      - template: readarr
+
 lidarr:
   instance1:
     # Set the URL/API Key to your actual instance

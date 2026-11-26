@@ -50,6 +50,7 @@ Images are available via Github Container Registry (ghcr) and dockerhub with tag
 - Sonarr v4 and v5 beta (v5-only settings require a v5 instance)
 - Whisparr (experimental)
 - Readarr (experimental)
+- Chaptarr (experimental)
 - Lidarr (experimental)
 
 ## Configuration

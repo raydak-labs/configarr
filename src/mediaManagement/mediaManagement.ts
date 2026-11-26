@@ -102,12 +102,17 @@ export class MediaManagementSync<Naming extends { id?: number }, Management exte
     );
   }
 
+  /** Map app-specific naming aliases before the diff. Identity by default. */
+  protected mapNamingApi(mediaNaming: MediaNamingApiType): MediaNamingApiType {
+    return mediaNaming;
+  }
+
   async calculateNamingDiff(mediaNaming?: MediaNamingApiType) {
     if (mediaNaming == null) {
       logger.debug(`Config 'media_naming_api' not specified. Ignoring.`);
       return null;
     }
-    return calculateNamingDiffFor(await this.getApi().getNaming(), mediaNaming);
+    return calculateNamingDiffFor(await this.getApi().getNaming(), this.mapNamingApi(mediaNaming));
   }
 
   async persistNaming(mediaNaming: MediaNamingApiType | undefined, write: boolean) {

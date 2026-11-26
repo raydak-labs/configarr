@@ -45,12 +45,16 @@ export class ReadarrClient
 {
   private api!: Api<unknown>;
 
-  constructor(baseUrl: string, apiKey: string) {
+  constructor(
+    baseUrl: string,
+    apiKey: string,
+    protected readonly arrLabel: "READARR" | "CHAPTARR" = "READARR",
+  ) {
     this.initialize(baseUrl, apiKey);
   }
 
   private initialize(baseUrl: string, apiKey: string) {
-    validateClientParams(baseUrl, apiKey, "READARR");
+    validateClientParams(baseUrl, apiKey, this.arrLabel);
 
     const httpClient = new KyHttpClient({
       headers: {
@@ -313,7 +317,7 @@ export class ReadarrClient
     try {
       await this.api.v1HealthList();
     } catch (error) {
-      const message = logConnectionError(error, "READARR");
+      const message = logConnectionError(error, this.arrLabel);
       logger.error(message);
       return false;
     }
