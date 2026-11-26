@@ -156,7 +156,7 @@ services:
 
   # Nightly required for protocol items[] (#481)
   lidarr:
-    image: lscr.io/linuxserver/lidarr:nightly@sha256:05200b5404112ef0595a8ee19109d494fdfb0e71e84dba82316544c8fef6593c
+    image: lscr.io/linuxserver/lidarr:nightly
     environment:
       - PUID=${PUID:-1000}
       - PGID=${PGID:-1000}
