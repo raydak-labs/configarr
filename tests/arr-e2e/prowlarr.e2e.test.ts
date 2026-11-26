@@ -630,8 +630,6 @@ describe("prowlarr (live)", () => {
     const backup_retention = original.backupRetention === 28 ? 7 : 28;
     const backup_folder = original.backupFolder === "Backups-e2e" ? "Backups" : "Backups-e2e";
     try {
-      // Only the instance connection and host settings: application sync validates Prowlarr
-      // callbacks, which the host-settings fixture cannot satisfy without a restart.
       const config = {
         telemetry: false,
         prowlarr: { e2e: { ...prowlarrConnection(), host_config: { backup_folder, backup_interval, backup_retention } } },
