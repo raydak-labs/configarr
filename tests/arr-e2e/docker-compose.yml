@@ -147,8 +147,10 @@ services:
       - CHAPTARR__AUTH__REQUIRED=DisabledForLocalAddresses
     volumes:
       - chaptarr-data:/config
+      - ./seed-arr-config.sh:/seed-arr-config.sh:ro
       - ./fixtures/media/e2e:/data/e2e
       - ./fixtures/media/e2e-b:/data/e2e-b
+    entrypoint: ["/bin/sh", "/seed-arr-config.sh", "chaptarr", "/entrypoint.sh", "dotnet", "/app/Chaptarr.dll", "-nobrowser", "-data=/config"]
     ports:
       - "18788:8789"
 

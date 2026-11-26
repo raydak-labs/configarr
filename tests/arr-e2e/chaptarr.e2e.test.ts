@@ -32,7 +32,6 @@ import {
   nonE2eNames,
   preservedRootFolderObjects,
   restoreMediaBaseline,
-  seedHostConfigWrite,
   snapshotMediaBaseline,
   stripVolatile,
   syncConfig,
@@ -86,7 +85,6 @@ describe("chaptarr (live)", () => {
   beforeAll(async () => {
     await cleanupMediaE2e(client);
     await cleanupMetadataProfilesE2e(client);
-    await seedHostConfigWrite(client);
     baseline = await snapshotMediaBaseline(client);
   }, 180_000);
 
