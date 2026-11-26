@@ -43,13 +43,50 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Restore docker image cache
+        id: image-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/arr-e2e-images.tar
+          key: arr-e2e-images-${{ hashFiles('tests/arr-e2e/docker-compose.yml') }}
+
+      - name: Load cached docker images
+        if: steps.image-cache.outputs.cache-hit == 'true'
+        run: |
+          set -euo pipefail
+          start=$(date +%s)
+          docker load -i "${RUNNER_TEMP}/arr-e2e-images.tar"
+          echo "image-cache: hit, docker load $(( $(date +%s) - start ))s, tar $(du -h "${RUNNER_TEMP}/arr-e2e-images.tar" | cut -f1)" | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Pull docker images
+        if: steps.image-cache.outputs.cache-hit != 'true'
+        working-directory: tests/arr-e2e
+        run: |
+          set -euo pipefail
+          start=$(date +%s)
+          PUID="$(id -u)" PGID="$(id -g)" docker compose pull
+          echo "image-cache: miss, docker compose pull $(( $(date +%s) - start ))s" | tee -a "$GITHUB_STEP_SUMMARY"
+          start=$(date +%s)
+          docker compose config --images | sort -u | xargs docker save -o "${RUNNER_TEMP}/arr-e2e-images.tar"
+          echo "image-cache: docker save $(( $(date +%s) - start ))s, tar $(du -h "${RUNNER_TEMP}/arr-e2e-images.tar" | cut -f1)" | tee -a "$GITHUB_STEP_SUMMARY"
+          docker compose config --images | sort -u | xargs docker image ls --format '{{.Repository}}:{{.Tag}} {{.Size}}' | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Save docker image cache
+        if: steps.image-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/arr-e2e-images.tar
+          key: ${{ steps.image-cache.outputs.cache-primary-key }}
+
       - name: Start *arr stack
         working-directory: tests/arr-e2e
         run: |
           set -euo pipefail
+          start=$(date +%s)
           # Containers must run as the runner user: /data/e2e is a bind mount from the
           # checkout, and *arr rejects a root folder it cannot write to.
           PUID="$(id -u)" PGID="$(id -g)" docker compose up -d
+          echo "compose up $(( $(date +%s) - start ))s" | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Wait for *arr APIs
         env:
